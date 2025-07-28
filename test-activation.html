@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>激活流程测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 3px;
+            background: #007acc;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+            background: #f5f5f5;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>HOUT 激活流程测试</h1>
+    
+    <div class="test-section">
+        <h2>本地存储管理</h2>
+        <button onclick="clearStorage()">清除本地存储</button>
+        <button onclick="checkStorage()">检查存储状态</button>
+        <div id="storage-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>激活状态测试</h2>
+        <p>测试激活码: <code>1K2L3M4N-ABC123-DEF45678</code></p>
+        <button onclick="testActivationFlow()">测试完整激活流程</button>
+        <div id="activation-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>应用状态</h2>
+        <button onclick="checkAppState()">检查应用状态</button>
+        <div id="app-state-result" class="result"></div>
+    </div>
+
+    <script>
+        function clearStorage() {
+            try {
+                localStorage.removeItem('hout-app-config');
+                localStorage.removeItem('hout-welcome-store');
+                sessionStorage.clear();
+                document.getElementById('storage-result').innerHTML = 
+                    '<span class="success">✓ 本地存储已清除</span>';
+            } catch (error) {
+                document.getElementById('storage-result').innerHTML = 
+                    '<span class="error">✗ 清除存储失败: ' + error.message + '</span>';
+            }
+        }
+        
+        function checkStorage() {
+            try {
+                const appConfig = localStorage.getItem('hout-app-config');
+                const welcomeStore = localStorage.getItem('hout-welcome-store');
+                
+                let result = '<h3>存储状态:</h3>';
+                result += '<p><strong>应用配置:</strong> ' + (appConfig ? '存在' : '不存在') + '</p>';
+                result += '<p><strong>欢迎页状态:</strong> ' + (welcomeStore ? '存在' : '不存在') + '</p>';
+                
+                if (appConfig) {
+                    try {
+                        const config = JSON.parse(appConfig);
+                        result += '<p><strong>激活状态:</strong> ' + (config.state?.config?.isActivated ? '已激活' : '未激活') + '</p>';
+                        result += '<p><strong>激活状态枚举:</strong> ' + (config.state?.config?.activationStatus || '未设置') + '</p>';
+                    } catch (e) {
+                        result += '<p><strong>配置解析错误:</strong> ' + e.message + '</p>';
+                    }
+                }
+                
+                document.getElementById('storage-result').innerHTML = result;
+            } catch (error) {
+                document.getElementById('storage-result').innerHTML = 
+                    '<span class="error">✗ 检查存储失败: ' + error.message + '</span>';
+            }
+        }
+        
+        function testActivationFlow() {
+            document.getElementById('activation-result').innerHTML = 
+                '<p>🔄 正在测试激活流程...</p>' +
+                '<p>1. 清除存储 ✓</p>' +
+                '<p>2. 刷新页面以重置状态</p>' +
+                '<p>3. 应该显示欢迎页面</p>' +
+                '<p>4. 输入测试激活码进行激活</p>' +
+                '<p>5. 激活成功后应自动跳转到主应用</p>';
+            
+            // 清除存储并刷新页面
+            clearStorage();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+        
+        function checkAppState() {
+            try {
+                const appConfig = localStorage.getItem('hout-app-config');
+                let result = '<h3>应用状态检查:</h3>';
+                
+                if (!appConfig) {
+                    result += '<p class="error">❌ 未找到应用配置，应用应显示欢迎页面</p>';
+                } else {
+                    const config = JSON.parse(appConfig);
+                    const isActivated = config.state?.config?.isActivated;
+                    const activationStatus = config.state?.config?.activationStatus;
+                    
+                    result += '<p><strong>激活状态:</strong> ' + (isActivated ? '✅ 已激活' : '❌ 未激活') + '</p>';
+                    result += '<p><strong>状态枚举:</strong> ' + activationStatus + '</p>';
+                    
+                    if (isActivated && activationStatus === 'activated') {
+                        result += '<p class="success">✅ 应用应显示主界面</p>';
+                    } else {
+                        result += '<p class="error">❌ 应用应显示欢迎页面</p>';
+                    }
+                    
+                    if (config.state?.config?.activationDate) {
+                        result += '<p><strong>激活时间:</strong> ' + new Date(config.state.config.activationDate).toLocaleString() + '</p>';
+                    }
+                    
+                    if (config.state?.config?.features) {
+                        result += '<p><strong>激活功能:</strong> ' + config.state.config.features.join(', ') + '</p>';
+                    }
+                }
+                
+                document.getElementById('app-state-result').innerHTML = result;
+            } catch (error) {
+                document.getElementById('app-state-result').innerHTML = 
+                    '<span class="error">✗ 检查应用状态失败: ' + error.message + '</span>';
+            }
+        }
+        
+        // 页面加载时自动检查状态
+        window.onload = function() {
+            checkStorage();
+            checkAppState();
+        };
+    </script>
+</body>
+</html>
