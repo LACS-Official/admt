@@ -795,6 +795,28 @@ pub async fn check_adb_availability() -> Result<CommandResult> {
     }
 }
 
+/// 检查Fastboot可用性
+#[tauri::command]
+pub async fn check_fastboot_availability() -> Result<CommandResult> {
+    let result = execute_fastboot_command(&["--version"], Some(5)).await?;
+
+    if result.success {
+        Ok(CommandResult {
+            success: true,
+            output: result.output,
+            error: None,
+            exit_code: Some(0),
+        })
+    } else {
+        Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("Fastboot不可用或未正确安装".to_string()),
+            exit_code: Some(1),
+        })
+    }
+}
+
 /// 检查设备连接状态
 #[tauri::command]
 pub async fn check_device_connection(serial: String) -> Result<CommandResult> {
@@ -1383,6 +1405,14 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
     let mut cmd = Command::new(&scrcpy_path);
     cmd.args(args);
 
+    // 在Windows上隐藏命令行窗口
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
     match cmd.spawn() {
         Ok(child) => {
             let pid = child.id();
@@ -1420,12 +1450,25 @@ fn find_scrcpy_executable() -> Result<String> {
     }
 
     // 3. 最后检查系统PATH中是否有scrcpy
-    if let Ok(output) = std::process::Command::new("where").arg("scrcpy").output() {
-        if output.status.success() {
-            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path.is_empty() {
-                log::info!("Found scrcpy in system PATH: {}", path);
-                return Ok(path);
+    {
+        let mut cmd = std::process::Command::new("where");
+        cmd.arg("scrcpy");
+
+        // 在Windows上隐藏命令行窗口
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        if let Ok(output) = cmd.output() {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path.is_empty() {
+                    log::info!("Found scrcpy in system PATH: {}", path);
+                    return Ok(path);
+                }
             }
         }
     }

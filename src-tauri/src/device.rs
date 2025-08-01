@@ -43,6 +43,7 @@ impl DeviceMode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct DeviceProperties {
     // 设备基本信息
     pub market_name: Option<String>,        // ro.product.marketname

@@ -1,4 +1,4 @@
-# HOUT Tauri - 功能特性详解
+# 玩机管家 Tauri - 功能特性详解
 
 ## 🎉 项目重构完成！
 
@@ -137,7 +137,7 @@ PySide6项目已成功重构为现代化的Tauri应用，具备完整的功能�
 
 ### 开发模式
 ```bash
-cd hout-tauri
+cd wanjiguanjia-tauri
 npm install
 npm run tauri dev
 ```

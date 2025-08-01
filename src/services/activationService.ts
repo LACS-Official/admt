@@ -8,7 +8,7 @@ import { ActivationStatus, ActivationRequest, ActivationResponse, AppConfig } fr
 import { activationLogger } from './activationLogger';
 
 // 激活码存储的加密密钥（实际应用中应该使用更安全的方式）
-const STORAGE_KEY = 'hout_activation_data';
+const STORAGE_KEY = 'wanjiguanjia_activation_data';
 const ENCRYPTION_KEY = 'hout_secure_key_2024';
 
 /**

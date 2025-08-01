@@ -7,7 +7,6 @@ import React, { useEffect, useState } from 'react';
 import {
   makeStyles,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogContent,
@@ -16,7 +15,6 @@ import {
   Button,
   Text,
   MessageBar,
-  MessageBarType,
   tokens,
 } from '@fluentui/react-components';
 import {
@@ -69,7 +67,7 @@ interface ActivationStatusManagerProps {
 
 export const ActivationStatusManager: React.FC<ActivationStatusManagerProps> = ({ children }) => {
   const styles = useStyles();
-  const { config, isExpired, setConfig } = useAppConfigStore();
+  const { config, setConfig } = useAppConfigStore();
   const [showExpiryDialog, setShowExpiryDialog] = useState(false);
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
   const [dismissedWarning, setDismissedWarning] = useState(false);

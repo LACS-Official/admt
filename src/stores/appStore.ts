@@ -19,6 +19,7 @@ const defaultConfig: AppConfig = {
   language: "zh-CN",
   autoDetectDevices: true,
   scanInterval: 2000,
+  deviceDetectionInterval: 5000,
   logLevel: "info",
 };
 
@@ -26,8 +27,8 @@ export const useAppStore = create<AppStoreState>()(
   persist(
     (set, get) => ({
       isInitialized: false,
-      config: defaultConfig,
-      currentView: "device-info",
+      config: { ...defaultConfig },
+      currentView: "home",
       isLoading: false,
       error: undefined,
       notifications: [],
@@ -40,7 +41,11 @@ export const useAppStore = create<AppStoreState>()(
 
       updateConfig: (configUpdates: Partial<AppConfig>) =>
         set((state) => ({
-          config: { ...state.config, ...configUpdates },
+          config: {
+            ...defaultConfig,
+            ...state.config,
+            ...configUpdates
+          },
         })),
 
       addNotification: (notification) => {

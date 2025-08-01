@@ -1,7 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useState } from "react";
 import {
   makeStyles,
-
   Text,
   Button,
   Badge,
@@ -16,10 +15,10 @@ import {
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
-import DeviceInfoCard from "./DeviceInfoCard";
-import DevicePropertiesCard from "./DevicePropertiesCard";
-import DeviceActionsCard from "./DeviceActionsCard";
-import DeviceSystemInfoCard from "./DeviceSystemInfoCard";
+import { useAppStore } from "../../stores/appStore";
+import DeviceCoreInfoCard from "./DeviceCoreInfoCard";
+import SecurityStatusCard from "./SecurityStatusCard";
+import DeviceDetailsModal from "./DeviceDetailsModal";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 
 const useStyles = makeStyles({
@@ -47,53 +46,28 @@ const useStyles = makeStyles({
   },
   content: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-    gridAutoRows: "minmax(280px, auto)",
-    gap: "12px",
+    gridTemplateColumns: "2fr 1fr",
+    gap: "16px",
     height: "calc(100% - 80px)",
     padding: "0 4px",
     overflow: "auto",
     scrollbarWidth: "thin",
   },
-  contentLarge: {
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gridTemplateRows: "auto auto",
-  },
   contentMedium: {
-    gridTemplateColumns: "1fr 1fr",
-    gridTemplateRows: "auto auto auto",
+    gridTemplateColumns: "1fr",
+    gridTemplateRows: "auto auto",
+    gap: "12px",
   },
   contentSmall: {
     gridTemplateColumns: "1fr",
-    gridTemplateRows: "repeat(4, auto)",
+    gridTemplateRows: "auto auto",
+    gap: "12px",
   },
-  deviceInfoCard: {
-    // 在大屏幕上占据两行
+  coreInfoCard: {
+    // 核心信息卡片
   },
-  deviceInfoCardLarge: {
-    gridColumn: "1 / 2",
-    gridRow: "1 / 3",
-  },
-  propertiesCard: {
-    // 自动布局
-  },
-  propertiesCardLarge: {
-    gridColumn: "2 / 3",
-    gridRow: "1 / 2",
-  },
-  systemInfoCard: {
-    // 自动布局
-  },
-  systemInfoCardLarge: {
-    gridColumn: "3 / 4",
-    gridRow: "1 / 2",
-  },
-  actionsCard: {
-    // 自动布局
-  },
-  actionsCardLarge: {
-    gridColumn: "2 / 4",
-    gridRow: "2 / 3",
+  securityCard: {
+    // 安全状态卡片
   },
   noDevice: {
     gridColumn: "1 / -1",
@@ -118,13 +92,12 @@ const DeviceInfoPanel: React.FC = () => {
     selectDevice,
     isScanning
   } = useDeviceStore();
-  const { startScanning, stopScanning, refreshDeviceInfo } = useDeviceService();
+  const { refreshDeviceInfo } = useDeviceService();
+  const { addNotification } = useAppStore();
   const { layoutSize } = useResponsiveLayout();
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  useEffect(() => {
-    startScanning();
-    return () => stopScanning();
-  }, [startScanning, stopScanning]);
+  // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
 
   const connectedDevices = devices.filter(d => d.connected);
 
@@ -136,6 +109,42 @@ const DeviceInfoPanel: React.FC = () => {
   const handleRefresh = async () => {
     if (selectedDevice) {
       await refreshDeviceInfo(selectedDevice.serial);
+    }
+  };
+
+  const handleShowDetails = () => {
+    setShowDetailsModal(true);
+  };
+
+  const handleCopyInfo = async () => {
+    if (!selectedDevice) return;
+
+    try {
+      const deviceInfo = [
+        `设备名称: ${selectedDevice.properties?.marketName || selectedDevice.properties?.model || '未知'}`,
+        `品牌: ${selectedDevice.properties?.brand || '未知'}`,
+        `型号: ${selectedDevice.properties?.model || '未知'}`,
+        `序列号: ${selectedDevice.serial}`,
+        `Android版本: ${selectedDevice.properties?.androidVersion || '未知'}`,
+        `设备模式: ${selectedDevice.mode}`,
+      ];
+
+      if (selectedDevice.properties?.batteryLevel !== undefined) {
+        deviceInfo.push(`电池电量: ${selectedDevice.properties.batteryLevel}%`);
+      }
+
+      await navigator.clipboard.writeText(deviceInfo.join('\n'));
+      addNotification({
+        type: "success",
+        title: "复制成功",
+        message: "设备信息已复制到剪贴板",
+      });
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "复制失败",
+        message: "无法访问剪贴板",
+      });
     }
   };
 
@@ -162,24 +171,18 @@ const DeviceInfoPanel: React.FC = () => {
 
   // 响应式布局逻辑
   const getContentClassName = () => {
-    const baseClass = styles.content;
     switch (layoutSize) {
-      case 'xlarge':
       case 'large':
-        return `${baseClass} ${styles.contentLarge}`;
+      case 'xlarge':
+        return styles.content;
       case 'medium':
-        return `${baseClass} ${styles.contentMedium}`;
+        return `${styles.content} ${styles.contentMedium}`;
+      case 'small':
+      case 'xsmall':
+        return `${styles.content} ${styles.contentSmall}`;
       default:
-        return `${baseClass} ${styles.contentSmall}`;
+        return styles.content;
     }
-  };
-
-  const getCardClassName = (cardType: string) => {
-    const baseClass = (styles as any)[`${cardType}Card`];
-    if (layoutSize === 'large' || layoutSize === 'xlarge') {
-      return `${baseClass} ${(styles as any)[`${cardType}CardLarge`]}`;
-    }
-    return baseClass;
   };
 
   return (
@@ -240,20 +243,27 @@ const DeviceInfoPanel: React.FC = () => {
           )}
         </div>
       ) : selectedDevice ? (
-        <div className={getContentClassName()}>
-          <div className={getCardClassName('deviceInfo')}>
-            <DeviceInfoCard device={selectedDevice} />
+        <>
+          <div className={getContentClassName()}>
+            <div className={styles.coreInfoCard}>
+              <DeviceCoreInfoCard
+                device={selectedDevice}
+                onShowDetails={handleShowDetails}
+                onCopyInfo={handleCopyInfo}
+              />
+            </div>
+            <div className={styles.securityCard}>
+              <SecurityStatusCard device={selectedDevice} />
+            </div>
           </div>
-          <div className={getCardClassName('properties')}>
-            <DevicePropertiesCard device={selectedDevice} />
-          </div>
-          <div className={getCardClassName('systemInfo')}>
-            <DeviceSystemInfoCard device={selectedDevice} />
-          </div>
-          <div className={getCardClassName('actions')}>
-            <DeviceActionsCard device={selectedDevice} />
-          </div>
-        </div>
+
+          {/* 详细信息模态框 */}
+          <DeviceDetailsModal
+            device={selectedDevice}
+            open={showDetailsModal}
+            onOpenChange={setShowDetailsModal}
+          />
+        </>
       ) : (
         <div className={styles.noDevice}>
           <Phone24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
