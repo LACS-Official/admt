@@ -11,6 +11,8 @@ import {
   Settings24Regular,
   Subtract24Regular,
   Dismiss24Regular,
+  Maximize24Regular,
+  SquareMultiple24Regular,
 } from "@fluentui/react-icons";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
@@ -65,15 +67,84 @@ const TitleBar: React.FC = () => {
   const styles = useStyles();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const { setCurrentView } = useAppStore();
+  const [isMaximized, setIsMaximized] = React.useState(false);
+
+  // 检查窗口状态
+  React.useEffect(() => {
+    const checkWindowState = async () => {
+      try {
+        const window = getCurrentWindow();
+        const maximized = await window.isMaximized();
+        console.log("窗口状态检查:", maximized);
+        setIsMaximized(maximized);
+      } catch (error) {
+        console.error("检查窗口状态失败:", error);
+      }
+    };
+
+    checkWindowState();
+
+    // 监听窗口状态变化
+    let unlistenPromise: Promise<() => void> | null = null;
+
+    const setupListener = async () => {
+      try {
+        const window = getCurrentWindow();
+        unlistenPromise = window.onResized(() => {
+          checkWindowState();
+        });
+      } catch (error) {
+        console.error("设置窗口监听器失败:", error);
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlistenPromise) {
+        unlistenPromise.then(fn => fn()).catch(console.error);
+      }
+    };
+  }, []);
 
   const handleMinimize = async () => {
-    const window = getCurrentWindow();
-    await window.minimize();
+    try {
+      console.log("🔧 执行窗口最小化...");
+      const window = getCurrentWindow();
+      await window.minimize();
+      console.log("✅ 窗口最小化成功");
+    } catch (error) {
+      console.error("❌ 最小化失败:", error);
+    }
+  };
+
+  const handleMaximize = async () => {
+    try {
+      const window = getCurrentWindow();
+      if (isMaximized) {
+        console.log("🔧 执行窗口还原...");
+        await window.unmaximize();
+        console.log("✅ 窗口还原成功");
+      } else {
+        console.log("🔧 执行窗口最大化...");
+        await window.maximize();
+        console.log("✅ 窗口最大化成功");
+      }
+      setIsMaximized(!isMaximized);
+    } catch (error) {
+      console.error("❌ 最大化/还原失败:", error);
+    }
   };
 
   const handleClose = async () => {
-    const window = getCurrentWindow();
-    await window.close();
+    try {
+      console.log("🔧 执行窗口关闭...");
+      const window = getCurrentWindow();
+      await window.close();
+      console.log("✅ 窗口关闭成功");
+    } catch (error) {
+      console.error("❌ 关闭失败:", error);
+    }
   };
 
   const handleSettings = () => {
@@ -84,7 +155,7 @@ const TitleBar: React.FC = () => {
     <div className={`${styles.titleBar} drag-region`}>
       <div className={styles.leftSection}>
         <div className={styles.logo} />
-        <Text className={styles.title}>HOUT - 澎湃解锁工具箱</Text>
+        <Text className={styles.title}>玩机管家</Text>
       </div>
       
       <div className={`${styles.rightSection} no-drag`}>
@@ -111,16 +182,37 @@ const TitleBar: React.FC = () => {
             appearance="subtle"
             icon={<Subtract24Regular />}
             className={styles.titleBarButton}
-            onClick={handleMinimize}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMinimize();
+            }}
           />
         </Tooltip>
-        
+
+        <Tooltip content={isMaximized ? "还原" : "最大化"} relationship="label">
+          <Button
+            appearance="subtle"
+            icon={isMaximized ? <SquareMultiple24Regular /> : <Maximize24Regular />}
+            className={styles.titleBarButton}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMaximize();
+            }}
+          />
+        </Tooltip>
+
         <Tooltip content="关闭" relationship="label">
           <Button
             appearance="subtle"
             icon={<Dismiss24Regular />}
             className={`${styles.titleBarButton} ${styles.closeButton}`}
-            onClick={handleClose}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleClose();
+            }}
           />
         </Tooltip>
       </div>

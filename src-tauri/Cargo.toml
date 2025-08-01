@@ -1,8 +1,8 @@
 [package]
-name = "hout-tauri"
+name = "wanjiguanjia-tauri"
 version = "1.0.0"
-description = "HOUT - 澎湃解锁工具箱 (Tauri版本)"
-authors = ["HOUT Team"]
+description = "玩机管家 (Tauri版本)"
+authors = ["玩机管家团队"]
 license = "MIT"
 repository = ""
 edition = "2021"

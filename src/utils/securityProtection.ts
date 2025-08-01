@@ -12,6 +12,12 @@ export class SecurityProtection {
   private onDevToolsDetected?: () => void;
 
   private constructor() {
+    // 在开发环境下默认禁用保护
+    if (import.meta.env.DEV) {
+      this.protectionEnabled = false;
+      this.refreshProtectionEnabled = false;
+      console.log('🔧 开发环境：安全保护已默认禁用');
+    }
     this.init();
   }
 
@@ -111,8 +117,20 @@ export class SecurityProtection {
         return false;
       }
 
-      // F5 - 刷新页面
+      // F5 - 刷新页面（在开发环境或特定情况下允许）
       if (this.refreshProtectionEnabled && e.key === 'F5') {
+        // 在开发环境下允许刷新
+        if (import.meta.env.DEV) {
+          console.log('开发环境下允许F5刷新');
+          return;
+        }
+
+        // 如果检测到开发者工具打开，允许刷新以恢复页面
+        if (this.isDevToolsOpen) {
+          console.log('检测到开发者工具，允许F5刷新以恢复页面');
+          return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
         return false;
@@ -120,6 +138,18 @@ export class SecurityProtection {
 
       // Ctrl+R - 刷新页面 (Windows/Linux)
       if (this.refreshProtectionEnabled && e.ctrlKey && e.key === 'r') {
+        // 在开发环境下允许刷新
+        if (import.meta.env.DEV) {
+          console.log('开发环境下允许Ctrl+R刷新');
+          return;
+        }
+
+        // 如果检测到开发者工具打开，允许刷新以恢复页面
+        if (this.isDevToolsOpen) {
+          console.log('检测到开发者工具，允许Ctrl+R刷新以恢复页面');
+          return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
         return false;
@@ -127,6 +157,18 @@ export class SecurityProtection {
 
       // Cmd+R - 刷新页面 (Mac)
       if (this.refreshProtectionEnabled && e.metaKey && e.key === 'r') {
+        // 在开发环境下允许刷新
+        if (import.meta.env.DEV) {
+          console.log('开发环境下允许Cmd+R刷新');
+          return;
+        }
+
+        // 如果检测到开发者工具打开，允许刷新以恢复页面
+        if (this.isDevToolsOpen) {
+          console.log('检测到开发者工具，允许Cmd+R刷新以恢复页面');
+          return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
         return false;
@@ -138,42 +180,50 @@ export class SecurityProtection {
    * 检测开发者工具是否打开
    */
   private startDevToolsDetection(): void {
-    // 方法1: 检测窗口尺寸变化
-    // let windowHeight = window.outerHeight;
-    // let windowWidth = window.outerWidth;
+    // 在开发环境下禁用检测，避免干扰开发
+    if (import.meta.env.DEV) {
+      console.log('开发环境下禁用开发者工具检测');
+      return;
+    }
 
-    // 方法2: 使用console.log检测
+    // 使用更温和的检测方法，减少误判
     const devtools = {
       open: false,
       orientation: null as string | null
     };
 
-    const threshold = 160;
+    // 提高阈值，减少误判
+    const threshold = 200;
+    let consecutiveDetections = 0;
+    const requiredDetections = 3; // 需要连续检测到3次才认为是真的打开了开发者工具
 
-    setInterval(() => {
-      if (window.outerHeight - window.innerHeight > threshold || 
-          window.outerWidth - window.innerWidth > threshold) {
-        if (!devtools.open) {
+    const checkInterval = setInterval(() => {
+      if (!this.protectionEnabled) {
+        clearInterval(checkInterval);
+        return;
+      }
+
+      const heightDiff = window.outerHeight - window.innerHeight;
+      const widthDiff = window.outerWidth - window.innerWidth;
+
+      if (heightDiff > threshold || widthDiff > threshold) {
+        consecutiveDetections++;
+        if (consecutiveDetections >= requiredDetections && !devtools.open) {
           devtools.open = true;
           this.handleDevToolsDetected();
         }
       } else {
-        devtools.open = false;
+        consecutiveDetections = 0;
+        if (devtools.open) {
+          devtools.open = false;
+          this.isDevToolsOpen = false;
+          // 恢复页面显示
+          this.restorePageContent();
+        }
       }
-    }, 500);
+    }, 1000); // 降低检测频率
 
-    // 方法3: 使用debugger检测
-    let element = new Image();
-    Object.defineProperty(element, 'id', {
-      get: () => {
-        this.handleDevToolsDetected();
-      }
-    });
-
-    setInterval(() => {
-      console.dir(element);
-      console.clear();
-    }, 1000);
+    this.devToolsCheckInterval = checkInterval;
   }
 
   /**
@@ -196,12 +246,17 @@ export class SecurityProtection {
    * 隐藏页面内容
    */
   private hidePageContent(): void {
+    // 在生产环境下才隐藏页面
+    if (import.meta.env.DEV) {
+      console.warn('开发环境下检测到开发者工具，但不隐藏页面');
+      return;
+    }
+
     const body = document.body;
-    if (body) {
-      body.style.display = 'none';
-      
-      // 创建警告页面
+    if (body && !document.getElementById('security-warning-overlay')) {
+      // 不完全隐藏body，而是添加遮罩层
       const warningDiv = document.createElement('div');
+      warningDiv.id = 'security-warning-overlay';
       warningDiv.innerHTML = `
         <div style="
           position: fixed;
@@ -209,22 +264,40 @@ export class SecurityProtection {
           left: 0;
           width: 100%;
           height: 100%;
-          background: #000;
+          background: rgba(0, 0, 0, 0.95);
           color: #fff;
           display: flex;
           justify-content: center;
           align-items: center;
-          font-size: 24px;
+          font-size: 18px;
           z-index: 999999;
+          backdrop-filter: blur(10px);
         ">
-          <div style="text-align: center;">
-            <h1>访问受限</h1>
-            <p>检测到开发者工具，页面已被保护</p>
-            <p>请关闭开发者工具后刷新页面</p>
+          <div style="
+            text-align: center;
+            padding: 40px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+          ">
+            <div style="font-size: 48px; margin-bottom: 20px;">🛡️</div>
+            <h1 style="margin: 0 0 16px 0; font-size: 24px;">安全保护已激活</h1>
+            <p style="margin: 0 0 12px 0; opacity: 0.9;">检测到开发者工具已打开</p>
+            <p style="margin: 0; opacity: 0.7; font-size: 14px;">关闭开发者工具后页面将自动恢复</p>
           </div>
         </div>
       `;
       document.documentElement.appendChild(warningDiv);
+    }
+  }
+
+  /**
+   * 恢复页面内容
+   */
+  private restorePageContent(): void {
+    const warningOverlay = document.getElementById('security-warning-overlay');
+    if (warningOverlay) {
+      warningOverlay.remove();
     }
   }
 
@@ -278,6 +351,12 @@ export class SecurityProtection {
    */
   public setProtectionEnabled(enabled: boolean): void {
     this.protectionEnabled = enabled;
+
+    // 如果禁用保护，恢复页面内容
+    if (!enabled) {
+      this.restorePageContent();
+      this.isDevToolsOpen = false;
+    }
   }
 
   /**
@@ -302,6 +381,22 @@ export class SecurityProtection {
   }
 
   /**
+   * 检查是否为开发环境
+   */
+  public isDevelopmentMode(): boolean {
+    return import.meta.env.DEV;
+  }
+
+  /**
+   * 手动恢复页面（用于调试或紧急情况）
+   */
+  public forceRestorePage(): void {
+    this.restorePageContent();
+    this.isDevToolsOpen = false;
+    console.log('页面已手动恢复');
+  }
+
+  /**
    * 销毁实例（用于测试或特殊情况）
    */
   public destroy(): void {
@@ -309,10 +404,43 @@ export class SecurityProtection {
       clearInterval(this.devToolsCheckInterval);
       this.devToolsCheckInterval = null;
     }
+    this.restorePageContent();
     this.protectionEnabled = false;
     this.refreshProtectionEnabled = false;
+    this.isDevToolsOpen = false;
   }
 }
 
 // 导出单例实例
 export const securityProtection = SecurityProtection.getInstance();
+
+// 全局错误恢复机制
+if (typeof window !== 'undefined') {
+  // 添加全局快捷键用于紧急恢复
+  window.addEventListener('keydown', (e) => {
+    // Ctrl+Alt+Shift+R - 紧急恢复页面
+    if (e.ctrlKey && e.altKey && e.shiftKey && e.key === 'R') {
+      console.log('🚨 紧急恢复：强制恢复页面');
+      securityProtection.forceRestorePage();
+      securityProtection.setProtectionEnabled(false);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  // 在控制台提供恢复方法
+  (window as any).emergencyRestore = () => {
+    console.log('🚨 紧急恢复：通过控制台恢复页面');
+    securityProtection.forceRestorePage();
+    securityProtection.setProtectionEnabled(false);
+    return '页面已恢复，安全保护已禁用';
+  };
+
+  // 开发环境下的额外提示
+  if (import.meta.env.DEV) {
+    console.log('🔧 开发提示：');
+    console.log('  - 如遇页面白屏，可按 Ctrl+Alt+Shift+R 紧急恢复');
+    console.log('  - 或在控制台执行 emergencyRestore() 恢复页面');
+    console.log('  - 开发环境下安全保护默认禁用');
+  }
+}

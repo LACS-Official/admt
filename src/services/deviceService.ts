@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useDeviceStore } from "../stores/deviceStore";
 import { useAppStore } from "../stores/appStore";
 import { DeviceInfo, DeviceProperties, CommandResult, InstalledApp, ApkInfo, BatchOperation, DeviceFile } from "../types/device";
+import { logService } from "./logService";
 
 export class DeviceService {
   private scanInterval: number | null = null;
@@ -203,6 +204,16 @@ export class DeviceService {
     }
   }
 
+  async checkFastbootAvailability(): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("check_fastboot_availability");
+      return result;
+    } catch (error) {
+      console.error("Failed to check Fastboot availability:", error);
+      throw error;
+    }
+  }
+
   async checkDeviceConnection(serial: string): Promise<CommandResult> {
     try {
       const result = await invoke<CommandResult>("check_device_connection", {
@@ -227,17 +238,83 @@ export class DeviceService {
     }
   }
 
-  startScanning(interval = 2000): void {
-    if (this.isScanning) return;
+  // ADB管理相关功能
+  async stopAdbServer(): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("stop_adb_server");
+      return result;
+    } catch (error) {
+      console.error("Failed to stop ADB server:", error);
+      throw error;
+    }
+  }
 
+  async restartAdbServer(): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("restart_adb_server");
+      return result;
+    } catch (error) {
+      console.error("Failed to restart ADB server:", error);
+      throw error;
+    }
+  }
+
+  async installDeviceDriver(): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("install_device_driver");
+      return result;
+    } catch (error) {
+      console.error("Failed to install device driver:", error);
+      throw error;
+    }
+  }
+
+  async fixUsb3Connection(): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("fix_usb3_connection");
+      return result;
+    } catch (error) {
+      console.error("Failed to fix USB 3.0 connection:", error);
+      throw error;
+    }
+  }
+
+  async clearAdbAuthorization(serial: string): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("clear_adb_authorization", { serial });
+      return result;
+    } catch (error) {
+      console.error("Failed to clear ADB authorization:", error);
+      throw error;
+    }
+  }
+
+  async diagnoseDeviceConnection(serial: string): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("diagnose_device_connection", { serial });
+      return result;
+    } catch (error) {
+      console.error("Failed to diagnose device connection:", error);
+      throw error;
+    }
+  }
+
+  startScanning(interval = 2000): void {
+    if (this.isScanning) {
+      logService.debug("设备扫描已在运行中", "DeviceService");
+      return;
+    }
+
+    logService.info("开始设备扫描...", "DeviceService");
     this.isScanning = true;
+    useDeviceStore.getState().setScanning(true);
 
     const scanDevicesInternal = async () => {
       try {
         const devices = await this.scanDevices();
         useDeviceStore.getState().setDevices(devices);
       } catch (error) {
-        console.error("Device scan failed:", error);
+        logService.error("设备扫描失败", "DeviceService", error);
       }
     };
 
@@ -248,11 +325,19 @@ export class DeviceService {
   }
 
   stopScanning(): void {
+    if (!this.isScanning) {
+      logService.debug("设备扫描未在运行", "DeviceService");
+      return;
+    }
+
+    logService.info("停止设备扫描...", "DeviceService");
+    this.isScanning = false;
+    useDeviceStore.getState().setScanning(false);
+
     if (this.scanInterval) {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
-    this.isScanning = false;
   }
 
   // APK下载相关方法
@@ -284,8 +369,7 @@ export class DeviceService {
   }
 }
 
-// 创建单例实例
-export const deviceService = new DeviceService();
+// 单例实例将在文件末尾创建
 
 // React Hook for device service
 export const useDeviceService = () => {
@@ -293,26 +377,35 @@ export const useDeviceService = () => {
   const scanningRef = useRef(false);
 
   const startScanning = useCallback(() => {
-    if (scanningRef.current) return;
-    
+    if (scanningRef.current) {
+      console.log("useDeviceService: Scanning already started by this hook");
+      return;
+    }
+
+    console.log("useDeviceService: Starting device scanning");
     scanningRef.current = true;
-    setLoading(true);
     deviceService.startScanning();
-    
-    addNotification({
-      type: "info",
-      title: "设备扫描",
-      message: "开始扫描连接的设备",
-    });
-  }, [setLoading, addNotification]);
+
+    // 只在第一次启动时显示通知
+    if (!deviceService.isScanning) {
+      addNotification({
+        type: "info",
+        title: "设备扫描",
+        message: "开始扫描连接的设备",
+      });
+    }
+  }, [addNotification]);
 
   const stopScanning = useCallback(() => {
-    if (!scanningRef.current) return;
-    
+    if (!scanningRef.current) {
+      console.log("useDeviceService: Scanning not started by this hook");
+      return;
+    }
+
+    console.log("useDeviceService: Stopping device scanning");
     scanningRef.current = false;
-    setLoading(false);
     deviceService.stopScanning();
-  }, [setLoading]);
+  }, []);
 
   const refreshDeviceInfo = useCallback(async (serial: string) => {
     try {
@@ -346,3 +439,64 @@ export const useDeviceService = () => {
     deviceService,
   };
 };
+
+// 扩展deviceService类，添加设备操作功能
+class ExtendedDeviceService extends DeviceService {
+  // 设备操作功能
+  async takeScreenshot(serial: string): Promise<void> {
+    try {
+      await invoke('take_screenshot', { serial });
+    } catch (error) {
+      console.error('截屏失败:', error);
+      throw error;
+    }
+  }
+
+  async startScreenRecord(serial: string): Promise<void> {
+    try {
+      await invoke('start_screen_record', { serial });
+    } catch (error) {
+      console.error('录屏失败:', error);
+      throw error;
+    }
+  }
+
+  async openFileManager(serial: string): Promise<void> {
+    try {
+      await invoke('open_file_manager', { serial });
+    } catch (error) {
+      console.error('打开文件管理器失败:', error);
+      throw error;
+    }
+  }
+
+  async openFileTransfer(serial: string): Promise<void> {
+    try {
+      await invoke('open_file_transfer', { serial });
+    } catch (error) {
+      console.error('打开文件传输失败:', error);
+      throw error;
+    }
+  }
+
+  async backupApps(serial: string): Promise<void> {
+    try {
+      await invoke('backup_apps', { serial });
+    } catch (error) {
+      console.error('应用备份失败:', error);
+      throw error;
+    }
+  }
+
+  async installApp(serial: string): Promise<void> {
+    try {
+      await invoke('install_app', { serial });
+    } catch (error) {
+      console.error('应用安装失败:', error);
+      throw error;
+    }
+  }
+}
+
+// 创建并导出扩展的服务实例（替代原有的DeviceService实例）
+export const deviceService = new ExtendedDeviceService();

@@ -32,6 +32,7 @@ pub fn run() {
             batch_install_apks,
             batch_uninstall_apps,
             check_adb_availability,
+            check_fastboot_availability,
             check_device_connection,
             get_device_connection_info,
             download_apk,

@@ -90,3 +90,17 @@ temp/
 
 # Build artifacts
 out/
+
+# Test files and debug files
+test-*.html
+test-*.js
+test-*.md
+test_*.js
+debug.log
+*.debug
+
+# Application specific
+activation-data/
+user-data/
+cache/
+build.log

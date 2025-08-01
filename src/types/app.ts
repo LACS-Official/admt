@@ -3,6 +3,7 @@ export interface AppConfig {
   language: "zh-CN" | "en-US";
   autoDetectDevices: boolean;
   scanInterval: number;
+  deviceDetectionInterval: number;
   logLevel: "debug" | "info" | "warn" | "error";
   adbPath?: string;
   fastbootPath?: string;
@@ -17,14 +18,18 @@ export interface AppState {
 }
 
 export type AppView =
-  | "device-info"
-  | "file-manager"
-  | "adb-tools"
-  | "device-control"
-  | "app-manager"
-  | "screen-mirror"
-  | "tools"
+  | "home"
+  | "adb-zone"
+  | "flash-zone"
+  | "device-management"
+  | "extended-features"
   | "settings";
+
+export type SettingsView =
+  | "about"
+  | "tool-settings"
+  | "other-settings"
+  | "logs";
 
 export interface NotificationMessage {
   id: string;
@@ -58,4 +63,64 @@ export interface ToolInfo {
   version?: string;
   isInstalled: boolean;
   downloadUrl?: string;
+}
+
+// 版本管理相关类型定义
+export interface VersionInfo {
+  id: number;
+  version: string;
+  releaseNotes: string;
+  releaseNotesEn?: string;
+  releaseDate: string;
+  downloadLinks?: {
+    official?: string;
+    quark?: string;
+    baidu?: string;
+    github?: string;
+  };
+  fileSize?: string;
+  isStable: boolean;
+  versionType: "release" | "beta" | "alpha";
+  metadata?: {
+    buildNumber?: string;
+    commitHash?: string;
+    changelog?: string[];
+  };
+}
+
+export interface SoftwareInfo {
+  id: number;
+  name: string;
+  nameEn?: string;
+  description: string;
+  descriptionEn?: string;
+  currentVersion: string;
+  category?: string;
+  tags?: string[];
+  officialWebsite?: string;
+  metadata?: {
+    developer?: string;
+    license?: string;
+    platform?: string[];
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VersionCheckResult {
+  needsUpdate: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  isForceUpdate: boolean;
+  updateInfo?: VersionInfo;
+  message: string;
+}
+
+export interface VersionCheckResponse {
+  success: boolean;
+  data?: {
+    software: SoftwareInfo;
+    versions: VersionInfo[];
+  };
+  error?: string;
 }

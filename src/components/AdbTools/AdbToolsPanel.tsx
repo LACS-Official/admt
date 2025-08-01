@@ -7,7 +7,6 @@ import {
   Button,
   Field,
   Input,
-  Badge,
 } from "@fluentui/react-components";
 import {
   Code24Regular,
@@ -193,17 +192,6 @@ const AdbToolsPanel: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Code24Regular />
-          <Text size={500} weight="semibold">ADB工具</Text>
-          {selectedDevice && (
-            <Badge appearance="filled" color="success">
-              {selectedDevice.serial}
-            </Badge>
-          )}
-        </div>
-      </div>
 
       <div className={styles.content}>
         <Card className={styles.card}>

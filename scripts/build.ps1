@@ -1,7 +1,7 @@
-# HOUT Tauri 应用构建脚本
+# 玩机管家 Tauri 应用构建脚本
 # PowerShell 脚本用于构建和打包应用
 
-Write-Host "🚀 开始构建 HOUT - 澎湃解锁工具箱..." -ForegroundColor Green
+Write-Host "🚀 开始构建玩机管家..." -ForegroundColor Green
 
 # 检查必要的工具
 Write-Host "📋 检查构建环境..." -ForegroundColor Yellow
