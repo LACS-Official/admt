@@ -317,15 +317,15 @@ const OtherSettingsPanel: React.FC = () => {
           <div className={styles.cardContent}>
             <Field label="数据收集:">
               <div className={styles.checkboxGroup}>
-                <Checkbox label="匿名使用统计" />
-                <Checkbox label="错误报告" defaultChecked />
-                <Checkbox label="性能数据" />
+                <Checkbox label="匿名使用统计（必需）" defaultChecked disabled />
+                <Checkbox label="错误报告（必需）" defaultChecked disabled />
+                <Checkbox label="性能数据（必需）" defaultChecked disabled />
               </div>
             </Field>
 
-            <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-              我们重视您的隐私，所有数据收集都是匿名的，
-              仅用于改善产品体验。您可以随时关闭这些选项。
+            <Text size={200} style={{ color: "var(--colorPaletteRedForeground1)" }}>
+              ⚠️ 这些数据收集选项是软件正常运行所必需的，无法关闭。
+              所有数据都经过匿名化处理，仅用于改善产品体验和确保软件稳定性。
             </Text>
           </div>
         </Card>

@@ -6,6 +6,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { ActivationStatus, ActivationRequest, ActivationResponse, AppConfig } from '../types/welcome';
 import { activationLogger } from './activationLogger';
+import { userBehaviorService } from './userBehaviorService';
+import { parseApiTime, getPriorityExpiryTime, checkExpiryStatus } from '../utils/timeZoneUtils';
 
 // 激活码存储的加密密钥（实际应用中应该使用更安全的方式）
 const STORAGE_KEY = 'wanjiguanjia_activation_data';
@@ -139,29 +141,10 @@ export class ActivationService {
   /**
    * 解析API返回的过期时间字符串
    * 支持ISO 8601格式的UTC时间字符串
+   * @deprecated 使用 parseApiTime 替代
    */
   private parseApiExpiryDate(expiryDateString: string): Date | undefined {
-    try {
-      // API返回的格式：2025-01-01T12:00:00.000Z
-      const date = new Date(expiryDateString);
-
-      // 验证日期是否有效
-      if (isNaN(date.getTime())) {
-        console.error('无效的过期时间格式:', expiryDateString);
-        return undefined;
-      }
-
-      console.log('成功解析过期时间:', {
-        original: expiryDateString,
-        parsed: date.toISOString(),
-        localTime: date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
-      });
-
-      return date;
-    } catch (error) {
-      console.error('解析过期时间失败:', error, '原始值:', expiryDateString);
-      return undefined;
-    }
+    return parseApiTime(expiryDateString) || undefined;
   }
 
   /**
@@ -266,6 +249,14 @@ export class ActivationService {
           apiValidation: response.apiValidation // 保存完整的API验证信息
         });
 
+        // 记录激活统计数据
+        try {
+          await this.recordActivationStatistics(request, response);
+        } catch (error) {
+          // 统计记录失败不应影响激活流程
+          console.warn('记录激活统计失败:', error);
+        }
+
         activationLogger.logActivationSuccess(response);
       }
 
@@ -279,6 +270,59 @@ export class ActivationService {
         expiryDate: undefined,
         features: undefined,
         token: undefined
+      };
+    }
+  }
+
+  /**
+   * 记录激活统计数据
+   */
+  private async recordActivationStatistics(
+    request: ActivationRequest,
+    response: ActivationResponse
+  ): Promise<void> {
+    try {
+      activationLogger.debug('STATISTICS', '开始记录激活统计数据');
+
+      // 获取系统信息
+      const systemInfo = await this.getSystemInfo();
+
+      // 记录激活统计
+      const success = await userBehaviorService.recordActivation({
+        activationCode: request.activationCode,
+        username: request.userConfig?.username,
+        userEmail: request.userConfig?.email,
+        deviceOs: systemInfo.os,
+        deviceArch: systemInfo.arch,
+        softwareVersion: '1.0.0', // 可以从配置中获取
+      });
+
+      if (success) {
+        activationLogger.debug('STATISTICS', '激活统计记录成功');
+      } else {
+        activationLogger.warn('STATISTICS', '激活统计记录失败');
+      }
+    } catch (error) {
+      activationLogger.error('STATISTICS', '记录激活统计时出错', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * 获取系统信息
+   */
+  private async getSystemInfo(): Promise<{ os: string; arch: string }> {
+    try {
+      // 可以通过Tauri API获取更准确的系统信息
+      return {
+        os: navigator.platform || 'Unknown',
+        arch: navigator.userAgent.includes('x64') ? 'x64' :
+              navigator.userAgent.includes('ARM') ? 'arm64' : 'x86'
+      };
+    } catch (error) {
+      return {
+        os: 'Unknown',
+        arch: 'Unknown'
       };
     }
   }
@@ -435,26 +479,20 @@ export class ActivationService {
       };
     }
 
-    // 优先使用apiValidation.expiresAt进行过期检查
-    let expiryDate: Date;
-    let expiredReason: string | undefined;
+    // 使用新的时区处理工具获取优先过期时间
+    const expiryDate = getPriorityExpiryTime(
+      data.apiValidation?.expiresAt,
+      data.expiryDate
+    );
 
-    if (data.apiValidation?.expiresAt) {
-      const apiExpiryDate = this.parseApiExpiryDate(data.apiValidation.expiresAt);
-      if (apiExpiryDate) {
-        expiryDate = apiExpiryDate;
-        console.log('使用API验证过期时间:', data.apiValidation.expiresAt);
-      } else {
-        expiryDate = new Date(data.expiryDate);
-        expiredReason = 'API过期时间解析失败，使用备用时间';
-        console.warn(expiredReason);
-      }
-    } else {
-      expiryDate = new Date(data.expiryDate);
-      console.log('使用本地存储过期时间:', data.expiryDate);
+    let expiredReason: string | undefined;
+    if (!expiryDate) {
+      expiredReason = '无法获取有效的过期时间';
     }
 
-    const isExpired = this.isActivationExpired(expiryDate);
+    // 使用新的过期检查工具
+    const expiryStatus = checkExpiryStatus(expiryDate);
+    const isExpired = expiryStatus.isExpired;
 
     if (isExpired && !expiredReason) {
       const now = new Date();
@@ -497,12 +535,18 @@ export class ActivationService {
       return null;
     }
 
-    const now = new Date();
-    const expiryDate = new Date(data.expiryDate);
-    const diffTime = expiryDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // 使用新的时区处理工具获取优先过期时间
+    const expiryDate = getPriorityExpiryTime(
+      data.apiValidation?.expiresAt,
+      data.expiryDate
+    );
 
-    return Math.max(0, diffDays);
+    if (!expiryDate) {
+      return null;
+    }
+
+    const expiryStatus = checkExpiryStatus(expiryDate);
+    return expiryStatus.remainingDays;
   }
 
   /**

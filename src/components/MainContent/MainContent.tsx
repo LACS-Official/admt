@@ -19,6 +19,7 @@ import {
   Wrench24Regular,
   Apps24Regular,
   CloudArrowUp24Regular,
+  CloudArrowDown24Regular,
   Circle12Filled,
 } from "@fluentui/react-icons";
 import { getDeviceIcon } from "../../assets/icons";
@@ -31,6 +32,7 @@ import AdbZonePanel from "../AdbZone/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
 import DeviceManagementPanel from "../DeviceManagement/DeviceManagementPanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
+import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "../Carousel/CarouselComponent";
 
@@ -453,6 +455,11 @@ const tabs = [
     icon: <Wrench24Regular />,
   },
   {
+    id: "online-resources" as AppView,
+    label: "在线资源",
+    icon: <CloudArrowDown24Regular />,
+  },
+  {
     id: "settings" as AppView,
     label: "设置",
     icon: <Settings24Regular />,
@@ -709,6 +716,8 @@ const MainContent: React.FC = () => {
         return <DeviceManagementPanel />;
       case "extended-features":
         return <ExtendedFeaturesPanel />;
+      case "online-resources":
+        return <OnlineResourcesPanel />;
       case "settings":
         return <SettingsPanel />;
       default:

@@ -13,9 +13,10 @@ export enum ActivationStatus {
 
 // 欢迎页面步骤
 export enum WelcomeStep {
-  WELCOME = 'welcome',
-  CONFIGURATION = 'configuration',
-  ACTIVATION = 'activation',
+  INTRODUCTION = 'introduction',    // 第1页：软件介绍
+  AGREEMENT = 'agreement',          // 第2页：用户协议和条款
+  SETTINGS = 'settings',            // 第3页：基础设置
+  ACTIVATION = 'activation',        // 第4页：激活码验证
   COMPLETE = 'complete'
 }
 
@@ -107,6 +108,10 @@ export interface WelcomeState {
   userConfig: Partial<UserConfiguration>;
   activationCode: string;
   activationStatus: ActivationStatus;
+  // 新增：协议同意状态
+  userAgreementAccepted: boolean;
+  privacyPolicyAccepted: boolean;
+  analyticsConsent: boolean;
 }
 
 // 默认用户配置

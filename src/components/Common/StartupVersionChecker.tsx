@@ -24,8 +24,8 @@ import {
   useToastController,
   ToastIntent
 } from '@fluentui/react-components';
-import { 
-  ArrowDownload24Regular, 
+import {
+  Open24Regular,
   Warning24Regular,
   Checkmark24Regular,
   Dismiss24Regular,
@@ -186,13 +186,45 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
   }, [onCheckComplete, showSuccessToast, timeoutReached]);
 
   /**
-   * 处理立即更新
+   * 处理立即更新 - 跳转到浏览器打开下载页面
    */
   const handleUpdateNow = useCallback(() => {
+    let downloadUrl = '';
+
+    // 优先使用官方下载链接
     if (checkResult?.updateInfo?.downloadLinks?.official) {
-      window.open(checkResult.updateInfo.downloadLinks.official, '_blank');
+      downloadUrl = checkResult.updateInfo.downloadLinks.official;
     } else if (checkResult?.updateInfo?.downloadLinks?.github) {
-      window.open(checkResult.updateInfo.downloadLinks.github, '_blank');
+      downloadUrl = checkResult.updateInfo.downloadLinks.github;
+    } else if (checkResult?.updateInfo?.downloadUrl) {
+      downloadUrl = checkResult.updateInfo.downloadUrl;
+    }
+
+    if (downloadUrl) {
+      // 使用 Tauri 的 shell API 打开浏览器
+      import('@tauri-apps/plugin-shell').then(({ open }) => {
+        open(downloadUrl).catch((error) => {
+          console.error('无法打开浏览器:', error);
+          // 降级到 window.open
+          window.open(downloadUrl, '_blank');
+        });
+      }).catch(() => {
+        // 如果 Tauri shell 插件不可用，使用 window.open
+        window.open(downloadUrl, '_blank');
+      });
+
+      // 显示成功提示
+      dispatchToast(
+        <Toast>
+          <ToastTitle media={<Open24Regular />}>
+            正在打开下载页面
+          </ToastTitle>
+          <ToastBody>
+            请在浏览器中完成下载和安装
+          </ToastBody>
+        </Toast>,
+        { intent: 'success' as ToastIntent }
+      );
     } else {
       // 如果没有下载链接，显示提示
       dispatchToast(
@@ -351,12 +383,12 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
             ) : (
               // 强制更新状态的按钮
               <div className={styles.actions}>
-                <Button 
-                  appearance="primary" 
+                <Button
+                  appearance="primary"
                   onClick={handleUpdateNow}
-                  icon={<ArrowDownload24Regular />}
+                  icon={<Open24Regular />}
                 >
-                  立即更新
+                  前往下载
                 </Button>
               </div>
             )}

@@ -26,6 +26,7 @@ import {
 } from '@fluentui/react-icons';
 import { ActivationStatus } from '../../types/welcome';
 import { activationService } from '../../services/activationService';
+import { formatActivationExpiryDate } from '../../utils/dateFormatter';
 
 const useStyles = makeStyles({
   card: {
@@ -205,7 +206,7 @@ export const ActivationStatusCard: React.FC<ActivationStatusCardProps> = ({
           {expiryDate && status === ActivationStatus.ACTIVATED && (
             <div className={styles.statusRow}>
               <Body1>过期时间:</Body1>
-              <Text>{expiryDate.toLocaleDateString('zh-CN')}</Text>
+              <Text>{formatActivationExpiryDate(expiryDate)}</Text>
             </div>
           )}
 

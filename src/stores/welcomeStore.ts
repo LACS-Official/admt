@@ -18,13 +18,18 @@ interface WelcomeStore extends WelcomeState {
   setUserConfig: (config: Partial<UserConfiguration>) => void;
   setActivationCode: (code: string) => void;
   setActivationStatus: (status: ActivationStatus) => void;
-  
+
+  // 新增：协议同意状态方法
+  setUserAgreementAccepted: (accepted: boolean) => void;
+  setPrivacyPolicyAccepted: (accepted: boolean) => void;
+  setAnalyticsConsent: (consent: boolean) => void;
+
   // 业务方法
   nextStep: () => void;
   previousStep: () => void;
   resetWelcome: () => void;
   updateUserConfig: (key: keyof UserConfiguration, value: string | boolean) => void;
-  
+
   // 验证方法
   validateCurrentStep: () => boolean;
   canProceedToNext: () => boolean;
@@ -51,12 +56,16 @@ interface AppConfigStore {
 // 欢迎页面状态管理
 export const useWelcomeStore = create<WelcomeStore>((set, get) => ({
   // 初始状态
-  currentStep: WelcomeStep.WELCOME,
+  currentStep: WelcomeStep.INTRODUCTION,
   isLoading: false,
   error: null,
   userConfig: { ...DEFAULT_USER_CONFIG },
   activationCode: '',
   activationStatus: ActivationStatus.NOT_ACTIVATED,
+  // 新增：协议同意状态
+  userAgreementAccepted: false,
+  privacyPolicyAccepted: false,
+  analyticsConsent: true, // 默认同意匿名数据收集
 
   // 状态更新方法
   setCurrentStep: (step) => set({ currentStep: step }),
@@ -68,13 +77,20 @@ export const useWelcomeStore = create<WelcomeStore>((set, get) => ({
   setActivationCode: (code) => set({ activationCode: code }),
   setActivationStatus: (status) => set({ activationStatus: status }),
 
+  // 新增：协议同意状态方法
+  setUserAgreementAccepted: (accepted) => set({ userAgreementAccepted: accepted }),
+  setPrivacyPolicyAccepted: (accepted) => set({ privacyPolicyAccepted: accepted }),
+  setAnalyticsConsent: (consent) => set({ analyticsConsent: consent }),
+
   // 业务方法
   nextStep: () => {
     const { currentStep, canProceedToNext } = get();
     if (!canProceedToNext()) return;
 
     const stepOrder = [
-      WelcomeStep.WELCOME,
+      WelcomeStep.INTRODUCTION,
+      WelcomeStep.AGREEMENT,
+      WelcomeStep.SETTINGS,
       WelcomeStep.ACTIVATION,
       WelcomeStep.COMPLETE
     ];
@@ -88,7 +104,9 @@ export const useWelcomeStore = create<WelcomeStore>((set, get) => ({
   previousStep: () => {
     const { currentStep } = get();
     const stepOrder = [
-      WelcomeStep.WELCOME,
+      WelcomeStep.INTRODUCTION,
+      WelcomeStep.AGREEMENT,
+      WelcomeStep.SETTINGS,
       WelcomeStep.ACTIVATION,
       WelcomeStep.COMPLETE
     ];
@@ -100,12 +118,15 @@ export const useWelcomeStore = create<WelcomeStore>((set, get) => ({
   },
 
   resetWelcome: () => set({
-    currentStep: WelcomeStep.WELCOME,
+    currentStep: WelcomeStep.INTRODUCTION,
     isLoading: false,
     error: null,
     userConfig: { ...DEFAULT_USER_CONFIG },
     activationCode: '',
     activationStatus: ActivationStatus.NOT_ACTIVATED,
+    userAgreementAccepted: false,
+    privacyPolicyAccepted: false,
+    analyticsConsent: false,
   }),
 
   updateUserConfig: (key, value) => set((state) => ({
@@ -114,13 +135,21 @@ export const useWelcomeStore = create<WelcomeStore>((set, get) => ({
 
   // 验证方法
   validateCurrentStep: () => {
-    const { currentStep, activationCode, activationStatus } = get();
+    const {
+      currentStep,
+      activationCode,
+      activationStatus,
+      userAgreementAccepted,
+      privacyPolicyAccepted
+    } = get();
 
     switch (currentStep) {
-      case WelcomeStep.WELCOME:
-        return true; // 欢迎页面无需验证
-      case WelcomeStep.CONFIGURATION:
-        return true; // 配置页面无需验证，直接跳过
+      case WelcomeStep.INTRODUCTION:
+        return true; // 介绍页面无需验证
+      case WelcomeStep.AGREEMENT:
+        return userAgreementAccepted && privacyPolicyAccepted; // 必须同意协议
+      case WelcomeStep.SETTINGS:
+        return true; // 设置页面无需验证
       case WelcomeStep.ACTIVATION:
         return activationStatus === ActivationStatus.ACTIVATED ||
                !!(activationCode && activationCode.trim().length > 0);

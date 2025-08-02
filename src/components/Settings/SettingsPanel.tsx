@@ -13,12 +13,14 @@ import {
   Wrench24Regular,
   Options24Regular,
   Document24Regular,
+  Shield24Regular,
 } from "@fluentui/react-icons";
 import { SettingsView } from "../../types/app";
 import AboutPanel from "./AboutPanel";
 import ToolSettingsPanel from "./ToolSettingsPanel";
 import OtherSettingsPanel from "./OtherSettingsPanel";
 import LogsPanel from "./LogsPanel";
+import PrivacyManagementPanel from "../Privacy/PrivacyManagementPanel";
 
 const useStyles = makeStyles({
   container: {
@@ -63,6 +65,11 @@ const tabs = [
     icon: <Options24Regular />,
   },
   {
+    id: "privacy" as SettingsView,
+    label: "隐私政策",
+    icon: <Shield24Regular />,
+  },
+  {
     id: "logs" as SettingsView,
     label: "日志",
     icon: <Document24Regular />,
@@ -85,6 +92,8 @@ const SettingsPanel: React.FC = () => {
         return <ToolSettingsPanel />;
       case "other-settings":
         return <OtherSettingsPanel />;
+      case "privacy":
+        return <PrivacyManagementPanel />;
       case "logs":
         return <LogsPanel />;
       default:

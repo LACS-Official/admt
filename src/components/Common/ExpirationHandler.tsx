@@ -27,6 +27,7 @@ import {
   ArrowClockwise24Regular,
 } from '@fluentui/react-icons';
 import { activationService } from '../../services/activationService';
+import { formatActivationExpiryDate, formatRemainingTime } from '../../utils/dateFormatter';
 
 const useStyles = makeStyles({
   dialogContent: {
@@ -234,7 +235,7 @@ export const ExpirationHandler: React.FC<ExpirationHandlerProps> = ({
                   <div className={styles.statusInfo}>
                     <div className={styles.statusRow}>
                       <Text weight="semibold">过期时间:</Text>
-                      <Text>{expirationInfo.expiryDate?.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) || '未知'}</Text>
+                      <Text>{formatActivationExpiryDate(expirationInfo.expiryDate)}</Text>
                     </div>
                     <div className={styles.statusRow}>
                       <Text weight="semibold">当前状态:</Text>
@@ -269,12 +270,12 @@ export const ExpirationHandler: React.FC<ExpirationHandlerProps> = ({
                   <div className={styles.statusInfo}>
                     <div className={styles.statusRow}>
                       <Text weight="semibold">过期时间:</Text>
-                      <Text>{expirationInfo.expiryDate?.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) || '未知'}</Text>
+                      <Text>{formatActivationExpiryDate(expirationInfo.expiryDate)}</Text>
                     </div>
                     <div className={styles.statusRow}>
                       <Text weight="semibold">剩余时间:</Text>
                       <Text className={styles.timeDisplay}>
-                        {expirationInfo.remainingMinutes !== undefined 
+                        {expirationInfo.remainingMinutes !== undefined
                           ? formatRemainingTime(expirationInfo.remainingMinutes)
                           : '未知'}
                       </Text>

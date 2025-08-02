@@ -4,14 +4,21 @@ import { useDeviceStore } from "../stores/deviceStore";
 import { useAppStore } from "../stores/appStore";
 import { DeviceInfo, DeviceProperties, CommandResult, InstalledApp, ApkInfo, BatchOperation, DeviceFile } from "../types/device";
 import { logService } from "./logService";
+import { userBehaviorService } from "./userBehaviorService";
+import { generateDeviceUniqueIdFromProperties } from "../utils/deviceIdentification";
 
 export class DeviceService {
   private scanInterval: number | null = null;
   private isScanning = false;
+  private connectedDevices = new Map<string, { connectedAt: Date; properties?: DeviceProperties }>();
 
   async scanDevices(): Promise<DeviceInfo[]> {
     try {
       const devices = await invoke<DeviceInfo[]>("scan_devices");
+
+      // 处理设备连接/断开统计
+      await this.handleDeviceConnectionChanges(devices);
+
       return devices;
     } catch (error) {
       console.error("Failed to scan devices:", error);
@@ -365,6 +372,97 @@ export class DeviceService {
     } catch (error) {
       // console.error("Failed to get download size:", error);
       throw error;
+    }
+  }
+
+  /**
+   * 处理设备连接变化，记录统计数据
+   */
+  private async handleDeviceConnectionChanges(currentDevices: DeviceInfo[]): Promise<void> {
+    try {
+      const currentSerials = new Set(currentDevices.map(d => d.serial));
+      const previousSerials = new Set(this.connectedDevices.keys());
+
+      // 检测新连接的设备
+      for (const device of currentDevices) {
+        if (!previousSerials.has(device.serial) && device.connected) {
+          await this.recordDeviceConnection(device);
+        }
+      }
+
+      // 检测断开的设备
+      for (const [serial, connectionInfo] of this.connectedDevices.entries()) {
+        if (!currentSerials.has(serial)) {
+          await this.recordDeviceDisconnection(serial, connectionInfo);
+        }
+      }
+
+      // 更新连接设备记录
+      this.updateConnectedDevicesRecord(currentDevices);
+    } catch (error) {
+      console.warn('处理设备连接变化失败:', error);
+    }
+  }
+
+  /**
+   * 记录设备连接
+   */
+  private async recordDeviceConnection(device: DeviceInfo): Promise<void> {
+    try {
+      console.log('记录设备连接:', device.serial);
+
+      // 获取设备详细属性
+      let properties: DeviceProperties | undefined;
+      try {
+        properties = await this.getDeviceProperties(device.serial);
+      } catch (error) {
+        console.warn('获取设备属性失败:', error);
+      }
+
+      // 记录连接信息（简化版本，不记录连接时间）
+      this.connectedDevices.set(device.serial, { connectedAt: new Date(), properties });
+
+      // 发送统计数据（只收集基本设备信息）
+      const connectionData = {
+        deviceSerial: device.serial,
+        deviceBrand: properties?.brand,
+        deviceModel: properties?.model,
+        softwareId: 1001, // 玩机管家软件ID
+        softwareVersion: '1.0.0', // 可以从配置中获取
+      };
+
+      await userBehaviorService.recordDeviceConnection(connectionData);
+      console.log('设备连接统计已记录:', device.serial);
+    } catch (error) {
+      console.error('记录设备连接失败:', error);
+    }
+  }
+
+  /**
+   * 记录设备断开
+   */
+  private async recordDeviceDisconnection(
+    serial: string,
+    connectionInfo: { connectedAt: Date; properties?: DeviceProperties }
+  ): Promise<void> {
+    try {
+      console.log('设备断开:', serial);
+      // 不再记录断开统计，只记录连接即可
+    } catch (error) {
+      console.error('处理设备断开失败:', error);
+    }
+  }
+
+  /**
+   * 更新连接设备记录
+   */
+  private updateConnectedDevicesRecord(currentDevices: DeviceInfo[]): void {
+    // 清除已断开的设备
+    const currentSerials = new Set(currentDevices.map(d => d.serial));
+    for (const serial of this.connectedDevices.keys()) {
+      if (!currentSerials.has(serial)) {
+        this.connectedDevices.delete(serial);
+      }
     }
   }
 }

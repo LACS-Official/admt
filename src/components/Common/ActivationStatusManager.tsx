@@ -26,6 +26,7 @@ import {
 import { useAppConfigStore } from '../../stores/welcomeStore';
 import { activationService } from '../../services/activationService';
 import { ActivationStatus } from '../../types/welcome';
+import { formatActivationExpiryDate } from '../../utils/dateFormatter';
 
 const useStyles = makeStyles({
   messageBar: {
@@ -176,7 +177,7 @@ export const ActivationStatusManager: React.FC<ActivationStatusManagerProps> = (
             <DialogContent>
               <div className={styles.dialogContent}>
                 <Text>
-                  您的激活码已于 {config.expiryDate ? new Date(config.expiryDate).toLocaleDateString('zh-CN') : '未知日期'} 过期。
+                  您的激活码已于 {formatActivationExpiryDate(config.expiryDate)} 过期。
                   为了继续使用HOUT工具箱的完整功能，请重新激活应用。
                 </Text>
 
@@ -187,7 +188,7 @@ export const ActivationStatusManager: React.FC<ActivationStatusManagerProps> = (
                   </div>
                   <div className={styles.statusRow}>
                     <Text weight="semibold">过期时间:</Text>
-                    <Text>{config.expiryDate ? new Date(config.expiryDate).toLocaleDateString('zh-CN') : '未知'}</Text>
+                    <Text>{formatActivationExpiryDate(config.expiryDate)}</Text>
                   </div>
                   <div className={styles.statusRow}>
                     <Text weight="semibold">已激活功能:</Text>
