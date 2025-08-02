@@ -214,9 +214,18 @@ const ActivationStep: React.FC = () => {
       if (response.success) {
         setActivationStatus(ActivationStatus.ACTIVATED);
 
-        // 保存激活响应数据
+        // 保存激活响应数据，优先使用API验证的过期时间
+        let expiryDate: Date | undefined;
+        if (response.apiValidation?.expiresAt) {
+          expiryDate = new Date(response.apiValidation.expiresAt);
+          console.log('ActivationStep: 使用API验证过期时间:', response.apiValidation.expiresAt);
+        } else if (response.expiryDate) {
+          expiryDate = new Date(response.expiryDate);
+          console.log('ActivationStep: 使用响应过期时间:', response.expiryDate);
+        }
+
         setActivationResponse({
-          expiryDate: response.expiryDate ? new Date(response.expiryDate) : undefined,
+          expiryDate,
           features: response.features
         });
 
@@ -368,6 +377,12 @@ const ActivationStep: React.FC = () => {
             value={activationCode}
             onChange={(e) => handleActivationCodeChange(e.target.value)}
             disabled={isLoading}
+            autoComplete="off"
+            data-form-type="other"
+            data-lpignore="true"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
         </Field>
 

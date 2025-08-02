@@ -23,12 +23,14 @@ export type AppView =
   | "flash-zone"
   | "device-management"
   | "extended-features"
+  | "online-resources"
   | "settings";
 
 export type SettingsView =
   | "about"
   | "tool-settings"
   | "other-settings"
+  | "privacy"
   | "logs";
 
 export interface NotificationMessage {
@@ -123,4 +125,107 @@ export interface VersionCheckResponse {
     versions: VersionInfo[];
   };
   error?: string;
+}
+
+// 公告相关类型
+export interface Announcement {
+  id: number;
+  title: string;
+  titleEn?: string;
+  content: string;
+  contentEn?: string;
+  type: 'general' | 'update' | 'security' | 'maintenance';
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  version?: string;
+  isPublished: boolean;
+  publishedAt: string;
+  expiresAt?: string;
+  metadata?: {
+    author?: string;
+    tags?: string[];
+    [key: string]: any;
+  };
+}
+
+export interface AnnouncementResponse {
+  success: boolean;
+  data: {
+    software: {
+      id: number;
+      name: string;
+    };
+    announcements: Announcement[];
+    pagination?: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+  error?: string;
+}
+
+// 在线资源相关类型
+export interface OnlineSoftware {
+  id: number;
+  name: string;
+  nameEn?: string;
+  description: string;
+  descriptionEn?: string;
+  currentVersion: string;
+  currentVersionId?: number;
+  latestDownloadUrl?: string;
+  category?: string;
+  tags?: string[];
+  officialWebsite?: string;
+  openname?: string;
+  filetype?: string;
+  systemRequirements?: {
+    os?: string[];
+    memory?: string;
+    storage?: string;
+  };
+  metadata?: {
+    developer?: string;
+    license?: string;
+    platform?: string[];
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OnlineSoftwareResponse {
+  success: boolean;
+  data: OnlineSoftware[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  error?: string;
+}
+
+export interface DownloadTask {
+  id: string;
+  softwareId: number;
+  softwareName: string;
+  fileName: string;
+  downloadUrl: string;
+  progress: number;
+  status: "pending" | "downloading" | "completed" | "failed" | "cancelled";
+  error?: string;
+  startTime: Date;
+  endTime?: Date;
+  fileSize?: number;
+  downloadedSize?: number;
+}
+
+// 在线资源页面状态
+export type OnlineResourcesView = "list" | "detail";
+
+export interface OnlineResourcesState {
+  currentView: OnlineResourcesView;
+  selectedSoftwareId?: number;
+  selectedSoftware?: OnlineSoftware;
 }

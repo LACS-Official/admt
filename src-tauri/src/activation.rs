@@ -69,22 +69,30 @@ pub struct VerifyResponse {
     pub success: bool,
     pub data: Option<VerifyResponseData>,
     pub error: Option<String>,
-    #[serde(rename = "usedAt")]
-    pub used_at: Option<DateTime<Utc>>,
-    #[serde(rename = "expiresAt")]
-    pub expires_at: Option<DateTime<Utc>>,
 }
 
-/// 验证响应数据（简化版本）
+/// 验证响应数据（根据实际API响应格式更新）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifyResponseData {
     pub id: String,
     pub code: String,
+    #[serde(rename = "activatedAt")]
+    pub activated_at: String, // API返回的是字符串格式的时间
     #[serde(rename = "productInfo")]
     pub product_info: Option<ProductInfo>,
     pub metadata: Option<serde_json::Value>,
-    #[serde(rename = "activatedAt")]
-    pub activated_at: DateTime<Utc>,
+    #[serde(rename = "apiValidation")]
+    pub api_validation: Option<ApiValidationInfo>,
+}
+
+/// API验证信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiValidationInfo {
+    #[serde(rename = "expiresAt")]
+    pub expires_at: String,
+    #[serde(rename = "remainingTime")]
+    pub remaining_time: Option<i64>,
+    pub message: Option<String>,
 }
 
 /// 激活请求
@@ -236,6 +244,19 @@ impl ActivationValidator {
         true
     }
     
+    /// 检查激活码是否过期
+    pub fn is_activation_expired(&self, activation_code: &ActivationCode) -> bool {
+        let now = chrono::Utc::now();
+        now > activation_code.expires_at
+    }
+
+    /// 获取激活码剩余有效时间（秒）
+    pub fn get_remaining_time(&self, activation_code: &ActivationCode) -> i64 {
+        let now = chrono::Utc::now();
+        let remaining = activation_code.expires_at.timestamp() - now.timestamp();
+        std::cmp::max(0, remaining)
+    }
+
     /// 验证激活码有效性（云端验证）
     pub async fn validate_code(&self, code: &str) -> Result<ActivationCode> {
         // 格式验证
@@ -286,13 +307,27 @@ impl ActivationValidator {
                             if verify_response.success {
                                 if let Some(verify_data) = verify_response.data {
                                     // 将VerifyResponseData转换为ActivationCode
+                                    // 由于API响应格式与ActivationCode结构不完全匹配，我们需要构造缺失的字段
+                                    let activated_at = chrono::DateTime::parse_from_rfc3339(&verify_data.activated_at)
+                                        .map(|dt| dt.with_timezone(&chrono::Utc))
+                                        .unwrap_or_else(|_| chrono::Utc::now());
+
+                                    // 从apiValidation中获取过期时间
+                                    let expires_at = if let Some(api_validation) = &verify_data.api_validation {
+                                        chrono::DateTime::parse_from_rfc3339(&api_validation.expires_at)
+                                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                                            .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(365))
+                                    } else {
+                                        chrono::Utc::now() + chrono::Duration::days(365)
+                                    };
+
                                     let activation_code = ActivationCode {
                                         id: verify_data.id,
                                         code: verify_data.code,
-                                        created_at: verify_data.activated_at, // 使用激活时间作为创建时间
-                                        expires_at: verify_data.activated_at + chrono::Duration::days(365), // 默认1年有效期
-                                        is_used: true, // 已激活表示已使用
-                                        used_at: Some(verify_data.activated_at),
+                                        created_at: chrono::Utc::now(), // API没有返回，使用当前时间
+                                        expires_at,
+                                        is_used: true, // 验证成功说明已被使用
+                                        used_at: Some(activated_at),
                                         metadata: verify_data.metadata,
                                         product_info: verify_data.product_info,
                                     };
@@ -439,5 +474,29 @@ impl ActivationValidator {
 impl Default for ActivationValidator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// Tauri命令：检查激活码过期状态
+#[tauri::command]
+pub async fn check_activation_expiry(activation_data: String) -> std::result::Result<serde_json::Value, String> {
+    match serde_json::from_str::<ActivationCode>(&activation_data) {
+        Ok(activation_code) => {
+            let validator = ActivationValidator::new();
+            let is_expired = validator.is_activation_expired(&activation_code);
+            let remaining_time = validator.get_remaining_time(&activation_code);
+
+            let result = serde_json::json!({
+                "isExpired": is_expired,
+                "expiresAt": activation_code.expires_at.to_rfc3339(),
+                "remainingTime": remaining_time,
+                "remainingDays": remaining_time / (24 * 60 * 60),
+                "remainingHours": (remaining_time % (24 * 60 * 60)) / 3600,
+                "remainingMinutes": (remaining_time % 3600) / 60
+            });
+
+            Ok(result)
+        }
+        Err(e) => Err(format!("解析激活码数据失败: {}", e))
     }
 }

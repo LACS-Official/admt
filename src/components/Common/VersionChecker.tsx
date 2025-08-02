@@ -19,11 +19,11 @@ import {
   makeStyles,
   tokens
 } from '@fluentui/react-components';
-import { 
-  ArrowDownload24Regular, 
-  Info24Regular, 
+import {
+  Open24Regular,
+  Info24Regular,
   Warning24Regular,
-  Checkmark24Regular 
+  Checkmark24Regular
 } from '@fluentui/react-icons';
 import { versionService } from '../../services/versionService';
 import { VersionCheckResult } from '../../types/app';
@@ -139,17 +139,38 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
   };
 
   /**
-   * 处理立即更新
+   * 处理立即更新 - 跳转到浏览器打开下载页面
    */
   const handleUpdateNow = () => {
+    let downloadUrl = '';
+
+    // 优先使用官方下载链接
     if (checkResult?.updateInfo?.downloadLinks?.official) {
-      // 打开下载链接
-      window.open(checkResult.updateInfo.downloadLinks.official, '_blank');
+      downloadUrl = checkResult.updateInfo.downloadLinks.official;
     } else if (checkResult?.updateInfo?.downloadLinks?.github) {
-      window.open(checkResult.updateInfo.downloadLinks.github, '_blank');
+      downloadUrl = checkResult.updateInfo.downloadLinks.github;
+    } else if (checkResult?.updateInfo?.downloadUrl) {
+      downloadUrl = checkResult.updateInfo.downloadUrl;
+    }
+
+    if (downloadUrl) {
+      // 使用 Tauri 的 shell API 打开浏览器
+      import('@tauri-apps/plugin-shell').then(({ open }) => {
+        open(downloadUrl).catch((error) => {
+          console.error('无法打开浏览器:', error);
+          // 降级到 window.open
+          window.open(downloadUrl, '_blank');
+        });
+      }).catch(() => {
+        // 如果 Tauri shell 插件不可用，使用 window.open
+        window.open(downloadUrl, '_blank');
+      });
     } else {
-      // 如果没有下载链接，可以跳转到官网或显示提示
+      // 如果没有下载链接，跳转到官网或显示提示
       console.warn('没有可用的下载链接');
+      // 可以跳转到官网或项目页面
+      const fallbackUrl = 'https://github.com/your-repo/releases'; // 替换为实际的项目地址
+      window.open(fallbackUrl, '_blank');
     }
     setIsDialogOpen(false);
   };
@@ -275,9 +296,9 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
               <Button
                 appearance="primary"
                 onClick={handleUpdateNow}
-                icon={<ArrowDownload24Regular />}
+                icon={<Open24Regular />}
               >
-                立即更新
+                前往下载
               </Button>
               {/* 强制更新时不显示"稍后更新"按钮 */}
             </>

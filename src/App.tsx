@@ -5,7 +5,12 @@ import TitleBar from "./components/TitleBar/TitleBar";
 import MainContent from "./components/MainContent/MainContent";
 import StatusBar from "./components/StatusBar/StatusBar";
 import NotificationContainer from "./components/Common/NotificationContainer";
+import StartupFlowManager from "./components/StartupFlow/StartupFlowManager";
+import StartupFlowTest from "./test/StartupFlowTest";
+import ActivationFlowTest from "./test/ActivationFlowTest";
+
 import { useAppStore } from "./stores/appStore";
+import { useStartupFlowStore } from "./stores/startupFlowStore";
 import { logService } from "./services/logService";
 
 const useStyles = makeStyles({
@@ -31,7 +36,19 @@ function App() {
   const styles = useStyles();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showStartupFlow, setShowStartupFlow] = useState(true); // 启用启动流程
+  const [showTestPage, setShowTestPage] = useState(false); // 禁用测试页面
+
   const { initialize } = useAppStore();
+  const { currentPhase } = useStartupFlowStore();
+
+  // 监听启动流程状态变化，确保删除激活码后能重新显示启动流程
+  useEffect(() => {
+    if (currentPhase === 'activation-verification' && !showStartupFlow) {
+      console.log('🔄 检测到需要激活验证，重新显示启动流程');
+      setShowStartupFlow(true);
+    }
+  }, [currentPhase, showStartupFlow]);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -46,28 +63,48 @@ function App() {
 
         logService.info('HOUT 应用初始化完成', 'App');
         setIsLoading(false);
+        // 初始化完成后，启动流程会自动开始
       } catch (err) {
         logService.error('应用初始化失败', 'App', err);
         setError('应用初始化失败，请重试');
         setIsLoading(false);
+        setShowStartupFlow(false); // 初始化失败时跳过启动流程
       }
     };
 
     initializeApp();
   }, [initialize]);
 
-  // 加载中状态
+  const handleStartupFlowComplete = () => {
+    logService.info('启动流程完成', 'App');
+    setShowStartupFlow(false);
+  };
+
+  const handleStartupFlowError = (error: string) => {
+    logService.error('启动流程失败', 'App', error);
+    setError(error);
+    // 即使启动流程失败，也允许用户继续使用应用
+    setShowStartupFlow(false);
+  };
+
+  // 加载中状态 - 现在直接进入启动流程，不显示单独的加载页面
   if (isLoading) {
+    // 加载完成后会自动显示启动流程
+    return null;
+  }
+
+  // 显示测试页面
+  if (showTestPage) {
+    return <StartupFlowTest />;
+  }
+
+  // 显示启动流程
+  if (showStartupFlow) {
     return (
-      <div className={styles.loading}>
-        <Spinner size="large" />
-        <Text size={400}>正在加载玩机管家...</Text>
-        {error && (
-          <MessageBar intent="error" style={{ marginTop: '16px', maxWidth: '400px' }}>
-            {error}
-          </MessageBar>
-        )}
-      </div>
+      <StartupFlowManager
+        onComplete={handleStartupFlowComplete}
+        onError={handleStartupFlowError}
+      />
     );
   }
 

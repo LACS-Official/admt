@@ -2,7 +2,10 @@ use crate::device::{DeviceInfo, DeviceMode, DeviceProperties, CommandResult, Ins
 use crate::error::{HoutError, Result};
 use crate::screen_mirror::{ScreenMirrorSession, ScreenMirrorConfig, ScreenMirrorDevice};
 use crate::utils::{execute_adb_command as utils_execute_adb_command, execute_fastboot_command, parse_device_list};
+use tauri::Emitter;
 use crate::activation::{ActivationValidator, ActivationRequest, ActivationResponse, AppConfig};
+use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 
 
@@ -1108,6 +1111,95 @@ pub async fn get_download_size(url: String, is_direct: bool) -> Result<u64> {
     }
 }
 
+/// 下载文件（支持进度回调）
+#[tauri::command]
+pub async fn download_file(
+    url: String,
+    file_name: String,
+    task_id: String,
+    window: tauri::Window,
+) -> Result<String> {
+    use tokio::fs;
+    use tokio::io::AsyncWriteExt;
+    use futures_util::StreamExt;
+
+    log::info!("开始下载文件: {} -> {}", url, file_name);
+
+    // 创建下载目录
+    let downloads_dir = std::env::temp_dir().join("hout_downloads");
+    fs::create_dir_all(&downloads_dir).await
+        .map_err(|e| HoutError::Io(format!("Failed to create downloads directory: {}", e)))?;
+
+    // 生成文件路径
+    let file_path = downloads_dir.join(&file_name);
+
+    // 开始下载
+    let client = reqwest::Client::new();
+    let response = client.get(&url)
+        .send()
+        .await
+        .map_err(|e| HoutError::Network(format!("Failed to start download: {}", e)))?;
+
+    if !response.status().is_success() {
+        return Err(HoutError::Network(format!("Download failed with status: {}", response.status())));
+    }
+
+    // 获取文件总大小
+    let total_size = response.content_length().unwrap_or(0);
+    let mut downloaded_size = 0u64;
+
+    // 创建文件
+    let mut file = fs::File::create(&file_path).await
+        .map_err(|e| HoutError::Io(format!("Failed to create file: {}", e)))?;
+
+    // 下载文件流
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk_result) = stream.next().await {
+        let chunk = chunk_result.map_err(|e| HoutError::Network(format!("Failed to read chunk: {}", e)))?;
+
+        // 写入文件
+        file.write_all(&chunk).await
+            .map_err(|e| HoutError::Io(format!("Failed to write chunk: {}", e)))?;
+
+        // 更新进度
+        downloaded_size += chunk.len() as u64;
+        let progress = if total_size > 0 {
+            (downloaded_size as f64 / total_size as f64 * 100.0) as u32
+        } else {
+            0
+        };
+
+        // 发送进度事件到前端
+        let _ = window.emit("download-progress", serde_json::json!({
+            "taskId": task_id,
+            "progress": progress,
+            "downloadedSize": downloaded_size,
+            "totalSize": total_size
+        }));
+    }
+
+    // 确保文件写入完成
+    file.flush().await
+        .map_err(|e| HoutError::Io(format!("Failed to flush file: {}", e)))?;
+
+    log::info!("文件下载完成: {}", file_path.display());
+    Ok(file_path.to_string_lossy().to_string())
+}
+
+/// 取消下载
+#[tauri::command]
+pub async fn cancel_download(task_id: String, window: tauri::Window) -> Result<()> {
+    log::info!("取消下载任务: {}", task_id);
+
+    // 发送取消事件到前端
+    let _ = window.emit("download-cancelled", serde_json::json!({
+        "taskId": task_id
+    }));
+
+    Ok(())
+}
+
 // ==================== 投屏相关命令 ====================
 
 /// 检查设备是否支持投屏
@@ -1544,4 +1636,130 @@ fn extract_resolution_number(resolution: &str) -> String {
     }
 
     "1080".to_string() // 默认值
+}
+
+// ==================== 安全配置相关命令 ====================
+
+/// 安全配置结构体
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityConfig {
+    pub api_base_url: String,
+    pub api_key: String,
+    pub app_id: String,
+    pub app_secret: String,
+    pub signature_secret: String,
+    pub enable_signature: bool,
+    pub enable_strict_user_agent: bool,
+}
+
+/// 获取安全配置
+#[tauri::command]
+pub async fn get_security_config() -> Result<SecurityConfig> {
+    log::info!("Getting security configuration");
+
+    // 在生产环境中，这些配置应该从安全的存储位置读取
+    // 例如：加密的配置文件、系统密钥库等
+    let config = SecurityConfig {
+        api_base_url: "https://api-g.lacs.cc".to_string(), // 正确的API地址
+        api_key: "7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e".to_string(),
+        app_id: "wanjiguanjia-desktop-v1.0.0".to_string(),
+        app_secret: "wjgj_2024_secure_app_secret_key_for_user_behavior_stats".to_string(),
+        signature_secret: "signature_secret_2024_wanjiguanjia_user_behavior_api_protection".to_string(),
+        enable_signature: false, // 开发环境暂时禁用
+        enable_strict_user_agent: false, // 开发环境暂时禁用
+    };
+
+    log::info!("Security configuration loaded successfully");
+    Ok(config)
+}
+
+/// 验证安全配置
+#[tauri::command]
+pub async fn validate_security_config() -> Result<bool> {
+    log::info!("Validating security configuration");
+
+    match get_security_config().await {
+        Ok(config) => {
+            // 验证配置完整性
+            if config.api_key.len() < 32 {
+                log::error!("API key is too weak");
+                return Ok(false);
+            }
+
+            if config.app_secret.len() < 16 {
+                log::error!("App secret is too weak");
+                return Ok(false);
+            }
+
+            if config.api_base_url.is_empty() {
+                log::error!("API base URL is empty");
+                return Ok(false);
+            }
+
+            log::info!("Security configuration validation passed");
+            Ok(true)
+        }
+        Err(e) => {
+            log::error!("Failed to validate security configuration: {}", e);
+            Ok(false)
+        }
+    }
+}
+
+/// 获取平台信息
+#[tauri::command]
+pub async fn get_platform_info() -> Result<String> {
+    Ok(std::env::consts::OS.to_string())
+}
+
+/// 获取系统架构信息
+#[tauri::command]
+pub async fn get_system_arch() -> Result<String> {
+    Ok(std::env::consts::ARCH.to_string())
+}
+
+/// 打开开发者工具（仅在调试模式下可用）
+#[tauri::command]
+pub async fn open_devtools(app: tauri::AppHandle) -> Result<()> {
+    #[cfg(debug_assertions)]
+    {
+        if let Some(window) = app.get_webview_window("main") {
+            window.open_devtools();
+            log::info!("开发者工具已打开");
+            Ok(())
+        } else {
+            log::error!("无法找到主窗口");
+            Err(HoutError::FileOperationFailed { message: "无法找到主窗口".to_string() })
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        log::warn!("开发者工具在生产模式下不可用");
+        Err(HoutError::FileOperationFailed { message: "开发者工具在生产模式下不可用".to_string() })
+    }
+}
+
+/// 检查是否为调试模式
+#[tauri::command]
+pub async fn is_debug_mode() -> Result<bool> {
+    Ok(cfg!(debug_assertions))
+}
+
+/// 获取应用环境信息
+#[tauri::command]
+pub async fn get_app_environment() -> Result<serde_json::Value> {
+    let mut env_info = serde_json::Map::new();
+
+    env_info.insert("debug_mode".to_string(), serde_json::Value::Bool(cfg!(debug_assertions)));
+    env_info.insert("platform".to_string(), serde_json::Value::String(std::env::consts::OS.to_string()));
+    env_info.insert("arch".to_string(), serde_json::Value::String(std::env::consts::ARCH.to_string()));
+    env_info.insert("family".to_string(), serde_json::Value::String(std::env::consts::FAMILY.to_string()));
+
+    // 添加版本信息
+    if let Ok(version) = std::env::var("CARGO_PKG_VERSION") {
+        env_info.insert("version".to_string(), serde_json::Value::String(version));
+    }
+
+    Ok(serde_json::Value::Object(env_info))
 }

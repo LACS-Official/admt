@@ -13,10 +13,13 @@ import {
   Dismiss24Regular,
   Maximize24Regular,
   SquareMultiple24Regular,
+  Person24Regular,
 } from "@fluentui/react-icons";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
+import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import UserInfoModal from "../UserInfo/UserInfoModal";
 
 const useStyles = makeStyles({
   titleBar: {
@@ -67,6 +70,7 @@ const TitleBar: React.FC = () => {
   const styles = useStyles();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const { setCurrentView } = useAppStore();
+  const { config } = useAppConfigStore();
   const [isMaximized, setIsMaximized] = React.useState(false);
 
   // 检查窗口状态
@@ -159,6 +163,17 @@ const TitleBar: React.FC = () => {
       </div>
       
       <div className={`${styles.rightSection} no-drag`}>
+        {/* 用户信息按钮 - 始终显示 */}
+        <UserInfoModal>
+          <Tooltip content="我的信息" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Person24Regular />}
+              className={styles.titleBarButton}
+            />
+          </Tooltip>
+        </UserInfoModal>
+
         <Tooltip content="切换主题" relationship="label">
           <Button
             appearance="subtle"
@@ -167,7 +182,7 @@ const TitleBar: React.FC = () => {
             onClick={toggleTheme}
           />
         </Tooltip>
-        
+
         <Tooltip content="设置" relationship="label">
           <Button
             appearance="subtle"

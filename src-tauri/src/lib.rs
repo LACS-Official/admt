@@ -9,6 +9,7 @@ mod activation;
 mod activation_tests;
 
 use commands::*;
+use activation::check_activation_expiry;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -37,6 +38,8 @@ pub fn run() {
             get_device_connection_info,
             download_apk,
             get_download_size,
+            download_file,
+            cancel_download,
             check_screen_mirror_support,
             start_screen_mirror,
             stop_screen_mirror,
@@ -44,9 +47,17 @@ pub fn run() {
             activate_application,
             check_activation_status,
             validate_local_activation_data,
+            check_activation_expiry,
             get_device_fingerprint,
             get_app_config,
-            save_app_config
+            save_app_config,
+            get_security_config,
+            validate_security_config,
+            get_platform_info,
+            get_system_arch,
+            open_devtools,
+            is_debug_mode,
+            get_app_environment
         ])
         .setup(|app| {
             // 只在调试模式下初始化日志插件
