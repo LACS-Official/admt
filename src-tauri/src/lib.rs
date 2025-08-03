@@ -4,6 +4,7 @@ mod error;
 mod screen_mirror;
 mod utils;
 mod activation;
+mod download_manager;
 
 #[cfg(test)]
 mod activation_tests;
@@ -40,6 +41,8 @@ pub fn run() {
             get_download_size,
             download_file,
             cancel_download,
+            get_downloads_directory,
+            cleanup_downloads,
             check_screen_mirror_support,
             start_screen_mirror,
             stop_screen_mirror,
@@ -57,7 +60,12 @@ pub fn run() {
             get_system_arch,
             open_devtools,
             is_debug_mode,
-            get_app_environment
+            get_app_environment,
+            download_and_extract_software,
+            get_default_download_directory,
+            open_folder,
+            check_file_exists,
+            delete_file
         ])
         .setup(|app| {
             // 只在调试模式下初始化日志插件

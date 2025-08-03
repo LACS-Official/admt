@@ -77,6 +77,15 @@ pub enum HoutError {
 
     #[error("Tauri error: {0}")]
     Tauri(String),
+
+    #[error("Network error: {0}")]
+    NetworkError(String),
+
+    #[error("Extraction error: {0}")]
+    ExtractionError(String),
+
+    #[error("Unsupported format: {0}")]
+    UnsupportedFormat(String),
 }
 
 impl From<std::io::Error> for HoutError {

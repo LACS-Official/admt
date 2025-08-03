@@ -15,15 +15,14 @@ import {
 import {
   CloudArrowDown24Regular,
   Search24Regular,
-  ChevronRight24Regular,
-  Info24Regular,
-  Tag24Regular,
-  Globe24Regular,
   ErrorCircle24Filled,
+  ArrowDownload24Regular,
 } from '@fluentui/react-icons';
 import { OnlineSoftware, OnlineResourcesState } from '../../types/app';
 import { onlineResourcesService, SearchParams } from '../../services/onlineResourcesService';
-import SoftwareDetailPanel from './SoftwareDetailPanel';
+
+import { DownloadManagerPanel } from './DownloadManagerPanel';
+import { ResourceDetailModal } from './ResourceDetailModalSimple';
 
 const useStyles = makeStyles({
   container: {
@@ -36,8 +35,8 @@ const useStyles = makeStyles({
   },
   header: {
     display: 'flex',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: '8px',
     marginBottom: '8px',
   },
   searchContainer: {
@@ -163,6 +162,7 @@ const OnlineResourcesPanel: React.FC = () => {
     currentView: 'list',
     selectedSoftwareId: undefined,
     selectedSoftware: undefined,
+    showResourceDetailModal: false,
   });
   const [softwareList, setSoftwareList] = useState<OnlineSoftware[]>([]);
   const [loading, setLoading] = useState(false);
@@ -198,41 +198,60 @@ const OnlineResourcesPanel: React.FC = () => {
     }
   };
 
-  // 查看软件详情
-  const handleViewDetail = (software: OnlineSoftware) => {
-    setState({
-      currentView: 'detail',
-      selectedSoftwareId: software.id,
-      selectedSoftware: software,
-    });
-  };
 
-  // 返回列表页面
-  const handleBackToList = () => {
+
+  // 查看下载管理
+  const handleViewDownloads = () => {
     setState({
-      currentView: 'list',
+      currentView: 'downloads',
       selectedSoftwareId: undefined,
       selectedSoftware: undefined,
+      showResourceDetailModal: false,
     });
   };
 
-  // 格式化日期
-  const formatDate = (dateString: string): string => {
+  // 显示资源详情弹窗
+  const handleShowResourceModal = (software: OnlineSoftware) => {
+    setState(prev => ({
+      ...prev,
+      showResourceDetailModal: true,
+      selectedResourceForModal: software,
+    }));
+  };
+
+  // 关闭资源详情弹窗
+  const handleCloseResourceModal = () => {
+    setState(prev => ({
+      ...prev,
+      showResourceDetailModal: false,
+      selectedResourceForModal: undefined,
+    }));
+  };
+
+  // 从弹窗下载软件
+  const handleDownloadFromModal = async (software: OnlineSoftware) => {
     try {
-      return new Date(dateString).toLocaleDateString('zh-CN');
-    } catch {
-      return dateString;
+      await onlineResourcesService.downloadSoftware(software);
+      // 可以选择关闭弹窗或保持打开状态
+      // handleCloseResourceModal();
+    } catch (error) {
+      console.error('下载失败:', error);
     }
   };
 
+
+
   // 渲染软件卡片
   const renderSoftwareCard = (software: OnlineSoftware) => {
-
     return (
-      <Card key={software.id} className={styles.softwareCard}>
+      <Card
+        key={software.id}
+        className={styles.softwareCard}
+        onClick={() => handleShowResourceModal(software)}
+      >
         <div className={styles.cardContent}>
           <Text className={styles.softwareTitle}>{software.name}</Text>
-          
+
           <Text className={styles.softwareDescription}>
             {software.description}
           </Text>
@@ -241,7 +260,7 @@ const OnlineResourcesPanel: React.FC = () => {
             <Badge className={styles.versionBadge} appearance="outline">
               v{software.currentVersion}
             </Badge>
-            
+
             {software.category && (
               <Badge className={styles.versionBadge} appearance="tint">
                 {software.category}
@@ -249,38 +268,21 @@ const OnlineResourcesPanel: React.FC = () => {
             )}
           </div>
 
-          {software.tags && software.tags.length > 0 && (
-            <div className={styles.tagContainer}>
-              {software.tags.slice(0, 3).map((tag, index) => (
-                <Badge key={index} className={styles.tag} size="small" appearance="ghost">
-                  {tag}
-                </Badge>
-              ))}
-              {software.tags.length > 3 && (
-                <Badge className={styles.tag} size="small" appearance="ghost">
-                  +{software.tags.length - 3}
-                </Badge>
-              )}
+          {software.updatedAt && (
+            <div className={styles.softwareInfo}>
+              <Caption1 style={{ color: 'var(--colorNeutralForeground3)' }}>
+                更新于 {new Date(software.updatedAt).toLocaleDateString('zh-CN')}
+              </Caption1>
             </div>
           )}
 
-          <div className={styles.downloadSection}>
-            <div>
-              {software.filetype && (
-                <Caption1>{software.filetype.toUpperCase()}</Caption1>
-              )}
+          {software.filetype && (
+            <div className={styles.softwareInfo}>
+              <Caption1 style={{ color: 'var(--colorNeutralForeground2)' }}>
+                {software.filetype.toUpperCase()}
+              </Caption1>
             </div>
-            
-            <Button
-              icon={<ChevronRight24Regular />}
-              onClick={() => handleViewDetail(software)}
-              size="small"
-              className={styles.downloadButton}
-              appearance="primary"
-            >
-              查看详情
-            </Button>
-          </div>
+          )}
         </div>
       </Card>
     );
@@ -292,11 +294,10 @@ const OnlineResourcesPanel: React.FC = () => {
   }, []);
 
   // 根据当前视图渲染不同内容
-  if (state.currentView === 'detail' && state.selectedSoftwareId) {
+  if (state.currentView === 'downloads') {
     return (
-      <SoftwareDetailPanel
-        softwareId={state.selectedSoftwareId}
-        onBack={handleBackToList}
+      <DownloadManagerPanel
+        onBack={() => setState(prev => ({ ...prev, currentView: 'list' }))}
       />
     );
   }
@@ -304,8 +305,17 @@ const OnlineResourcesPanel: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <CloudArrowDown24Regular />
-        <Title2>在线资源</Title2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CloudArrowDown24Regular />
+          <Title2>在线资源</Title2>
+        </div>
+        <Button
+          appearance="outline"
+          icon={<ArrowDownload24Regular />}
+          onClick={handleViewDownloads}
+        >
+          下载管理
+        </Button>
       </div>
 
       <div className={styles.searchContainer}>
@@ -349,6 +359,16 @@ const OnlineResourcesPanel: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* 资源详情弹窗 */}
+      {state.selectedResourceForModal && (
+        <ResourceDetailModal
+          software={state.selectedResourceForModal}
+          isOpen={!!state.showResourceDetailModal}
+          onClose={handleCloseResourceModal}
+          onDownload={handleDownloadFromModal}
+        />
+      )}
     </div>
   );
 };

@@ -20,6 +20,7 @@ import { useAppStore } from "../../stores/appStore";
 import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import UserInfoModal from "../UserInfo/UserInfoModal";
+import AppIcon from "../Common/AppIcon";
 
 const useStyles = makeStyles({
   titleBar: {
@@ -40,8 +41,6 @@ const useStyles = makeStyles({
   logo: {
     width: "24px",
     height: "24px",
-    borderRadius: "4px",
-    backgroundColor: "var(--colorBrandBackground)",
   },
   title: {
     fontWeight: "600",
@@ -158,8 +157,10 @@ const TitleBar: React.FC = () => {
   return (
     <div className={`${styles.titleBar} drag-region`}>
       <div className={styles.leftSection}>
-        <div className={styles.logo} />
-        <Text className={styles.title}>玩机管家</Text>
+        <div className={styles.logo}>
+          <AppIcon size="medium"/>
+        </div>
+        <Text className={styles.title}>玩机管家-Android Device Management Tool</Text>
       </div>
       
       <div className={`${styles.rightSection} no-drag`}>

@@ -16,6 +16,7 @@ import {
   Globe24Regular,
   ArrowUpload24Regular,
 } from "@fluentui/react-icons";
+import AppIcon from "../Common/AppIcon";
 
 const useStyles = makeStyles({
   container: {
@@ -58,9 +59,8 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "32px",
-    color: "white",
     marginBottom: "8px",
+    padding: "8px",
   },
   versionBadge: {
     alignSelf: "center",
@@ -157,7 +157,7 @@ const AboutPanel: React.FC = () => {
 
           <div className={styles.aboutContent}>
             <div className={styles.appIcon}>
-              📱
+              <AppIcon size="xlarge" />
             </div>
             
             <Text size={600} weight="bold">玩机管家</Text>

@@ -468,15 +468,21 @@ const tabs = [
 
 const MainContent: React.FC = () => {
   const styles = useStyles();
-  const { currentView, setCurrentView } = useAppStore();
+  const { currentView, setCurrentView, config } = useAppStore();
   const { selectedDevice, devices, selectDevice } = useDeviceStore();
   const { startScanning, stopScanning, refreshDeviceInfo } = useDeviceService();
 
-  // 全局设备扫描 - 确保在所有标签页都能检测到设备
+  // 全局设备扫描 - 根据配置控制是否启用和扫描间隔
   useEffect(() => {
-    startScanning();
+    if (config.autoDetectDevices) {
+      // 如果扫描间隔改变，需要重新启动扫描
+      stopScanning();
+      startScanning();
+    } else {
+      stopScanning();
+    }
     return () => stopScanning();
-  }, [startScanning, stopScanning]);
+  }, [config.autoDetectDevices, config.scanInterval, startScanning, stopScanning]);
 
   // 当选择设备时自动获取设备属性
   useEffect(() => {
