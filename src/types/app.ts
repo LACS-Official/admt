@@ -213,19 +213,34 @@ export interface DownloadTask {
   fileName: string;
   downloadUrl: string;
   progress: number;
-  status: "pending" | "downloading" | "completed" | "failed" | "cancelled";
+  status: "pending" | "downloading" | "downloaded" | "extracting" | "completed" | "failed" | "cancelled";
   error?: string;
   startTime: Date;
   endTime?: Date;
   fileSize?: number;
   downloadedSize?: number;
+  downloadSpeed?: number; // 下载速度 (bytes/second)
+  remainingTime?: number; // 剩余时间 (seconds)
+  filePath?: string; // 下载完成后的文件路径
+  extractedPath?: string; // 解压后的目录路径
+  openname?: string; // 启动文件名或命令
+}
+
+// 下载管理状态
+export interface DownloadManagerState {
+  tasks: DownloadTask[];
+  activeDownloads: number;
+  totalDownloaded: number;
+  downloadHistory: DownloadTask[];
 }
 
 // 在线资源页面状态
-export type OnlineResourcesView = "list" | "detail";
+export type OnlineResourcesView = "list" | "detail" | "downloads";
 
 export interface OnlineResourcesState {
   currentView: OnlineResourcesView;
   selectedSoftwareId?: number;
   selectedSoftware?: OnlineSoftware;
+  showResourceDetailModal?: boolean;
+  selectedResourceForModal?: OnlineSoftware;
 }

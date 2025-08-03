@@ -25,8 +25,10 @@ import {
   Rocket24Regular,
   ArrowSync24Regular,
   Eye24Regular,
+  Phone24Regular,
 } from '@fluentui/react-icons';
 import { useWelcomeStore } from '../../../stores/welcomeStore';
+import { useAppStore } from '../../../stores/appStore';
 import { LANGUAGE_OPTIONS, THEME_OPTIONS } from '../../../types/welcome';
 
 const useStyles = makeStyles({
@@ -107,6 +109,7 @@ const SettingsPage: React.FC = () => {
     userConfig,
     updateUserConfig,
   } = useWelcomeStore();
+  const { config, updateConfig } = useAppStore();
 
   const handleLanguageChange = (value: string) => {
     updateUserConfig('language', value);
@@ -126,6 +129,17 @@ const SettingsPage: React.FC = () => {
 
   const handleTelemetryChange = (checked: boolean) => {
     updateUserConfig('enableTelemetry', checked);
+  };
+
+  const handleAutoDetectChange = (checked: boolean) => {
+    updateConfig({ autoDetectDevices: checked });
+  };
+
+  const handleScanIntervalChange = (value: string) => {
+    const interval = parseInt(value);
+    if (!isNaN(interval) && interval >= 1000) {
+      updateConfig({ scanInterval: interval });
+    }
   };
 
   return (
@@ -256,6 +270,69 @@ const SettingsPage: React.FC = () => {
                 checked={userConfig.enableTelemetry || false}
                 onChange={(_, data) => handleTelemetryChange(data.checked)}
               />
+            </div>
+          </div>
+        </Card>
+
+        <Divider />
+
+        {/* 设备检测设置 */}
+        <Card className={styles.settingCard}>
+          <Title2 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Phone24Regular style={{ fontSize: '24px' }} />
+            设备检测设置
+          </Title2>
+
+          <div className={styles.settingGroup}>
+            <div className={styles.settingItem}>
+              <div className={styles.settingInfo}>
+                <Text size={400} weight="semibold">
+                  自动检测设备
+                </Text>
+                <Caption1 style={{ color: 'var(--colorNeutralForeground2)' }}>
+                  自动扫描和检测连接的Android设备
+                </Caption1>
+              </div>
+              <Switch
+                checked={config.autoDetectDevices}
+                onChange={(_, data) => handleAutoDetectChange(data.checked)}
+              />
+            </div>
+
+            <div className={styles.settingItem}>
+              <div className={styles.settingInfo}>
+                <Text size={400} weight="semibold">
+                  扫描间隔
+                </Text>
+                <Caption1 style={{
+                  color: config.autoDetectDevices
+                    ? 'var(--colorNeutralForeground2)'
+                    : 'var(--colorNeutralForeground3)'
+                }}>
+                  设备扫描的时间间隔（毫秒）
+                </Caption1>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+                <Dropdown
+                  value={config.scanInterval.toString()}
+                  onOptionSelect={(_, data) => handleScanIntervalChange(data.optionValue || '2000')}
+                  disabled={!config.autoDetectDevices}
+                >
+                  <Option value="1000">1秒</Option>
+                  <Option value="2000">2秒</Option>
+                  <Option value="3000">3秒</Option>
+                  <Option value="5000">5秒</Option>
+                  <Option value="10000">10秒</Option>
+                </Dropdown>
+                <Text size={200} style={{
+                  color: config.autoDetectDevices
+                    ? 'var(--colorNeutralForeground3)'
+                    : 'var(--colorNeutralForeground4)',
+                  textAlign: 'center'
+                }}>
+                  {config.autoDetectDevices ? '推荐: 2-5秒' : '需要启用自动检测'}
+                </Text>
+              </div>
             </div>
           </div>
         </Card>

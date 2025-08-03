@@ -39,7 +39,7 @@ function App() {
   const [showStartupFlow, setShowStartupFlow] = useState(true); // 启用启动流程
   const [showTestPage, setShowTestPage] = useState(false); // 禁用测试页面
 
-  const { initialize } = useAppStore();
+  const { initialize, config } = useAppStore();
   const { currentPhase } = useStartupFlowStore();
 
   // 监听启动流程状态变化，确保删除激活码后能重新显示启动流程
@@ -57,6 +57,9 @@ function App() {
 
         // 初始化应用状态
         initialize();
+
+        // 记录设备检测配置状态
+        logService.info(`设备检测配置 - 自动检测: ${config.autoDetectDevices}, 扫描间隔: ${config.scanInterval}ms`, 'App');
 
         // 初始化过程
         await new Promise(resolve => setTimeout(resolve, 800));

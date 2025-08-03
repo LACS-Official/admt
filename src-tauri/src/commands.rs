@@ -2,10 +2,12 @@ use crate::device::{DeviceInfo, DeviceMode, DeviceProperties, CommandResult, Ins
 use crate::error::{HoutError, Result};
 use crate::screen_mirror::{ScreenMirrorSession, ScreenMirrorConfig, ScreenMirrorDevice};
 use crate::utils::{execute_adb_command as utils_execute_adb_command, execute_fastboot_command, parse_device_list};
+use crate::download_manager::{DownloadManager, DownloadRequest, DownloadProgress};
 use tauri::Emitter;
 use crate::activation::{ActivationValidator, ActivationRequest, ActivationResponse, AppConfig};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use std::path::PathBuf;
 
 
 
@@ -1005,6 +1007,26 @@ fn parse_aapt_output(output: &str, apk_info: &mut ApkInfo) {
     }
 }
 
+/// 获取应用下载目录
+fn get_app_downloads_dir() -> Result<std::path::PathBuf> {
+    // 尝试获取应用程序安装目录
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let downloads_dir = exe_dir.join("downloads");
+            return Ok(downloads_dir);
+        }
+    }
+
+    // 如果无法获取安装目录，使用应用数据目录
+    if let Some(data_dir) = dirs::data_dir() {
+        let app_data_dir = data_dir.join("HOUT").join("downloads");
+        return Ok(app_data_dir);
+    }
+
+    // 最后回退到临时目录
+    Ok(std::env::temp_dir().join("hout_downloads"))
+}
+
 /// 下载APK文件
 #[tauri::command]
 pub async fn download_apk(
@@ -1017,7 +1039,7 @@ pub async fn download_apk(
     use tokio::io::AsyncWriteExt;
 
     // 创建下载目录
-    let downloads_dir = std::env::temp_dir().join("hout_downloads");
+    let downloads_dir = get_app_downloads_dir()?;
     fs::create_dir_all(&downloads_dir).await
         .map_err(|e| HoutError::Io(format!("Failed to create downloads directory: {}", e)))?;
 
@@ -1125,13 +1147,15 @@ pub async fn download_file(
 
     log::info!("开始下载文件: {} -> {}", url, file_name);
 
-    // 创建下载目录
-    let downloads_dir = std::env::temp_dir().join("hout_downloads");
-    fs::create_dir_all(&downloads_dir).await
+    // 创建下载目录（按日期分类）
+    let downloads_dir = get_app_downloads_dir()?;
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let daily_dir = downloads_dir.join(&today);
+    fs::create_dir_all(&daily_dir).await
         .map_err(|e| HoutError::Io(format!("Failed to create downloads directory: {}", e)))?;
 
     // 生成文件路径
-    let file_path = downloads_dir.join(&file_name);
+    let file_path = daily_dir.join(&file_name);
 
     // 开始下载
     let client = reqwest::Client::new();
@@ -1198,6 +1222,59 @@ pub async fn cancel_download(task_id: String, window: tauri::Window) -> Result<(
     }));
 
     Ok(())
+}
+
+/// 获取下载目录路径
+#[tauri::command]
+pub async fn get_downloads_directory() -> Result<String> {
+    let downloads_dir = get_app_downloads_dir()?;
+    Ok(downloads_dir.to_string_lossy().to_string())
+}
+
+/// 清理下载文件
+#[tauri::command]
+pub async fn cleanup_downloads(older_than_days: u64) -> Result<u64> {
+    use tokio::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let downloads_dir = get_app_downloads_dir()?;
+    if !downloads_dir.exists() {
+        return Ok(0);
+    }
+
+    let cutoff_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() - (older_than_days * 24 * 60 * 60);
+
+    let mut deleted_count = 0;
+    let mut entries = fs::read_dir(&downloads_dir).await
+        .map_err(|e| HoutError::Io(format!("Failed to read downloads directory: {}", e)))?;
+
+    while let Some(entry) = entries.next_entry().await
+        .map_err(|e| HoutError::Io(format!("Failed to read directory entry: {}", e)))? {
+
+        let metadata = entry.metadata().await
+            .map_err(|e| HoutError::Io(format!("Failed to get file metadata: {}", e)))?;
+
+        if let Ok(modified) = metadata.modified() {
+            if let Ok(modified_secs) = modified.duration_since(UNIX_EPOCH) {
+                if modified_secs.as_secs() < cutoff_time {
+                    if metadata.is_file() {
+                        fs::remove_file(entry.path()).await
+                            .map_err(|e| HoutError::Io(format!("Failed to delete file: {}", e)))?;
+                        deleted_count += 1;
+                    } else if metadata.is_dir() {
+                        fs::remove_dir_all(entry.path()).await
+                            .map_err(|e| HoutError::Io(format!("Failed to delete directory: {}", e)))?;
+                        deleted_count += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(deleted_count)
 }
 
 // ==================== 投屏相关命令 ====================
@@ -1762,4 +1839,89 @@ pub async fn get_app_environment() -> Result<serde_json::Value> {
     }
 
     Ok(serde_json::Value::Object(env_info))
+}
+
+/// 下载并解压软件
+#[tauri::command]
+pub async fn download_and_extract_software<R: tauri::Runtime>(
+    app_handle: tauri::AppHandle<R>,
+    request: crate::download_manager::DownloadRequest,
+) -> Result<String> {
+    let download_manager = crate::download_manager::DownloadManager::new();
+    let result_path = download_manager.download_and_extract(&app_handle, request).await?;
+    Ok(result_path.to_string_lossy().to_string())
+}
+
+/// 获取默认下载目录
+#[tauri::command]
+pub async fn get_default_download_directory() -> Result<String> {
+    let download_dir = dirs::download_dir()
+        .or_else(|| dirs::home_dir().map(|p| p.join("Downloads")))
+        .unwrap_or_else(|| std::path::PathBuf::from("./downloads"));
+
+    let hout_download_dir = download_dir.join("HOUT");
+
+    // 确保目录存在
+    std::fs::create_dir_all(&hout_download_dir)
+        .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+
+    Ok(hout_download_dir.to_string_lossy().to_string())
+}
+
+/// 打开文件夹
+#[tauri::command]
+pub async fn open_folder(path: String) -> Result<()> {
+    let path = std::path::Path::new(&path);
+
+    if !path.exists() {
+        return Err(HoutError::FileNotFound { path: path.to_string_lossy().to_string() });
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(path)
+            .spawn()
+            .map_err(|e| HoutError::Process(e.to_string()))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(path)
+            .spawn()
+            .map_err(|e| HoutError::Process(e.to_string()))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(path)
+            .spawn()
+            .map_err(|e| HoutError::Process(e.to_string()))?;
+    }
+
+    Ok(())
+}
+
+/// 检查文件是否存在
+#[tauri::command]
+pub async fn check_file_exists(path: String) -> Result<bool> {
+    Ok(std::path::Path::new(&path).exists())
+}
+
+/// 删除文件
+#[tauri::command]
+pub async fn delete_file(path: String) -> Result<()> {
+    let path = std::path::Path::new(&path);
+
+    if path.is_file() {
+        std::fs::remove_file(path)
+            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+    } else if path.is_dir() {
+        std::fs::remove_dir_all(path)
+            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+    }
+
+    Ok(())
 }

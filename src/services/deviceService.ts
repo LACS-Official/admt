@@ -471,7 +471,7 @@ export class DeviceService {
 
 // React Hook for device service
 export const useDeviceService = () => {
-  const { setLoading, addNotification } = useAppStore();
+  const { setLoading, addNotification, config } = useAppStore();
   const scanningRef = useRef(false);
 
   const startScanning = useCallback(() => {
@@ -480,19 +480,19 @@ export const useDeviceService = () => {
       return;
     }
 
-    console.log("useDeviceService: Starting device scanning");
+    console.log("useDeviceService: Starting device scanning with interval:", config.scanInterval);
     scanningRef.current = true;
-    deviceService.startScanning();
+    deviceService.startScanning(config.scanInterval);
 
     // 只在第一次启动时显示通知
     if (!deviceService.isScanning) {
       addNotification({
         type: "info",
         title: "设备扫描",
-        message: "开始扫描连接的设备",
+        message: `开始扫描连接的设备（间隔：${config.scanInterval}ms）`,
       });
     }
-  }, [addNotification]);
+  }, [addNotification, config.scanInterval]);
 
   const stopScanning = useCallback(() => {
     if (!scanningRef.current) {

@@ -3,7 +3,7 @@
  * 展示"玩机管家"的主要功能、特色和用途
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
   Text,
@@ -22,8 +22,10 @@ import {
   Wrench24Regular,
   Shield24Regular,
   Star24Regular,
-  Sparkle48Regular,
+  Document24Regular,
 } from '@fluentui/react-icons';
+import AppIcon from '../../Common/AppIcon';
+import { logService, LogEntry } from '../../../services/logService';
 
 const useStyles = makeStyles({
   container: {
@@ -121,10 +123,75 @@ const useStyles = makeStyles({
     fontSize: '16px',
     color: 'var(--colorPaletteGreenForeground1)',
   },
+  logSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    padding: '24px',
+    backgroundColor: 'var(--colorNeutralBackground2)',
+    borderRadius: '8px',
+  },
+  logContainer: {
+    maxHeight: '200px',
+    overflowY: 'auto',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    border: '1px solid var(--colorNeutralStroke2)',
+    borderRadius: '4px',
+    padding: '12px',
+    fontFamily: 'monospace',
+    fontSize: '12px',
+  },
+  logEntry: {
+    display: 'flex',
+    gap: '8px',
+    marginBottom: '4px',
+    '&:last-child': {
+      marginBottom: 0,
+    },
+  },
+  logTimestamp: {
+    color: 'var(--colorNeutralForeground3)',
+    minWidth: '80px',
+  },
+  logLevel: {
+    minWidth: '60px',
+    fontWeight: 'bold',
+  },
+  logMessage: {
+    flex: 1,
+    color: 'var(--colorNeutralForeground1)',
+  },
 });
 
 const IntroductionPage: React.FC = () => {
   const styles = useStyles();
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  // 订阅日志更新
+  useEffect(() => {
+    const unsubscribe = logService.subscribe((newLogs) => {
+      // 只显示最近的10条日志
+      setLogs(newLogs.slice(-10));
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // 获取日志级别的颜色
+  const getLogLevelColor = (level: string) => {
+    switch (level) {
+      case 'error':
+        return 'var(--colorPaletteRedForeground1)';
+      case 'warning':
+        return 'var(--colorPaletteYellowForeground1)';
+      case 'info':
+        return 'var(--colorBrandForeground1)';
+      case 'debug':
+        return 'var(--colorNeutralForeground3)';
+      default:
+        return 'var(--colorNeutralForeground2)';
+    }
+  };
 
   const features = [
     {
@@ -169,7 +236,7 @@ const IntroductionPage: React.FC = () => {
     <div className={styles.container}>
       {/* 英雄区域 */}
       <div className={styles.heroSection}>
-        <Sparkle48Regular className={styles.appIcon} />
+        <AppIcon size="large" className={styles.appIcon} />
         <div>
           <Title1 className={styles.title}>
             欢迎使用玩机管家
@@ -226,6 +293,46 @@ const IntroductionPage: React.FC = () => {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* 应用日志 */}
+      <div className={styles.logSection}>
+        <Title2 style={{ textAlign: 'center', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <Document24Regular style={{ fontSize: '24px' }} />
+          应用运行日志
+        </Title2>
+        <div className={styles.logContainer}>
+          {logs.length === 0 ? (
+            <Text style={{ color: 'var(--colorNeutralForeground3)' }}>
+              暂无日志记录
+            </Text>
+          ) : (
+            logs.map((log) => (
+              <div key={log.id} className={styles.logEntry}>
+                <span className={styles.logTimestamp}>
+                  {log.timestamp.toLocaleTimeString()}
+                </span>
+                <span
+                  className={styles.logLevel}
+                  style={{ color: getLogLevelColor(log.level) }}
+                >
+                  [{log.level.toUpperCase()}]
+                </span>
+                {log.source && (
+                  <span style={{ color: 'var(--colorNeutralForeground2)', minWidth: '100px' }}>
+                    [{log.source}]
+                  </span>
+                )}
+                <span className={styles.logMessage}>
+                  {log.message}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+        <Text size={200} style={{ color: 'var(--colorNeutralForeground3)', textAlign: 'center' }}>
+          显示最近 {logs.length} 条日志记录
+        </Text>
       </div>
     </div>
   );

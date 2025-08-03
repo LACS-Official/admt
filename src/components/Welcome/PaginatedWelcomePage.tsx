@@ -20,7 +20,6 @@ import {
   ArrowLeft24Regular,
   ArrowRight24Regular,
   Checkmark24Regular,
-  Sparkle24Regular,
 } from '@fluentui/react-icons';
 import { useWelcomeStore, useAppConfigStore } from '../../stores/welcomeStore';
 import { WelcomeStep } from '../../types/welcome';
@@ -30,6 +29,7 @@ import IntroductionPage from './pages/IntroductionPage';
 import AgreementPage from './pages/AgreementPage';
 import SettingsPage from './pages/SettingsPage';
 import ActivationPage from './pages/ActivationPage';
+import AppIcon from '../Common/AppIcon';
 
 const useStyles = makeStyles({
   container: {
@@ -234,7 +234,7 @@ const PaginatedWelcomePage: React.FC<PaginatedWelcomePageProps> = ({ onComplete 
       {/* 头部 */}
       <div className={styles.header}>
         <div className={styles.headerContent}>
-          <Sparkle24Regular className={styles.appIcon} />
+          <AppIcon className={styles.appIcon} />
           <Title1>玩机管家</Title1>
         </div>
         

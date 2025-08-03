@@ -23,6 +23,7 @@ class OnlineResourcesService {
   private transmissionService: SecureDataTransmissionService;
   private downloadTasks: Map<string, DownloadTask> = new Map();
   private isInitialized: boolean = false;
+  private readonly STORAGE_KEY = 'hout_download_tasks';
 
   constructor() {
     this.config = {
@@ -32,6 +33,7 @@ class OnlineResourcesService {
     };
     this.transmissionService = SecureDataTransmissionService.getInstance();
     this.initialize();
+    this.loadPersistedTasks();
   }
 
   /**
@@ -172,7 +174,7 @@ class OnlineResourcesService {
   }
 
   /**
-   * 开始下载软件
+   * 开始下载软件（新版本：支持自动解压和配置文件生成）
    */
   async downloadSoftware(software: OnlineSoftware): Promise<string> {
     try {
@@ -181,13 +183,28 @@ class OnlineResourcesService {
       }
 
       const taskId = `download_${software.id}_${Date.now()}`;
-      const fileName = this.generateFileName(software);
+
+      // 获取默认下载目录
+      const { invoke } = await import('@tauri-apps/api/core');
+      const downloadDir = await invoke('get_default_download_directory') as string;
+
+      // 从URL中提取文件扩展名
+      const fileExtension = this.extractFileExtension(software.latestDownloadUrl, software.filetype);
+
+      const downloadRequest = {
+        id: taskId,
+        url: software.latestDownloadUrl,
+        software_name: software.name, // 使用软件名称作为文件名（不包含版本号）
+        openname: software.openname || null,
+        file_extension: fileExtension,
+        download_dir: downloadDir,
+      };
 
       const downloadTask: DownloadTask = {
         id: taskId,
         softwareId: software.id,
         softwareName: software.name,
-        fileName,
+        fileName: `${software.name}.${fileExtension}`,
         downloadUrl: software.latestDownloadUrl,
         progress: 0,
         status: 'pending',
@@ -195,16 +212,39 @@ class OnlineResourcesService {
       };
 
       this.downloadTasks.set(taskId, downloadTask);
+      this.persistTasks();
 
-      console.log('🚀 开始下载软件:', software.name);
+      console.log('🚀 开始下载并解压软件:', software.name);
 
-      // 使用 Tauri 的下载 API
-      await this.startTauriDownload(downloadTask);
+      // 监听下载进度事件
+      await this.setupDownloadProgressListener(taskId);
 
+      // 调用新的下载和解压命令
+      const resultPath = await invoke('download_and_extract_software', downloadRequest) as string;
+
+      // 更新任务状态为完成
+      downloadTask.status = 'completed';
+      downloadTask.endTime = new Date();
+      downloadTask.extractedPath = resultPath;
+      this.downloadTasks.set(taskId, downloadTask);
+      this.persistTasks();
+
+      console.log('✅ 软件下载并解压完成:', resultPath);
       return taskId;
 
     } catch (error) {
       console.error('❌ 下载软件失败:', error);
+
+      // 更新任务状态为失败
+      const task = this.downloadTasks.get(`download_${software.id}_${Date.now()}`);
+      if (task) {
+        task.status = 'failed';
+        task.endTime = new Date();
+        task.error = error instanceof Error ? error.message : String(error);
+        this.downloadTasks.set(task.id, task);
+        this.persistTasks();
+      }
+
       throw error;
     }
   }
@@ -221,14 +261,37 @@ class OnlineResourcesService {
       // 更新任务状态
       task.status = 'downloading';
       this.downloadTasks.set(task.id, task);
+      this.persistTasks();
+
+      let lastDownloadedSize = 0;
+      let lastUpdateTime = Date.now();
 
       // 监听下载进度事件
       const progressUnlisten = await listen('download-progress', (event: any) => {
         const { taskId, progress, downloadedSize, totalSize } = event.payload;
         if (taskId === task.id) {
+          const now = Date.now();
+          const timeDiff = (now - lastUpdateTime) / 1000; // 秒
+          const sizeDiff = downloadedSize - lastDownloadedSize;
+
+          // 计算下载速度
+          if (timeDiff > 0) {
+            task.downloadSpeed = sizeDiff / timeDiff;
+          }
+
+          // 计算剩余时间
+          if (task.downloadSpeed && task.downloadSpeed > 0) {
+            const remainingBytes = totalSize - downloadedSize;
+            task.remainingTime = remainingBytes / task.downloadSpeed;
+          }
+
           task.progress = progress;
           task.downloadedSize = downloadedSize;
           task.fileSize = totalSize;
+
+          lastDownloadedSize = downloadedSize;
+          lastUpdateTime = now;
+
           this.downloadTasks.set(task.id, task);
         }
       });
@@ -254,13 +317,14 @@ class OnlineResourcesService {
         fileName: task.fileName,
         taskId: task.id,
         window: window,
-      });
+      }) as string;
 
-      // 下载完成
       task.status = 'completed';
       task.endTime = new Date();
       task.progress = 100;
+      task.filePath = result;
       this.downloadTasks.set(task.id, task);
+      this.persistTasks();
 
       // 清理事件监听器
       progressUnlisten();
@@ -274,6 +338,7 @@ class OnlineResourcesService {
       task.error = error instanceof Error ? error.message : '下载失败';
       task.endTime = new Date();
       this.downloadTasks.set(task.id, task);
+      this.persistTasks();
 
       console.error('❌ 下载失败:', error);
       throw error;
@@ -290,6 +355,69 @@ class OnlineResourcesService {
   }
 
   /**
+   * 从URL或filetype中提取文件扩展名
+   */
+  private extractFileExtension(url: string, filetype?: string): string {
+    if (filetype) {
+      return filetype;
+    }
+
+    // 从URL中提取扩展名
+    const urlPath = new URL(url).pathname;
+    const extension = urlPath.split('.').pop();
+
+    if (extension && ['exe', 'zip', '7z', 'rar', 'msi', 'dmg', 'pkg', 'deb', 'rpm', 'apk'].includes(extension.toLowerCase())) {
+      return extension.toLowerCase();
+    }
+
+    // 默认返回zip
+    return 'zip';
+  }
+
+  /**
+   * 设置下载进度监听器
+   */
+  private async setupDownloadProgressListener(taskId: string): Promise<void> {
+    const { listen } = await import('@tauri-apps/api/event');
+
+    // 监听下载进度事件
+    await listen('download-progress', (event: any) => {
+      const progressData = event.payload;
+      if (progressData.id === taskId) {
+        const task = this.downloadTasks.get(taskId);
+        if (task) {
+          task.progress = progressData.percentage;
+          task.downloadedSize = progressData.downloaded;
+          task.fileSize = progressData.total_size;
+          task.downloadSpeed = progressData.speed;
+
+          // 更新状态
+          switch (progressData.status) {
+            case 'Downloading':
+              task.status = 'downloading';
+              break;
+            case 'Completed':
+              task.status = 'downloaded';
+              break;
+            case 'Extracting':
+              task.status = 'extracting';
+              break;
+            case 'ExtractCompleted':
+              task.status = 'completed';
+              break;
+            case 'Failed':
+              task.status = 'failed';
+              break;
+          }
+
+          this.downloadTasks.set(taskId, task);
+          this.persistTasks();
+        }
+      }
+    });
+  }
+
+  /**
    * 获取下载任务
    */
   getDownloadTask(taskId: string): DownloadTask | undefined {
@@ -301,6 +429,30 @@ class OnlineResourcesService {
    */
   getAllDownloadTasks(): DownloadTask[] {
     return Array.from(this.downloadTasks.values());
+  }
+
+  /**
+   * 暂停下载
+   */
+  async pauseDownload(taskId: string): Promise<void> {
+    const task = this.downloadTasks.get(taskId);
+    if (task && task.status === 'downloading') {
+      task.status = 'paused';
+      this.downloadTasks.set(taskId, task);
+      console.log('⏸️ 下载已暂停:', task.fileName);
+    }
+  }
+
+  /**
+   * 恢复下载
+   */
+  async resumeDownload(taskId: string): Promise<void> {
+    const task = this.downloadTasks.get(taskId);
+    if (task && task.status === 'paused') {
+      task.status = 'downloading';
+      this.downloadTasks.set(taskId, task);
+      console.log('▶️ 下载已恢复:', task.fileName);
+    }
   }
 
   /**
@@ -327,16 +479,7 @@ class OnlineResourcesService {
     }
   }
 
-  /**
-   * 清理已完成的下载任务
-   */
-  clearCompletedTasks(): void {
-    for (const [taskId, task] of this.downloadTasks.entries()) {
-      if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
-        this.downloadTasks.delete(taskId);
-      }
-    }
-  }
+
 
   /**
    * 更新下载进度（由 Tauri 后端调用）
@@ -350,6 +493,155 @@ class OnlineResourcesService {
       }
       this.downloadTasks.set(taskId, task);
     }
+  }
+
+  /**
+   * 获取下载统计信息
+   */
+  getDownloadStats() {
+    const tasks = Array.from(this.downloadTasks.values());
+    return {
+      total: tasks.length,
+      downloading: tasks.filter(t => t.status === 'downloading').length,
+      completed: tasks.filter(t => t.status === 'completed').length,
+      failed: tasks.filter(t => t.status === 'failed').length,
+      cancelled: tasks.filter(t => t.status === 'cancelled').length,
+      paused: tasks.filter(t => t.status === 'paused').length,
+    };
+  }
+
+  /**
+   * 格式化文件大小
+   */
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  /**
+   * 格式化下载速度
+   */
+  formatDownloadSpeed(bytesPerSecond: number): string {
+    return this.formatFileSize(bytesPerSecond) + '/s';
+  }
+
+  /**
+   * 格式化剩余时间
+   */
+  formatRemainingTime(seconds: number): string {
+    if (seconds < 60) return `${Math.round(seconds)}秒`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}分钟`;
+    return `${Math.round(seconds / 3600)}小时`;
+  }
+
+  /**
+   * 获取下载目录
+   */
+  async getDownloadsDirectory(): Promise<string> {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return await invoke('get_downloads_directory');
+    } catch (error) {
+      console.error('❌ 获取下载目录失败:', error);
+      return '';
+    }
+  }
+
+  /**
+   * 清理下载文件
+   */
+  async cleanupDownloads(olderThanDays: number = 30): Promise<number> {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return await invoke('cleanup_downloads', { olderThanDays });
+    } catch (error) {
+      console.error('❌ 清理下载文件失败:', error);
+      return 0;
+    }
+  }
+
+  // 加载持久化的下载任务
+  private loadPersistedTasks(): void {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) {
+        const tasks: DownloadTask[] = JSON.parse(stored);
+        tasks.forEach(task => {
+          // 恢复日期对象
+          if (task.startTime) {
+            task.startTime = new Date(task.startTime);
+          }
+          if (task.endTime) {
+            task.endTime = new Date(task.endTime);
+          }
+
+          // 重置进行中的任务状态
+          if (task.status === 'downloading' || task.status === 'paused') {
+            task.status = 'failed';
+            task.error = '应用程序重启，下载已中断';
+          }
+
+          this.downloadTasks.set(task.id, task);
+        });
+      }
+    } catch (error) {
+      console.error('加载持久化下载任务失败:', error);
+    }
+  }
+
+  // 保存下载任务到本地存储
+  private persistTasks(): void {
+    try {
+      const tasks = Array.from(this.downloadTasks.values());
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(tasks));
+    } catch (error) {
+      console.error('保存下载任务失败:', error);
+    }
+  }
+
+  // 更新任务并持久化
+  private updateTaskAndPersist(taskId: string, updates: Partial<DownloadTask>): void {
+    const task = this.downloadTasks.get(taskId);
+    if (task) {
+      Object.assign(task, updates);
+      this.downloadTasks.set(taskId, task);
+      this.persistTasks();
+    }
+  }
+
+  // 清除已完成的下载任务
+  clearCompletedTasks(): void {
+    const completedTasks = Array.from(this.downloadTasks.entries())
+      .filter(([_, task]) => task.status === 'completed')
+      .map(([id, _]) => id);
+
+    completedTasks.forEach(id => this.downloadTasks.delete(id));
+    this.persistTasks();
+  }
+
+  // 清除失败的下载任务
+  clearFailedTasks(): void {
+    const failedTasks = Array.from(this.downloadTasks.entries())
+      .filter(([_, task]) => task.status === 'failed')
+      .map(([id, _]) => id);
+
+    failedTasks.forEach(id => this.downloadTasks.delete(id));
+    this.persistTasks();
+  }
+
+  // 清除所有下载任务
+  clearAllTasks(): void {
+    this.downloadTasks.clear();
+    this.persistTasks();
+  }
+
+  // 删除特定下载任务
+  deleteTask(taskId: string): void {
+    this.downloadTasks.delete(taskId);
+    this.persistTasks();
   }
 }
 
