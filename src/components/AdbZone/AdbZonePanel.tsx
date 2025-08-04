@@ -9,13 +9,13 @@ import {
   Code24Regular,
   Settings24Regular,
   Play24Regular,
-  Info24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import AdbToolsPanel from "../AdbTools/AdbToolsPanel";
-import RebootControlCard from "../DeviceControl/RebootControlCard";
-import QuickActionsCard from "../DeviceControl/QuickActionsCard";
-import SystemInfoCard from "../DeviceControl/SystemInfoCard";
+import SystemControlCard from "../DeviceControl/SystemControlCard";
+import AppManagementCard from "../DeviceControl/AppManagementCard";
+import FileOperationCard from "../DeviceControl/FileOperationCard";
+import NetworkDebugCard from "../DeviceControl/NetworkDebugCard";
 
 const useStyles = makeStyles({
   container: {
@@ -61,12 +61,7 @@ const useStyles = makeStyles({
     flex: 1,
     overflow: "hidden",
   },
-  deviceControlGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gap: "16px",
-    height: "100%",
-  },
+
   noDevice: {
     flex: 1,
     display: "flex",
@@ -79,7 +74,7 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "adb-tools" | "device-control" | "system-info";
+type AdbZoneView = "adb-tools" | "device-control";
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -99,11 +94,6 @@ const AdbZonePanel: React.FC = () => {
       label: "设备控制",
       icon: <Play24Regular />,
     },
-    {
-      id: "system-info" as AdbZoneView,
-      label: "系统信息",
-      icon: <Info24Regular />,
-    },
   ];
 
   const renderContent = () => {
@@ -118,13 +108,20 @@ const AdbZonePanel: React.FC = () => {
         );
       case "device-control":
         return (
-          <div className={styles.deviceControlGrid}>
-            <RebootControlCard device={selectedDevice} />
-            <QuickActionsCard device={selectedDevice} />
+          <div style={{
+            height: "100%",
+            overflow: "auto",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "16px",
+            padding: "16px"
+          }}>
+            <SystemControlCard device={selectedDevice} />
+            <AppManagementCard device={selectedDevice} />
+            <FileOperationCard device={selectedDevice} />
+            <NetworkDebugCard device={selectedDevice} />
           </div>
         );
-      case "system-info":
-        return <SystemInfoCard device={selectedDevice} />;
       default:
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
