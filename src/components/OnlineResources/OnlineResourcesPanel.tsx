@@ -23,6 +23,7 @@ import { onlineResourcesService, SearchParams } from '../../services/onlineResou
 
 import { DownloadManagerPanel } from './DownloadManagerPanel';
 import { ResourceDetailModal } from './ResourceDetailModalSimple';
+import SoftwareCard from './SoftwareCard';
 
 const useStyles = makeStyles({
   container: {
@@ -229,13 +230,15 @@ const OnlineResourcesPanel: React.FC = () => {
   };
 
   // 从弹窗下载软件
-  const handleDownloadFromModal = async (software: OnlineSoftware) => {
+  const handleDownloadFromModal = async (software: OnlineSoftware): Promise<string> => {
     try {
-      await onlineResourcesService.downloadSoftware(software);
+      const taskId = await onlineResourcesService.downloadSoftware(software);
       // 可以选择关闭弹窗或保持打开状态
       // handleCloseResourceModal();
+      return taskId;
     } catch (error) {
       console.error('下载失败:', error);
+      throw error;
     }
   };
 
@@ -244,47 +247,12 @@ const OnlineResourcesPanel: React.FC = () => {
   // 渲染软件卡片
   const renderSoftwareCard = (software: OnlineSoftware) => {
     return (
-      <Card
+      <SoftwareCard
         key={software.id}
-        className={styles.softwareCard}
+        software={software}
         onClick={() => handleShowResourceModal(software)}
-      >
-        <div className={styles.cardContent}>
-          <Text className={styles.softwareTitle}>{software.name}</Text>
-
-          <Text className={styles.softwareDescription}>
-            {software.description}
-          </Text>
-
-          <div className={styles.softwareInfo}>
-            <Badge className={styles.versionBadge} appearance="outline">
-              v{software.currentVersion}
-            </Badge>
-
-            {software.category && (
-              <Badge className={styles.versionBadge} appearance="tint">
-                {software.category}
-              </Badge>
-            )}
-          </div>
-
-          {software.updatedAt && (
-            <div className={styles.softwareInfo}>
-              <Caption1 style={{ color: 'var(--colorNeutralForeground3)' }}>
-                更新于 {new Date(software.updatedAt).toLocaleDateString('zh-CN')}
-              </Caption1>
-            </div>
-          )}
-
-          {software.filetype && (
-            <div className={styles.softwareInfo}>
-              <Caption1 style={{ color: 'var(--colorNeutralForeground2)' }}>
-                {software.filetype.toUpperCase()}
-              </Caption1>
-            </div>
-          )}
-        </div>
-      </Card>
+        onDownload={handleDownloadFromModal}
+      />
     );
   };
 

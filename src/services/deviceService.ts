@@ -245,6 +245,39 @@ export class DeviceService {
     }
   }
 
+  async getDeviceMemoryStorageInfo(serial: string): Promise<{
+    memory: {
+      memory_total: number | null;
+      memory_used: number | null;
+      memory_available: number | null;
+      memory_usage_percent: number | null;
+    };
+    storage: {
+      storage_total: number | null;
+      storage_used: number | null;
+      storage_available: number | null;
+      storage_usage_percent: number | null;
+    };
+    battery: {
+      battery_health_percent: number | null;
+      battery_actual_capacity: number | null;
+      battery_design_capacity: number | null;
+      battery_health_status: string | null;
+      battery_level: number | null;
+      battery_temperature: number | null;
+      health_calculation_method: string | null;
+      charge_counter_available: boolean;
+    };
+  }> {
+    try {
+      const result = await invoke("get_device_memory_storage_info", { serial });
+      return result as any;
+    } catch (error) {
+      console.error("Failed to get device memory/storage/battery info:", error);
+      throw error;
+    }
+  }
+
   // ADB管理相关功能
   async stopAdbServer(): Promise<CommandResult> {
     try {

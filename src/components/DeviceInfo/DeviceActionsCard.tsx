@@ -227,29 +227,6 @@ const DeviceActionsCard: React.FC<DeviceActionsCardProps> = ({ device }) => {
         />
         
         <div className={styles.content}>
-          {/* 重启控制 */}
-          <div className={styles.actionSection}>
-            <Text className={styles.sectionTitle}>设备重启</Text>
-            <div className={styles.actionGrid}>
-              {rebootModes.map((mode) => (
-                <Button
-                  key={mode.id}
-                  appearance={mode.primary ? "primary" : "secondary"}
-                  className={styles.actionButton}
-                  onClick={() => handleRebootClick(mode.id)}
-                  disabled={!isDeviceAvailable || isRebooting}
-                >
-                  {isRebooting && selectedRebootMode === mode.id ? (
-                    <Spinner size="small" />
-                  ) : (
-                    <span style={{ fontSize: "16px" }}>{mode.icon}</span>
-                  )}
-                  <Text size={200} weight="semibold">{mode.label}</Text>
-                </Button>
-              ))}
-            </div>
-          </div>
-
           {/* 快捷操作 */}
           <div className={styles.actionSection}>
             <Text className={styles.sectionTitle}>快捷操作</Text>

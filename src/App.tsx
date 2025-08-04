@@ -4,10 +4,9 @@ import { makeStyles, Spinner, Text, MessageBar } from "@fluentui/react-component
 import TitleBar from "./components/TitleBar/TitleBar";
 import MainContent from "./components/MainContent/MainContent";
 import StatusBar from "./components/StatusBar/StatusBar";
-import NotificationContainer from "./components/Common/NotificationContainer";
+
 import StartupFlowManager from "./components/StartupFlow/StartupFlowManager";
 import StartupFlowTest from "./test/StartupFlowTest";
-import ActivationFlowTest from "./test/ActivationFlowTest";
 
 import { useAppStore } from "./stores/appStore";
 import { useStartupFlowStore } from "./stores/startupFlowStore";
@@ -20,6 +19,8 @@ const useStyles = makeStyles({
     flexDirection: "column",
     backgroundColor: "var(--colorNeutralBackground1)",
     overflow: "hidden",
+    // 添加现代化的渐变背景
+    background: "linear-gradient(135deg, var(--colorNeutralBackground1) 0%, var(--colorNeutralBackground2) 100%)",
   },
   loading: {
     height: "100vh",
@@ -27,8 +28,21 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: "16px",
+    gap: "24px", // 增加间距
     backgroundColor: "var(--colorNeutralBackground1)",
+    // 添加现代化的加载背景
+    background: "linear-gradient(135deg, var(--colorNeutralBackground1) 0%, var(--colorNeutralBackground2) 100%)",
+  },
+  loadingContent: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "16px",
+    padding: "32px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    borderRadius: "16px",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
 });
 
@@ -117,7 +131,6 @@ function App() {
       <TitleBar />
       <MainContent />
       <StatusBar />
-      <NotificationContainer />
     </div>
   );
 }

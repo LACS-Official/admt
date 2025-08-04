@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   makeStyles,
   Text,
@@ -7,22 +7,14 @@ import {
   Switch,
   Field,
   Input,
-  Button,
-  Badge,
   Select,
   Textarea,
 } from "@fluentui/react-components";
 import {
-  Wrench24Regular,
   Timer24Regular,
   Settings24Regular,
-  CheckmarkCircle24Regular,
-  ErrorCircle24Regular,
-  Search24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
-import { DeviceService } from "../../services/deviceService";
-import { logService } from "../../services/logService";
 
 const useStyles = makeStyles({
   container: {
@@ -73,43 +65,9 @@ const useStyles = makeStyles({
 const ToolSettingsPanel: React.FC = () => {
   const styles = useStyles();
   const { config, updateConfig } = useAppStore();
-  const [adbStatus, setAdbStatus] = useState<"checking" | "found" | "not-found" | "error">("checking");
-  const [fastbootStatus, setFastbootStatus] = useState<"checking" | "found" | "not-found" | "error">("checking");
-  const [deviceService] = useState(() => new DeviceService());
 
-  // 检测工具可用性
-  const checkToolAvailability = async () => {
-    setAdbStatus("checking");
-    setFastbootStatus("checking");
-    logService.info("开始检测ADB和Fastboot工具可用性", "ToolSettingsPanel");
 
-    try {
-      // 检测ADB
-      const adbResult = await deviceService.checkAdbAvailability();
-      const adbFound = adbResult.success;
-      setAdbStatus(adbFound ? "found" : "not-found");
-      logService.info(`ADB工具检测结果: ${adbFound ? "已找到" : "未找到"}`, "ToolSettingsPanel");
-    } catch (error) {
-      logService.error("ADB检测失败", "ToolSettingsPanel", error);
-      setAdbStatus("error");
-    }
 
-    try {
-      // 检测Fastboot
-      const fastbootResult = await deviceService.checkFastbootAvailability();
-      const fastbootFound = fastbootResult.success;
-      setFastbootStatus(fastbootFound ? "found" : "not-found");
-      logService.info(`Fastboot工具检测结果: ${fastbootFound ? "已找到" : "未找到"}`, "ToolSettingsPanel");
-    } catch (error) {
-      logService.error("Fastboot检测失败", "ToolSettingsPanel", error);
-      setFastbootStatus("error");
-    }
-  };
-
-  // 组件加载时检测工具
-  useEffect(() => {
-    checkToolAvailability();
-  }, []);
 
   const handleAutoDetectChange = (checked: boolean) => {
     updateConfig({ autoDetectDevices: checked });
@@ -131,116 +89,14 @@ const ToolSettingsPanel: React.FC = () => {
 
 
 
-  const handleAutoDetectPaths = () => {
-    // 重新检测工具路径
-    checkToolAvailability();
-  };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "found":
-        return (
-          <Badge 
-            appearance="filled" 
-            color="success" 
-            icon={<CheckmarkCircle24Regular />}
-            className={styles.statusBadge}
-          >
-            已找到
-          </Badge>
-        );
-      case "not-found":
-        return (
-          <Badge 
-            appearance="filled" 
-            color="danger" 
-            icon={<ErrorCircle24Regular />}
-            className={styles.statusBadge}
-          >
-            未找到
-          </Badge>
-        );
-      case "error":
-        return (
-          <Badge 
-            appearance="filled" 
-            color="warning" 
-            icon={<ErrorCircle24Regular />}
-            className={styles.statusBadge}
-          >
-            错误
-          </Badge>
-        );
-      default:
-        return (
-          <Badge 
-            appearance="outline" 
-            color="brand"
-            className={styles.statusBadge}
-          >
-            检测中...
-          </Badge>
-        );
-    }
-  };
+
+
 
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        {/* 工具状态检测 */}
-        <Card className={`${styles.card} ${styles.fullWidth}`}>
-          <CardHeader
-            image={<Wrench24Regular />}
-            header={<Text weight="semibold">工具状态检测</Text>}
-            description={<Text size={200}>ADB和Fastboot工具可用性状态</Text>}
-            action={
-              <Button
-                appearance="secondary"
-                size="small"
-                icon={<Search24Regular />}
-                onClick={handleAutoDetectPaths}
-              >
-                重新检测
-              </Button>
-            }
-          />
 
-          <div className={styles.cardContent}>
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">ADB工具状态</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  Android Debug Bridge 调试工具
-                </Text>
-              </div>
-              {getStatusBadge(adbStatus)}
-            </div>
-
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">Fastboot工具状态</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  Android Fastboot 刷机工具
-                </Text>
-              </div>
-              {getStatusBadge(fastbootStatus)}
-            </div>
-
-            <div className={styles.helpText}>
-              <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                💡 <strong>说明：</strong>
-                <br />
-                • 系统会自动检测并使用可用的ADB和Fastboot工具
-                <br />
-                • 工具状态会在应用启动时自动检测
-                <br />
-                • 如果检测失败，请确保已正确安装Android SDK Platform Tools
-              </Text>
-            </div>
-          </div>
-        </Card>
 
         {/* 设备连接设置 */}
         <Card className={styles.card}>
