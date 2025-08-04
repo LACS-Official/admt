@@ -6,7 +6,6 @@ import MainContent from "./components/MainContent/MainContent";
 import StatusBar from "./components/StatusBar/StatusBar";
 
 import StartupFlowManager from "./components/StartupFlow/StartupFlowManager";
-import StartupFlowTest from "./test/StartupFlowTest";
 
 import { useAppStore } from "./stores/appStore";
 import { useStartupFlowStore } from "./stores/startupFlowStore";
@@ -51,7 +50,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showStartupFlow, setShowStartupFlow] = useState(true); // 启用启动流程
-  const [showTestPage, setShowTestPage] = useState(false); // 禁用测试页面
+
 
   const { initialize, config } = useAppStore();
   const { currentPhase } = useStartupFlowStore();
@@ -108,11 +107,6 @@ function App() {
   if (isLoading) {
     // 加载完成后会自动显示启动流程
     return null;
-  }
-
-  // 显示测试页面
-  if (showTestPage) {
-    return <StartupFlowTest />;
   }
 
   // 显示启动流程
