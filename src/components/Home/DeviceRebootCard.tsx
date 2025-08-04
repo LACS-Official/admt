@@ -18,7 +18,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 const useStyles = makeStyles({
   card: {
-    height: "100%",
+    height: "150px",
     display: "flex",
     flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -128,37 +128,39 @@ interface RebootOption {
 const DeviceRebootCard: React.FC = () => {
   const styles = useStyles();
   const { selectedDevice } = useDeviceStore();
-  const { addNotification } = useAppStore();
+  const { setStatusBarMessage } = useAppStore();
   const [isRebooting, setIsRebooting] = useState(false);
   const [pendingRebootOption, setPendingRebootOption] = useState<RebootOption | null>(null);
   const [confirmationTimeout, setConfirmationTimeout] = useState<number | null>(null);
+  const [_rebootCountdown, setRebootCountdown] = useState<number | null>(null);
+  const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
 
   const rebootOptions: RebootOption[] = [
     {
       id: "normal",
       label: "正常重启",
       description: "重启到Android系统",
-      command: "reboot",
+      command: "system", // 后端期望的参数
     },
     {
       id: "recovery",
       label: "重启到Recovery",
       description: "进入恢复模式",
-      command: "reboot recovery",
+      command: "recovery", // 后端期望的参数
       warning: true,
     },
     {
       id: "bootloader",
       label: "重启到Bootloader",
       description: "进入引导加载程序模式",
-      command: "reboot bootloader",
+      command: "bootloader", // 后端期望的参数
       warning: true,
     },
     {
       id: "fastboot",
       label: "重启到Fastboot",
       description: "进入快速启动模式",
-      command: "reboot fastboot",
+      command: "fastboot", // 后端期望的参数
       warning: true,
     },
   ];
@@ -172,13 +174,31 @@ const DeviceRebootCard: React.FC = () => {
     }
   };
 
+  // 清理倒计时的函数
+  const clearCountdown = () => {
+    setRebootCountdown(null);
+    if (countdownTimer) {
+      clearTimeout(countdownTimer);
+      setCountdownTimer(null);
+    }
+  };
+
   // 处理重启按钮点击 - 双击确认机制
   const handleReboot = async (option: RebootOption) => {
     if (!selectedDevice) {
-      addNotification({
+      setStatusBarMessage({
         type: "error",
-        title: "重启失败",
-        message: "请先选择一个设备",
+        message: "请先连接一个设备",
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (!selectedDevice.connected) {
+      setStatusBarMessage({
+        type: "error",
+        message: "设备未连接，无法执行重启操作",
+        duration: 3000,
       });
       return;
     }
@@ -207,10 +227,11 @@ const DeviceRebootCard: React.FC = () => {
 
     setConfirmationTimeout(timeout);
 
-    addNotification({
+    // 在状态栏显示确认提示
+    setStatusBarMessage({
       type: "warning",
-      title: "确认重启",
-      message: `请再次点击"${option.label}"按钮确认执行重启操作`,
+      message: `请再次点击 ${option.label} 确认执行重启操作`,
+      icon: <Warning24Regular />,
       duration: 5000,
     });
   };
@@ -222,26 +243,76 @@ const DeviceRebootCard: React.FC = () => {
     setIsRebooting(true);
     clearPendingReboot();
 
+    // 开始2秒倒计时
+    setRebootCountdown(2);
+    setStatusBarMessage({
+      type: "warning",
+      message: `正在重启到 ${option.label}... (2秒)`,
+      icon: <Power24Regular />,
+    });
+
+    // 倒计时逻辑
+    let countdown = 2;
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      setRebootCountdown(countdown);
+
+      if (countdown > 0) {
+        setStatusBarMessage({
+          type: "warning",
+          message: `正在重启到 ${option.label}... (${countdown}秒)`,
+          icon: <Power24Regular />,
+        });
+      } else {
+        clearInterval(countdownInterval);
+        setCountdownTimer(null);
+        performReboot(option);
+      }
+    }, 1000);
+
+    setCountdownTimer(countdownInterval);
+  };
+
+  // 执行重启命令
+  const performReboot = async (option: RebootOption) => {
+    if (!selectedDevice) return;
+
     try {
+      setStatusBarMessage({
+        type: "info",
+        message: `正在发送重启命令...`,
+        icon: <Power24Regular />,
+      });
+
       await invoke("reboot_device", {
         serial: selectedDevice.serial,
         mode: option.command,
       });
 
-      addNotification({
+      setStatusBarMessage({
         type: "success",
-        title: "重启命令已发送",
-        message: `设备 ${selectedDevice.serial} 正在${option.label}`,
+        message: `重启命令已发送，设备正在${option.label}`,
+        duration: 3000,
       });
     } catch (error) {
-      console.error("重启设备失败:", error);
-      addNotification({
+      let errorMessage = "重启失败：未知错误";
+
+      if (error instanceof Error) {
+        errorMessage = `重启失败：${error.message}`;
+      } else if (typeof error === 'string') {
+        errorMessage = `重启失败：${error}`;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = `重启失败：${(error as { message: string }).message}`;
+      }
+
+      setStatusBarMessage({
         type: "error",
-        title: "重启失败",
-        message: error instanceof Error ? error.message : "未知错误",
+        message: errorMessage,
+        duration: 5000,
       });
     } finally {
       setIsRebooting(false);
+      clearCountdown();
     }
   };
 
@@ -253,8 +324,11 @@ const DeviceRebootCard: React.FC = () => {
       if (confirmationTimeout) {
         clearTimeout(confirmationTimeout);
       }
+      if (countdownTimer) {
+        clearTimeout(countdownTimer);
+      }
     };
-  }, [confirmationTimeout]);
+  }, [confirmationTimeout, countdownTimer]);
 
   return (
     <Card className={styles.card}>
@@ -268,8 +342,6 @@ const DeviceRebootCard: React.FC = () => {
       />
 
       <div className={styles.content}>
-
-
         {/* 重启选项列表 */}
         <div className={styles.rebootOptions}>
           {rebootOptions.map((option) => (

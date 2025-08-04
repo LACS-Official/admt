@@ -64,7 +64,7 @@ interface ResourceDetailModalProps {
   software: OnlineSoftware;
   isOpen: boolean;
   onClose: () => void;
-  onDownload: (software: OnlineSoftware) => Promise<void>;
+  onDownload: (software: OnlineSoftware) => Promise<string>;
 }
 
 export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
@@ -77,11 +77,16 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   const [detailData, setDetailData] = useState<OnlineSoftware | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState<{
+    isDownloaded: boolean;
+    filePath?: string;
+    task?: any;
+  }>({ isDownloaded: false });
 
   // 获取软件详细信息
   const fetchSoftwareDetail = async () => {
     if (!software.id) return;
-    
+
     setLoading(true);
     try {
       const detail = await onlineResourcesService.getSoftwareDetail(software.id);
@@ -95,15 +100,34 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     }
   };
 
-  // 当弹窗打开时获取详细信息
+  // 检查下载状态
+  const checkDownloadStatus = async () => {
+    const currentData = detailData || software;
+    try {
+      const status = await onlineResourcesService.checkSoftwareDownloaded(currentData);
+      setDownloadStatus(status);
+    } catch (error) {
+      console.error('检查下载状态失败:', error);
+    }
+  };
+
+  // 当弹窗打开时获取详细信息和下载状态
   useEffect(() => {
     if (isOpen && software.id) {
       fetchSoftwareDetail();
+      checkDownloadStatus();
     }
   }, [isOpen, software.id]);
 
+  // 当详细信息加载完成后重新检查下载状态
+  useEffect(() => {
+    if (detailData) {
+      checkDownloadStatus();
+    }
+  }, [detailData]);
+
   // 处理下载
-  const handleDownload = async () => {
+  const handleDownload = async (forceRedownload = false) => {
     const currentData = detailData || software;
     if (onDownload && currentData.latestDownloadUrl) {
       setIsDownloading(true);
@@ -113,7 +137,10 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
         // 显示下载成功消息
         console.log('✅ 下载任务已启动:', taskId);
 
-        // 可以在这里添加通知或跳转到下载管理页面
+        // 重新检查下载状态
+        setTimeout(() => {
+          checkDownloadStatus();
+        }, 1000);
 
       } catch (error) {
         console.error('❌ 下载失败:', error);
@@ -255,15 +282,37 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
           <Button appearance="secondary" onClick={onClose}>
             关闭
           </Button>
-          <Button
-            appearance="primary"
-            icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
-            onClick={handleDownload}
-            disabled={isDownloading || !currentData.latestDownloadUrl}
-            className={styles.downloadButton}
-          >
-            {isDownloading ? '下载中...' : '下载软件'}
-          </Button>
+
+          {downloadStatus.isDownloaded ? (
+            <>
+              <Button
+                appearance="outline"
+                onClick={() => downloadStatus.filePath && handleOpenFolder(downloadStatus.filePath)}
+                disabled={!downloadStatus.filePath}
+              >
+                打开文件位置
+              </Button>
+              <Button
+                appearance="primary"
+                icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
+                onClick={() => handleDownload(true)}
+                disabled={isDownloading || !currentData.latestDownloadUrl}
+                className={styles.downloadButton}
+              >
+                {isDownloading ? '重新下载中...' : '重新下载'}
+              </Button>
+            </>
+          ) : (
+            <Button
+              appearance="primary"
+              icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
+              onClick={() => handleDownload(false)}
+              disabled={isDownloading || !currentData.latestDownloadUrl}
+              className={styles.downloadButton}
+            >
+              {isDownloading ? '下载中...' : '下载软件'}
+            </Button>
+          )}
         </DialogActions>
       </DialogSurface>
     </Dialog>

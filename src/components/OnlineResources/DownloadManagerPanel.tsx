@@ -27,6 +27,7 @@ import {
   ErrorCircle24Filled,
   Warning24Filled,
   Broom24Regular,
+  FolderZip24Regular,
 } from '@fluentui/react-icons';
 import { DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
@@ -225,6 +226,8 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
     switch (status) {
       case 'downloading':
         return { appearance: 'filled' as const, color: 'brand' as const, icon: <ArrowDownload24Regular /> };
+      case 'extracting':
+        return { appearance: 'filled' as const, color: 'warning' as const, icon: <FolderZip24Regular /> };
       case 'paused':
         return { appearance: 'filled' as const, color: 'warning' as const, icon: <Pause24Regular /> };
       case 'completed':
@@ -242,6 +245,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
   const getStatusText = (status: DownloadTask['status']) => {
     switch (status) {
       case 'downloading': return '下载中';
+      case 'extracting': return '正在解压';
       case 'paused': return '已暂停';
       case 'completed': return '已完成';
       case 'failed': return '失败';
@@ -277,10 +281,14 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
         <Button
           appearance="subtle"
           icon={<FolderOpen24Regular />}
-          onClick={() => {
+          onClick={async () => {
             if (downloadDirectory) {
-              // 打开下载目录
-              window.open(`file://${downloadDirectory}`);
+              try {
+                const { invoke } = await import('@tauri-apps/api/core');
+                await invoke('open_folder', { path: downloadDirectory });
+              } catch (error) {
+                console.error('❌ 打开下载目录失败:', error);
+              }
             }
           }}
         >
@@ -382,13 +390,28 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, styles }) => {
 
   // 删除任务
   const handleDelete = async () => {
-    // TODO: 实现删除任务功能
+    try {
+      // 如果任务已完成且有文件路径，删除本地文件
+      if (task.status === 'completed' && task.filePath) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('delete_file', { path: task.filePath });
+        console.log('✅ 已删除文件:', task.filePath);
+      }
+
+      // 从下载管理器中移除任务
+      onlineResourcesService.removeDownloadTask(task.id);
+      console.log('✅ 已删除下载任务:', task.id);
+    } catch (error) {
+      console.error('❌ 删除任务失败:', error);
+    }
   };
 
   const getStatusBadgeProps = (status: DownloadTask['status']) => {
     switch (status) {
       case 'downloading':
         return { appearance: 'filled' as const, color: 'brand' as const };
+      case 'extracting':
+        return { appearance: 'filled' as const, color: 'warning' as const };
       case 'paused':
         return { appearance: 'filled' as const, color: 'warning' as const };
       case 'completed':
@@ -405,6 +428,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, styles }) => {
   const getStatusText = (status: DownloadTask['status']) => {
     switch (status) {
       case 'downloading': return '下载中';
+      case 'extracting': return '正在解压';
       case 'paused': return '已暂停';
       case 'completed': return '已完成';
       case 'failed': return '失败';

@@ -100,6 +100,14 @@ pub struct DeviceProperties {
     pub screen_resolution: Option<String>,  // wm size
     pub total_memory: Option<String>,      // /proc/meminfo
     pub available_storage: Option<String>, // df /data
+
+    // 详细内存和存储信息
+    pub memory_total: Option<u64>,         // 总内存 (MB)
+    pub memory_used: Option<u64>,          // 已使用内存 (MB)
+    pub memory_available: Option<u64>,     // 可用内存 (MB)
+    pub storage_total: Option<u64>,        // 总存储 (MB)
+    pub storage_used: Option<u64>,         // 已使用存储 (MB)
+    pub storage_available: Option<u64>,    // 可用存储 (MB)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

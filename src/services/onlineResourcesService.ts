@@ -187,6 +187,7 @@ class OnlineResourcesService {
       // 获取默认下载目录
       const { invoke } = await import('@tauri-apps/api/core');
       const downloadDir = await invoke('get_default_download_directory') as string;
+      console.log('📁 使用下载目录:', downloadDir);
 
       // 从URL中提取文件扩展名
       const fileExtension = this.extractFileExtension(software.latestDownloadUrl, software.filetype);
@@ -220,14 +221,18 @@ class OnlineResourcesService {
       await this.setupDownloadProgressListener(taskId);
 
       // 调用新的下载和解压命令
-      const resultPath = await invoke('download_and_extract_software', downloadRequest) as string;
+      const resultPath = await invoke('download_and_extract_software', { request: downloadRequest }) as string;
 
-      // 更新任务状态为完成
-      downloadTask.status = 'completed';
-      downloadTask.endTime = new Date();
-      downloadTask.extractedPath = resultPath;
-      this.downloadTasks.set(taskId, downloadTask);
-      this.persistTasks();
+      // 更新任务状态为完成（只有在进度监听器没有设置为完成时才更新）
+      const currentTask = this.downloadTasks.get(taskId);
+      if (currentTask && currentTask.status !== 'completed') {
+        currentTask.status = 'completed';
+        currentTask.endTime = new Date();
+        currentTask.extractedPath = resultPath;
+        currentTask.filePath = resultPath; // 设置文件路径用于状态检测
+        this.downloadTasks.set(taskId, currentTask);
+        this.persistTasks();
+      }
 
       console.log('✅ 软件下载并解压完成:', resultPath);
       return taskId;
@@ -236,7 +241,7 @@ class OnlineResourcesService {
       console.error('❌ 下载软件失败:', error);
 
       // 更新任务状态为失败
-      const task = this.downloadTasks.get(`download_${software.id}_${Date.now()}`);
+      const task = this.downloadTasks.get(taskId);
       if (task) {
         task.status = 'failed';
         task.endTime = new Date();
@@ -345,14 +350,7 @@ class OnlineResourcesService {
     }
   }
 
-  /**
-   * 生成文件名
-   */
-  private generateFileName(software: OnlineSoftware): string {
-    const extension = software.filetype || 'zip';
-    const safeName = software.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
-    return `${safeName}_v${software.currentVersion}.${extension}`;
-  }
+
 
   /**
    * 从URL或filetype中提取文件扩展名
@@ -398,15 +396,27 @@ class OnlineResourcesService {
               break;
             case 'Completed':
               task.status = 'downloaded';
+              // 如果有文件路径信息，设置到任务中
+              if (progressData.file_path) {
+                task.filePath = progressData.file_path;
+              }
               break;
             case 'Extracting':
               task.status = 'extracting';
               break;
             case 'ExtractCompleted':
               task.status = 'completed';
+              // 如果有解压路径信息，设置到任务中
+              if (progressData.extract_path) {
+                task.extractedPath = progressData.extract_path;
+                task.filePath = progressData.extract_path;
+              }
               break;
             case 'Failed':
               task.status = 'failed';
+              if (progressData.error) {
+                task.error = progressData.error;
+              }
               break;
           }
 
@@ -642,6 +652,79 @@ class OnlineResourcesService {
   deleteTask(taskId: string): void {
     this.downloadTasks.delete(taskId);
     this.persistTasks();
+  }
+
+  // 移除下载任务（别名方法）
+  removeDownloadTask(taskId: string): void {
+    this.deleteTask(taskId);
+  }
+
+  /**
+   * 检查软件是否已下载
+   */
+  async checkSoftwareDownloaded(software: OnlineSoftware): Promise<{
+    isDownloaded: boolean;
+    filePath?: string;
+    task?: DownloadTask;
+  }> {
+    try {
+      // 1. 检查是否有已完成的下载任务
+      const completedTask = Array.from(this.downloadTasks.values()).find(
+        task => task.softwareId === software.id && task.status === 'completed' && task.filePath
+      );
+
+      if (completedTask && completedTask.filePath) {
+        // 2. 验证文件是否仍然存在
+        const { invoke } = await import('@tauri-apps/api/core');
+        const fileExists = await invoke('check_file_exists', { path: completedTask.filePath }) as boolean;
+
+        if (fileExists) {
+          return {
+            isDownloaded: true,
+            filePath: completedTask.filePath,
+            task: completedTask
+          };
+        } else {
+          // 文件不存在，更新任务状态
+          this.updateTaskAndPersist(completedTask.id, {
+            status: 'failed',
+            error: '文件已被删除或移动'
+          });
+        }
+      }
+
+      // 3. 检查默认下载目录中是否存在文件
+      const downloadDir = await this.getDownloadsDirectory();
+      if (downloadDir && software.latestDownloadUrl) {
+        const fileName = this.generateFileName(software);
+        const filePath = `${downloadDir}/${fileName}`;
+
+        const { invoke } = await import('@tauri-apps/api/core');
+        const fileExists = await invoke('check_file_exists', { path: filePath }) as boolean;
+
+        if (fileExists) {
+          return {
+            isDownloaded: true,
+            filePath: filePath
+          };
+        }
+      }
+
+      return { isDownloaded: false };
+    } catch (error) {
+      console.error('❌ 检查软件下载状态失败:', error);
+      return { isDownloaded: false };
+    }
+  }
+
+  /**
+   * 生成下载文件名
+   */
+  private generateFileName(software: OnlineSoftware): string {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const safeName = software.name.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_');
+    const extension = software.filetype || 'zip';
+    return `${safeName}_v${software.currentVersion}_${timestamp}.${extension}`;
   }
 }
 

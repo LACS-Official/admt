@@ -9,121 +9,120 @@ use crate::error::{HoutError, Result};
 
 /// 获取ADB可执行文件路径
 pub fn get_adb_path() -> PathBuf {
-    // 首先尝试从环境变量获取
-    if let Ok(path) = std::env::var("ADB_PATH") {
-        println!("Using ADB_PATH environment variable: {}", path);
-        return PathBuf::from(path);
-    }
-
-    // 尝试从应用资源目录获取
+    // 1. 优先尝试从应用资源目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
             let adb_path = parent.join("resources").join("adb.exe");
             if adb_path.exists() {
+                log::info!("Found ADB at app resources: {}", adb_path.display());
                 return adb_path;
             }
         }
     }
 
-    // 尝试从当前工作目录的resources获取
+    // 2. 尝试从当前工作目录的resources获取（开发模式）
     let current_dir_resources = std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("src-tauri")
         .join("resources")
         .join("adb.exe");
     if current_dir_resources.exists() {
+        log::info!("Found ADB at current dir resources: {}", current_dir_resources.display());
         return current_dir_resources;
     }
 
-    // 尝试从相对路径获取（开发模式）
+    // 3. 尝试从相对路径获取（开发模式备选）
     let relative_path = PathBuf::from("src-tauri/resources/adb.exe");
     if relative_path.exists() {
+        log::info!("Found ADB at relative path: {}", relative_path.display());
         return relative_path;
     }
 
-    // 尝试从上级目录获取
+    // 4. 尝试从上级目录获取（特殊项目结构）
     let parent_resources = std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .parent()
         .map(|p| p.join("Res").join("adb.exe"));
     if let Some(path) = parent_resources {
         if path.exists() {
-            println!("Found ADB at parent Res directory: {}", path.display());
+            log::info!("Found ADB at parent Res directory: {}", path.display());
             return path;
         }
     }
 
-    // 尝试绝对路径（基于您的项目结构）
+    // 5. 尝试绝对路径（基于项目结构）
     let absolute_path = PathBuf::from(r"D:\kaifa\HOUT\Res\adb.exe");
     if absolute_path.exists() {
-        println!("Found ADB at absolute path: {}", absolute_path.display());
+        log::info!("Found ADB at absolute path: {}", absolute_path.display());
         return absolute_path;
     }
 
-    // 打印当前工作目录用于调试
+    // 如果所有路径都找不到，记录错误并返回默认名称
     if let Ok(cwd) = std::env::current_dir() {
-        println!("Current working directory: {}", cwd.display());
+        log::error!("Current working directory: {}", cwd.display());
     }
-
-    // 默认使用系统PATH中的adb
-    println!("Falling back to system PATH for adb");
-    PathBuf::from("adb")
+    log::error!("ADB executable not found in any expected location, this may cause device detection to fail");
+    log::error!("Please ensure adb.exe is present in src-tauri/resources/ directory");
+    PathBuf::from("adb.exe")
 }
 
 /// 获取Fastboot可执行文件路径
 pub fn get_fastboot_path() -> PathBuf {
-    // 首先尝试从环境变量获取
-    if let Ok(path) = std::env::var("FASTBOOT_PATH") {
-        return PathBuf::from(path);
-    }
-
-    // 尝试从应用资源目录获取
+    // 1. 优先尝试从应用资源目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
             let fastboot_path = parent.join("resources").join("fastboot.exe");
             if fastboot_path.exists() {
+                log::info!("Found Fastboot at app resources: {}", fastboot_path.display());
                 return fastboot_path;
             }
         }
     }
 
-    // 尝试从当前工作目录的resources获取
+    // 2. 尝试从当前工作目录的resources获取（开发模式）
     let current_dir_resources = std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("src-tauri")
         .join("resources")
         .join("fastboot.exe");
     if current_dir_resources.exists() {
+        log::info!("Found Fastboot at current dir resources: {}", current_dir_resources.display());
         return current_dir_resources;
     }
 
-    // 尝试从相对路径获取（开发模式）
+    // 3. 尝试从相对路径获取（开发模式备选）
     let relative_path = PathBuf::from("src-tauri/resources/fastboot.exe");
     if relative_path.exists() {
+        log::info!("Found Fastboot at relative path: {}", relative_path.display());
         return relative_path;
     }
 
-    // 尝试从上级目录获取
+    // 4. 尝试从上级目录获取（特殊项目结构）
     let parent_resources = std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .parent()
         .map(|p| p.join("Res").join("fastboot.exe"));
     if let Some(path) = parent_resources {
         if path.exists() {
-            println!("Found Fastboot at parent Res directory: {}", path.display());
+            log::info!("Found Fastboot at parent Res directory: {}", path.display());
             return path;
         }
     }
 
-    // 尝试绝对路径（基于您的项目结构）
+    // 5. 尝试绝对路径（基于项目结构）
     let absolute_path = PathBuf::from(r"D:\kaifa\HOUT\Res\fastboot.exe");
     if absolute_path.exists() {
-        println!("Found Fastboot at absolute path: {}", absolute_path.display());
+        log::info!("Found Fastboot at absolute path: {}", absolute_path.display());
         return absolute_path;
     }
 
-    // 默认使用系统PATH中的fastboot
-    PathBuf::from("fastboot")
+    // 如果所有路径都找不到，记录错误并返回默认名称
+    if let Ok(cwd) = std::env::current_dir() {
+        log::error!("Current working directory: {}", cwd.display());
+    }
+    log::error!("Fastboot executable not found in any expected location, this may cause device detection to fail");
+    log::error!("Please ensure fastboot.exe is present in src-tauri/resources/ directory");
+    PathBuf::from("fastboot.exe")
 }
 
 /// 执行ADB命令
@@ -185,8 +184,8 @@ pub async fn execute_command(
     }
 }
 
-/// 解析设备列表输出
-pub fn parse_device_list(output: &str) -> Vec<(String, String)> {
+/// 解析ADB设备列表输出
+pub fn parse_adb_device_list(output: &str) -> Vec<(String, String)> {
     output
         .lines()
         .skip(1) // 跳过"List of devices attached"行
@@ -199,6 +198,36 @@ pub fn parse_device_list(output: &str) -> Vec<(String, String)> {
             }
         })
         .collect()
+}
+
+/// 解析Fastboot设备列表输出
+pub fn parse_fastboot_device_list(output: &str) -> Vec<(String, String)> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            if line.is_empty() {
+                return None;
+            }
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                Some((parts[0].to_string(), parts[1].to_string()))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// 解析设备列表输出（兼容函数，保持向后兼容）
+pub fn parse_device_list(output: &str) -> Vec<(String, String)> {
+    // 检查是否是ADB输出格式（包含"List of devices attached"）
+    if output.contains("List of devices attached") {
+        parse_adb_device_list(output)
+    } else {
+        // 假设是Fastboot输出格式
+        parse_fastboot_device_list(output)
+    }
 }
 
 /// 解析设备属性输出

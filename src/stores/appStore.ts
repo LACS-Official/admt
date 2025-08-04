@@ -2,8 +2,19 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { AppState, AppView, AppConfig, NotificationMessage } from "../types/app";
 
+// 状态栏消息类型
+export interface StatusBarMessage {
+  id: string;
+  type: "info" | "warning" | "error" | "success";
+  message: string;
+  icon?: React.ReactNode;
+  timestamp: Date;
+  duration?: number; // 显示持续时间，毫秒
+}
+
 interface AppStoreState extends AppState {
   notifications: NotificationMessage[];
+  statusBarMessage: StatusBarMessage | null;
   setCurrentView: (view: AppView) => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | undefined) => void;
@@ -11,6 +22,8 @@ interface AppStoreState extends AppState {
   addNotification: (notification: Omit<NotificationMessage, "id" | "timestamp">) => void;
   removeNotification: (id: string) => void;
   clearNotifications: () => void;
+  setStatusBarMessage: (message: Omit<StatusBarMessage, "id" | "timestamp"> | null) => void;
+  clearStatusBarMessage: () => void;
   initialize: () => void;
 }
 
@@ -32,6 +45,7 @@ export const useAppStore = create<AppStoreState>()(
       isLoading: false,
       error: undefined,
       notifications: [],
+      statusBarMessage: null,
 
       setCurrentView: (view: AppView) => set({ currentView: view }),
 
@@ -55,18 +69,18 @@ export const useAppStore = create<AppStoreState>()(
           id,
           timestamp: new Date(),
         };
-        
+
         set((state) => ({
           notifications: [...state.notifications, newNotification],
         }));
 
-        // 自动移除通知
-        if (notification.autoClose !== false) {
-          const duration = notification.duration || 5000;
-          setTimeout(() => {
-            get().removeNotification(id);
-          }, duration);
-        }
+        // 注释掉自动移除逻辑，由StatusBar组件手动管理
+        // if (notification.autoClose !== false) {
+        //   const duration = notification.duration || 5000;
+        //   setTimeout(() => {
+        //     get().removeNotification(id);
+        //   }, duration);
+        // }
       },
 
       removeNotification: (id: string) =>
@@ -75,6 +89,37 @@ export const useAppStore = create<AppStoreState>()(
         })),
 
       clearNotifications: () => set({ notifications: [] }),
+
+      setStatusBarMessage: (message) => {
+        if (message === null) {
+          set({ statusBarMessage: null });
+          return;
+        }
+
+        const id = Date.now().toString();
+        const newMessage: StatusBarMessage = {
+          ...message,
+          id,
+          timestamp: new Date(),
+        };
+
+        set({ statusBarMessage: newMessage });
+
+        // 如果设置了持续时间，自动清除消息
+        if (message.duration && message.duration > 0) {
+          setTimeout(() => {
+            set((state) => {
+              // 只有当前消息ID匹配时才清除，避免清除新消息
+              if (state.statusBarMessage?.id === id) {
+                return { statusBarMessage: null };
+              }
+              return state;
+            });
+          }, message.duration);
+        }
+      },
+
+      clearStatusBarMessage: () => set({ statusBarMessage: null }),
 
       initialize: () => set({ isInitialized: true }),
     }),

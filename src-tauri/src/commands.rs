@@ -1,13 +1,13 @@
 use crate::device::{DeviceInfo, DeviceMode, DeviceProperties, CommandResult, InstalledApp, ApkInfo, BatchOperation, DeviceFile};
 use crate::error::{HoutError, Result};
 use crate::screen_mirror::{ScreenMirrorSession, ScreenMirrorConfig, ScreenMirrorDevice};
-use crate::utils::{execute_adb_command as utils_execute_adb_command, execute_fastboot_command, parse_device_list};
-use crate::download_manager::{DownloadManager, DownloadRequest, DownloadProgress};
+use crate::utils::{execute_adb_command as utils_execute_adb_command, execute_fastboot_command, parse_adb_device_list, parse_fastboot_device_list};
+use crate::download_manager::DownloadManager;
 use tauri::Emitter;
 use crate::activation::{ActivationValidator, ActivationRequest, ActivationResponse, AppConfig};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
-use std::path::PathBuf;
+
 
 
 
@@ -20,7 +20,7 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
     // 扫描ADB设备
     match utils_execute_adb_command(&["devices"], Some(10)).await {
         Ok(result) if result.success => {
-            let device_list = parse_device_list(&result.output);
+            let device_list = parse_adb_device_list(&result.output);
             for (serial, status) in device_list {
                 let mode = DeviceMode::from_adb_status(&status);
                 devices.push(DeviceInfo::new(serial, mode));
@@ -35,18 +35,26 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
     }
     
     // 扫描Fastboot设备
+    log::info!("Scanning for Fastboot devices...");
     match execute_fastboot_command(&["devices"], Some(10)).await {
         Ok(result) if result.success => {
-            let device_list = parse_device_list(&result.output);
-            for (serial, _) in device_list {
+            log::info!("Fastboot devices command output: {}", result.output);
+            let device_list = parse_fastboot_device_list(&result.output);
+            log::info!("Parsed {} fastboot devices", device_list.len());
+            for (serial, status) in device_list {
+                log::info!("Found fastboot device: {} with status: {}", serial, status);
                 // 检查是否已经在ADB设备列表中
                 if !devices.iter().any(|d| d.serial == serial) {
                     devices.push(DeviceInfo::new(serial, DeviceMode::Fastboot));
+                    log::info!("Added fastboot device to list");
+                } else {
+                    log::info!("Device already in ADB list, skipping");
                 }
             }
         }
         Ok(result) => {
-            log::warn!("Fastboot devices command failed: {:?}", result.error);
+            log::warn!("Fastboot devices command failed: success={}, output={}, error={:?}",
+                result.success, result.output, result.error);
         }
         Err(e) => {
             log::error!("Failed to execute Fastboot devices command: {}", e);
@@ -142,6 +150,14 @@ pub async fn get_device_properties(serial: String) -> Result<DeviceProperties> {
         screen_resolution: None,
         total_memory: None,
         available_storage: None,
+
+        // 详细内存和存储信息
+        memory_total: None,
+        memory_used: None,
+        memory_available: None,
+        storage_total: None,
+        storage_used: None,
+        storage_available: None,
     };
     
     // 获取基本属性 - 扩展更多关键信息
@@ -820,6 +836,271 @@ pub async fn check_fastboot_availability() -> Result<CommandResult> {
             exit_code: Some(1),
         })
     }
+}
+
+/// 专门扫描Fastboot设备（用于调试）
+#[tauri::command]
+pub async fn scan_fastboot_devices() -> Result<CommandResult> {
+    log::info!("Scanning fastboot devices for debugging...");
+    let result = execute_fastboot_command(&["devices"], Some(10)).await?;
+
+    log::info!("Fastboot devices result: success={}, output='{}', error={:?}",
+        result.success, result.output, result.error);
+
+    Ok(result)
+}
+
+/// 获取设备内存、存储和电池详细信息
+#[tauri::command]
+pub async fn get_device_memory_storage_info(serial: String) -> Result<serde_json::Value> {
+    use serde_json::json;
+
+    let mut memory_info = json!({
+        "memory_total": null,
+        "memory_used": null,
+        "memory_available": null,
+        "memory_usage_percent": null
+    });
+
+    let mut storage_info = json!({
+        "storage_total": null,
+        "storage_used": null,
+        "storage_available": null,
+        "storage_usage_percent": null
+    });
+
+    let mut battery_info = json!({
+        "battery_health_percent": null,
+        "battery_actual_capacity": null,
+        "battery_design_capacity": null,
+        "battery_health_status": null,
+        "battery_level": null,
+        "battery_temperature": null
+    });
+
+    // 获取内存信息
+    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/proc/meminfo"], Some(10)).await {
+        if result.success {
+            let mut mem_total_kb = 0u64;
+            let mut mem_available_kb = 0u64;
+
+            for line in result.output.lines() {
+                if line.starts_with("MemTotal:") {
+                    if let Some(mem_part) = line.split_whitespace().nth(1) {
+                        if let Ok(mem_kb) = mem_part.parse::<u64>() {
+                            mem_total_kb = mem_kb;
+                        }
+                    }
+                } else if line.starts_with("MemAvailable:") {
+                    if let Some(mem_part) = line.split_whitespace().nth(1) {
+                        if let Ok(mem_kb) = mem_part.parse::<u64>() {
+                            mem_available_kb = mem_kb;
+                        }
+                    }
+                }
+            }
+
+            if mem_total_kb > 0 {
+                let mem_total_mb = mem_total_kb / 1024;
+                let mem_available_mb = mem_available_kb / 1024;
+                let mem_used_mb = mem_total_mb - mem_available_mb;
+                let usage_percent = if mem_total_mb > 0 {
+                    ((mem_used_mb as f64 / mem_total_mb as f64) * 100.0).round() as u32
+                } else {
+                    0
+                };
+
+                memory_info = json!({
+                    "memory_total": mem_total_mb,
+                    "memory_used": mem_used_mb,
+                    "memory_available": mem_available_mb,
+                    "memory_usage_percent": usage_percent
+                });
+            }
+        }
+    }
+
+    // 获取存储信息
+    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "df", "/data"], Some(10)).await {
+        if result.success {
+            let lines: Vec<&str> = result.output.lines().collect();
+            if lines.len() > 1 {
+                let data_line = lines[1];
+                let parts: Vec<&str> = data_line.split_whitespace().collect();
+                if parts.len() >= 4 {
+                    if let (Ok(total_kb), Ok(used_kb), Ok(available_kb)) = (
+                        parts[1].parse::<u64>(),
+                        parts[2].parse::<u64>(),
+                        parts[3].parse::<u64>()
+                    ) {
+                        let total_mb = total_kb / 1024;
+                        let used_mb = used_kb / 1024;
+                        let available_mb = available_kb / 1024;
+                        let usage_percent = if total_mb > 0 {
+                            ((used_mb as f64 / total_mb as f64) * 100.0).round() as u32
+                        } else {
+                            0
+                        };
+
+                        storage_info = json!({
+                            "storage_total": total_mb,
+                            "storage_used": used_mb,
+                            "storage_available": available_mb,
+                            "storage_usage_percent": usage_percent
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // 获取电池信息
+    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "dumpsys", "battery"], Some(10)).await {
+        if result.success {
+            let mut battery_level: Option<u32> = None;
+            let mut battery_health_status: Option<String> = None;
+            let mut battery_temperature: Option<f32> = None;
+            let mut battery_actual_capacity: Option<u32> = None;
+            let mut battery_design_capacity: Option<u32> = None;
+            let mut charge_counter_uah: Option<i64> = None; // Charge counter in μAh
+
+            for line in result.output.lines() {
+                let line = line.trim();
+
+                // 解析电池电量
+                if line.starts_with("level:") {
+                    if let Some(level_str) = line.split(':').nth(1) {
+                        if let Ok(level) = level_str.trim().parse::<u32>() {
+                            battery_level = Some(level);
+                        }
+                    }
+                }
+                // 解析电池健康状态
+                else if line.starts_with("health:") {
+                    if let Some(health_str) = line.split(':').nth(1) {
+                        let health = health_str.trim();
+                        battery_health_status = Some(health.to_string());
+                    }
+                }
+                // 解析电池温度
+                else if line.starts_with("temperature:") {
+                    if let Some(temp_str) = line.split(':').nth(1) {
+                        if let Ok(temp) = temp_str.trim().parse::<i32>() {
+                            // 温度通常以十分之一摄氏度为单位
+                            battery_temperature = Some(temp as f32 / 10.0);
+                        }
+                    }
+                }
+                // 解析 Charge counter（优先使用此方法）
+                else if line.contains("Charge counter:") || line.contains("charge_counter:") {
+                    if let Some(counter_str) = line.split(':').nth(1) {
+                        if let Ok(counter) = counter_str.trim().parse::<i64>() {
+                            // Charge counter 通常以 μAh 为单位
+                            charge_counter_uah = Some(counter);
+                            log::info!("Found Charge counter: {} μAh", counter);
+                        }
+                    }
+                }
+            }
+
+            // 使用 Charge counter 和当前电量计算实际可用容量
+            if let (Some(counter_uah), Some(level)) = (charge_counter_uah, battery_level) {
+                if level > 0 && counter_uah > 0 {
+                    // 计算实际可用容量：Charge counter ÷ 当前电量百分比
+                    let actual_capacity_uah = (counter_uah as f64 / (level as f64 / 100.0)) as i64;
+                    let actual_capacity_mah = (actual_capacity_uah / 1000) as u32;
+
+                    // 验证计算结果的合理性（容量范围 500-15000 mAh）
+                    if actual_capacity_mah >= 500 && actual_capacity_mah <= 15000 {
+                        battery_actual_capacity = Some(actual_capacity_mah);
+                        log::info!("Calculated actual capacity from Charge counter: {} mAh (counter: {} μAh, level: {}%)",
+                                 actual_capacity_mah, counter_uah, level);
+                    } else {
+                        log::warn!("Calculated capacity {} mAh is out of reasonable range, ignoring", actual_capacity_mah);
+                    }
+                } else {
+                    log::warn!("Invalid data for capacity calculation: counter={:?}, level={:?}", charge_counter_uah, battery_level);
+                }
+            }
+
+            // 尝试获取设计容量信息（标称容量）
+            if let Ok(capacity_result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/sys/class/power_supply/battery/charge_full_design"], Some(5)).await {
+                if capacity_result.success {
+                    if let Ok(design_capacity) = capacity_result.output.trim().parse::<u32>() {
+                        battery_design_capacity = Some(design_capacity / 1000); // 转换为mAh
+                        log::info!("Found design capacity: {} mAh", design_capacity / 1000);
+                    }
+                }
+            }
+
+            // 如果没有获取到设计容量，尝试另一个路径
+            if battery_design_capacity.is_none() {
+                if let Ok(capacity_result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/sys/class/power_supply/battery/charge_full"], Some(5)).await {
+                    if capacity_result.success {
+                        if let Ok(full_capacity) = capacity_result.output.trim().parse::<u32>() {
+                            battery_design_capacity = Some(full_capacity / 1000); // 转换为mAh
+                            log::info!("Found full capacity as design capacity: {} mAh", full_capacity / 1000);
+                        }
+                    }
+                }
+            }
+
+            // 如果 Charge counter 方法失败，回退到传统方法获取实际容量
+            if battery_actual_capacity.is_none() {
+                log::info!("Charge counter method failed, falling back to traditional method");
+
+                if let Ok(capacity_result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/sys/class/power_supply/battery/charge_now"], Some(5)).await {
+                    if capacity_result.success {
+                        if let Ok(current_capacity) = capacity_result.output.trim().parse::<u32>() {
+                            battery_actual_capacity = Some(current_capacity / 1000); // 转换为mAh
+                            log::info!("Found current capacity (fallback): {} mAh", current_capacity / 1000);
+                        }
+                    }
+                }
+            }
+
+            // 计算电池健康度百分比和状态
+            let (battery_health_percent, health_calculation_method) = if let (Some(actual), Some(design)) = (battery_actual_capacity, battery_design_capacity) {
+                if design > 0 {
+                    let health_percent = ((actual as f64 / design as f64) * 100.0).round() as u32;
+                    let limited_health = std::cmp::min(health_percent, 150); // 允许稍微超过100%，但限制在150%以内
+                    let method = if charge_counter_uah.is_some() {
+                        "Charge counter 计算"
+                    } else {
+                        "系统文件计算"
+                    };
+                    log::info!("Battery health calculated: {}% using method: {}", limited_health, method);
+                    (Some(limited_health), Some(method.to_string()))
+                } else {
+                    log::warn!("Design capacity is 0, cannot calculate health");
+                    (None, None)
+                }
+            } else if battery_actual_capacity.is_some() && battery_design_capacity.is_none() {
+                log::info!("Have actual capacity but no design capacity, cannot calculate health percentage");
+                (None, Some("无标称容量".to_string()))
+            } else {
+                log::info!("No capacity data available for health calculation");
+                (None, None)
+            };
+
+            battery_info = json!({
+                "battery_health_percent": battery_health_percent,
+                "battery_actual_capacity": battery_actual_capacity,
+                "battery_design_capacity": battery_design_capacity,
+                "battery_health_status": battery_health_status,
+                "battery_level": battery_level,
+                "battery_temperature": battery_temperature,
+                "health_calculation_method": health_calculation_method,
+                "charge_counter_available": charge_counter_uah.is_some()
+            });
+        }
+    }
+
+    Ok(json!({
+        "memory": memory_info,
+        "storage": storage_info,
+        "battery": battery_info
+    }))
 }
 
 /// 检查设备连接状态
@@ -1847,25 +2128,22 @@ pub async fn download_and_extract_software<R: tauri::Runtime>(
     app_handle: tauri::AppHandle<R>,
     request: crate::download_manager::DownloadRequest,
 ) -> Result<String> {
-    let download_manager = crate::download_manager::DownloadManager::new();
+    let download_manager = DownloadManager::new();
     let result_path = download_manager.download_and_extract(&app_handle, request).await?;
     Ok(result_path.to_string_lossy().to_string())
 }
 
-/// 获取默认下载目录
+/// 获取默认下载目录（使用应用程序目录下的downloads）
 #[tauri::command]
 pub async fn get_default_download_directory() -> Result<String> {
-    let download_dir = dirs::download_dir()
-        .or_else(|| dirs::home_dir().map(|p| p.join("Downloads")))
-        .unwrap_or_else(|| std::path::PathBuf::from("./downloads"));
-
-    let hout_download_dir = download_dir.join("HOUT");
+    // 使用应用程序目录下的downloads文件夹
+    let app_downloads_dir = get_app_downloads_dir()?;
 
     // 确保目录存在
-    std::fs::create_dir_all(&hout_download_dir)
+    std::fs::create_dir_all(&app_downloads_dir)
         .map_err(|e| HoutError::IoError { message: e.to_string() })?;
 
-    Ok(hout_download_dir.to_string_lossy().to_string())
+    Ok(app_downloads_dir.to_string_lossy().to_string())
 }
 
 /// 打开文件夹

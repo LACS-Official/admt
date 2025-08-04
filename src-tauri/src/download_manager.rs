@@ -15,6 +15,9 @@ pub struct DownloadProgress {
     pub percentage: f64,
     pub speed: f64, // bytes per second
     pub status: DownloadStatus,
+    pub file_path: Option<String>,
+    pub extract_path: Option<String>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,6 +56,30 @@ impl DownloadManager {
         Self
     }
 
+    /// 获取应用程序下载目录
+    fn get_app_downloads_dir() -> Result<PathBuf> {
+        // 尝试获取应用程序可执行文件所在目录
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let downloads_dir = exe_dir.join("downloads");
+                println!("🎯 使用应用程序目录下的downloads: {}", downloads_dir.display());
+                return Ok(downloads_dir);
+            }
+        }
+
+        // 如果无法获取可执行文件目录，使用应用数据目录作为备选
+        if let Some(data_dir) = dirs::data_dir() {
+            let app_data_dir = data_dir.join("HOUT").join("downloads");
+            println!("🎯 使用应用数据目录: {}", app_data_dir.display());
+            return Ok(app_data_dir);
+        }
+
+        // 最后回退到临时目录
+        let temp_dir = std::env::temp_dir().join("hout_downloads");
+        println!("🎯 使用临时目录: {}", temp_dir.display());
+        Ok(temp_dir)
+    }
+
     /// 下载文件并自动解压
     pub async fn download_and_extract<R: tauri::Runtime>(
         &self,
@@ -64,18 +91,21 @@ impl DownloadManager {
         
         // 2. 检查是否需要解压
         if self.is_archive_file(&downloaded_file) {
+            println!("🗜️ 检测到压缩文件，开始自动解压: {}", downloaded_file.display());
             let extract_dir = self.extract_archive(app_handle, &downloaded_file, &request).await?;
-            
+
             // 3. 生成配置文件
             if let Some(openname) = &request.openname {
+                println!("📝 生成配置文件: {}", openname);
                 self.create_config_file(&extract_dir, openname)?;
             }
-            
-            // 4. 可选删除原压缩文件
-            // 这里可以添加用户配置选项来决定是否删除
-            
+
+            // 4. 保留原压缩文件（根据用户要求）
+            println!("✅ 解压完成，保留原压缩文件: {}", downloaded_file.display());
+
             Ok(extract_dir)
         } else {
+            println!("📄 非压缩文件，无需解压: {}", downloaded_file.display());
             Ok(downloaded_file.parent().unwrap().to_path_buf())
         }
     }
@@ -96,17 +126,22 @@ impl DownloadManager {
 
         let total_size = response.content_length().unwrap_or(0);
         
+        // 获取应用程序下载目录
+        let app_downloads_dir = Self::get_app_downloads_dir()?;
+
         // 构建文件名
         let file_extension = request.file_extension.as_deref().unwrap_or("bin");
         let filename = format!("{}.{}", request.software_name, file_extension);
-        let file_path = Path::new(&request.download_dir).join(&filename);
+        let file_path = app_downloads_dir.join(&filename);
 
         // 确保下载目录存在
         if let Some(parent) = file_path.parent() {
+            println!("📁 创建下载目录: {}", parent.display());
             fs::create_dir_all(parent)
                 .map_err(|e| HoutError::IoError { message: e.to_string() })?;
         }
 
+        println!("📁 创建下载文件: {}", file_path.display());
         let mut file = fs::File::create(&file_path)
             .map_err(|e| HoutError::IoError { message: e.to_string() })?;
         
@@ -122,6 +157,9 @@ impl DownloadManager {
             percentage: 0.0,
             speed: 0.0,
             status: DownloadStatus::Downloading,
+            file_path: None,
+            extract_path: None,
+            error: None,
         };
         let _ = app_handle.emit("download-progress", &progress);
 
@@ -148,6 +186,9 @@ impl DownloadManager {
                     percentage,
                     speed,
                     status: DownloadStatus::Downloading,
+                    file_path: None,
+                    extract_path: None,
+                    error: None,
                 };
                 let _ = app_handle.emit("download-progress", &progress);
             }
@@ -161,9 +202,13 @@ impl DownloadManager {
             percentage: 100.0,
             speed: 0.0,
             status: DownloadStatus::Completed,
+            file_path: Some(file_path.to_string_lossy().to_string()),
+            extract_path: None,
+            error: None,
         };
         let _ = app_handle.emit("download-progress", &progress);
 
+        println!("✅ 文件下载完成: {}", file_path.display());
         Ok(file_path)
     }
 
@@ -171,7 +216,7 @@ impl DownloadManager {
     fn is_archive_file(&self, file_path: &Path) -> bool {
         if let Some(extension) = file_path.extension() {
             let ext = extension.to_string_lossy().to_lowercase();
-            matches!(ext.as_str(), "zip")
+            matches!(ext.as_str(), "zip" | "7z")
         } else {
             false
         }
@@ -196,6 +241,9 @@ impl DownloadManager {
             percentage: 0.0,
             speed: 0.0,
             status: DownloadStatus::Extracting,
+            file_path: Some(archive_path.to_string_lossy().to_string()),
+            extract_path: None,
+            error: None,
         };
         let _ = app_handle.emit("download-progress", &progress);
 
@@ -206,10 +254,7 @@ impl DownloadManager {
 
         match extension.as_str() {
             "zip" => self.extract_zip(archive_path, &extract_dir).await?,
-            "7z" => {
-                // 暂时不支持7z，返回错误提示
-                return Err(HoutError::UnsupportedFormat("7z格式暂不支持自动解压，请手动解压".to_string()));
-            },
+            "7z" => self.extract_7z(archive_path, &extract_dir).await?,
             _ => return Err(HoutError::UnsupportedFormat(format!("不支持的压缩格式: {}", extension))),
         }
 
@@ -221,6 +266,9 @@ impl DownloadManager {
             percentage: 100.0,
             speed: 0.0,
             status: DownloadStatus::ExtractCompleted,
+            file_path: None,
+            extract_path: Some(extract_dir.to_string_lossy().to_string()),
+            error: None,
         };
         let _ = app_handle.emit("download-progress", &progress);
 
@@ -264,7 +312,17 @@ impl DownloadManager {
         Ok(())
     }
 
+    /// 解压7Z文件
+    async fn extract_7z(&self, archive_path: &Path, extract_dir: &Path) -> Result<()> {
+        println!("🗜️ 开始解压7z文件: {}", archive_path.display());
 
+        // 使用sevenz_rust的decompress_file函数进行解压
+        sevenz_rust::decompress_file(archive_path, extract_dir)
+            .map_err(|e| HoutError::ExtractionError(format!("7z文件解压失败: {}", e)))?;
+
+        println!("✅ 7z文件解压完成");
+        Ok(())
+    }
 
     /// 创建配置文件
     fn create_config_file(&self, extract_dir: &Path, openname: &str) -> Result<()> {

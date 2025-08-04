@@ -44,33 +44,37 @@ const useStyles = makeStyles({
     overflow: "hidden",
     height: "100vh",
     backgroundColor: "var(--colorNeutralBackground1)",
+    gap: "1px", // 添加分隔线效果
   },
   sidebar: {
-    width: "200px",
-    minWidth: "200px",
-    maxWidth: "200px", // 严格限制宽度
-    backgroundColor: "var(--colorNeutralBackground1)",
-    borderRight: "1px solid var(--colorNeutralStroke2)", // 简化边框
+    width: "240px", // 增加宽度
+    minWidth: "240px",
+    maxWidth: "240px", // 更新最大宽度
+    backgroundColor: "var(--colorNeutralBackground2)", // 使用更深的背景色
+    borderRight: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)", // 简化阴影
+    boxShadow: "2px 0 16px rgba(0, 0, 0, 0.08)", // 更现代的阴影
     position: "relative",
     zIndex: 10,
+    // 添加渐变背景
+    background: "linear-gradient(180deg, var(--colorNeutralBackground2) 0%, var(--colorNeutralBackground1) 100%)",
   },
   deviceInfo: {
-    padding: "10px", // 减少内边距防止溢出
-    borderBottom: "1px solid var(--colorNeutralStroke2)", // 简化边框
-    backgroundColor: "var(--colorNeutralBackground1)",
+    padding: "10px", // 增加内边距
+    borderBottom: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
+    backdropFilter: "blur(10px)", // 毛玻璃效果
     overflow: "hidden",
     minHeight: "auto",
     position: "relative",
-    boxSizing: "border-box", // 确保边框计算在内
+    boxSizing: "border-box",
+    margin: "8px", // 添加外边距
   },
   deviceInfoContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px", // 进一步减少间距
+    gap: "2px", // 进一步减少间距
     width: "100%",
     overflow: "hidden",
     boxSizing: "border-box",
@@ -78,7 +82,7 @@ const useStyles = makeStyles({
   deviceInfoTop: {
     display: "flex",
     alignItems: "flex-start",
-    gap: "6px", // 进一步减少间距
+    gap: "2px", // 进一步减少间距
     width: "100%",
     overflow: "hidden",
     marginBottom: "4px", // 减少底部间距
@@ -136,6 +140,7 @@ const useStyles = makeStyles({
     },
   },
   deviceTextInfo: {
+    marginLeft: "12px",
     flex: 1,
     display: "flex",
     flexDirection: "column",
@@ -211,7 +216,7 @@ const useStyles = makeStyles({
     color: "var(--colorBrandForeground1)",
   },
   deviceIconImage: {
-    width: "90px", // 增加宽度以更好地填充容器
+    width: "95px", // 增加宽度以更好地填充容器
     height: "100%", // 高度填充整个容器
     maxHeight: "88px", // 设置最大高度，留出容器内边距空间
     borderRadius: "4px",
@@ -312,10 +317,11 @@ const useStyles = makeStyles({
   },
   tabList: {
     backgroundColor: "transparent",
-    padding: "0 8px 8px 8px", // 进一步减少内边距
+    padding: "3px 8px 8px 8px", // 进一步减少内边距
     display: "flex",
     flexDirection: "column",
-    gap: "3px", // 减少标签间距
+    alignItems: "center",
+    gap: "5px", // 减少标签间距
     flex: 1,
     overflow: "auto",
     boxSizing: "border-box",
@@ -336,19 +342,20 @@ const useStyles = makeStyles({
     width: "100%",
     justifyContent: "flex-start",
     padding: "6px 8px", // 减小内边距
-    borderRadius: "4px", // 减小圆角
+    borderRadius: "8px", // 减小圆角
     minHeight: "28px", // 减小高度
+    maxWidth: "90%",
     fontSize: "11px", // 减小字体
     fontWeight: "500",
     transition: "all 0.2s ease", // 简化过渡
-    border: "1px solid transparent", // 简化边框
     position: "relative",
     backgroundColor: "var(--colorNeutralBackground1)",
     color: "var(--colorNeutralForeground2)",
     cursor: "pointer",
     overflow: "hidden",
     boxSizing: "border-box",
-
+    border: "1px solid var(--colorNeutralStroke2)", // 添加默认灰色边框
+        boxShadow: "2px 0 16px rgba(0, 0, 0, 0.08)", // 更现代的阴影
     // 简化图标样式
     "& .fui-Tab__icon": {
       color: "var(--colorNeutralForeground3)",
