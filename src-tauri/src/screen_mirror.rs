@@ -195,6 +195,7 @@ impl ScreenMirrorSession {
         self.end_time = Some(Utc::now());
     }
 
+    #[allow(dead_code)]
     pub fn stop(&mut self) {
         self.status = ScreenMirrorStatus::Disconnected;
         self.end_time = Some(Utc::now());
@@ -206,6 +207,7 @@ impl ScreenMirrorSession {
 }
 
 /// 预设的投屏质量配置
+#[allow(dead_code)]
 pub fn get_quality_presets() -> HashMap<String, ScreenMirrorQuality> {
     let mut presets = HashMap::new();
     

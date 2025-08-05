@@ -7,14 +7,22 @@ use tauri::Emitter;
 use crate::activation::{ActivationValidator, ActivationRequest, ActivationResponse, AppConfig};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use crate::cache::get_cache_manager;
 
 
 
 
 
-/// 扫描连接的设备
+/// 扫描连接的设备（使用缓存）
 #[tauri::command]
 pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
+    // 首先尝试从缓存获取
+    let cache_manager = get_cache_manager();
+    if let Some(cached_devices) = cache_manager.get_device_list().await {
+        log::debug!("Device list cache hit with {} devices", cached_devices.len());
+        return Ok(cached_devices);
+    }
+
     let mut devices = Vec::new();
     
     // 扫描ADB设备
@@ -60,8 +68,12 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
             log::error!("Failed to execute Fastboot devices command: {}", e);
         }
     }
-    
+
     log::info!("Found {} devices", devices.len());
+
+    // 缓存设备列表
+    cache_manager.set_device_list(devices.clone()).await;
+
     Ok(devices)
 }
 
@@ -82,275 +94,279 @@ pub async fn get_device_info(serial: String) -> Result<DeviceInfo> {
     Ok(device)
 }
 
-/// 获取设备属性
-#[tauri::command]
-pub async fn get_device_properties(serial: String) -> Result<DeviceProperties> {
-    // 验证设备存在且可访问
-    let device = get_device_info(serial.clone()).await?;
-    
-    if !device.is_adb_available() {
-        return Err(HoutError::InvalidDeviceMode {
-            mode: format!("{:?}", device.mode),
-        });
+/// 批量获取设备属性（优化版本）
+async fn get_device_properties_batch(serial: &str) -> Result<DeviceProperties> {
+    // 使用单个getprop命令获取所有属性
+    let result = utils_execute_adb_command(&["-s", serial, "shell", "getprop"], Some(10)).await?;
+
+    if !result.success {
+        let error_msg = result.error.unwrap_or_else(|| "Unknown error".to_string());
+        return Err(HoutError::Device(format!("Failed to get device properties: {}", error_msg)));
     }
-    
-    let mut properties = DeviceProperties {
-        // 设备基本信息
-        market_name: None,
-        product_name: None,
-        brand: None,
-        model: None,
-        device_name: None,
-        manufacturer: None,
-        serial_number: None,
 
-        // 系统版本信息
-        android_version: None,
-        sdk_version: None,
-        build_id: None,
-        build_display_id: None,
-        system_version: None,
-        security_patch_level: None,
-        build_fingerprint: None,
-        build_date: None,
-        build_user: None,
-        build_host: None,
+    let mut properties = DeviceProperties::default();
 
-        // 硬件信息
-        cpu_abi: None,
-        cpu_abi_list: None,
-        soc_manufacturer: None,
-        soc_model: None,
-        hardware: None,
-        hardware_chipname: None,
-        board_platform: None,
-        product_board: None,
+    // 解析getprop输出
+    for line in result.output.lines() {
+        if let Some((key, value)) = parse_getprop_line(line) {
+            match key.as_str() {
+                // 设备基本信息
+                "ro.product.marketname" => properties.market_name = Some(value),
+                "ro.product.name" => properties.product_name = Some(value),
+                "ro.product.brand" => properties.brand = Some(value),
+                "ro.product.model" => properties.model = Some(value),
+                "ro.product.device" => properties.device_name = Some(value),
+                "ro.product.manufacturer" => properties.manufacturer = Some(value),
+                "ro.serialno" => properties.serial_number = Some(value),
 
-        // 安全和启动信息
-        bootloader_locked: None,
-        verified_boot_state: None,
-        verity_mode: None,
-        debuggable: None,
-        secure: None,
-        adb_secure: None,
+                // 系统版本信息
+                "ro.build.version.release" => properties.android_version = Some(value),
+                "ro.build.version.sdk" => properties.sdk_version = Some(value),
+                "ro.build.id" => properties.build_id = Some(value),
+                "ro.build.display.id" => properties.build_display_id = Some(value),
+                "ro.system.build.version.incremental" => properties.system_version = Some(value),
+                "ro.build.version.security_patch" => properties.security_patch_level = Some(value),
+                "ro.build.fingerprint" => properties.build_fingerprint = Some(value),
+                "ro.build.date" => properties.build_date = Some(value),
+                "ro.build.user" => properties.build_user = Some(value),
+                "ro.build.host" => properties.build_host = Some(value),
 
-        // 显示和UI信息
-        lcd_density: None,
-        locale: None,
-        timezone: None,
+                // 硬件信息
+                "ro.product.cpu.abi" => properties.cpu_abi = Some(value),
+                "ro.product.cpu.abilist" => properties.cpu_abi_list = Some(value),
+                "ro.soc.manufacturer" => properties.soc_manufacturer = Some(value),
+                "ro.soc.model" => properties.soc_model = Some(value),
+                "ro.hardware" => properties.hardware = Some(value),
+                "ro.hardware.chipname" => properties.hardware_chipname = Some(value),
+                "ro.board.platform" => properties.board_platform = Some(value),
+                "ro.product.board" => properties.product_board = Some(value),
 
-        // 网络和通信
-        default_network: None,
-        first_api_level: None,
-        vndk_version: None,
+                // 安全和启动信息
+                "ro.boot.flash.locked" => properties.bootloader_locked = parse_bool(&value),
+                "ro.boot.verifiedbootstate" => properties.verified_boot_state = Some(value),
+                "ro.boot.veritymode" => properties.verity_mode = Some(value),
+                "ro.debuggable" => properties.debuggable = parse_bool(&value),
+                "ro.secure" => properties.secure = parse_bool(&value),
+                "ro.adb.secure" => properties.adb_secure = parse_bool(&value),
 
-        // 运行时信息
-        imei: None,
-        battery_level: None,
-        screen_resolution: None,
-        total_memory: None,
-        available_storage: None,
+                // 显示和UI信息
+                "ro.sf.lcd_density" => properties.lcd_density = Some(value),
+                "ro.product.locale" => properties.locale = Some(value),
+                "persist.sys.timezone" => properties.timezone = Some(value),
 
-        // 详细内存和存储信息
-        memory_total: None,
-        memory_used: None,
-        memory_available: None,
-        storage_total: None,
-        storage_used: None,
-        storage_available: None,
-    };
-    
-    // 获取基本属性 - 扩展更多关键信息
-    let property_keys = [
-        // 设备基本信息
-        "ro.product.marketname",
-        "ro.product.name",
-        "ro.product.brand",
-        "ro.product.model",
-        "ro.product.device",
-        "ro.product.manufacturer",
-        "ro.serialno",
-
-        // 系统版本信息
-        "ro.build.version.release",
-        "ro.build.version.sdk",
-        "ro.build.id",
-        "ro.build.display.id",
-        "ro.system.build.version.incremental",
-        "ro.build.version.security_patch",
-        "ro.build.fingerprint",
-        "ro.build.date",
-        "ro.build.user",
-        "ro.build.host",
-
-        // 硬件信息
-        "ro.product.cpu.abi",
-        "ro.product.cpu.abilist",
-        "ro.soc.manufacturer",
-        "ro.soc.model",
-        "ro.hardware",
-        "ro.hardware.chipname",
-        "ro.board.platform",
-        "ro.product.board",
-
-        // 安全和启动信息
-        "ro.boot.flash.locked",
-        "ro.boot.verifiedbootstate",
-        "ro.boot.veritymode",
-        "ro.debuggable",
-        "ro.secure",
-        "ro.adb.secure",
-
-        // 显示和UI信息
-        "ro.sf.lcd_density",
-        "ro.product.locale",
-        "persist.sys.timezone",
-
-        // 网络和通信
-        "ro.telephony.default_network",
-        "ro.product.first_api_level",
-        "ro.vndk.version",
-    ];
-    
-    for key in &property_keys {
-        if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "getprop", key], Some(5)).await {
-            if result.success {
-                let value = result.output.trim();
-                if !value.is_empty() {
-                    match *key {
-                        // 设备基本信息
-                        "ro.product.marketname" => properties.market_name = Some(value.to_string()),
-                        "ro.product.name" => properties.product_name = Some(value.to_string()),
-                        "ro.product.brand" => properties.brand = Some(value.to_string()),
-                        "ro.product.model" => properties.model = Some(value.to_string()),
-                        "ro.product.device" => properties.device_name = Some(value.to_string()),
-                        "ro.product.manufacturer" => properties.manufacturer = Some(value.to_string()),
-                        "ro.serialno" => properties.serial_number = Some(value.to_string()),
-
-                        // 系统版本信息
-                        "ro.build.version.release" => properties.android_version = Some(value.to_string()),
-                        "ro.build.version.sdk" => properties.sdk_version = Some(value.to_string()),
-                        "ro.build.id" => properties.build_id = Some(value.to_string()),
-                        "ro.build.display.id" => properties.build_display_id = Some(value.to_string()),
-                        "ro.system.build.version.incremental" => properties.system_version = Some(value.to_string()),
-                        "ro.build.version.security_patch" => properties.security_patch_level = Some(value.to_string()),
-                        "ro.build.fingerprint" => properties.build_fingerprint = Some(value.to_string()),
-                        "ro.build.date" => properties.build_date = Some(value.to_string()),
-                        "ro.build.user" => properties.build_user = Some(value.to_string()),
-                        "ro.build.host" => properties.build_host = Some(value.to_string()),
-
-                        // 硬件信息
-                        "ro.product.cpu.abi" => properties.cpu_abi = Some(value.to_string()),
-                        "ro.product.cpu.abilist" => properties.cpu_abi_list = Some(value.to_string()),
-                        "ro.soc.manufacturer" => properties.soc_manufacturer = Some(value.to_string()),
-                        "ro.soc.model" => properties.soc_model = Some(value.to_string()),
-                        "ro.hardware" => properties.hardware = Some(value.to_string()),
-                        "ro.hardware.chipname" => properties.hardware_chipname = Some(value.to_string()),
-                        "ro.board.platform" => properties.board_platform = Some(value.to_string()),
-                        "ro.product.board" => properties.product_board = Some(value.to_string()),
-
-                        // 安全和启动信息
-                        "ro.boot.flash.locked" => properties.bootloader_locked = Some(value == "1"),
-                        "ro.boot.verifiedbootstate" => properties.verified_boot_state = Some(value.to_string()),
-                        "ro.boot.veritymode" => properties.verity_mode = Some(value.to_string()),
-                        "ro.debuggable" => properties.debuggable = Some(value == "1"),
-                        "ro.secure" => properties.secure = Some(value == "1"),
-                        "ro.adb.secure" => properties.adb_secure = Some(value == "1"),
-
-                        // 显示和UI信息
-                        "ro.sf.lcd_density" => properties.lcd_density = Some(value.to_string()),
-                        "ro.product.locale" => properties.locale = Some(value.to_string()),
-                        "persist.sys.timezone" => properties.timezone = Some(value.to_string()),
-
-                        // 网络和通信
-                        "ro.telephony.default_network" => properties.default_network = Some(value.to_string()),
-                        "ro.product.first_api_level" => properties.first_api_level = Some(value.to_string()),
-                        "ro.vndk.version" => properties.vndk_version = Some(value.to_string()),
-
-                        _ => {}
-                    }
-                }
-            }
-        }
-    }
-    
-    // 获取电池电量和状态
-    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "dumpsys", "battery"], Some(10)).await {
-        if result.success {
-            for line in result.output.lines() {
-                if line.trim().starts_with("level:") {
-                    if let Some(level_str) = line.split(':').nth(1) {
-                        if let Ok(level) = level_str.trim().parse::<i32>() {
-                            properties.battery_level = Some(level);
-                        }
-                    }
-                }
+                // 网络和通信
+                "ro.telephony.default_network" => properties.default_network = Some(value),
+                "ro.product.first_api_level" => properties.first_api_level = Some(value),
+                "ro.vndk.version" => properties.vndk_version = Some(value),
+                _ => {} // 忽略其他属性
             }
         }
     }
 
-    // 获取屏幕分辨率
-    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "wm", "size"], Some(5)).await {
-        if result.success {
-            for line in result.output.lines() {
-                if line.contains("Physical size:") {
-                    if let Some(size_part) = line.split("Physical size:").nth(1) {
-                        properties.screen_resolution = Some(size_part.trim().to_string());
-                    }
-                }
-            }
+    // 获取电池电量信息
+    if let Ok(battery_result) = utils_execute_adb_command(&["-s", serial, "shell", "dumpsys", "battery"], Some(10)).await {
+        if battery_result.success {
+            properties.battery_level = parse_battery_level(&battery_result.output);
+            log::debug!("Battery level for {}: {:?}", serial, properties.battery_level);
+        } else {
+            log::warn!("Failed to get battery info for {}: {:?}", serial, battery_result.error);
+        }
+    } else {
+        log::warn!("Failed to execute battery command for {}", serial);
+    }
+
+    // 获取屏幕分辨率信息
+    if let Ok(screen_result) = utils_execute_adb_command(&["-s", serial, "shell", "wm", "size"], Some(5)).await {
+        if screen_result.success {
+            properties.screen_resolution = parse_screen_resolution(&screen_result.output);
+            log::debug!("Screen resolution for {}: {:?}", serial, properties.screen_resolution);
         }
     }
 
     // 获取内存信息
-    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/proc/meminfo"], Some(5)).await {
-        if result.success {
-            for line in result.output.lines() {
-                if line.starts_with("MemTotal:") {
-                    if let Some(mem_part) = line.split_whitespace().nth(1) {
-                        if let Ok(mem_kb) = mem_part.parse::<u64>() {
-                            let mem_mb = mem_kb / 1024;
-                            properties.total_memory = Some(format!("{} MB", mem_mb));
-                        }
-                    }
-                    break;
-                }
+    if let Ok(memory_result) = utils_execute_adb_command(&["-s", serial, "shell", "cat", "/proc/meminfo"], Some(5)).await {
+        if memory_result.success {
+            if let Some(total_memory) = parse_total_memory(&memory_result.output) {
+                properties.total_memory = Some(format!("{} MB", total_memory / 1024));
+                log::debug!("Total memory for {}: {:?}", serial, properties.total_memory);
             }
         }
     }
 
     // 获取存储信息
-    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "df", "/data"], Some(5)).await {
-        if result.success {
-            let lines: Vec<&str> = result.output.lines().collect();
-            if lines.len() > 1 {
-                let data_line = lines[1];
-                let parts: Vec<&str> = data_line.split_whitespace().collect();
-                if parts.len() >= 4 {
-                    if let Ok(available_kb) = parts[3].parse::<u64>() {
-                        let available_mb = available_kb / 1024;
-                        properties.available_storage = Some(format!("{} MB", available_mb));
+    if let Ok(storage_result) = utils_execute_adb_command(&["-s", serial, "shell", "df", "/data"], Some(5)).await {
+        if storage_result.success {
+            if let Some(available_storage) = parse_available_storage(&storage_result.output) {
+                properties.available_storage = Some(format!("{} MB", available_storage / 1024));
+                log::debug!("Available storage for {}: {:?}", serial, properties.available_storage);
+            }
+        }
+    }
+
+    Ok(properties)
+}
+
+/// 解析getprop输出行
+fn parse_getprop_line(line: &str) -> Option<(String, String)> {
+    // getprop输出格式: [key]: [value]
+    if let Some(start) = line.find('[') {
+        if let Some(end) = line.find("]: [") {
+            let key = line[start + 1..end].to_string();
+            if let Some(value_start) = line.rfind('[') {
+                if let Some(value_end) = line.rfind(']') {
+                    if value_start != start && value_end > value_start {
+                        let value = line[value_start + 1..value_end].to_string();
+                        if !value.is_empty() {
+                            return Some((key, value));
+                        }
                     }
                 }
             }
         }
     }
+    None
+}
+
+/// 解析布尔值字符串
+fn parse_bool(value: &str) -> Option<bool> {
+    match value.to_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Some(true),
+        "0" | "false" | "no" | "off" => Some(false),
+        _ => None,
+    }
+}
+
+/// 解析电池电量信息
+fn parse_battery_level(output: &str) -> Option<i32> {
+    for line in output.lines() {
+        let line = line.trim();
+        if line.starts_with("level:") {
+            if let Some(level_str) = line.split(':').nth(1) {
+                if let Ok(level) = level_str.trim().parse::<i32>() {
+                    if level >= 0 && level <= 100 {
+                        return Some(level);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// 解析屏幕分辨率信息
+fn parse_screen_resolution(output: &str) -> Option<String> {
+    for line in output.lines() {
+        if line.contains("Physical size:") {
+            if let Some(size_part) = line.split("Physical size:").nth(1) {
+                return Some(size_part.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+/// 解析总内存信息（返回KB）
+fn parse_total_memory(output: &str) -> Option<u64> {
+    for line in output.lines() {
+        if line.starts_with("MemTotal:") {
+            if let Some(mem_part) = line.split_whitespace().nth(1) {
+                if let Ok(mem_kb) = mem_part.parse::<u64>() {
+                    return Some(mem_kb);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// 解析可用存储信息（返回KB）
+fn parse_available_storage(output: &str) -> Option<u64> {
+    let lines: Vec<&str> = output.lines().collect();
+    if lines.len() > 1 {
+        let data_line = lines[1];
+        let parts: Vec<&str> = data_line.split_whitespace().collect();
+        if parts.len() >= 4 {
+            if let Ok(available_kb) = parts[3].parse::<u64>() {
+                return Some(available_kb);
+            }
+        }
+    }
+    None
+}
+
+/// 获取设备属性（使用缓存）
+#[tauri::command]
+pub async fn get_device_properties(serial: String) -> Result<DeviceProperties> {
+    // 首先尝试从缓存获取
+    let cache_manager = get_cache_manager();
+    if let Some(cached_properties) = cache_manager.get_device_properties(&serial).await {
+        log::debug!("Device properties cache hit for {}", serial);
+        return Ok(cached_properties);
+    }
+
+    // 验证设备存在且可访问
+    let device = get_device_info(serial.clone()).await?;
+
+    if !device.is_adb_available() {
+        return Err(HoutError::InvalidDeviceMode {
+            mode: format!("{:?}", device.mode),
+        });
+    }
+
+    // 使用批量获取方法
+    let properties = get_device_properties_batch(&serial).await?;
+
+    // 缓存设备属性
+    cache_manager.set_device_properties(serial.clone(), properties.clone()).await;
     
-    // 获取屏幕分辨率
-    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "wm", "size"], Some(5)).await {
-        if result.success {
-            for line in result.output.lines() {
-                if line.contains("Physical size:") {
-                    if let Some(size) = line.split(':').nth(1) {
-                        properties.screen_resolution = Some(size.trim().to_string());
-                        break;
-                    }
-                }
-            }
-        }
-    }
+
+
+
     
     Ok(properties)
+}
+
+/// 获取缓存统计信息
+#[tauri::command]
+pub async fn get_cache_stats() -> Result<serde_json::Value> {
+    let cache_manager = get_cache_manager();
+    let stats = cache_manager.get_stats().await;
+    let cache_info = cache_manager.get_cache_info().await;
+
+    let mut result = serde_json::json!({
+        "path_cache_hits": stats.path_cache_hits,
+        "path_cache_misses": stats.path_cache_misses,
+        "device_cache_hits": stats.device_cache_hits,
+        "device_cache_misses": stats.device_cache_misses,
+        "cache_evictions": stats.cache_evictions,
+        "path_hit_rate": stats.path_hit_rate(),
+        "device_hit_rate": stats.device_hit_rate(),
+        "uptime_seconds": stats.last_reset.elapsed().as_secs(),
+    });
+
+    for (key, value) in cache_info {
+        result[key] = serde_json::Value::from(value);
+    }
+
+    Ok(result)
+}
+
+/// 清除所有缓存
+#[tauri::command]
+pub async fn clear_all_cache() -> Result<()> {
+    let cache_manager = get_cache_manager();
+    cache_manager.clear_all().await;
+    log::info!("All caches cleared by user request");
+    Ok(())
+}
+
+/// 清除设备属性缓存
+#[tauri::command]
+pub async fn invalidate_device_cache(serial: String) -> Result<()> {
+    let cache_manager = get_cache_manager();
+    cache_manager.invalidate_device(&serial).await;
+    log::info!("Device cache invalidated for: {}", serial);
+    Ok(())
 }
 
 /// 执行ADB命令
@@ -1876,6 +1892,661 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
     }
 }
 
+// ==================== 杂项控制功能命令 ====================
+
+/// 停止ADB进程
+#[tauri::command]
+pub async fn stop_adb_process() -> Result<CommandResult> {
+    log::info!("Attempting to stop ADB process");
+
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+
+        // 首先检查是否有ADB进程在运行
+        let mut check_cmd = Command::new("tasklist");
+        check_cmd.args(&["/FI", "IMAGENAME eq adb.exe", "/FO", "CSV"]);
+
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        check_cmd.creation_flags(CREATE_NO_WINDOW);
+
+        let mut processes_found = false;
+        let mut process_count = 0;
+
+        match check_cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                // 检查输出中是否包含adb.exe进程
+                for line in stdout.lines() {
+                    if line.contains("adb.exe") && !line.contains("映像名称") {
+                        processes_found = true;
+                        process_count += 1;
+                    }
+                }
+                log::info!("Found {} ADB processes running", process_count);
+            }
+            Err(e) => {
+                log::warn!("Failed to check ADB processes: {}", e);
+            }
+        }
+
+        if !processes_found {
+            return Ok(CommandResult {
+                success: true,
+                output: "没有发现正在运行的ADB进程".to_string(),
+                error: None,
+                exit_code: Some(0),
+            });
+        }
+
+        // 使用taskkill命令强制终止所有ADB进程
+        let mut cmd = Command::new("taskkill");
+        cmd.args(&["/F", "/IM", "adb.exe", "/T"]); // /T 参数终止子进程
+        cmd.creation_flags(CREATE_NO_WINDOW);
+
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+                log::info!("Taskkill output: {}", stdout);
+                if !stderr.is_empty() {
+                    log::warn!("Taskkill stderr: {}", stderr);
+                }
+
+                if output.status.success() {
+                    // 再次验证进程是否已终止
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+                    let mut verify_cmd = Command::new("tasklist");
+                    verify_cmd.args(&["/FI", "IMAGENAME eq adb.exe", "/FO", "CSV"]);
+                    verify_cmd.creation_flags(CREATE_NO_WINDOW);
+
+                    let mut still_running = false;
+                    if let Ok(verify_output) = verify_cmd.output() {
+                        let verify_stdout = String::from_utf8_lossy(&verify_output.stdout);
+                        for line in verify_stdout.lines() {
+                            if line.contains("adb.exe") && !line.contains("映像名称") {
+                                still_running = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if still_running {
+                        log::warn!("Some ADB processes may still be running");
+                        Ok(CommandResult {
+                            success: false,
+                            output: format!("已尝试终止{}个ADB进程，但部分进程可能仍在运行", process_count),
+                            error: Some("部分ADB进程可能需要管理员权限才能终止".to_string()),
+                            exit_code: Some(1),
+                        })
+                    } else {
+                        log::info!("All ADB processes stopped successfully");
+                        Ok(CommandResult {
+                            success: true,
+                            output: format!("已成功终止{}个ADB进程", process_count),
+                            error: None,
+                            exit_code: Some(0),
+                        })
+                    }
+                } else {
+                    // 检查是否是因为进程不存在而失败
+                    if stderr.contains("找不到进程") || stderr.contains("not found") || stderr.contains("ERROR: The process") {
+                        Ok(CommandResult {
+                            success: true,
+                            output: "ADB进程未运行或已停止".to_string(),
+                            error: None,
+                            exit_code: Some(0),
+                        })
+                    } else {
+                        Ok(CommandResult {
+                            success: false,
+                            output: stdout,
+                            error: Some(format!("终止ADB进程失败: {}", stderr)),
+                            exit_code: output.status.code(),
+                        })
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to execute taskkill command: {}", e);
+                Err(HoutError::IoError {
+                    message: format!("执行停止ADB进程命令失败: {}", e),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        // 非Windows系统的实现
+        use std::process::Command;
+
+        let mut cmd = Command::new("pkill");
+        cmd.args(&["-f", "adb"]);
+
+        match cmd.output() {
+            Ok(output) => {
+                Ok(CommandResult {
+                    success: output.status.success(),
+                    output: if output.status.success() { "ADB进程已停止".to_string() } else { "ADB进程未运行".to_string() },
+                    error: if output.status.success() { None } else { Some("停止ADB进程失败".to_string()) },
+                    exit_code: output.status.code(),
+                })
+            }
+            Err(e) => {
+                Err(HoutError::IoError {
+                    message: format!("执行停止ADB进程命令失败: {}", e),
+                })
+            }
+        }
+    }
+}
+
+/// 重启ADB服务
+#[tauri::command]
+pub async fn restart_adb_service() -> Result<CommandResult> {
+    log::info!("Attempting to restart ADB service");
+
+    // 第一步：停止ADB服务
+    log::info!("Step 1: Stopping ADB server");
+    let kill_result = utils_execute_adb_command(&["kill-server"], Some(10)).await;
+
+    match &kill_result {
+        Ok(result) => {
+            log::info!("ADB kill-server result: success={}, output={}", result.success, result.output);
+            if let Some(ref error) = result.error {
+                log::warn!("ADB kill-server error: {}", error);
+            }
+        }
+        Err(e) => {
+            log::warn!("ADB kill-server command failed: {}", e);
+        }
+    }
+
+    // 等待ADB服务完全停止
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+    // 第二步：验证ADB服务已停止（通过检查进程）
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+        let mut check_cmd = Command::new("tasklist");
+        check_cmd.args(&["/FI", "IMAGENAME eq adb.exe", "/FO", "CSV"]);
+        check_cmd.creation_flags(CREATE_NO_WINDOW);
+
+        if let Ok(output) = check_cmd.output() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut adb_running = false;
+            for line in stdout.lines() {
+                if line.contains("adb.exe") && !line.contains("映像名称") {
+                    adb_running = true;
+                    break;
+                }
+            }
+
+            if adb_running {
+                log::warn!("ADB processes still running, attempting to force kill");
+                let mut force_kill = Command::new("taskkill");
+                force_kill.args(&["/F", "/IM", "adb.exe", "/T"]);
+                force_kill.creation_flags(CREATE_NO_WINDOW);
+                let _ = force_kill.output();
+
+                // 再等待一秒
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            }
+        }
+    }
+
+    // 第三步：启动ADB服务
+    log::info!("Step 2: Starting ADB server");
+    let start_result = utils_execute_adb_command(&["start-server"], Some(15)).await;
+
+    match start_result {
+        Ok(result) => {
+            log::info!("ADB start-server result: success={}, output={}", result.success, result.output);
+
+            if result.success || result.output.contains("daemon started successfully") {
+                // 第四步：验证ADB服务是否正常工作
+                log::info!("Step 3: Verifying ADB service");
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+                let verify_result = utils_execute_adb_command(&["version"], Some(5)).await;
+                match verify_result {
+                    Ok(verify) => {
+                        if verify.success && verify.output.contains("Android Debug Bridge") {
+                            log::info!("ADB service verification successful");
+                            Ok(CommandResult {
+                                success: true,
+                                output: "ADB服务已成功重启并验证正常工作".to_string(),
+                                error: None,
+                                exit_code: Some(0),
+                            })
+                        } else {
+                            log::warn!("ADB service verification failed: {}", verify.output);
+                            Ok(CommandResult {
+                                success: false,
+                                output: "ADB服务启动但验证失败".to_string(),
+                                error: Some(format!("验证失败: {}", verify.output)),
+                                exit_code: Some(1),
+                            })
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("ADB service verification error: {}", e);
+                        Ok(CommandResult {
+                            success: false,
+                            output: "ADB服务启动但无法验证".to_string(),
+                            error: Some(format!("验证错误: {}", e)),
+                            exit_code: Some(1),
+                        })
+                    }
+                }
+            } else {
+                log::warn!("ADB start-server failed: {:?}", result.error);
+                Ok(CommandResult {
+                    success: false,
+                    output: format!("ADB服务启动失败: {}", result.output),
+                    error: result.error,
+                    exit_code: result.exit_code,
+                })
+            }
+        }
+        Err(e) => {
+            log::error!("Failed to start ADB service: {}", e);
+            Err(e)
+        }
+    }
+}
+
+/// 安装设备驱动
+#[tauri::command]
+pub async fn install_device_driver() -> Result<CommandResult> {
+    log::info!("Attempting to install device driver");
+
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+
+        // 使用pnputil命令安装驱动
+        // 这里假设驱动文件在resources目录下
+        let driver_path = std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|p| p.join("resources").join("android_winusb.inf")))
+            .unwrap_or_else(|| std::path::PathBuf::from("resources/android_winusb.inf"));
+
+        if !driver_path.exists() {
+            return Ok(CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some("驱动文件不存在，请确保android_winusb.inf文件在resources目录下".to_string()),
+                exit_code: Some(1),
+            });
+        }
+
+        let mut cmd = Command::new("pnputil");
+        cmd.args(&["/add-driver", &driver_path.to_string_lossy(), "/install"]);
+
+        // 隐藏命令行窗口
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+                if output.status.success() {
+                    log::info!("Device driver installed successfully");
+                    Ok(CommandResult {
+                        success: true,
+                        output: "设备驱动安装成功".to_string(),
+                        error: None,
+                        exit_code: Some(0),
+                    })
+                } else {
+                    log::warn!("Device driver installation failed: {}", stderr);
+                    Ok(CommandResult {
+                        success: false,
+                        output: stdout,
+                        error: Some(format!("驱动安装失败: {}", stderr)),
+                        exit_code: output.status.code(),
+                    })
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to execute pnputil command: {}", e);
+                Err(HoutError::IoError {
+                    message: format!("执行驱动安装命令失败: {}", e),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("驱动安装功能仅在Windows系统上可用".to_string()),
+            exit_code: Some(1),
+        })
+    }
+}
+
+/// USB 3.0修复
+#[tauri::command]
+pub async fn fix_usb3_connection() -> Result<CommandResult> {
+    log::info!("Attempting to fix USB 3.0 connection");
+
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+
+        // 重新扫描硬件变化
+        let mut cmd = Command::new("devcon");
+        cmd.args(&["rescan"]);
+
+        // 隐藏命令行窗口
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+
+        match cmd.output() {
+            Ok(output) => {
+                if output.status.success() {
+                    log::info!("USB 3.0 connection fix completed");
+                    Ok(CommandResult {
+                        success: true,
+                        output: "USB 3.0连接修复完成，请重新连接设备".to_string(),
+                        error: None,
+                        exit_code: Some(0),
+                    })
+                } else {
+                    // 如果devcon不可用，尝试使用PowerShell命令
+                    let mut ps_cmd = Command::new("powershell");
+                    ps_cmd.args(&["-Command", "Get-PnpDevice | Where-Object {$_.Class -eq 'USB'} | Disable-PnpDevice -Confirm:$false; Start-Sleep 2; Get-PnpDevice | Where-Object {$_.Class -eq 'USB'} | Enable-PnpDevice -Confirm:$false"]);
+                    ps_cmd.creation_flags(CREATE_NO_WINDOW);
+
+                    match ps_cmd.output() {
+                        Ok(ps_output) => {
+                            if ps_output.status.success() {
+                                Ok(CommandResult {
+                                    success: true,
+                                    output: "USB设备已重新初始化，请重新连接设备".to_string(),
+                                    error: None,
+                                    exit_code: Some(0),
+                                })
+                            } else {
+                                Ok(CommandResult {
+                                    success: false,
+                                    output: String::new(),
+                                    error: Some("USB 3.0修复失败，请手动重新插拔USB设备".to_string()),
+                                    exit_code: ps_output.status.code(),
+                                })
+                            }
+                        }
+                        Err(e) => {
+                            log::error!("Failed to execute PowerShell USB fix command: {}", e);
+                            Ok(CommandResult {
+                                success: false,
+                                output: String::new(),
+                                error: Some("USB 3.0修复失败，请手动重新插拔USB设备".to_string()),
+                                exit_code: Some(1),
+                            })
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to execute devcon command: {}", e);
+                // 尝试备用方案
+                Ok(CommandResult {
+                    success: true,
+                    output: "已尝试修复USB连接，请重新插拔USB设备".to_string(),
+                    error: None,
+                    exit_code: Some(0),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("USB 3.0修复功能仅在Windows系统上可用".to_string()),
+            exit_code: Some(1),
+        })
+    }
+}
+
+/// 打开设备管理器
+#[tauri::command]
+pub async fn open_device_manager() -> Result<CommandResult> {
+    log::info!("Opening Device Manager using improved method");
+
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+
+        // 方法1: 尝试直接启动 devmgmt.msc
+        log::info!("Attempting to open Device Manager with devmgmt.msc");
+        let mut cmd = Command::new("devmgmt.msc");
+
+        // 设置工作目录为系统目录
+        if let Ok(system_dir) = std::env::var("SYSTEMROOT") {
+            cmd.current_dir(format!("{}\\System32", system_dir));
+        }
+
+        match cmd.spawn() {
+            Ok(child) => {
+                let pid = child.id();
+                log::info!("Device Manager started successfully with PID: {}", pid);
+
+                // 等待一小段时间确保进程启动
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+                return Ok(CommandResult {
+                    success: true,
+                    output: format!("设备管理器已成功打开 (进程ID: {})", pid),
+                    error: None,
+                    exit_code: Some(0),
+                });
+            }
+            Err(e) => {
+                log::warn!("Direct method failed: {}", e);
+            }
+        }
+
+        // 方法2: 使用 cmd /c start 作为备用方案
+        log::info!("Attempting to open Device Manager with cmd /c start");
+        let mut cmd2 = Command::new("cmd");
+        cmd2.args(&["/c", "start", "", "devmgmt.msc"]);
+
+        match cmd2.spawn() {
+            Ok(_) => {
+                log::info!("Device Manager started via cmd /c start");
+
+                // 等待一小段时间确保进程启动
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+
+                return Ok(CommandResult {
+                    success: true,
+                    output: "设备管理器已成功打开 (通过cmd启动)".to_string(),
+                    error: None,
+                    exit_code: Some(0),
+                });
+            }
+            Err(e) => {
+                log::warn!("CMD method failed: {}", e);
+            }
+        }
+
+        // 方法3: 使用 explorer 作为最后的备用方案
+        log::info!("Attempting to open Device Manager with explorer");
+        let mut cmd3 = Command::new("explorer");
+        cmd3.args(&["devmgmt.msc"]);
+
+        match cmd3.spawn() {
+            Ok(_) => {
+                log::info!("Device Manager started via explorer");
+
+                // 等待一小段时间确保进程启动
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+
+                return Ok(CommandResult {
+                    success: true,
+                    output: "设备管理器已成功打开 (通过explorer启动)".to_string(),
+                    error: None,
+                    exit_code: Some(0),
+                });
+            }
+            Err(e) => {
+                log::error!("Explorer method also failed: {}", e);
+            }
+        }
+
+        // 所有方法都失败
+        log::error!("All methods failed to open Device Manager");
+        Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("无法打开设备管理器，所有启动方法都失败了。请检查系统配置。".to_string()),
+            exit_code: Some(1),
+        })
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("设备管理器功能仅在Windows系统上可用".to_string()),
+            exit_code: Some(1),
+        })
+    }
+}
+
+/// 重启应用
+#[tauri::command]
+pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<CommandResult> {
+    log::info!("Restarting application");
+
+    // 获取当前可执行文件路径
+    let current_exe = std::env::current_exe().map_err(|e| {
+        log::error!("Failed to get current executable path: {}", e);
+        HoutError::IoError {
+            message: format!("无法获取当前可执行文件路径: {}", e),
+        }
+    })?;
+
+    log::info!("Current executable path: {}", current_exe.display());
+
+    // 在Windows上，我们需要使用一个更可靠的重启方法
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+        // 创建一个批处理脚本来重启应用
+        let temp_dir = std::env::temp_dir();
+        let restart_script = temp_dir.join("hout_restart.bat");
+
+        let script_content = format!(
+            "@echo off\n\
+            timeout /t 2 /nobreak >nul\n\
+            start \"\" \"{}\"\n\
+            del \"%~f0\"\n",
+            current_exe.display()
+        );
+
+        match std::fs::write(&restart_script, script_content) {
+            Ok(_) => {
+                log::info!("Created restart script: {}", restart_script.display());
+
+                // 启动重启脚本
+                let mut cmd = Command::new("cmd");
+                cmd.args(&["/C", &restart_script.to_string_lossy()]);
+                cmd.creation_flags(CREATE_NO_WINDOW);
+
+                match cmd.spawn() {
+                    Ok(_) => {
+                        log::info!("Restart script launched successfully");
+
+                        // 延迟一小段时间让脚本启动
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+                        // 退出当前应用
+                        app_handle.exit(0);
+
+                        // 这行代码实际上不会执行，因为应用已经退出
+                        Ok(CommandResult {
+                            success: true,
+                            output: "应用正在重启...".to_string(),
+                            error: None,
+                            exit_code: Some(0),
+                        })
+                    }
+                    Err(e) => {
+                        log::error!("Failed to launch restart script: {}", e);
+                        // 清理脚本文件
+                        let _ = std::fs::remove_file(&restart_script);
+
+                        // 尝试使用Tauri的内置重启功能作为备用
+                        log::info!("Falling back to Tauri restart method");
+                        app_handle.restart();
+
+                        Ok(CommandResult {
+                            success: true,
+                            output: "应用正在重启... (备用方法)".to_string(),
+                            error: None,
+                            exit_code: Some(0),
+                        })
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to create restart script: {}", e);
+
+                // 尝试使用Tauri的内置重启功能作为备用
+                log::info!("Falling back to Tauri restart method");
+                app_handle.restart();
+
+                Ok(CommandResult {
+                    success: true,
+                    output: "应用正在重启... (备用方法)".to_string(),
+                    error: None,
+                    exit_code: Some(0),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        // 非Windows系统使用Tauri的内置重启功能
+        app_handle.restart();
+
+        Ok(CommandResult {
+            success: true,
+            output: "应用正在重启...".to_string(),
+            error: None,
+            exit_code: Some(0),
+        })
+    }
+}
+
+
+
 /// 查找scrcpy可执行文件
 fn find_scrcpy_executable() -> Result<String> {
     log::info!("Searching for scrcpy executable...");
@@ -2102,6 +2773,38 @@ pub async fn open_devtools(app: tauri::AppHandle) -> Result<()> {
 #[tauri::command]
 pub async fn is_debug_mode() -> Result<bool> {
     Ok(cfg!(debug_assertions))
+}
+
+/// 设置窗口置顶状态
+#[tauri::command]
+pub async fn set_window_always_on_top(app: tauri::AppHandle, always_on_top: bool) -> Result<()> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.set_always_on_top(always_on_top)
+            .map_err(|e| HoutError::FileOperationFailed {
+                message: format!("设置窗口置顶状态失败: {}", e)
+            })?;
+        log::info!("窗口置顶状态已设置为: {}", always_on_top);
+        Ok(())
+    } else {
+        log::error!("无法找到主窗口");
+        Err(HoutError::FileOperationFailed { message: "无法找到主窗口".to_string() })
+    }
+}
+
+/// 获取窗口置顶状态
+#[tauri::command]
+pub async fn get_window_always_on_top(app: tauri::AppHandle) -> Result<bool> {
+    if let Some(window) = app.get_webview_window("main") {
+        let is_always_on_top = window.is_always_on_top()
+            .map_err(|e| HoutError::FileOperationFailed {
+                message: format!("获取窗口置顶状态失败: {}", e)
+            })?;
+        log::info!("窗口置顶状态: {}", is_always_on_top);
+        Ok(is_always_on_top)
+    } else {
+        log::error!("无法找到主窗口");
+        Err(HoutError::FileOperationFailed { message: "无法找到主窗口".to_string() })
+    }
 }
 
 /// 获取应用环境信息

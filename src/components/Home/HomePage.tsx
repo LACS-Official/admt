@@ -19,8 +19,7 @@ import { useAppStore } from "../../stores/appStore";
 
 // 导入新的组件
 
-import DeviceCoreInfoCard from "../DeviceInfo/DeviceCoreInfoCard";
-import DeviceDetailsModal from "../DeviceInfo/DeviceDetailsModal";
+import DeviceOverviewCard from "../DeviceInfo/DeviceOverviewCard";
 import DeviceRebootCard from "./DeviceRebootCard";
 import MiscellaneousCard from "./MiscellaneousCard";
 
@@ -101,36 +100,36 @@ const useStyles = makeStyles({
     flex: 1,
     height: "100%",
   },
-  // 第一行：设备概览信息区域 - 占据60-65%高度
+  // 第一行：设备概览信息区域 - 占据60%高度
   deviceOverviewSection: {
-    flex: "0 0 62%", // 固定占据62%的高度
+    flex: "0 0 50%", // 固定占据60%的高度
     display: "flex",
     flexDirection: "column",
-    minHeight: "400px", // 最小高度确保内容可见
-    maxHeight: "65%", // 最大高度限制
+    minHeight: "380px", // 稍微减少最小高度
+    maxHeight: "60%", // 最大高度限制调整为60%
   },
   deviceInfoCard: {
     height: "100%",
     overflow: "auto",
   },
-  // 第二行：功能控制区域 - 占据35-40%高度
+  // 第二行：功能控制区域 - 占据40%高度
   deviceActionsSection: {
-    flex: "1 1 38%", // 占据剩余高度（约38%）
+    flex: "1 1 50%", // 占据剩余高度（40%）
     display: "flex",
     flexDirection: "row", // 水平排列两个卡片
     gap: "16px",
-    minHeight: "250px", // 最小高度确保功能可用
+    minHeight: "260px", // 增加最小高度以适应40%的空间
   },
-  // 重启卡片 - 等宽分布
+  // 重启卡片 - 40%宽度
   rebootCard: {
-    flex: "1 1 50%", // 占据一半宽度
+    flex: "0 0 40%", // 占据40%宽度
     minHeight: "100%",
     display: "flex",
     flexDirection: "column",
   },
-  // 杂项功能卡片 - 等宽分布
+  // 杂项功能卡片 - 60%宽度
   miscCard: {
-    flex: "1 1 50%", // 占据一半宽度
+    flex: "0 0 60%", // 占据60%宽度
     minHeight: "100%",
     overflow: "auto",
     display: "flex",
@@ -142,18 +141,18 @@ const useStyles = makeStyles({
       minHeight: "600px", // 平板端减少最小高度
     },
     deviceOverviewSection: {
-      flex: "0 0 55%", // 平板端设备概览区域稍微减少高度
+      flex: "0 0 50%", // 平板端保持60%高度
       minHeight: "320px",
     },
     deviceActionsSection: {
-      flex: "1 1 45%", // 平板端功能区域增加高度
-      minHeight: "200px",
+      flex: "1 1 50%", // 平板端功能区域40%高度
+      minHeight: "220px", // 稍微增加最小高度
     },
     rebootCard: {
-      flex: "1 1 50%", // 保持水平排列
+      flex: "0 0 40%", // 平板端保持40%宽度
     },
     miscCard: {
-      flex: "1 1 50%", // 保持水平排列
+      flex: "0 0 60%", // 平板端保持60%宽度
     },
   },
   "@media (max-width: 768px)": {
@@ -165,11 +164,11 @@ const useStyles = makeStyles({
       gap: "12px", // 移动端减少间距
     },
     deviceOverviewSection: {
-      flex: "0 0 50%", // 移动端设备概览区域占一半高度
+      flex: "0 0 55%", // 移动端设备概览区域占55%高度
       minHeight: "250px",
     },
     deviceActionsSection: {
-      flex: "1 1 50%", // 移动端功能区域占一半高度
+      flex: "1 1 45%", // 移动端功能区域占45%高度
       flexDirection: "column", // 移动端改为垂直布局
       gap: "8px",
       minHeight: "200px",
@@ -205,7 +204,6 @@ const HomePage: React.FC = () => {
     isScanning
   } = useDeviceStore();
   const { addNotification } = useAppStore();
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
 
@@ -219,38 +217,6 @@ const HomePage: React.FC = () => {
       title: "设备扫描",
       message: "正在刷新设备列表...",
     });
-  };
-
-  const handleShowDetails = () => {
-    setShowDetailsModal(true);
-  };
-
-  const handleCopyInfo = async () => {
-    if (!selectedDevice) return;
-
-    try {
-      const deviceInfo = [
-        `设备名称: ${selectedDevice.properties?.marketName || selectedDevice.properties?.model || '未知'}`,
-        `品牌: ${selectedDevice.properties?.brand || '未知'}`,
-        `型号: ${selectedDevice.properties?.model || '未知'}`,
-        `序列号: ${selectedDevice.serial}`,
-        `Android版本: ${selectedDevice.properties?.androidVersion || '未知'}`,
-        `设备模式: ${selectedDevice.mode}`,
-      ];
-
-      await navigator.clipboard.writeText(deviceInfo.join('\n'));
-      addNotification({
-        type: "success",
-        title: "复制成功",
-        message: "设备信息已复制到剪贴板"
-      });
-    } catch {
-      addNotification({
-        type: "error",
-        title: "复制失败",
-        message: "无法访问剪贴板"
-      });
-    }
   };
 
   return (
@@ -275,18 +241,16 @@ const HomePage: React.FC = () => {
                 <>
                   {/* 新的布局：上下两行布局 */}
                   <div className={styles.mainContentGrid}>
-                    {/* 第一行：设备概览信息区域 - 占据60-65%高度 */}
+                    {/* 第一行：设备概览信息区域 - 占据60%高度 */}
                     <div className={styles.deviceOverviewSection}>
                       <div className={styles.deviceInfoCard}>
-                        <DeviceCoreInfoCard
+                        <DeviceOverviewCard
                           device={selectedDevice}
-                          onShowDetails={handleShowDetails}
-                          onCopyInfo={handleCopyInfo}
                         />
                       </div>
                     </div>
 
-                    {/* 第二行：功能控制区域 - 占据35-40%高度 */}
+                    {/* 第二行：功能控制区域 - 占据40%高度 */}
                     <div className={styles.deviceActionsSection}>
                       {/* 左侧：设备重启卡片 */}
                       <div className={styles.rebootCard}>
@@ -299,13 +263,6 @@ const HomePage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* 详细信息模态框 */}
-                  <DeviceDetailsModal
-                    device={selectedDevice}
-                    open={showDetailsModal}
-                    onOpenChange={setShowDetailsModal}
-                  />
                 </>
               ) : (
                 <div className={styles.noDevice}>
