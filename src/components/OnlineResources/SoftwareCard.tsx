@@ -9,7 +9,6 @@ import {
   Spinner,
 } from '@fluentui/react-components';
 import {
-  ArrowDownload24Regular,
   CheckmarkCircle24Filled,
   FolderOpen24Regular,
 } from '@fluentui/react-icons';
@@ -80,13 +79,11 @@ const useStyles = makeStyles({
 interface SoftwareCardProps {
   software: OnlineSoftware;
   onClick: () => void;
-  onDownload?: (software: OnlineSoftware) => Promise<string>;
 }
 
 export const SoftwareCard: React.FC<SoftwareCardProps> = ({
   software,
   onClick,
-  onDownload,
 }) => {
   const styles = useStyles();
   const [downloadStatus, setDownloadStatus] = useState<{
@@ -94,7 +91,7 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
     filePath?: string;
     task?: any;
   }>({ isDownloaded: false });
-  const [isDownloading, setIsDownloading] = useState(false);
+
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
   // 检查下载状态
@@ -113,25 +110,7 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
     checkDownloadStatus();
   }, [software.id]);
 
-  // 处理下载
-  const handleDownload = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // 阻止卡片点击事件
-    
-    if (!onDownload) return;
-    
-    setIsDownloading(true);
-    try {
-      await onDownload(software);
-      // 重新检查下载状态
-      setTimeout(() => {
-        checkDownloadStatus();
-      }, 1000);
-    } catch (error) {
-      console.error('下载失败:', error);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+
 
   // 打开文件位置
   const handleOpenFolder = async (e: React.MouseEvent) => {
@@ -197,41 +176,18 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
           </div>
         )}
 
-        {/* 下载状态和操作按钮 */}
-        {!isCheckingStatus && (
+        {/* 下载状态指示 */}
+        {!isCheckingStatus && downloadStatus.isDownloaded && (
           <div className={styles.actionButtons}>
-            {downloadStatus.isDownloaded ? (
-              <>
-                <Button
-                  size="small"
-                  appearance="outline"
-                  icon={<FolderOpen24Regular />}
-                  onClick={handleOpenFolder}
-                  disabled={!downloadStatus.filePath}
-                >
-                  打开位置
-                </Button>
-                <Button
-                  size="small"
-                  appearance="primary"
-                  icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
-                  onClick={handleDownload}
-                  disabled={isDownloading || !onDownload}
-                >
-                  {isDownloading ? '重新下载中...' : '重新下载'}
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="small"
-                appearance="primary"
-                icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
-                onClick={handleDownload}
-                disabled={isDownloading || !onDownload}
-              >
-                {isDownloading ? '下载中...' : '下载'}
-              </Button>
-            )}
+            <Button
+              size="small"
+              appearance="outline"
+              icon={<FolderOpen24Regular />}
+              onClick={handleOpenFolder}
+              disabled={!downloadStatus.filePath}
+            >
+              打开位置
+            </Button>
           </div>
         )}
       </div>

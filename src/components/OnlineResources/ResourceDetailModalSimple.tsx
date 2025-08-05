@@ -82,6 +82,12 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     filePath?: string;
     task?: any;
   }>({ isDownloaded: false });
+  const [downloadLimitInfo, setDownloadLimitInfo] = useState<{
+    canDownload: boolean;
+    reason?: string;
+    remainingTime?: number;
+  }>({ canDownload: true });
+  const [cooldownTimer, setCooldownTimer] = useState<NodeJS.Timeout | null>(null);
 
   // 获取软件详细信息
   const fetchSoftwareDetail = async () => {
@@ -111,11 +117,49 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     }
   };
 
+  // 检查下载限制
+  const checkDownloadLimits = () => {
+    const limitInfo = onlineResourcesService.canStartDownload();
+    setDownloadLimitInfo(limitInfo);
+
+    // 如果有冷却时间，启动倒计时
+    if (!limitInfo.canDownload && limitInfo.remainingTime && limitInfo.remainingTime > 0) {
+      startCooldownTimer(limitInfo.remainingTime);
+    }
+  };
+
+  // 启动冷却倒计时
+  const startCooldownTimer = (initialTime: number) => {
+    if (cooldownTimer) {
+      clearInterval(cooldownTimer);
+    }
+
+    let remainingTime = initialTime;
+    const timer = setInterval(() => {
+      remainingTime -= 1;
+
+      if (remainingTime <= 0) {
+        clearInterval(timer);
+        setCooldownTimer(null);
+        checkDownloadLimits(); // 重新检查限制
+      } else {
+        setDownloadLimitInfo(prev => ({
+          ...prev,
+          remainingTime,
+          reason: `下载冷却中，请等待 ${remainingTime} 秒后再试`
+        }));
+      }
+    }, 1000);
+
+    setCooldownTimer(timer);
+  };
+
   // 当弹窗打开时获取详细信息和下载状态
   useEffect(() => {
     if (isOpen && software.id) {
       fetchSoftwareDetail();
       checkDownloadStatus();
+      checkDownloadLimits();
     }
   }, [isOpen, software.id]);
 
@@ -126,9 +170,34 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     }
   }, [detailData]);
 
+  // 定期检查下载限制（每5秒检查一次）
+  useEffect(() => {
+    if (isOpen) {
+      const interval = setInterval(checkDownloadLimits, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen]);
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (cooldownTimer) {
+        clearInterval(cooldownTimer);
+      }
+    };
+  }, [cooldownTimer]);
+
   // 处理下载
   const handleDownload = async (forceRedownload = false) => {
     const currentData = detailData || software;
+
+    // 检查下载限制
+    const limitCheck = onlineResourcesService.canStartDownload();
+    if (!limitCheck.canDownload) {
+      console.warn('下载被限制:', limitCheck.reason);
+      return;
+    }
+
     if (onDownload && currentData.latestDownloadUrl) {
       setIsDownloading(true);
       try {
@@ -137,9 +206,10 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
         // 显示下载成功消息
         console.log('✅ 下载任务已启动:', taskId);
 
-        // 重新检查下载状态
+        // 重新检查下载状态和限制
         setTimeout(() => {
           checkDownloadStatus();
+          checkDownloadLimits();
         }, 1000);
 
       } catch (error) {
@@ -283,6 +353,21 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             关闭
           </Button>
 
+          {/* 下载限制提示 */}
+          {!downloadLimitInfo.canDownload && (
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--colorPaletteRedForeground1)',
+              fontSize: '12px',
+              textAlign: 'center'
+            }}>
+              {downloadLimitInfo.reason}
+            </div>
+          )}
+
           {downloadStatus.isDownloaded ? (
             <>
               <Button
@@ -296,7 +381,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                 appearance="primary"
                 icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
                 onClick={() => handleDownload(true)}
-                disabled={isDownloading || !currentData.latestDownloadUrl}
+                disabled={isDownloading || !currentData.latestDownloadUrl || !downloadLimitInfo.canDownload}
                 className={styles.downloadButton}
               >
                 {isDownloading ? '重新下载中...' : '重新下载'}
@@ -307,10 +392,10 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
               appearance="primary"
               icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
               onClick={() => handleDownload(false)}
-              disabled={isDownloading || !currentData.latestDownloadUrl}
+              disabled={isDownloading || !currentData.latestDownloadUrl || !downloadLimitInfo.canDownload}
               className={styles.downloadButton}
             >
-              {isDownloading ? '下载中...' : '下载软件'}
+              {isDownloading ? '下载中...' : downloadLimitInfo.canDownload ? '下载软件' : `等待 ${downloadLimitInfo.remainingTime || 0}s`}
             </Button>
           )}
         </DialogActions>

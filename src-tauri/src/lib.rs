@@ -72,6 +72,8 @@ pub fn run() {
             open_folder,
             check_file_exists,
             delete_file,
+            read_json_file,
+            execute_script_in_new_window,
             get_cache_stats,
             clear_all_cache,
             invalidate_device_cache,

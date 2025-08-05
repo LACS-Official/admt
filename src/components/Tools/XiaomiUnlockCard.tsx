@@ -7,13 +7,18 @@ import {
   Button,
   Badge,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogContent,
   DialogBody,
   DialogActions,
   Spinner,
+  Accordion,
+  AccordionItem,
+  AccordionHeader,
+  AccordionPanel,
+  SearchBox,
+  Textarea,
 } from "@fluentui/react-components";
 import {
   LockOpen24Regular,
@@ -26,6 +31,7 @@ import {
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
+import { invoke } from "@tauri-apps/api/core";
 
 const useStyles = makeStyles({
   card: {
@@ -99,6 +105,32 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [selectedAction, setSelectedAction] = useState<string>("");
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [commandOutputs, setCommandOutputs] = useState<Array<{
+    id: string;
+    command: string;
+    output: string;
+    timestamp: Date;
+    success: boolean;
+  }>>([]);
+  const [outputSearchQuery, setOutputSearchQuery] = useState("");
+
+  // 添加命令输出到历史记录
+  const addCommandOutput = (command: string, output: string, success: boolean) => {
+    const newOutput = {
+      id: Date.now().toString(),
+      command,
+      output,
+      timestamp: new Date(),
+      success
+    };
+    setCommandOutputs(prev => [newOutput, ...prev]);
+  };
+
+  // 过滤命令输出
+  const filteredOutputs = commandOutputs.filter(output =>
+    output.command.toLowerCase().includes(outputSearchQuery.toLowerCase()) ||
+    output.output.toLowerCase().includes(outputSearchQuery.toLowerCase())
+  );
 
   const xiaomiTools = [
     {
@@ -140,12 +172,260 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   const handleToolClick = (toolId: string) => {
     const tool = xiaomiTools.find(t => t.id === toolId);
     if (tool && tool.available) {
-      if (tool.dangerous) {
+      if (tool.dangerous && toolId !== "bypass_unlock") {
         setSelectedAction(toolId);
         setConfirmDialogOpen(true);
+      } else if (toolId === "bypass_unlock") {
+        // bypass解锁跳过确认弹窗，直接执行
+        executeBypassUnlock();
+      } else if (toolId === "xiaomi_unlock_tool") {
+        // 小米解锁工具跳过确认弹窗，直接执行
+        executeXiaomiUnlockTool();
       } else {
         executeAction(toolId);
       }
+    }
+  };
+
+  const executeBypassUnlock = async () => {
+    setIsExecuting(true);
+    setSelectedAction("bypass_unlock");
+
+    try {
+      addNotification({
+        type: "info",
+        title: "Bypass解锁",
+        message: "正在检测MiBypass工具...",
+      });
+
+      // 尝试多个可能的路径
+      const possiblePaths = [
+        "downloads/MiBypass",
+        "src-tauri/target/debug/downloads/MiBypass",
+        "target/debug/downloads/MiBypass"
+      ];
+
+      let miBypassPath = "";
+      let folderExists = false;
+
+      // 检查MiBypass文件夹是否存在
+      for (const path of possiblePaths) {
+        const exists = await invoke<boolean>("check_file_exists", {
+          path: path
+        });
+        if (exists) {
+          miBypassPath = path;
+          folderExists = true;
+          break;
+        }
+      }
+
+      if (!folderExists) {
+        addNotification({
+          type: "error",
+          title: "工具未下载",
+          message: "该工具还未下载，请前往资源中心下载",
+        });
+        return;
+      }
+
+      const configPath = `${miBypassPath}/config.json`;
+
+      // 检查config.json文件是否存在
+      const configExists = await invoke<boolean>("check_file_exists", {
+        path: configPath
+      });
+
+      if (!configExists) {
+        addNotification({
+          type: "error",
+          title: "配置文件缺失",
+          message: "找不到config.json文件，请重新下载MiBypass工具",
+        });
+        return;
+      }
+
+      // 读取config.json文件
+      const configData = await invoke<any>("read_json_file", {
+        path: configPath
+      });
+
+      const openname = configData.openname;
+      if (!openname) {
+        addNotification({
+          type: "error",
+          title: "配置错误",
+          message: "config.json文件中缺少openname字段",
+        });
+        return;
+      }
+
+      // 检查脚本文件是否存在
+      const scriptPath = `${miBypassPath}/${openname}`;
+      const scriptExists = await invoke<boolean>("check_file_exists", {
+        path: scriptPath
+      });
+
+      if (!scriptExists) {
+        addNotification({
+          type: "error",
+          title: "脚本文件缺失",
+          message: `找不到脚本文件: ${openname}`,
+        });
+        return;
+      }
+
+      addNotification({
+        type: "info",
+        title: "Bypass解锁",
+        message: "正在启动bypass解锁脚本...",
+      });
+
+      // 在新窗口中执行脚本
+      const result = await invoke<any>("execute_script_in_new_window", {
+        scriptPath: scriptPath
+      });
+
+      if (result.success) {
+        addNotification({
+          type: "success",
+          title: "Bypass解锁",
+          message: "bypass解锁脚本已成功启动，请按照脚本提示操作",
+        });
+      } else {
+        throw new Error(result.error || "脚本启动失败");
+      }
+
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "Bypass解锁失败",
+        message: error instanceof Error ? error.message : "未知错误",
+      });
+    } finally {
+      setIsExecuting(false);
+      setSelectedAction("");
+    }
+  };
+
+  const executeXiaomiUnlockTool = async () => {
+    setIsExecuting(true);
+    setSelectedAction("xiaomi_unlock_tool");
+
+    try {
+      addNotification({
+        type: "info",
+        title: "小米解锁工具",
+        message: "正在检测小米解锁工具...",
+      });
+
+      // 尝试多个可能的路径
+      const possiblePaths = [
+        "downloads/miflash_unlock",
+        "src-tauri/target/debug/downloads/miflash_unlock",
+        "target/debug/downloads/miflash_unlock"
+      ];
+
+      let miflashUnlockPath = "";
+      let folderExists = false;
+
+      // 检查miflash_unlock文件夹是否存在
+      for (const path of possiblePaths) {
+        const exists = await invoke<boolean>("check_file_exists", {
+          path: path
+        });
+        if (exists) {
+          miflashUnlockPath = path;
+          folderExists = true;
+          break;
+        }
+      }
+
+      if (!folderExists) {
+        addNotification({
+          type: "error",
+          title: "工具未下载",
+          message: "该工具还未下载，请前往资源中心下载",
+        });
+        return;
+      }
+
+      const configPath = `${miflashUnlockPath}/config.json`;
+
+      // 检查config.json文件是否存在
+      const configExists = await invoke<boolean>("check_file_exists", {
+        path: configPath
+      });
+
+      if (!configExists) {
+        addNotification({
+          type: "error",
+          title: "配置文件缺失",
+          message: "找不到config.json文件，请重新下载小米解锁工具",
+        });
+        return;
+      }
+
+      // 读取config.json文件
+      const configData = await invoke<any>("read_json_file", {
+        path: configPath
+      });
+
+      const executableName = configData.executable || configData.openname;
+      if (!executableName) {
+        addNotification({
+          type: "error",
+          title: "配置错误",
+          message: "config.json文件中缺少启动程序配置",
+        });
+        return;
+      }
+
+      // 检查可执行文件是否存在
+      const executablePath = `${miflashUnlockPath}/${executableName}`;
+      const executableExists = await invoke<boolean>("check_file_exists", {
+        path: executablePath
+      });
+
+      if (!executableExists) {
+        addNotification({
+          type: "error",
+          title: "启动程序缺失",
+          message: `找不到启动程序: ${executableName}`,
+        });
+        return;
+      }
+
+      addNotification({
+        type: "info",
+        title: "小米解锁工具",
+        message: "正在启动小米解锁工具...",
+      });
+
+      // 在新窗口中执行程序
+      const result = await invoke<any>("execute_script_in_new_window", {
+        scriptPath: executablePath
+      });
+
+      if (result.success) {
+        addNotification({
+          type: "success",
+          title: "小米解锁工具",
+          message: "小米解锁工具已成功启动，请按照程序提示操作",
+        });
+      } else {
+        throw new Error(result.error || "程序启动失败");
+      }
+
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "小米解锁工具启动失败",
+        message: error instanceof Error ? error.message : "未知错误",
+      });
+    } finally {
+      setIsExecuting(false);
+      setSelectedAction("");
     }
   };
 
@@ -157,13 +437,9 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
       let result;
       switch (actionId) {
         case "xiaomi_unlock_tool":
-          // 启动小米官方解锁工具
-          addNotification({
-            type: "info",
-            title: "小米解锁工具",
-            message: "正在启动小米官方解锁工具...",
-          });
-          // TODO: 实现启动小米解锁工具的逻辑
+          // 这个case现在不会被执行，因为小米解锁工具直接调用executeXiaomiUnlockTool
+          // 保留这里是为了代码完整性
+          await executeXiaomiUnlockTool();
           break;
         
         case "bypass_unlock":
@@ -176,14 +452,19 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
           // TODO: 实现bypass解锁逻辑
           break;
         
-        case "detect_unlock_method":
+        case "detect_unlock_method": {
           // 检测解锁方式
-          result = await deviceService.executeAdbCommand(
-            device.serial, 
-            "shell", 
-            ["getprop", "ro.secureboot.lockstate"], 
+          const command = "adb shell getprop ro.secureboot.lockstate";
+          result = await deviceService.deviceService.executeAdbCommand(
+            device.serial,
+            "shell",
+            ["getprop", "ro.secureboot.lockstate"],
             10
           );
+
+          // 添加命令输出到历史记录
+          addCommandOutput(command, result.output || result.error || "无输出", result.success);
+
           if (result.success) {
             addNotification({
               type: "success",
@@ -192,16 +473,49 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
             });
           }
           break;
+        }
         
-        case "install_unlock_settings":
+        case "install_unlock_settings": {
           // 安装解锁专用设置
           addNotification({
             type: "info",
             title: "安装解锁专用设置",
-            message: "正在安装解锁专用设置应用...",
+            message: "正在检查设备信息...",
           });
-          // TODO: 实现安装解锁设置的逻辑
+
+          // 获取设备信息
+          const deviceInfoCommand = "adb shell getprop ro.product.model";
+          const deviceInfoResult = await deviceService.deviceService.executeAdbCommand(
+            device.serial,
+            "shell",
+            ["getprop", "ro.product.model"],
+            10
+          );
+
+          // 添加命令输出到历史记录
+          addCommandOutput(deviceInfoCommand, deviceInfoResult.output || deviceInfoResult.error || "无输出", deviceInfoResult.success);
+
+          if (deviceInfoResult.success) {
+            // 获取Android版本
+            const androidVersionCommand = "adb shell getprop ro.build.version.release";
+            const androidVersionResult = await deviceService.deviceService.executeAdbCommand(
+              device.serial,
+              "shell",
+              ["getprop", "ro.build.version.release"],
+              10
+            );
+
+            // 添加命令输出到历史记录
+            addCommandOutput(androidVersionCommand, androidVersionResult.output || androidVersionResult.error || "无输出", androidVersionResult.success);
+
+            addNotification({
+              type: "success",
+              title: "设备信息获取完成",
+              message: `设备型号: ${deviceInfoResult.output.trim()}, Android版本: ${androidVersionResult.output.trim()}`,
+            });
+          }
           break;
+        }
         
         default:
           throw new Error("未知操作");
@@ -301,6 +615,7 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
           </div>
         </div>
       </Card>
+
 
       {/* 确认对话框 */}
       <Dialog open={confirmDialogOpen} onOpenChange={(_, data) => setConfirmDialogOpen(data.open)}>

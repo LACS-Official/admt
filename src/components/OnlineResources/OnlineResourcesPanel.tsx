@@ -251,7 +251,6 @@ const OnlineResourcesPanel: React.FC = () => {
         key={software.id}
         software={software}
         onClick={() => handleShowResourceModal(software)}
-        onDownload={handleDownloadFromModal}
       />
     );
   };
