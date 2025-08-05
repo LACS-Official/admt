@@ -36,6 +36,7 @@ impl DeviceMode {
         }
     }
     
+    #[allow(dead_code)]
     pub fn from_fastboot_status(_status: &str) -> Self {
         // Fastboot通常只返回设备序列号，需要进一步检测是fastboot还是fastbootd
         DeviceMode::Fastboot
@@ -240,6 +241,7 @@ impl DeviceInfo {
         }
     }
     
+    #[allow(dead_code)]
     pub fn update_properties(&mut self, properties: DeviceProperties) {
         self.properties = Some(properties);
         self.last_seen = Some(Utc::now());

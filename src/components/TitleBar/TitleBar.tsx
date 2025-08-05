@@ -14,11 +14,14 @@ import {
   Maximize24Regular,
   SquareMultiple24Regular,
   Person24Regular,
+  Pin24Regular,
+  PinOff24Regular,
 } from "@fluentui/react-icons";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
 import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import UserInfoModal from "../UserInfo/UserInfoModal";
 import AppIcon from "../Common/AppIcon";
 
@@ -71,6 +74,7 @@ const TitleBar: React.FC = () => {
   const { setCurrentView } = useAppStore();
   const { config } = useAppConfigStore();
   const [isMaximized, setIsMaximized] = React.useState(false);
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = React.useState(false);
 
   // 检查窗口状态
   React.useEffect(() => {
@@ -80,6 +84,15 @@ const TitleBar: React.FC = () => {
         const maximized = await window.isMaximized();
         console.log("窗口状态检查:", maximized);
         setIsMaximized(maximized);
+
+        // 检查置顶状态
+        try {
+          const alwaysOnTop = await invoke<boolean>("get_window_always_on_top");
+          setIsAlwaysOnTop(alwaysOnTop);
+          console.log("窗口置顶状态:", alwaysOnTop);
+        } catch (alwaysOnTopError) {
+          console.log("无法获取置顶状态，使用手动管理:", alwaysOnTopError);
+        }
       } catch (error) {
         console.error("检查窗口状态失败:", error);
       }
@@ -154,6 +167,18 @@ const TitleBar: React.FC = () => {
     setCurrentView("settings");
   };
 
+  const handleToggleAlwaysOnTop = async () => {
+    try {
+      console.log("🔧 切换窗口置顶状态...");
+      const newState = !isAlwaysOnTop;
+      await invoke("set_window_always_on_top", { alwaysOnTop: newState });
+      setIsAlwaysOnTop(newState);
+      console.log(`✅ 窗口置顶状态已${newState ? '开启' : '关闭'}`);
+    } catch (error) {
+      console.error("❌ 切换置顶状态失败:", error);
+    }
+  };
+
   return (
     <div className={`${styles.titleBar} drag-region`}>
       <div className={styles.leftSection}>
@@ -192,7 +217,20 @@ const TitleBar: React.FC = () => {
             onClick={handleSettings}
           />
         </Tooltip>
-        
+
+        <Tooltip content={isAlwaysOnTop ? "取消置顶" : "窗口置顶"} relationship="label">
+          <Button
+            appearance="subtle"
+            icon={isAlwaysOnTop ? <PinOff24Regular /> : <Pin24Regular />}
+            className={styles.titleBarButton}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleToggleAlwaysOnTop();
+            }}
+          />
+        </Tooltip>
+
         <Tooltip content="最小化" relationship="label">
           <Button
             appearance="subtle"

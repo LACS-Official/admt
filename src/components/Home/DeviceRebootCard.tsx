@@ -18,7 +18,8 @@ import { invoke } from "@tauri-apps/api/core";
 
 const useStyles = makeStyles({
   card: {
-    height: "150px",
+    height: "200px",
+    minWidth: "200px",
     display: "flex",
     flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -32,7 +33,7 @@ const useStyles = makeStyles({
   },
   content: {
     flex: 1,
-    padding: "10px",
+    padding: "8px",
     display: "flex",
     flexDirection: "column",
     gap: "6px",
@@ -46,9 +47,10 @@ const useStyles = makeStyles({
     borderRadius: "6px",
   },
   rebootOptions: {
-    display: "flex",
-    flexDirection: "row",
-    gap: "4px",
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr", // 2列网格布局
+    gridTemplateRows: "1fr 1fr", // 2行网格布局
+    gap: "6px", // 增加间距以适应网格布局
     flex: 1,
     alignItems: "stretch",
   },
@@ -57,18 +59,20 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "2px 4px",
+    padding: "6px 4px", // 增加垂直内边距以适应网格布局
     border: "1px solid var(--colorNeutralStroke3)",
-    borderRadius: "4px",
+    borderRadius: "6px", // 稍微增加圆角
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.2s ease",
     cursor: "pointer",
-    minHeight: "28px",
+    minHeight: "40px", // 增加最小高度以适应网格布局
     textAlign: "center",
-    flex: 1,
     minWidth: 0,
+    position: "relative", // 添加相对定位以支持绝对定位的徽章
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground2Hover)",
+      transform: "translateY(-1px)", // 添加轻微的悬停效果
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
     },
   },
   rebootOptionPending: {
@@ -77,32 +81,35 @@ const useStyles = makeStyles({
   },
   rebootOptionContent: {
     display: "flex",
-    flexDirection: "row", // 改为水平排版：左边图标右边文字
+    flexDirection: "column", // 改为垂直排版：上方图标下方文字
     alignItems: "center",
-    gap: "4px", // 增加图标和文字之间的间距
-    justifyContent: "flex-start", // 左对齐
+    gap: "4px", // 图标和文字之间的间距
+    justifyContent: "center", // 居中对齐
+    height: "100%",
   },
   rebootOptionIcon: {
-    fontSize: "12px", // 稍微增大图标以适配水平布局
+    fontSize: "16px", // 增大图标以适配垂直布局
     color: "var(--colorBrandForeground1)",
-    flexShrink: 0, // 防止图标被压缩
+    flexShrink: 0,
   },
   rebootOptionTitle: {
-    fontSize: "8px", // 稍微增大文字以适配水平布局
+    fontSize: "11px", // 稍微增大文字以适配垂直布局
     fontWeight: "600",
-    textAlign: "left", // 改为左对齐
-    lineHeight: "1.0",
+    textAlign: "center", // 居中对齐
+    lineHeight: "1.2",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    flex: 1, // 文字占据剩余空间
+    width: "100%", // 占据全宽
   },
   rebootOptionBadge: {
-    fontSize: "7px",
-    padding: "1px 3px",
-    minHeight: "12px",
-    flexShrink: 0, // 防止徽章被压缩
-    marginLeft: "auto", // 推到右边
+    fontSize: "8px",
+    padding: "2px 4px",
+    minHeight: "14px",
+    flexShrink: 0,
+    position: "absolute", // 绝对定位
+    top: "2px", // 距离顶部2px
+    right: "2px", // 距离右边2px
   },
   rebootButton: {
     width: "100%",
@@ -138,27 +145,27 @@ const DeviceRebootCard: React.FC = () => {
   const rebootOptions: RebootOption[] = [
     {
       id: "normal",
-      label: "正常重启",
+      label: "System",
       description: "重启到Android系统",
       command: "system", // 后端期望的参数
     },
     {
       id: "recovery",
-      label: "重启到Recovery",
+      label: "Recovery",
       description: "进入恢复模式",
       command: "recovery", // 后端期望的参数
       warning: true,
     },
     {
       id: "bootloader",
-      label: "重启到Bootloader",
+      label: "Bootloader",
       description: "进入引导加载程序模式",
       command: "bootloader", // 后端期望的参数
       warning: true,
     },
     {
       id: "fastboot",
-      label: "重启到Fastboot",
+      label: "Fastboot",
       description: "进入快速启动模式",
       command: "fastboot", // 后端期望的参数
       warning: true,
@@ -336,7 +343,7 @@ const DeviceRebootCard: React.FC = () => {
         header={
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Power24Regular />
-            <Text weight="semibold">设备重启</Text>
+            <Text weight="semibold">将设备重启到</Text>
           </div>
         }
       />

@@ -5,12 +5,14 @@ mod screen_mirror;
 mod utils;
 mod activation;
 mod download_manager;
+mod cache;
 
 #[cfg(test)]
 mod activation_tests;
 
 use commands::*;
 use activation::check_activation_expiry;
+use cache::cache_cleanup_task;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -62,12 +64,24 @@ pub fn run() {
             get_system_arch,
             open_devtools,
             is_debug_mode,
+            set_window_always_on_top,
+            get_window_always_on_top,
             get_app_environment,
             download_and_extract_software,
             get_default_download_directory,
             open_folder,
             check_file_exists,
-            delete_file
+            delete_file,
+            get_cache_stats,
+            clear_all_cache,
+            invalidate_device_cache,
+            // 杂项控制功能命令
+            stop_adb_process,
+            restart_adb_service,
+            install_device_driver,
+            fix_usb3_connection,
+            open_device_manager,
+            restart_application
         ])
         .setup(|app| {
             // 只在调试模式下初始化日志插件
@@ -81,6 +95,11 @@ pub fn run() {
 
             // 初始化应用状态
             println!("HOUT Tauri application starting...");
+
+            // 启动缓存清理任务（在应用启动后）
+            tauri::async_runtime::spawn(async move {
+                cache_cleanup_task().await;
+            });
 
             Ok(())
         })

@@ -4,10 +4,13 @@ use std::time::Duration;
 use tokio::process::Command as TokioCommand;
 use tokio::time::timeout;
 use crate::error::{HoutError, Result};
+use crate::cache::{get_cached_adb_path, get_cached_fastboot_path, record_path_cache_hit};
 
 
 
-/// 获取ADB可执行文件路径
+/// 获取ADB可执行文件路径（已弃用，请使用缓存版本）
+#[deprecated(note = "Use get_cached_adb_path() for better performance")]
+#[allow(dead_code)]
 pub fn get_adb_path() -> PathBuf {
     // 1. 优先尝试从应用资源目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
@@ -66,7 +69,9 @@ pub fn get_adb_path() -> PathBuf {
     PathBuf::from("adb.exe")
 }
 
-/// 获取Fastboot可执行文件路径
+/// 获取Fastboot可执行文件路径（已弃用，请使用缓存版本）
+#[deprecated(note = "Use get_cached_fastboot_path() for better performance")]
+#[allow(dead_code)]
 pub fn get_fastboot_path() -> PathBuf {
     // 1. 优先尝试从应用资源目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
@@ -125,22 +130,24 @@ pub fn get_fastboot_path() -> PathBuf {
     PathBuf::from("fastboot.exe")
 }
 
-/// 执行ADB命令
+/// 执行ADB命令（使用缓存路径）
 pub async fn execute_adb_command(
     args: &[&str],
     timeout_secs: Option<u64>,
 ) -> Result<crate::device::CommandResult> {
-    let adb_path = get_adb_path();
-    execute_command(&adb_path, args, timeout_secs).await
+    let adb_path = get_cached_adb_path();
+    record_path_cache_hit().await;
+    execute_command(adb_path, args, timeout_secs).await
 }
 
-/// 执行Fastboot命令
+/// 执行Fastboot命令（使用缓存路径）
 pub async fn execute_fastboot_command(
     args: &[&str],
     timeout_secs: Option<u64>,
 ) -> Result<crate::device::CommandResult> {
-    let fastboot_path = get_fastboot_path();
-    execute_command(&fastboot_path, args, timeout_secs).await
+    let fastboot_path = get_cached_fastboot_path();
+    record_path_cache_hit().await;
+    execute_command(fastboot_path, args, timeout_secs).await
 }
 
 /// 执行通用命令
@@ -219,41 +226,12 @@ pub fn parse_fastboot_device_list(output: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-/// 解析设备列表输出（兼容函数，保持向后兼容）
-pub fn parse_device_list(output: &str) -> Vec<(String, String)> {
-    // 检查是否是ADB输出格式（包含"List of devices attached"）
-    if output.contains("List of devices attached") {
-        parse_adb_device_list(output)
-    } else {
-        // 假设是Fastboot输出格式
-        parse_fastboot_device_list(output)
-    }
-}
 
-/// 解析设备属性输出
-pub fn parse_device_properties(output: &str) -> std::collections::HashMap<String, String> {
-    let mut properties = std::collections::HashMap::new();
-    
-    for line in output.lines() {
-        if let Some(eq_pos) = line.find('=') {
-            let key = line[..eq_pos].trim();
-            let value = line[eq_pos + 1..].trim();
-            
-            // 移除方括号
-            let value = if value.starts_with('[') && value.ends_with(']') {
-                &value[1..value.len() - 1]
-            } else {
-                value
-            };
-            
-            properties.insert(key.to_string(), value.to_string());
-        }
-    }
-    
-    properties
-}
+
+
 
 /// 格式化文件大小
+#[allow(dead_code)]
 pub fn format_file_size(size: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = size as f64;
@@ -272,6 +250,7 @@ pub fn format_file_size(size: u64) -> String {
 }
 
 /// 验证设备序列号格式
+#[allow(dead_code)]
 pub fn is_valid_serial(serial: &str) -> bool {
     !serial.is_empty() && serial.chars().all(|c| c.is_alphanumeric() || c == ':' || c == '.')
 }

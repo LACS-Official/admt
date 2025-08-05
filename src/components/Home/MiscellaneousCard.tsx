@@ -7,24 +7,30 @@ import {
   Badge,
   Spinner,
   tokens,
+  Dialog,
+  DialogSurface,
+  DialogTitle,
+  DialogContent,
+  DialogBody,
+  DialogActions,
+  Button,
 } from "@fluentui/react-components";
 import {
-  Settings24Regular,
-  Power24Regular,
-  UsbStick24Regular,
   Wrench24Regular,
-  Shield24Regular,
-  Search24Regular,
   Warning24Regular,
-  Checkmark24Regular,
+  Desktop24Regular,
+  ArrowClockwise24Regular,
+  Stop24Regular,
+  Shield24Regular,
+  Info24Regular,
 } from "@fluentui/react-icons";
-import { useDeviceStore } from "../../stores/deviceStore";
-import { useDeviceService } from "../../services/deviceService";
+
 import { useAppStore } from "../../stores/appStore";
+import { invoke } from "@tauri-apps/api/core";
 
 const useStyles = makeStyles({
   card: {
-    height: "100%",
+    height: "200px",
     display: "flex",
     flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -54,9 +60,9 @@ const useStyles = makeStyles({
   cardContent: {
     flex: 1,
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gridTemplateRows: "1fr 1fr 1fr", // 3行布局，每行固定高度
-    gap: "3px",
+    gridTemplateColumns: "1fr 1fr 1fr", // 改为3列布局
+    gridTemplateRows: "1fr 1fr 1fr", // 保持3行布局
+    gap: "4px", // 稍微增加间距
     padding: "0 8px 8px 8px",
   },
   functionItem: {
@@ -64,16 +70,19 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "3px",
-    borderRadius: "4px",
+    padding: "4px 2px", // 调整内边距以适应3x3网格
+    borderRadius: "6px", // 稍微增加圆角
     border: `1px solid ${tokens.colorNeutralStroke3}`,
     backgroundColor: tokens.colorNeutralBackground2,
     transition: "all 0.2s ease",
     cursor: "pointer",
-    minHeight: "30px", // 进一步减少高度
+    minHeight: "32px", // 增加最小高度以适应3x3网格
     textAlign: "center",
+    position: "relative", // 添加相对定位以支持绝对定位的徽章
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground2Hover,
+      transform: "translateY(-1px)", // 添加轻微的悬停效果
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
     },
   },
   functionInfo: {
@@ -85,23 +94,26 @@ const useStyles = makeStyles({
   },
   functionIcon: {
     color: tokens.colorBrandForeground1,
-    fontSize: "10px", // 减少图标大小
+    fontSize: "14px", // 增大图标以适应3x3网格
+    marginBottom: "2px", // 添加底部间距
   },
   functionText: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "2px",
+    gap: "1px", // 减少间距
+    width: "100%",
   },
   functionTitle: {
-    fontSize: "7px", // 进一步减少字体大小
+    fontSize: "8px", // 稍微增大字体以适应3x3网格
     fontWeight: tokens.fontWeightSemibold,
     color: tokens.colorNeutralForeground1,
     textAlign: "center",
-    lineHeight: "1.0",
+    lineHeight: "1.1",
     whiteSpace: "nowrap", // 防止换行
     overflow: "hidden",
     textOverflow: "ellipsis",
+    width: "100%", // 占据全宽
   },
   functionDescription: {
     display: "none", // 隐藏描述以节省空间
@@ -109,17 +121,38 @@ const useStyles = makeStyles({
   actionButton: {
     minWidth: "60px",
   },
-  warningItem: {
-    borderColor: tokens.colorPaletteYellowBorder2,
-    backgroundColor: tokens.colorPaletteYellowBackground1,
+  disabledItem: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderColor: tokens.colorNeutralStroke3,
     ":hover": {
-      backgroundColor: tokens.colorPaletteYellowBackground2,
-      borderColor: tokens.colorPaletteYellowBorder1,
+      backgroundColor: tokens.colorNeutralBackground3,
+      borderColor: tokens.colorNeutralStroke3,
+      transform: "none",
+      boxShadow: "none",
     },
   },
-  pendingItem: {
-    borderColor: tokens.colorPaletteYellowBorder1,
-    backgroundColor: tokens.colorPaletteYellowBackground2,
+  warningDialog: {
+    maxWidth: "450px",
+  },
+  warningContent: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  warningDialogIcon: {
+    color: "var(--colorPaletteRedForeground1)",
+    fontSize: "24px",
+  },
+  warningText: {
+    lineHeight: "1.5",
+  },
+  infoBox: {
+    padding: "12px",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "6px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
 });
 
@@ -129,210 +162,203 @@ interface MiscFunction {
   description: string;
   icon: React.ReactElement;
   isRisky: boolean;
+  isDisabled?: boolean; // 新增禁用状态
   action: () => Promise<void>;
 }
 
 const MiscellaneousCard: React.FC = () => {
   const styles = useStyles();
-  const { selectedDevice } = useDeviceStore();
-  const { deviceService } = useDeviceService();
   const { addNotification } = useAppStore();
-  
+
   const [executingFunction, setExecutingFunction] = useState<string | null>(null);
-  const [pendingConfirmation, setPendingConfirmation] = useState<string | null>(null);
-  const [confirmationTimeout, setConfirmationTimeout] = useState<number | null>(null);
 
-  const miscFunctions: MiscFunction[] = [
-    {
-      id: "stop-adb",
-      title: "停止ADB进程",
-      description: "终止当前运行的ADB服务进程",
-      icon: <Power24Regular />,
-      isRisky: true,
-      action: async () => {
-        const result = await deviceService.stopAdbServer();
-        if (result.success) {
-          addNotification({
-            type: "success",
-            title: "ADB进程已停止",
-            message: "ADB服务进程已成功终止",
-          });
-        } else {
-          throw new Error(result.error || "停止ADB进程失败");
-        }
-      },
-    },
-    {
-      id: "install-driver",
-      title: "安装设备驱动",
-      description: "自动检测并安装Android设备驱动程序",
-      icon: <UsbStick24Regular />,
-      isRisky: false,
-      action: async () => {
-        const result = await deviceService.installDeviceDriver();
-        if (result.success) {
-          addNotification({
-            type: "success",
-            title: "驱动安装完成",
-            message: "Android设备驱动程序已成功安装",
-          });
-        } else {
-          throw new Error(result.error || "安装设备驱动失败");
-        }
-      },
-    },
-    {
-      id: "usb3-fix",
-      title: "USB 3.0修复",
-      description: "修复USB 3.0连接问题，优化设备连接稳定性",
-      icon: <Wrench24Regular />,
-      isRisky: false,
-      action: async () => {
-        const result = await deviceService.fixUsb3Connection();
-        if (result.success) {
-          addNotification({
-            type: "success",
-            title: "USB连接已优化",
-            message: "USB 3.0连接问题已修复",
-          });
-        } else {
-          throw new Error(result.error || "USB 3.0修复失败");
-        }
-      },
-    },
-    {
-      id: "restart-adb",
-      title: "重启ADB服务",
-      description: "重新启动ADB服务以解决连接问题",
-      icon: <Settings24Regular />,
-      isRisky: false,
-      action: async () => {
-        const result = await deviceService.restartAdbServer();
-        if (result.success) {
-          addNotification({
-            type: "success",
-            title: "ADB服务已重启",
-            message: "ADB服务已成功重新启动",
-          });
-        } else {
-          throw new Error(result.error || "重启ADB服务失败");
-        }
-      },
-    },
-    {
-      id: "clear-auth",
-      title: "清除ADB授权",
-      description: "清除设备上的ADB调试授权记录",
-      icon: <Shield24Regular />,
-      isRisky: true,
-      action: async () => {
-        if (!selectedDevice) {
-          throw new Error("请先选择一个设备");
-        }
-        const result = await deviceService.clearAdbAuthorization(selectedDevice.serial);
-        if (result.success) {
-          addNotification({
-            type: "success",
-            title: "授权记录已清除",
-            message: "设备ADB调试授权记录已清除",
-          });
-        } else {
-          throw new Error(result.error || "清除ADB授权失败");
-        }
-      },
-    },
-    {
-      id: "connection-diagnosis",
-      title: "设备连接诊断",
-      description: "检测和诊断设备连接状态",
-      icon: <Search24Regular />,
-      isRisky: false,
-      action: async () => {
-        if (!selectedDevice) {
-          throw new Error("请先选择一个设备");
-        }
-        const result = await deviceService.diagnoseDeviceConnection(selectedDevice.serial);
-        if (result.success) {
-          addNotification({
-            type: "info",
-            title: "诊断完成",
-            message: result.output || "设备连接状态检测完成，连接正常",
-          });
-        } else {
-          throw new Error(result.error || "设备连接诊断失败");
-        }
-      },
-    },
-  ];
+  // 对话框状态
+  const [showRestartDialog, setShowRestartDialog] = useState(false);
+  const [showStopAdbDialog, setShowStopAdbDialog] = useState(false);
+  const [showDriverDialog, setShowDriverDialog] = useState(false);
+  const [showUsbDialog, setShowUsbDialog] = useState(false);
 
-  const handleFunctionClick = async (func: MiscFunction) => {
-    if (executingFunction) return;
-
-    // 如果是有风险的操作且需要确认
-    if (func.isRisky) {
-      // 如果当前有待确认的操作且是同一个操作，执行操作
-      if (pendingConfirmation && pendingConfirmation === func.id) {
-        await executeFunction(func);
-        return;
-      }
-
-      // 第一次点击：设置待确认状态
-      setPendingConfirmation(func.id);
-
-      // 清除之前的超时
-      if (confirmationTimeout) {
-        clearTimeout(confirmationTimeout);
-      }
-
-      // 设置5秒后自动清除确认状态
-      const timeout = setTimeout(() => {
-        setPendingConfirmation(null);
-        setConfirmationTimeout(null);
-      }, 5000);
-
-      setConfirmationTimeout(timeout);
-
+  // 通用命令执行函数
+  const executeCommand = async (
+    commandId: string,
+    command: () => Promise<any>,
+    description: string,
+    isRisky: boolean = false
+  ) => {
+    if (isRisky) {
       addNotification({
         type: "warning",
-        title: "确认操作",
-        message: `请再次点击"${func.title}"确认执行操作`,
-        duration: 5000,
+        title: "风险操作",
+        message: `即将执行: ${description}，请确认操作`,
       });
-    } else {
-      // 非风险操作直接执行
-      await executeFunction(func);
-    }
-  };
-
-  const executeFunction = async (func: MiscFunction) => {
-    setExecutingFunction(func.id);
-    setPendingConfirmation(null);
-    
-    if (confirmationTimeout) {
-      clearTimeout(confirmationTimeout);
-      setConfirmationTimeout(null);
     }
 
+    setExecutingFunction(commandId);
     try {
-      await func.action();
+      const result = await command();
+      if (result.success) {
+        addNotification({
+          type: "success",
+          title: "操作成功",
+          message: `${description}成功`,
+        });
+      } else {
+        addNotification({
+          type: "error",
+          title: "操作失败",
+          message: result.error || `${description}失败`,
+        });
+      }
     } catch (error) {
       addNotification({
         type: "error",
         title: "操作失败",
-        message: `${func.title}执行失败: ${error}`,
+        message: `${description}失败: ${error}`,
       });
     } finally {
       setExecutingFunction(null);
     }
   };
 
+  // 各种处理函数
+  const handleOpenDeviceManager = async () => {
+    await executeCommand(
+      "open-device-manager",
+      () => invoke("open_device_manager"),
+      "打开设备管理器"
+    );
+  };
+
+  const handleRestartApp = async () => {
+    setShowRestartDialog(true);
+  };
+
+  const confirmRestartApp = async () => {
+    setShowRestartDialog(false);
+    await executeCommand(
+      "restart-app",
+      () => invoke("restart_application"),
+      "重启应用",
+      true
+    );
+  };
+
+  const handleStopAdb = async () => {
+    setShowStopAdbDialog(true);
+  };
+
+  const confirmStopAdb = async () => {
+    setShowStopAdbDialog(false);
+    await executeCommand(
+      "stop-adb",
+      () => invoke("stop_adb_process"),
+      "停止ADB进程",
+      true
+    );
+  };
+
+  const handleRestartAdb = async () => {
+    await executeCommand(
+      "restart-adb",
+      () => invoke("restart_adb_service"),
+      "重启ADB服务"
+    );
+  };
+
+  const handleInstallDriver = async () => {
+    setShowDriverDialog(true);
+  };
+
+  const confirmInstallDriver = async () => {
+    setShowDriverDialog(false);
+    await executeCommand(
+      "install-driver",
+      () => invoke("install_device_driver"),
+      "安装设备驱动",
+      true
+    );
+  };
+
+  const handleFixUsb3 = async () => {
+    setShowUsbDialog(true);
+  };
+
+  const confirmFixUsb3 = async () => {
+    setShowUsbDialog(false);
+    await executeCommand(
+      "fix-usb3",
+      () => invoke("fix_usb3_connection"),
+      "修复USB 3.0连接",
+      true
+    );
+  };
+
+
+
+  const miscFunctions: MiscFunction[] = [
+    {
+      id: "stop-adb",
+      title: "停止ADB进程",
+      description: "强制终止当前运行的ADB进程",
+      icon: <Stop24Regular />,
+      isRisky: true,
+      action: handleStopAdb,
+    },
+    {
+      id: "restart-adb",
+      title: "重启ADB服务",
+      description: "重新启动ADB服务以恢复连接",
+      icon: <ArrowClockwise24Regular />,
+      isRisky: false,
+      action: handleRestartAdb,
+    },
+    {
+      id: "install-driver",
+      title: "安装设备驱动",
+      description: "自动安装Android设备驱动程序",
+      icon: <Shield24Regular />,
+      isRisky: true,
+      action: handleInstallDriver,
+    },
+    {
+      id: "fix-usb3",
+      title: "USB 3.0修复",
+      description: "修复USB 3.0连接问题，确保设备正常识别",
+      icon: <Wrench24Regular />,
+      isRisky: true,
+      action: handleFixUsb3,
+    },
+    {
+      id: "open-device-manager",
+      title: "打开设备管理器",
+      description: "快速启动Windows设备管理器",
+      icon: <Desktop24Regular />,
+      isRisky: false,
+      action: handleOpenDeviceManager,
+    },
+    {
+      id: "restart-app",
+      title: "重启应用",
+      description: "重新启动HOUT应用程序",
+      icon: <ArrowClockwise24Regular />,
+      isRisky: true,
+      action: handleRestartApp,
+    },
+  ];
+
+  const handleFunctionClick = async (func: MiscFunction) => {
+    if (executingFunction || func.isDisabled) return;
+
+    // 直接调用对应的处理函数
+    await func.action();
+  };
+
+
+
   const getItemClassName = (func: MiscFunction) => {
     let className = styles.functionItem;
-    if (func.isRisky && func.id === "clear-auth" && !selectedDevice) {
-      className += ` ${styles.warningItem}`;
-    }
-    if (pendingConfirmation === func.id) {
-      className += ` ${styles.pendingItem}`;
+    if (func.isDisabled) {
+      className += ` ${styles.disabledItem}`;
     }
     return className;
   };
@@ -340,49 +366,244 @@ const MiscellaneousCard: React.FC = () => {
 
 
   return (
-    <Card className={styles.card}>
-      <CardHeader className={styles.cardHeader}>
-        <Text className={styles.cardTitle}>
-          <Wrench24Regular className={styles.titleIcon} />
-          杂项功能
-        </Text>
-      </CardHeader>
-      
-      <div className={styles.cardContent}>
-        {miscFunctions.map((func) => (
-          <div
-            key={func.id}
-            className={getItemClassName(func)}
-            onClick={() => handleFunctionClick(func)}
-          >
-            <div className={styles.functionInfo}>
-              <div className={styles.functionIcon}>
-                {executingFunction === func.id ? (
-                  <Spinner size="tiny" />
-                ) : pendingConfirmation === func.id ? (
-                  <Warning24Regular />
-                ) : (
-                  func.icon
+    <>
+      <Card className={styles.card}>
+        <CardHeader className={styles.cardHeader}>
+          <Text className={styles.cardTitle}>
+            <Wrench24Regular className={styles.titleIcon} />
+            杂项控制
+          </Text>
+        </CardHeader>
+
+        <div className={styles.cardContent}>
+          {miscFunctions.map((func) => (
+            <div
+              key={func.id}
+              className={getItemClassName(func)}
+              onClick={() => handleFunctionClick(func)}
+            >
+              <div className={styles.functionInfo}>
+                <div className={styles.functionIcon}>
+                  {executingFunction === func.id ? (
+                    <Spinner size="tiny" />
+                  ) : (
+                    func.icon
+                  )}
+                </div>
+                <div className={styles.functionText}>
+                  <Text className={styles.functionTitle}>{func.title}</Text>
+                </div>
+                {func.isRisky && (
+                  <Badge appearance="outline" color="warning" size="small">
+                    风险
+                  </Badge>
                 )}
               </div>
-              <div className={styles.functionText}>
-                <Text className={styles.functionTitle}>{func.title}</Text>
-              </div>
-              {pendingConfirmation === func.id && (
-                <Badge appearance="filled" color="warning" size="small">
-                  待确认
-                </Badge>
-              )}
-              {func.isRisky && pendingConfirmation !== func.id && (
-                <Badge appearance="outline" color="warning" size="small">
-                  风险
-                </Badge>
-              )}
             </div>
-          </div>
-        ))}
-      </div>
-    </Card>
+          ))}
+        </div>
+      </Card>
+
+      {/* 重启应用确认对话框 */}
+      <Dialog open={showRestartDialog} onOpenChange={(_, data) => setShowRestartDialog(data.open)}>
+        <DialogSurface className={styles.warningDialog}>
+          <DialogTitle>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Warning24Regular className={styles.warningDialogIcon} />
+              确认重启应用
+            </div>
+          </DialogTitle>
+          <DialogContent>
+            <DialogBody>
+              <div className={styles.warningContent}>
+                <Text className={styles.warningText}>
+                  您即将重启HOUT应用程序。
+                </Text>
+                <div className={styles.infoBox}>
+                  <Text style={{ fontWeight: "500", marginBottom: "8px" }}>
+                    <Info24Regular style={{ marginRight: "6px" }} />
+                    注意事项：
+                  </Text>
+                  <Text className={styles.warningText}>
+                    • 当前所有操作将被中断<br/>
+                    • 未保存的设置可能丢失<br/>
+                    • 设备连接将被重新建立
+                  </Text>
+                </div>
+                <Text className={styles.warningText}>
+                  是否确认重启？
+                </Text>
+              </div>
+            </DialogBody>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              appearance="secondary"
+              onClick={() => setShowRestartDialog(false)}
+            >
+              取消
+            </Button>
+            <Button
+              appearance="primary"
+              onClick={confirmRestartApp}
+              style={{ backgroundColor: "var(--colorPaletteRedBackground1)" }}
+            >
+              确认重启
+            </Button>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
+
+      {/* 停止ADB确认对话框 */}
+      <Dialog open={showStopAdbDialog} onOpenChange={(_, data) => setShowStopAdbDialog(data.open)}>
+        <DialogSurface className={styles.warningDialog}>
+          <DialogTitle>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Warning24Regular className={styles.warningDialogIcon} />
+              确认停止ADB进程
+            </div>
+          </DialogTitle>
+          <DialogContent>
+            <DialogBody>
+              <div className={styles.warningContent}>
+                <Text className={styles.warningText}>
+                  您即将强制终止ADB进程。
+                </Text>
+                <div className={styles.infoBox}>
+                  <Text style={{ fontWeight: "500", marginBottom: "8px" }}>
+                    <Info24Regular style={{ marginRight: "6px" }} />
+                    注意事项：
+                  </Text>
+                  <Text className={styles.warningText}>
+                    • 所有设备连接将被断开<br/>
+                    • 正在进行的ADB操作将被中断<br/>
+                    • 需要重启ADB服务才能恢复连接
+                  </Text>
+                </div>
+                <Text className={styles.warningText}>
+                  是否确认停止ADB进程？
+                </Text>
+              </div>
+            </DialogBody>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              appearance="secondary"
+              onClick={() => setShowStopAdbDialog(false)}
+            >
+              取消
+            </Button>
+            <Button
+              appearance="primary"
+              onClick={confirmStopAdb}
+              style={{ backgroundColor: "var(--colorPaletteRedBackground1)" }}
+            >
+              确认停止
+            </Button>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
+
+      {/* 安装驱动确认对话框 */}
+      <Dialog open={showDriverDialog} onOpenChange={(_, data) => setShowDriverDialog(data.open)}>
+        <DialogSurface className={styles.warningDialog}>
+          <DialogTitle>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Warning24Regular className={styles.warningDialogIcon} />
+              确认安装设备驱动
+            </div>
+          </DialogTitle>
+          <DialogContent>
+            <DialogBody>
+              <div className={styles.warningContent}>
+                <Text className={styles.warningText}>
+                  您即将安装Android设备驱动程序。
+                </Text>
+                <div className={styles.infoBox}>
+                  <Text style={{ fontWeight: "500", marginBottom: "8px" }}>
+                    <Info24Regular style={{ marginRight: "6px" }} />
+                    注意事项：
+                  </Text>
+                  <Text className={styles.warningText}>
+                    • 此操作需要管理员权限<br/>
+                    • 可能需要重启计算机<br/>
+                    • 安装过程中请勿断开设备连接
+                  </Text>
+                </div>
+                <Text className={styles.warningText}>
+                  是否确认安装驱动？
+                </Text>
+              </div>
+            </DialogBody>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              appearance="secondary"
+              onClick={() => setShowDriverDialog(false)}
+            >
+              取消
+            </Button>
+            <Button
+              appearance="primary"
+              onClick={confirmInstallDriver}
+              style={{ backgroundColor: "var(--colorPaletteRedBackground1)" }}
+            >
+              确认安装
+            </Button>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
+
+      {/* USB 3.0修复确认对话框 */}
+      <Dialog open={showUsbDialog} onOpenChange={(_, data) => setShowUsbDialog(data.open)}>
+        <DialogSurface className={styles.warningDialog}>
+          <DialogTitle>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Warning24Regular className={styles.warningDialogIcon} />
+              确认修复USB 3.0连接
+            </div>
+          </DialogTitle>
+          <DialogContent>
+            <DialogBody>
+              <div className={styles.warningContent}>
+                <Text className={styles.warningText}>
+                  您即将修复USB 3.0连接问题。
+                </Text>
+                <div className={styles.infoBox}>
+                  <Text style={{ fontWeight: "500", marginBottom: "8px" }}>
+                    <Info24Regular style={{ marginRight: "6px" }} />
+                    注意事项：
+                  </Text>
+                  <Text className={styles.warningText}>
+                    • 此操作需要管理员权限<br/>
+                    • 可能会重置USB控制器<br/>
+                    • 修复过程中请勿操作USB设备
+                  </Text>
+                </div>
+                <Text className={styles.warningText}>
+                  是否确认修复USB 3.0连接？
+                </Text>
+              </div>
+            </DialogBody>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              appearance="secondary"
+              onClick={() => setShowUsbDialog(false)}
+            >
+              取消
+            </Button>
+            <Button
+              appearance="primary"
+              onClick={confirmFixUsb3}
+              style={{ backgroundColor: "var(--colorPaletteRedBackground1)" }}
+            >
+              确认修复
+            </Button>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
+    </>
   );
 };
 

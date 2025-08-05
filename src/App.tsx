@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { makeStyles, Spinner, Text, MessageBar } from "@fluentui/react-components";
+import { makeStyles } from "@fluentui/react-components";
 import TitleBar from "./components/TitleBar/TitleBar";
 import MainContent from "./components/MainContent/MainContent";
 import StatusBar from "./components/StatusBar/StatusBar";
@@ -48,7 +48,7 @@ const useStyles = makeStyles({
 function App() {
   const styles = useStyles();
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [showStartupFlow, setShowStartupFlow] = useState(true); // 启用启动流程
 
 

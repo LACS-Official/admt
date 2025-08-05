@@ -66,90 +66,142 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "16px", // 更大的圆角，更现代
-    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.06)", // 更柔和的阴影
+    borderRadius: "12px", // 适中的圆角，保持现代感
+    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04)", // 更轻微的阴影，避免过于突出
     backgroundColor: "var(--colorNeutralBackground1)",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", // 更流畅的动画
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)", // 更快的过渡动画
     position: "relative",
     overflow: "hidden",
+    ":hover": {
+      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)", // 悬停时轻微增强阴影
+    },
   },
   content: {
-    padding: "16px", // 增加内边距，更舒适
-    paddingTop: "14px", // 为顶部装饰条留出空间
+    padding: "12px", // 减少内边距，使布局更紧凑
+    paddingTop: "10px",
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "20px", // 增加间距
+    gap: "16px", // 减少间距，压缩垂直空间
   },
   // 设备名称和进度条的顶部区域
   deviceTopSection: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: "14px",
+    gap: "12px", // 减少间距
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "16px",
-    padding: "10px",
-    marginBottom: "10px",
+    borderRadius: "8px", // 进一步减小圆角
+    padding: "12px", // 减少内边距，使布局更紧凑
+    marginBottom: "12px", // 减少底部间距
+    backgroundColor: "var(--colorNeutralBackground2)", // 添加背景色区分
+    transition: "all 0.2s ease", // 添加过渡动画
+    ":hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)", // 悬停效果
+    },
     "@media (max-width: 480px)": {
       flexDirection: "column", // 超小屏幕改为垂直布局
-      gap: "12px",
+      gap: "8px", // 移动端进一步减少间距
+      padding: "10px", // 移动端减少内边距
     },
   },
-  // 左侧设备名称区域
+  // 左侧设备名称区域 - 单行布局优化
   deviceNameSection: {
     flex: "1 1 auto",
     display: "flex",
-    flexDirection: "column",
+    alignItems: "center", // 改为水平对齐
+    gap: "12px", // 设备名称和副标题之间的间距
     minWidth: 0, // 防止文字溢出
   },
   deviceHeader: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between", // 设备名称和按钮分布在两端
-    gap: "12px",
-    marginBottom: "6px",
+    gap: "8px", // 减少间距
+    marginBottom: "0", // 移除底部间距，实现单行布局
   },
   deviceNameText: {
-    flex: "1 1 auto",
     display: "flex",
-    flexDirection: "column",
+    alignItems: "center", // 改为水平对齐
+    gap: "10px", // 名称和副标题之间的间距
     minWidth: 0,
   },
   deviceName: {
-    fontSize: "20px", // 增大字体
-    fontWeight: "700", // 更粗的字体
-    color: "var(--colorBrandForeground1)", // 使用品牌色
-    lineHeight: "1.2",
+    fontSize: "18px", // 减小字体以适应单行布局
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
+    lineHeight: "1.2", // 减少行高以压缩垂直空间
     wordBreak: "break-word",
-    marginBottom: "4px",
+    marginBottom: "0", // 移除底部间距
+    whiteSpace: "nowrap", // 防止换行
+    overflow: "hidden",
+    textOverflow: "ellipsis", // 文字过长时显示省略号
+    maxWidth: "200px", // 限制最大宽度
+    flexShrink: 1, // 允许压缩
+    "@media (max-width: 768px)": {
+      fontSize: "16px", // 移动端进一步减小字体
+      maxWidth: "150px",
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "14px", // 超小屏幕更小字体
+      maxWidth: "120px",
+    },
   },
   deviceSubtitle: {
-    fontSize: "13px", // 稍微增大
-    color: "var(--colorNeutralForeground3)",
+    fontSize: "10px", // 减小字体以适应单行布局
+    color: "var(--colorNeutralForeground2)",
     fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace",
-    marginTop: "2px",
+    marginTop: "0", // 移除顶部间距
     wordBreak: "break-word",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    padding: "4px 8px",
-    borderRadius: "6px",
-    border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    padding: "3px 6px", // 减少内边距以压缩高度
+    borderRadius: "4px", // 减小圆角
+    border: "1px solid var(--colorNeutralStroke3)",
     display: "inline-block",
+    transition: "all 0.2s ease",
+    whiteSpace: "nowrap", // 防止换行
+    overflow: "hidden",
+    textOverflow: "ellipsis", // 文字过长时显示省略号
+    maxWidth: "180px", // 限制最大宽度
+    flexShrink: 1, // 允许压缩
+    "@media (max-width: 768px)": {
+      fontSize: "9px", // 移动端进一步减小字体
+      maxWidth: "140px",
+      padding: "2px 4px", // 移动端减少内边距
+    },
+    "@media (max-width: 480px)": {
+      fontSize: "8px", // 超小屏幕更小字体
+      maxWidth: "100px",
+      padding: "2px 4px",
+    },
+    ":hover": {
+      backgroundColor: "var(--colorNeutralBackground3Hover)",
+    },
   },
-  // 设备名称区域的查看详情按钮
+  // 设备名称区域的查看详情按钮 - 单行布局优化
   deviceDetailsButton: {
     marginLeft: "5px",
-    minWidth: "80px",
-    height: "24px",
-    fontSize: "12px",
+    minWidth: "70px", // 减少最小宽度
+    height: "28px", // 稍微增加高度以保持可点击性
+    fontSize: "11px", // 减小字体
+    borderRadius: "6px", // 减小圆角
   },
-  // 标题栏提示文字
+  // 标题栏提示文字 - 单行布局优化
   headerHint: {
-    fontSize: "11px",
-    color: "var(--colorNeutralForeground3)", // 较淡的颜色
+    fontSize: "10px", // 减小字体以适应单行布局
+    color: "var(--colorNeutralForeground3)",
     fontWeight: "400",
-    marginLeft: "8px",
-    fontStyle: "italic", // 斜体强调
+    marginLeft: "auto", // 自动左边距，推到右侧
+    marginRight: "12px", // 与按钮保持间距
+    fontStyle: "italic",
+    whiteSpace: "nowrap", // 防止换行
+    flexShrink: 0, // 防止被压缩
+    "@media (max-width: 768px)": {
+      fontSize: "9px", // 移动端减小字体
+      marginRight: "8px",
+    },
+    "@media (max-width: 480px)": {
+      display: "none", // 超小屏幕隐藏提示文字以节省空间
+    },
   },
   // 右侧进度条区域 - 两列布局
   progressSection: {
@@ -179,57 +231,81 @@ const useStyles = makeStyles({
   },
   infoGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr 1fr", // 改为四列布局
-    gap: "12px",
+    gridTemplateColumns: "1fr 1fr 1fr 1fr", // 保持四列布局
+    gap: "10px", // 减少间距，使布局更紧凑
     "@media (max-width: 1200px)": {
       gridTemplateColumns: "1fr 1fr 1fr", // 中等屏幕改为三列
-      gap: "10px",
+      gap: "10px", // 保持一致的间距
     },
     "@media (max-width: 768px)": {
       gridTemplateColumns: "1fr 1fr", // 小屏幕改为两列
-      gap: "8px",
+      gap: "8px", // 小屏幕减少间距
     },
     "@media (max-width: 480px)": {
       gridTemplateColumns: "1fr", // 超小屏幕改为单列
-      gap: "6px",
+      gap: "8px", // 超小屏幕保持较小间距
     },
   },
   infoItem: {
     display: "flex",
     flexDirection: "column",
-    gap: "4px", // 减少间距
+    gap: "4px", // 减少间距，使布局更紧凑
+    padding: "8px", // 减少内边距，压缩空间
+    borderRadius: "6px", // 减小圆角
+    backgroundColor: "var(--colorNeutralBackground2)", // 添加背景色
+    border: "1px solid var(--colorNeutralStroke3)", // 添加边框
+    transition: "all 0.2s ease", // 添加过渡动画
+    ":hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)", // 悬停效果
+      border: "1px solid var(--colorNeutralStroke2)", // 悬停时边框颜色
+    },
   },
   infoLabel: {
-    fontSize: "12px",
+    fontSize: "10px", // 进一步减小标签字体以适应紧凑布局
     fontWeight: "600",
-    color: "#000000", // 标题为黑色
-    textTransform: "none",
-    letterSpacing: "0px",
-    marginBottom: "4px",
+    color: "var(--colorNeutralForeground2)", // 使用次要文本色，提升层次感
+    textTransform: "uppercase", // 大写字母，增强标签感
+    letterSpacing: "0.05em", // 增加字母间距
+    marginBottom: "1px", // 减少底部间距
+    lineHeight: "1.2", // 减少行高
   },
   infoValue: {
-    fontSize: "13px",
+    fontSize: "13px", // 稍微减小内容字体以适应紧凑布局
     fontWeight: "500",
-    color: "var(--colorBrandForeground1)", // 内容为主色调蓝色
+    color: "var(--colorNeutralForeground1)", // 使用主要文本色，提升可读性
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: "4px", // 减少间距
     cursor: "pointer", // 鼠标指针样式
-    padding: "2px 4px", // 增加点击区域
-    borderRadius: "3px", // 圆角
+    padding: "3px 4px", // 减少内边距
+    borderRadius: "3px", // 减小圆角
     transition: "all 0.2s ease", // 平滑过渡效果
+    lineHeight: "1.3", // 减少行高
     ":hover": {
-      backgroundColor: "var(--colorNeutralBackground2Hover)", // 悬停背景色
-      textDecoration: "underline", // 悬停下划线
+      backgroundColor: "var(--colorNeutralBackground3)", // 悬停背景色
+      color: "var(--colorBrandForeground1)", // 悬停时使用品牌色
     },
     ":active": {
-      backgroundColor: "var(--colorNeutralBackground2Pressed)", // 点击时背景色
+      backgroundColor: "var(--colorNeutralBackground3Pressed)", // 点击时背景色
     },
   },
   progressItem: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "6px", // 减少间距，使布局更紧凑
+  },
+  progressGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr 1fr",
+    gap: "12px", // 减少间距
+    "@media (max-width: 768px)": {
+      gridTemplateColumns: "1fr 1fr",
+      gap: "10px", // 减少移动端间距
+    },
+    "@media (max-width: 480px)": {
+      gridTemplateColumns: "1fr",
+      gap: "8px", // 减少超小屏幕间距
+    },
   },
   progressHeader: {
     display: "flex",
@@ -237,17 +313,20 @@ const useStyles = makeStyles({
     alignItems: "center",
   },
   progressLabel: {
-    fontSize: "11px", // 恢复原来的字体大小
+    fontSize: "11px", // 减小字体以适应紧凑布局
     fontWeight: "500",
     color: "var(--colorNeutralForeground2)",
     display: "flex",
     alignItems: "center",
-    gap: "4px",
+    gap: "4px", // 减少图标和文字间距
+    lineHeight: "1.2", // 减少行高
   },
   progressValue: {
-    fontSize: "11px", // 恢复原来的字体大小
+    fontSize: "11px", // 减小字体以适应紧凑布局
     fontWeight: "600",
     color: "var(--colorNeutralForeground1)",
+    letterSpacing: "0.02em", // 添加字母间距，提升数字可读性
+    lineHeight: "1.2", // 减少行高
   },
   batteryIcon: {
     color: "var(--colorPaletteGreenForeground1)",
@@ -496,26 +575,39 @@ const DeviceCoreInfoCard: React.FC<DeviceCoreInfoCardProps> = ({
       <Toaster />
       <Card className={styles.card}>
         <CardHeader
-          image={<Phone24Regular />}
           header={
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <Text weight="semibold">设备概览</Text>
-                <Button
-                appearance="primary"
-                icon={<ChevronRight24Regular />}
-                iconPosition="after"
-                onClick={onShowDetails}
-                className={styles.deviceDetailsButton}
-                size="small"
-              >
-                查看全部参数
-              </Button>
-              <Text className={styles.headerHint}>点击对应的值即可复制</Text>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              width: "100%",
+              minHeight: "32px", // 设置最小高度以压缩垂直空间
+              padding: "4px 0" // 减少垂直内边距
+            }}>
+              {/* 设备图标 */}
+              <Phone24Regular style={{
+                fontSize: "20px", // 减小图标尺寸
+                color: "var(--colorBrandForeground1)",
+                flexShrink: 0
+              }} />
+
+              {/* 设备名称 */}
+              <Text className={styles.deviceName}>{getDeviceName()}</Text>
+
+              {/* 设备副标题 */}
+              <Text className={styles.deviceSubtitle}>{getDeviceSubtitle()}</Text>
+
+              {/* 提示文字 */}
+              <Text className={styles.headerHint}>点击信息即可复制</Text>
             </div>
-            
           }
           action={
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px", // 减少按钮间距
+              flexShrink: 0 // 防止按钮被压缩
+            }}>
               {device.connected && (
                 <Button
                   appearance="subtle"
@@ -524,120 +616,95 @@ const DeviceCoreInfoCard: React.FC<DeviceCoreInfoCardProps> = ({
                   onClick={fetchMemoryStorageInfo}
                   disabled={isLoadingMemoryStorage}
                   title="刷新内存和存储信息"
+                  style={{
+                    minWidth: "32px", // 设置最小宽度
+                    height: "28px" // 与详情按钮保持一致的高度
+                  }}
                 />
               )}
-              <Badge
-                appearance="filled"
-                color={device.connected ? "success" : "danger"}
+              <Button
+                appearance="primary"
+                icon={<ChevronRight24Regular />}
+                iconPosition="after"
+                onClick={onShowDetails}
+                className={styles.deviceDetailsButton}
+                size="small"
               >
-                {device.connected ? "已连接" : "已断开"}
-              </Badge>
+                查看详情
+              </Button>
             </div>
           }
         />
+        
       
       <div className={styles.content}>
-        {/* 设备名称和进度条的顶部区域 */}
+        {/* 设备状态指标区域 */}
         <div className={styles.deviceTopSection}>
-          {/* 左侧：设备名称区域 */}
-          <div className={styles.deviceNameSection}>
-            <div className={styles.deviceHeader}>
-              <div className={styles.deviceNameText}>
-                <Text className={styles.deviceName}>{getDeviceName()}</Text>
-                <Text className={styles.deviceSubtitle}>{getDeviceSubtitle()}</Text>
-              </div>
-
-            </div>
-          </div>
-
-          {/* 右侧：进度条区域 - 两列四个进度条 */}
-          <div className={styles.progressSection}>
-            {/* 左列：电池信息 */}
-            <div className={styles.progressColumn}>
-              {/* 电池电量 */}
-              {device.properties?.batteryLevel !== undefined && (
-                <div className={styles.progressItem}>
-                  <div className={styles.progressHeader}>
-                    <div className={styles.progressLabel}>
-                      {getBatteryIcon(device.properties.batteryLevel)}
-                      <Text>电池电量</Text>
-                    </div>
-                    <Text className={styles.progressValue}>
-                      {device.properties.batteryLevel}%
-                    </Text>
-                  </div>
-                  <ProgressBar
-                    value={device.properties.batteryLevel / 100}
-                    color={getBatteryColor(device.properties.batteryLevel)}
-                  />
+          <div className={styles.progressGrid}>
+            {/* 电池电量 */}
+            <div className={styles.progressItem}>
+              <div className={styles.progressHeader}>
+                <div className={styles.progressLabel}>
+                  {getBatteryIcon(device.properties?.batteryLevel)}
+                  <Text>电池电量</Text>
                 </div>
-              )}
-
-              {/* 设备温度 - 显示电池温度 */}
-              <div className={styles.progressItem}>
-                <div className={styles.progressHeader}>
-                  <div className={styles.progressLabel}>
-                    <DesktopPulse24Regular />
-                    <Text>设备温度</Text>
-                  </div>
-                  <Text className={styles.progressValue}>
-                    {temperatureInfo.temperature !== null
-                      ? `${temperatureInfo.temperature.toFixed(1)}°C`
-                      : temperatureInfo.status
-                    }
-                  </Text>
-                </div>
-                {temperatureInfo.temperaturePercent !== null ? (
-                  <ProgressBar
-                    value={temperatureInfo.temperaturePercent / 100} // 0-100°C 范围
-                    color={getTemperatureColor(temperatureInfo.temperature!)}
-                  />
-                ) : (
-                  <ProgressBar
-                    value={0}
-                    color="success"
-                    style={{ opacity: 0.3 }}
-                  />
-                )}
-
+                <Text className={styles.progressValue}>{device.properties?.batteryLevel || 0}%</Text>
               </div>
+              <ProgressBar
+                value={(device.properties?.batteryLevel || 0) / 100}
+                color={getBatteryColor(device.properties?.batteryLevel)}
+                thickness="medium"
+              />
             </div>
 
-            {/* 右列：存储和内存信息 */}
-            <div className={styles.progressColumn}>
-              {/* 内部存储 */}
-              <div className={styles.progressItem}>
-                <div className={styles.progressHeader}>
-                  <div className={styles.progressLabel}>
-                    <Storage24Regular />
-                    <Text>内部存储</Text>
-                  </div>
-                  <Text className={styles.progressValue}>
-                    {storageInfo.used}% 已使用
-                  </Text>
+            {/* 设备温度 */}
+            <div className={styles.progressItem}>
+              <div className={styles.progressHeader}>
+                <div className={styles.progressLabel}>
+                  <DesktopPulse24Regular />
+                  <Text>设备温度</Text>
                 </div>
-                <ProgressBar
-                  value={storageInfo.used / 100}
-                  color={getStorageColor(storageInfo.used)}
-                />
+                <Text className={styles.progressValue}>
+                  {temperatureInfo.temperature !== null ? `${temperatureInfo.temperature.toFixed(1)}°C` : temperatureInfo.status}
+                </Text>
               </div>
+              <ProgressBar
+                value={(temperatureInfo.temperaturePercent || 0) / 100}
+                color={temperatureInfo.temperature ? getTemperatureColor(temperatureInfo.temperature) : "success"}
+                thickness="medium"
+              />
+            </div>
 
-              {/* 运行内存 */}
-              <div className={styles.progressItem}>
-                <div className={styles.progressHeader}>
-                  <div className={styles.progressLabel}>
-                    <DesktopPulse24Regular />
-                    <Text>运行内存</Text>
-                  </div>
-                  <Text className={styles.progressValue}>
-                    {memoryUsage.used}% 已使用
-                  </Text>
+            {/* 内部存储 */}
+            <div className={styles.progressItem}>
+              <div className={styles.progressHeader}>
+                <div className={styles.progressLabel}>
+                  <Storage24Regular />
+                  <Text>内部存储</Text>
                 </div>
-                <ProgressBar
-                  value={memoryUsage.used / 100}
-                  color={getMemoryColor(memoryUsage.used)}
-                />
+                <Text className={styles.progressValue}>{storageInfo.used}% 已使用</Text>
               </div>
+              <ProgressBar
+                value={storageInfo.used / 100}
+                color={getStorageColor(storageInfo.used)}
+                thickness="medium"
+              />
+            </div>
+
+            {/* 运行内存 */}
+            <div className={styles.progressItem}>
+              <div className={styles.progressHeader}>
+                <div className={styles.progressLabel}>
+                  <DesktopPulse24Regular />
+                  <Text>运行内存</Text>
+                </div>
+                <Text className={styles.progressValue}>{memoryUsage.used}% 已使用</Text>
+              </div>
+              <ProgressBar
+                value={memoryUsage.used / 100}
+                color={getMemoryColor(memoryUsage.used)}
+                thickness="medium"
+              />
             </div>
           </div>
         </div>

@@ -163,6 +163,7 @@ impl ActivationValidator {
     }
 
     /// 使用自定义API地址创建验证器
+    #[allow(dead_code)]
     pub fn with_api_url(api_url: String) -> Self {
         Self {
             api_base_url: api_url,

@@ -32,6 +32,7 @@ import AdbZonePanel from "../AdbZone/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
 import DeviceManagementPanel from "../DeviceManagement/DeviceManagementPanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
+
 import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "../Carousel/CarouselComponent";
@@ -47,8 +48,8 @@ const useStyles = makeStyles({
     gap: "1px", // 添加分隔线效果
   },
   sidebar: {
-    width: "240px", // 增加宽度
-    minWidth: "240px",
+    width: "200px", // 增加宽度
+    minWidth: "200px",
     maxWidth: "240px", // 更新最大宽度
     backgroundColor: "var(--colorNeutralBackground2)", // 使用更深的背景色
     borderRight: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
@@ -355,7 +356,6 @@ const useStyles = makeStyles({
     overflow: "hidden",
     boxSizing: "border-box",
     border: "1px solid var(--colorNeutralStroke2)", // 添加默认灰色边框
-        boxShadow: "2px 0 16px rgba(0, 0, 0, 0.08)", // 更现代的阴影
     // 简化图标样式
     "& .fui-Tab__icon": {
       color: "var(--colorNeutralForeground3)",
@@ -461,6 +461,7 @@ const tabs = [
     label: "扩展功能",
     icon: <Wrench24Regular />,
   },
+
   {
     id: "online-resources" as AppView,
     label: "在线资源",
@@ -729,6 +730,7 @@ const MainContent: React.FC = () => {
         return <DeviceManagementPanel />;
       case "extended-features":
         return <ExtendedFeaturesPanel />;
+
       case "online-resources":
         return <OnlineResourcesPanel />;
       case "settings":
