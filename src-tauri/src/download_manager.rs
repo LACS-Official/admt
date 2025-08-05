@@ -341,7 +341,7 @@ impl DownloadManager {
         let json_config = serde_json::json!({
             "openname": openname,
             "created_at": chrono::Utc::now().to_rfc3339(),
-            "created_by": "HOUT"
+            "created_by": "ADMT-By LACS"
         });
 
         fs::write(&json_config_path, serde_json::to_string_pretty(&json_config).unwrap())

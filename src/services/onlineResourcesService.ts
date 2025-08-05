@@ -24,6 +24,8 @@ class OnlineResourcesService {
   private downloadTasks: Map<string, DownloadTask> = new Map();
   private isInitialized: boolean = false;
   private readonly STORAGE_KEY = 'hout_download_tasks';
+  private lastDownloadTime: number = 0;
+  private readonly DOWNLOAD_COOLDOWN = 60 * 1000; // 1分钟冷却时间
 
   constructor() {
     this.config = {
@@ -174,10 +176,62 @@ class OnlineResourcesService {
   }
 
   /**
+   * 检查是否可以开始新的下载
+   */
+  canStartDownload(): { canDownload: boolean; reason?: string; remainingTime?: number } {
+    // 检查是否有正在下载的任务
+    const activeDownloads = Array.from(this.downloadTasks.values()).filter(
+      task => task.status === 'downloading' || task.status === 'extracting'
+    );
+
+    if (activeDownloads.length > 0) {
+      return {
+        canDownload: false,
+        reason: '已有下载任务正在进行中，请等待当前任务完成'
+      };
+    }
+
+    // 检查下载冷却时间
+    const now = Date.now();
+    const timeSinceLastDownload = now - this.lastDownloadTime;
+
+    if (this.lastDownloadTime > 0 && timeSinceLastDownload < this.DOWNLOAD_COOLDOWN) {
+      const remainingTime = Math.ceil((this.DOWNLOAD_COOLDOWN - timeSinceLastDownload) / 1000);
+      return {
+        canDownload: false,
+        reason: `下载冷却中，请等待 ${remainingTime} 秒后再试`,
+        remainingTime
+      };
+    }
+
+    return { canDownload: true };
+  }
+
+  /**
+   * 获取下载冷却剩余时间（秒）
+   */
+  getDownloadCooldownRemaining(): number {
+    if (this.lastDownloadTime === 0) return 0;
+
+    const now = Date.now();
+    const timeSinceLastDownload = now - this.lastDownloadTime;
+
+    if (timeSinceLastDownload >= this.DOWNLOAD_COOLDOWN) return 0;
+
+    return Math.ceil((this.DOWNLOAD_COOLDOWN - timeSinceLastDownload) / 1000);
+  }
+
+  /**
    * 开始下载软件（新版本：支持自动解压和配置文件生成）
    */
   async downloadSoftware(software: OnlineSoftware): Promise<string> {
     try {
+      // 检查下载限制
+      const downloadCheck = this.canStartDownload();
+      if (!downloadCheck.canDownload) {
+        throw new Error(downloadCheck.reason || '无法开始下载');
+      }
+
       if (!software.latestDownloadUrl) {
         throw new Error('没有可用的下载链接');
       }
@@ -232,6 +286,9 @@ class OnlineResourcesService {
         currentTask.filePath = resultPath; // 设置文件路径用于状态检测
         this.downloadTasks.set(taskId, currentTask);
         this.persistTasks();
+
+        // 记录下载完成时间，用于冷却计算
+        this.lastDownloadTime = Date.now();
       }
 
       console.log('✅ 软件下载并解压完成:', resultPath);

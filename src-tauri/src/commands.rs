@@ -2906,3 +2906,126 @@ pub async fn delete_file(path: String) -> Result<()> {
 
     Ok(())
 }
+
+/// 读取JSON文件内容
+#[tauri::command]
+pub async fn read_json_file(path: String) -> Result<serde_json::Value> {
+    use std::fs;
+
+    let path = std::path::Path::new(&path);
+
+    if !path.exists() {
+        return Err(HoutError::FileNotFound { path: path.to_string_lossy().to_string() });
+    }
+
+    let content = fs::read_to_string(path)
+        .map_err(|e| HoutError::IoError { message: format!("Failed to read file: {}", e) })?;
+
+    let json: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| HoutError::IoError { message: format!("Failed to parse JSON: {}", e) })?;
+
+    Ok(json)
+}
+
+/// 在新窗口中执行脚本文件
+#[tauri::command]
+pub async fn execute_script_in_new_window(script_path: String) -> Result<CommandResult> {
+    use std::process::Command;
+    use std::path::Path;
+
+    // 转换为绝对路径
+    let path = if Path::new(&script_path).is_absolute() {
+        Path::new(&script_path).to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|e| HoutError::IoError { message: format!("Failed to get current directory: {}", e) })?
+            .join(&script_path)
+    };
+
+    if !path.exists() {
+        log::error!("Script file not found: {}", path.display());
+        return Err(HoutError::FileNotFound { path: path.to_string_lossy().to_string() });
+    }
+
+    log::info!("Executing script in new window: {}", path.display());
+
+    #[cfg(target_os = "windows")]
+    {
+
+        // 获取脚本的绝对路径
+        let script_absolute_path = path.canonicalize()
+            .map_err(|e| HoutError::IoError { message: format!("Failed to canonicalize path: {}", e) })?;
+
+        // 设置工作目录为脚本所在目录
+        let working_dir = script_absolute_path.parent()
+            .ok_or_else(|| HoutError::IoError { message: "Failed to get script parent directory".to_string() })?;
+
+        log::info!("Script absolute path: {}", script_absolute_path.display());
+        log::info!("Working directory: {}", working_dir.display());
+
+        // 使用简单的start命令在新窗口中启动脚本
+        let script_name = script_absolute_path.file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("bypass.cmd");
+
+        let mut cmd = Command::new("cmd");
+        cmd.args(&["/C", "start", script_name]);
+        cmd.current_dir(working_dir);
+
+        match cmd.spawn() {
+            Ok(child) => {
+                let pid = child.id();
+                log::info!("Script started in new window with PID: {}", pid);
+
+                Ok(CommandResult {
+                    success: true,
+                    output: format!("脚本已在新窗口中启动 (进程ID: {})", pid),
+                    error: None,
+                    exit_code: Some(0),
+                })
+            }
+            Err(e) => {
+                log::error!("Failed to start script in new window: {}", e);
+                Err(HoutError::Process(format!("Failed to execute script: {}", e)))
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // 对于非Windows系统，使用默认终端
+        let script_absolute_path = path.canonicalize()
+            .map_err(|e| HoutError::IoError { message: format!("Failed to canonicalize path: {}", e) })?;
+
+        let script_str = script_absolute_path.to_string_lossy().to_string();
+
+        // 设置工作目录为脚本所在目录
+        let working_dir = script_absolute_path.parent()
+            .ok_or_else(|| HoutError::IoError { message: "Failed to get script parent directory".to_string() })?;
+
+        log::info!("Script absolute path: {}", script_str);
+        log::info!("Working directory: {}", working_dir.display());
+
+        let mut cmd = Command::new("sh");
+        cmd.args(&["-c", &script_str]);
+        cmd.current_dir(working_dir);
+
+        match cmd.spawn() {
+            Ok(child) => {
+                let pid = child.id();
+                log::info!("Script started with PID: {}", pid);
+
+                Ok(CommandResult {
+                    success: true,
+                    output: format!("脚本已启动 (进程ID: {})", pid),
+                    error: None,
+                    exit_code: Some(0),
+                })
+            }
+            Err(e) => {
+                log::error!("Failed to start script: {}", e);
+                Err(HoutError::Process(format!("Failed to execute script: {}", e)))
+            }
+        }
+    }
+}

@@ -86,7 +86,7 @@ const AdbZonePanel: React.FC = () => {
   const tabs = [
     {
       id: "adb-tools" as AdbZoneView,
-      label: "ADB工具",
+      label: "ADB命令",
       icon: <Code24Regular />,
     },
     {

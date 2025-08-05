@@ -61,6 +61,7 @@ const useStyles = makeStyles({
   statsCard: {
     padding: '16px',
     marginBottom: '16px',
+        minHeight: '80px',
   },
   statsGrid: {
     display: 'grid',
@@ -83,63 +84,97 @@ const useStyles = makeStyles({
   taskList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
     flex: 1,
     overflowY: 'auto',
+    maxHeight: '65vh', // 增加最大高度
+    minHeight: '400px', // 增加最小高度
+    border: '1px solid var(--colorNeutralStroke2)',
+    borderRadius: '6px',
+    backgroundColor: 'var(--colorNeutralBackground1)',
   },
-  taskCard: {
-    padding: '16px',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
+  taskListHeader: {
+    display: 'grid',
+    gridTemplateColumns: '2fr 1fr 120px 140px 100px',
+    gap: '12px',
+    padding: '12px 16px',
+    borderBottom: '1px solid var(--colorNeutralStroke2)',
+    backgroundColor: 'var(--colorNeutralBackground2)',
+    fontWeight: '600',
+    fontSize: '12px',
+    color: 'var(--colorNeutralForeground2)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1,
+  },
+  taskRow: {
+    display: 'grid',
+    gridTemplateColumns: '2fr 1fr 120px 140px 100px',
+    gap: '12px',
+    padding: '12px 16px',
+    borderBottom: '1px solid var(--colorNeutralStroke3)',
+    alignItems: 'center',
+    minHeight: '60px',
+    transition: 'background-color 0.2s ease',
     '&:hover': {
       backgroundColor: 'var(--colorNeutralBackground1Hover)',
     },
+    '&:last-child': {
+      borderBottom: 'none',
+    },
   },
-  taskHeader: {
+  taskMainInfo: {
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '8px',
-  },
-  taskInfo: {
-    flex: 1,
-    marginRight: '12px',
+    flexDirection: 'column',
+    gap: '4px',
+    minWidth: 0, // 允许内容收缩
   },
   taskName: {
     fontWeight: '600',
-    marginBottom: '4px',
+    fontSize: '14px',
+    color: 'var(--colorNeutralForeground1)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
-  taskMeta: {
-    display: 'flex',
-    gap: '12px',
+  taskFileName: {
     fontSize: '12px',
     color: 'var(--colorNeutralForeground2)',
-    marginBottom: '8px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  taskProgress: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    minWidth: 0,
+  },
+  taskProgressBar: {
+    width: '100%',
+  },
+  taskProgressText: {
+    fontSize: '11px',
+    color: 'var(--colorNeutralForeground2)',
+    textAlign: 'center',
+  },
+  taskStatus: {
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  taskTime: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    fontSize: '11px',
+    color: 'var(--colorNeutralForeground2)',
   },
   taskActions: {
     display: 'flex',
-    gap: '8px',
+    gap: '4px',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  progressSection: {
-    marginTop: '8px',
-  },
-  progressHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '4px',
-  },
-  progressDetails: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '11px',
-    color: 'var(--colorNeutralForeground2)',
-    marginTop: '4px',
-  },
-  statusBadge: {
-    fontSize: '11px',
-  },
+
   emptyState: {
     display: 'flex',
     flexDirection: 'column',
@@ -196,7 +231,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
     return () => clearInterval(interval);
   }, []);
 
-  // 过滤任务
+  // 过滤和排序任务
   useEffect(() => {
     let filtered = tasks;
 
@@ -212,6 +247,13 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
         task.fileName.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+
+    // 按下载时间排序（最新的在前）
+    filtered = filtered.sort((a, b) => {
+      const timeA = a.endTime || a.startTime;
+      const timeB = b.endTime || b.startTime;
+      return timeB.getTime() - timeA.getTime();
+    });
 
     setFilteredTasks(filtered);
   }, [tasks, statusFilter, searchQuery]);
@@ -357,22 +399,33 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
             <Caption1>开始下载软件后，任务将显示在这里</Caption1>
           </div>
         ) : (
-          filteredTasks.map(task => (
-            <TaskCard key={task.id} task={task} styles={styles} />
-          ))
+          <>
+            {/* 表头 */}
+            <div className={styles.taskListHeader}>
+              <div>软件名称 / 文件名</div>
+              <div>进度</div>
+              <div>状态</div>
+              <div>时间</div>
+              <div>操作</div>
+            </div>
+            {/* 任务列表 */}
+            {filteredTasks.map(task => (
+              <TaskRow key={task.id} task={task} styles={styles} />
+            ))}
+          </>
         )}
       </div>
     </div>
   );
 };
 
-// 任务卡片组件
-interface TaskCardProps {
+// 任务行组件
+interface TaskRowProps {
   task: DownloadTask;
   styles: any;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, styles }) => {
+const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
   // 暂停下载
   const handlePause = async () => {
     await onlineResourcesService.pauseDownload(task.id);
@@ -438,72 +491,94 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, styles }) => {
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleString('zh-CN');
+    return date.toLocaleDateString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatShortTime = (date: Date) => {
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
-    <Card className={styles.taskCard}>
-      <div className={styles.taskHeader}>
-        <div className={styles.taskInfo}>
-          <div className={styles.taskName}>{task.softwareName}</div>
-          <div className={styles.taskMeta}>
-            <span>{task.fileName}</span>
-            <span>开始时间: {formatTime(task.startTime)}</span>
-            {task.endTime && <span>完成时间: {formatTime(task.endTime)}</span>}
-          </div>
+    <div className={styles.taskRow}>
+      {/* 软件名称和文件名 */}
+      <div className={styles.taskMainInfo}>
+        <div className={styles.taskName} title={task.softwareName}>
+          {task.softwareName}
         </div>
-        <div className={styles.taskActions}>
-          <Badge {...getStatusBadgeProps(task.status)} className={styles.statusBadge}>
-            {getStatusText(task.status)}
-          </Badge>
-          
-          {task.status === 'downloading' && (
-            <Button size="small" appearance="subtle" icon={<Pause24Regular />} onClick={handlePause} />
-          )}
-          
-          {task.status === 'paused' && (
-            <Button size="small" appearance="subtle" icon={<Play24Regular />} onClick={handleResume} />
-          )}
-          
-          {(task.status === 'downloading' || task.status === 'paused') && (
-            <Button size="small" appearance="subtle" icon={<Dismiss24Regular />} onClick={handleCancel} />
-          )}
-          
-          {(task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') && (
-            <Button size="small" appearance="subtle" icon={<Delete24Regular />} onClick={handleDelete} />
-          )}
+        <div className={styles.taskFileName} title={task.fileName}>
+          {task.fileName}
         </div>
       </div>
 
-      {/* 进度条 */}
-      {(task.status === 'downloading' || task.status === 'paused') && (
-        <div className={styles.progressSection}>
-          <div className={styles.progressHeader}>
-            <span>{Math.round(task.progress)}%</span>
-            {task.downloadSpeed && task.status === 'downloading' && (
-              <span>{onlineResourcesService.formatDownloadSpeed(task.downloadSpeed)}</span>
-            )}
+      {/* 进度信息 */}
+      <div className={styles.taskProgress}>
+        {(task.status === 'downloading' || task.status === 'paused') ? (
+          <>
+            <ProgressBar
+              value={task.progress / 100}
+              className={styles.taskProgressBar}
+            />
+            <div className={styles.taskProgressText}>
+              {Math.round(task.progress)}%
+              {task.downloadSpeed && task.status === 'downloading' && (
+                <> • {onlineResourcesService.formatDownloadSpeed(task.downloadSpeed)}</>
+              )}
+            </div>
+          </>
+        ) : task.status === 'completed' ? (
+          <div className={styles.taskProgressText}>
+            {task.downloadedSize && onlineResourcesService.formatFileSize(task.downloadedSize)}
           </div>
-          <ProgressBar value={task.progress / 100} />
-          <div className={styles.progressDetails}>
-            {task.downloadedSize && task.fileSize && (
-              <span>
-                {onlineResourcesService.formatFileSize(task.downloadedSize)} / {onlineResourcesService.formatFileSize(task.fileSize)}
-              </span>
-            )}
-            {task.remainingTime && task.status === 'downloading' && (
-              <span>剩余 {onlineResourcesService.formatRemainingTime(task.remainingTime)}</span>
-            )}
-          </div>
-        </div>
-      )}
+        ) : (
+          <div className={styles.taskProgressText}>-</div>
+        )}
+      </div>
 
-      {/* 错误信息 */}
-      {task.status === 'failed' && task.error && (
-        <div style={{ marginTop: '8px', color: 'var(--colorPaletteRedForeground1)', fontSize: '12px' }}>
-          错误: {task.error}
+      {/* 状态 */}
+      <div className={styles.taskStatus}>
+        <Badge {...getStatusBadgeProps(task.status)}>
+          {getStatusText(task.status)}
+        </Badge>
+      </div>
+
+      {/* 时间信息 */}
+      <div className={styles.taskTime}>
+        <div title={`开始时间: ${task.startTime.toLocaleString('zh-CN')}`}>
+          开始: {formatShortTime(task.startTime)}
         </div>
-      )}
-    </Card>
+        {task.endTime && (
+          <div title={`完成时间: ${task.endTime.toLocaleString('zh-CN')}`}>
+            完成: {formatShortTime(task.endTime)}
+          </div>
+        )}
+      </div>
+
+      {/* 操作按钮 */}
+      <div className={styles.taskActions}>
+        {task.status === 'downloading' && (
+          <Button size="small" appearance="subtle" icon={<Pause24Regular />} onClick={handlePause} />
+        )}
+
+        {task.status === 'paused' && (
+          <Button size="small" appearance="subtle" icon={<Play24Regular />} onClick={handleResume} />
+        )}
+
+        {(task.status === 'downloading' || task.status === 'paused') && (
+          <Button size="small" appearance="subtle" icon={<Dismiss24Regular />} onClick={handleCancel} />
+        )}
+
+        {(task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') && (
+          <Button size="small" appearance="subtle" icon={<Delete24Regular />} onClick={handleDelete} />
+        )}
+      </div>
+    </div>
   );
 };

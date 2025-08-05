@@ -14,10 +14,13 @@ import {
   Warning24Regular,
   LockOpen24Regular,
   Database24Regular,
+  Flash24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import SystemToolCard from "../Tools/SystemToolCard";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
+import ImageFlashCard from "../Tools/ImageFlashCard";
+import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
 
 const useStyles = makeStyles({
   container: {
@@ -88,7 +91,7 @@ const useStyles = makeStyles({
   },
 });
 
-type FlashZoneView = "unlock-tools" | "flash-tools" | "system-backup";
+type FlashZoneView = "unlock-tools" | "image-flash" | "xiaomi-flash" | "system-backup";
 
 const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -104,9 +107,14 @@ const FlashZonePanel: React.FC = () => {
       icon: <LockOpen24Regular />,
     },
     {
-      id: "flash-tools" as FlashZoneView,
-      label: "刷机工具",
+      id: "image-flash" as FlashZoneView,
+      label: "镜像刷入",
       icon: <CloudArrowUp24Regular />,
+    },
+    {
+      id: "xiaomi-flash" as FlashZoneView,
+      label: "小米线刷",
+      icon: <Flash24Regular />,
     },
     {
       id: "system-backup" as FlashZoneView,
@@ -121,7 +129,10 @@ const FlashZonePanel: React.FC = () => {
     switch (currentView) {
       case "unlock-tools":
         return <XiaomiUnlockCard device={selectedDevice} />;
-      case "flash-tools":
+      case "image-flash":
+        return <ImageFlashCard device={selectedDevice} />;
+      case "xiaomi-flash":
+        return <XiaomiFlashCard device={selectedDevice} />;
       case "system-backup":
         return <SystemToolCard device={selectedDevice} />;
       default:
