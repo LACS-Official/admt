@@ -76,12 +76,6 @@ const useStyles = makeStyles({
     flex: 1,
     height: "100%",
   },
-  // 轮播图区域
-  bannerSection: {
-    height: "120px", // 固定高度
-    width: "100%",
-    marginBottom: "16px",
-  },
   // 无设备状态下的全屏显示
   noDeviceFullScreen: {
     height: "100%",
@@ -245,10 +239,6 @@ const HomePage: React.FC = () => {
           <div className={styles.deviceSection}>
               {selectedDevice ? (
                 <>
-                  {/* 轮播图区域 */}
-                  <div className={styles.bannerSection}>
-                    <CarouselBanner />
-                  </div>
 
                   {/* 新的布局：上下两行布局 */}
                   <div className={styles.mainContentGrid}>

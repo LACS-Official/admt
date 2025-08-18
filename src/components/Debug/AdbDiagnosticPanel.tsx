@@ -269,21 +269,40 @@ const AdbDiagnosticPanel: React.FC = () => {
               {!diagnosticData.adb_exists && (
                 <div className={styles.errorContainer}>
                   <Text weight="semibold">❌ ADB 文件不存在</Text>
-                  <Text>请确保 adb.exe 文件位于 src-tauri/resources/ 目录中，或者在系统 PATH 中可用。</Text>
+                  <Text>请将 adb.exe 文件放置在 src-tauri/resources/ 目录中。</Text>
                 </div>
               )}
-              
+
               {!diagnosticData.fastboot_exists && (
                 <div className={styles.errorContainer}>
                   <Text weight="semibold">❌ Fastboot 文件不存在</Text>
-                  <Text>请确保 fastboot.exe 文件位于 src-tauri/resources/ 目录中，或者在系统 PATH 中可用。</Text>
+                  <Text>请将 fastboot.exe 文件放置在 src-tauri/resources/ 目录中。</Text>
                 </div>
               )}
-              
-              {diagnosticData.adb_exists && diagnosticData.fastboot_exists && (
+
+              {(!diagnosticData.adb_command_test.success || !diagnosticData.fastboot_command_test.success) && (
+                <div className={styles.errorContainer}>
+                  <Text weight="semibold">❌ 命令执行失败</Text>
+                  <Text>工具文件可能损坏或权限不足，请重新下载 Android Platform Tools。</Text>
+                </div>
+              )}
+
+              {diagnosticData.adb_exists && diagnosticData.fastboot_exists &&
+               diagnosticData.adb_command_test.success && diagnosticData.fastboot_command_test.success && (
                 <div className={styles.successContainer}>
-                  <Text weight="semibold">✅ 路径配置正常</Text>
-                  <Text>ADB 和 Fastboot 文件都已找到，设备检测应该可以正常工作。</Text>
+                  <Text weight="semibold">✅ 配置正常</Text>
+                  <Text>ADB 和 Fastboot 工具都已正确配置，设备检测应该可以正常工作。</Text>
+                </div>
+              )}
+
+              {(!diagnosticData.adb_exists || !diagnosticData.fastboot_exists) && (
+                <div style={{ marginTop: tokens.spacingVerticalM, padding: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground2, borderRadius: tokens.borderRadiusMedium }}>
+                  <Text weight="semibold">📥 下载 Android Platform Tools</Text>
+                  <Text>
+                    访问 <a href="https://developer.android.com/studio/releases/platform-tools" target="_blank" rel="noopener noreferrer">
+                      Android 开发者网站
+                    </a> 下载 Platform Tools，解压后将 adb.exe 和 fastboot.exe 复制到 src-tauri/resources/ 目录。
+                  </Text>
                 </div>
               )}
             </div>

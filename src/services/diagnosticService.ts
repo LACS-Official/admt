@@ -121,29 +121,64 @@ ${this.generateRecommendations(adbFastbootDiag)}
   private generateRecommendations(diagnostic: DiagnosticResult): string {
     const recommendations: string[] = [];
 
+    // 检查 ADB 文件
     if (!diagnostic.adb_exists) {
-      recommendations.push('❌ ADB 文件不存在，请确保 adb.exe 位于 src-tauri/resources/ 目录或系统 PATH 中');
+      recommendations.push('❌ ADB 文件不存在');
+      recommendations.push('   请将 adb.exe 文件放置在 src-tauri/resources/ 目录中');
     }
 
+    // 检查 Fastboot 文件
     if (!diagnostic.fastboot_exists) {
-      recommendations.push('❌ Fastboot 文件不存在，请确保 fastboot.exe 位于 src-tauri/resources/ 目录或系统 PATH 中');
+      recommendations.push('❌ Fastboot 文件不存在');
+      recommendations.push('   请将 fastboot.exe 文件放置在 src-tauri/resources/ 目录中');
     }
 
+    // 检查命令执行
     if (!diagnostic.adb_command_test.success) {
-      recommendations.push('❌ ADB 命令测试失败，请检查文件权限和路径配置');
+      recommendations.push('❌ ADB 命令测试失败');
+      if (diagnostic.adb_command_test.result?.error) {
+        recommendations.push(`   错误信息: ${diagnostic.adb_command_test.result.error}`);
+      }
+      recommendations.push('   请检查 adb.exe 文件权限和完整性');
     }
 
     if (!diagnostic.fastboot_command_test.success) {
-      recommendations.push('❌ Fastboot 命令测试失败，请检查文件权限和路径配置');
+      recommendations.push('❌ Fastboot 命令测试失败');
+      if (diagnostic.fastboot_command_test.result?.error) {
+        recommendations.push(`   错误信息: ${diagnostic.fastboot_command_test.result.error}`);
+      }
+      recommendations.push('   请检查 fastboot.exe 文件权限和完整性');
     }
 
+    // 检查资源目录
     const hasValidResourceDir = diagnostic.resource_directories.some(dir => dir.exists);
     if (!hasValidResourceDir) {
-      recommendations.push('❌ 未找到有效的资源目录，请确保项目结构正确');
+      recommendations.push('❌ 未找到有效的资源目录');
+      recommendations.push('   请确保 src-tauri/resources/ 目录存在');
+    } else {
+      // 检查具体哪个资源目录有工具文件
+      const hasAdbInAnyDir = diagnostic.resource_directories.some(dir => dir.adb_exists);
+      const hasFastbootInAnyDir = diagnostic.resource_directories.some(dir => dir.fastboot_exists);
+
+      if (!hasAdbInAnyDir && !hasFastbootInAnyDir) {
+        recommendations.push('❌ 所有资源目录中都没有找到 ADB 和 Fastboot 工具');
+        recommendations.push('   请下载 Android Platform Tools 并将 adb.exe 和 fastboot.exe 复制到 src-tauri/resources/ 目录');
+      } else if (!hasAdbInAnyDir) {
+        recommendations.push('❌ 所有资源目录中都没有找到 adb.exe');
+      } else if (!hasFastbootInAnyDir) {
+        recommendations.push('❌ 所有资源目录中都没有找到 fastboot.exe');
+      }
     }
 
+    // 如果所有检查都通过
     if (recommendations.length === 0) {
       recommendations.push('✅ 所有检查都通过，ADB 和 Fastboot 配置正常');
+      recommendations.push('   应用应该能够正常检测和管理 Android 设备');
+    } else {
+      recommendations.push('');
+      recommendations.push('📥 下载 Android Platform Tools:');
+      recommendations.push('   https://developer.android.com/studio/releases/platform-tools');
+      recommendations.push('   解压后将 adb.exe 和 fastboot.exe 复制到 src-tauri/resources/ 目录');
     }
 
     return recommendations.join('\n');

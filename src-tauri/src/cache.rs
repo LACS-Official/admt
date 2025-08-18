@@ -292,216 +292,127 @@ pub async fn record_path_cache_hit() {
 
 
 /// 查找ADB路径（仅在首次调用时执行）
+/// 只检查 src-tauri/resources 目录中的可执行文件
 fn find_adb_path() -> PathBuf {
-    log::info!("Starting ADB path discovery...");
+    log::info!("Starting ADB path discovery (resources directory only)...");
 
     // 记录当前工作目录用于调试
     if let Ok(cwd) = std::env::current_dir() {
         log::info!("Current working directory: {}", cwd.display());
     }
 
-    // 1. 优先使用固定的资源路径（生产环境）
+    // 1. 生产环境：可执行文件目录下的 resources 文件夹
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
             let adb_path = parent.join("resources").join("adb.exe");
-            log::info!("Checking app resources path: {}", adb_path.display());
+            log::info!("Checking production resources path: {}", adb_path.display());
             if adb_path.exists() {
-                log::info!("✅ Found ADB at app resources: {}", adb_path.display());
+                log::info!("✅ Found ADB at production resources: {}", adb_path.display());
                 return adb_path;
+            } else {
+                log::warn!("❌ ADB not found at production resources: {}", adb_path.display());
             }
         }
     }
 
-    // 2. 开发模式路径
-    let dev_path = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("src-tauri")
-        .join("resources")
-        .join("adb.exe");
-    log::info!("Checking development path: {}", dev_path.display());
+    // 2. 开发环境：当前工作目录下的 resources（考虑当前目录可能已经在 src-tauri 中）
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let dev_path = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
+        // 如果当前目录已经是 src-tauri，直接使用 resources
+        current_dir.join("resources").join("adb.exe")
+    } else {
+        // 否则添加 src-tauri 路径
+        current_dir.join("src-tauri").join("resources").join("adb.exe")
+    };
+    log::info!("Checking development resources path: {}", dev_path.display());
     if dev_path.exists() {
-        log::info!("✅ Found ADB at development path: {}", dev_path.display());
+        log::info!("✅ Found ADB at development resources: {}", dev_path.display());
         return dev_path;
+    } else {
+        log::warn!("❌ ADB not found at development resources: {}", dev_path.display());
     }
 
-    // 3. 相对路径
+    // 3. 相对路径：src-tauri/resources（备用）
     let relative_path = PathBuf::from("src-tauri/resources/adb.exe");
-    log::info!("Checking relative path: {}", relative_path.display());
+    log::info!("Checking relative resources path: {}", relative_path.display());
     if relative_path.exists() {
-        log::info!("✅ Found ADB at relative path: {}", relative_path.display());
+        log::info!("✅ Found ADB at relative resources: {}", relative_path.display());
         return relative_path;
+    } else {
+        log::warn!("❌ ADB not found at relative resources: {}", relative_path.display());
     }
 
-    // 4. 特殊项目结构路径（保留兼容性）
-    let special_path = PathBuf::from(r"D:\kaifa\HOUT\Res\adb.exe");
-    log::info!("Checking special path: {}", special_path.display());
-    if special_path.exists() {
-        log::warn!("✅ Using hardcoded ADB path: {}", special_path.display());
-        return special_path;
-    }
-
-    // 5. 尝试在系统 PATH 中查找 ADB
-    if let Some(system_adb) = find_in_system_path("adb.exe") {
-        log::info!("✅ Found ADB in system PATH: {}", system_adb.display());
-        return system_adb;
-    }
-
-    // 6. 尝试常见的 Android SDK 安装路径
-    let common_paths = [
-        r"C:\Users\%USERNAME%\AppData\Local\Android\Sdk\platform-tools\adb.exe",
-        r"C:\Android\Sdk\platform-tools\adb.exe",
-        r"C:\Program Files\Android\Android Studio\bin\adb.exe",
-        r"D:\Android\Sdk\platform-tools\adb.exe",
-    ];
-
-    for path_template in &common_paths {
-        let expanded_path = expand_environment_variables(path_template);
-        log::info!("Checking common Android SDK path: {}", expanded_path.display());
-        if expanded_path.exists() {
-            log::info!("✅ Found ADB at common SDK path: {}", expanded_path.display());
-            return expanded_path;
-        }
-    }
-
-    // 如果都找不到，返回默认名称并记录详细错误信息
-    log::error!("❌ ADB executable not found in any location!");
+    // 如果所有路径都找不到，记录错误并返回空路径
+    log::error!("❌ ADB executable not found in any resources directory!");
     log::error!("Searched paths:");
-    log::error!("  - App resources directory");
-    log::error!("  - Development resources directory");
-    log::error!("  - Relative path");
-    log::error!("  - System PATH");
-    log::error!("  - Common Android SDK locations");
-    log::error!("Please ensure adb.exe is available in one of these locations or in your system PATH");
+    log::error!("  - Production: {{exe_dir}}/resources/adb.exe");
+    log::error!("  - Development: src-tauri/resources/adb.exe");
+    log::error!("  - Relative: src-tauri/resources/adb.exe");
+    log::error!("Please ensure adb.exe is placed in the src-tauri/resources/ directory");
 
-    PathBuf::from("adb.exe")
+    // 返回一个明显无效的路径，这样后续的存在性检查会失败
+    PathBuf::from("INVALID_ADB_PATH")
 }
 
 /// 查找Fastboot路径（仅在首次调用时执行）
+/// 只检查 src-tauri/resources 目录中的可执行文件
 fn find_fastboot_path() -> PathBuf {
-    log::info!("Starting Fastboot path discovery...");
+    log::info!("Starting Fastboot path discovery (resources directory only)...");
 
-    // 1. 优先使用固定的资源路径（生产环境）
+    // 1. 生产环境：可执行文件目录下的 resources 文件夹
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
             let fastboot_path = parent.join("resources").join("fastboot.exe");
-            log::info!("Checking app resources path: {}", fastboot_path.display());
+            log::info!("Checking production resources path: {}", fastboot_path.display());
             if fastboot_path.exists() {
-                log::info!("✅ Found Fastboot at app resources: {}", fastboot_path.display());
+                log::info!("✅ Found Fastboot at production resources: {}", fastboot_path.display());
                 return fastboot_path;
+            } else {
+                log::warn!("❌ Fastboot not found at production resources: {}", fastboot_path.display());
             }
         }
     }
 
-    // 2. 开发模式路径
-    let dev_path = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("src-tauri")
-        .join("resources")
-        .join("fastboot.exe");
-    log::info!("Checking development path: {}", dev_path.display());
-    if dev_path.exists() {
-        log::info!("✅ Found Fastboot at development path: {}", dev_path.display());
-        return dev_path;
-    }
-
-    // 3. 相对路径
-    let relative_path = PathBuf::from("src-tauri/resources/fastboot.exe");
-    log::info!("Checking relative path: {}", relative_path.display());
-    if relative_path.exists() {
-        log::info!("✅ Found Fastboot at relative path: {}", relative_path.display());
-        return relative_path;
-    }
-
-    // 4. 特殊项目结构路径（保留兼容性）
-    let special_path = PathBuf::from(r"D:\kaifa\HOUT\Res\fastboot.exe");
-    log::info!("Checking special path: {}", special_path.display());
-    if special_path.exists() {
-        log::warn!("✅ Using hardcoded Fastboot path: {}", special_path.display());
-        return special_path;
-    }
-
-    // 5. 尝试在系统 PATH 中查找 Fastboot
-    if let Some(system_fastboot) = find_in_system_path("fastboot.exe") {
-        log::info!("✅ Found Fastboot in system PATH: {}", system_fastboot.display());
-        return system_fastboot;
-    }
-
-    // 6. 尝试常见的 Android SDK 安装路径
-    let common_paths = [
-        r"C:\Users\%USERNAME%\AppData\Local\Android\Sdk\platform-tools\fastboot.exe",
-        r"C:\Android\Sdk\platform-tools\fastboot.exe",
-        r"C:\Program Files\Android\Android Studio\bin\fastboot.exe",
-        r"D:\Android\Sdk\platform-tools\fastboot.exe",
-    ];
-
-    for path_template in &common_paths {
-        let expanded_path = expand_environment_variables(path_template);
-        log::info!("Checking common Android SDK path: {}", expanded_path.display());
-        if expanded_path.exists() {
-            log::info!("✅ Found Fastboot at common SDK path: {}", expanded_path.display());
-            return expanded_path;
-        }
-    }
-
-    // 如果都找不到，返回默认名称并记录详细错误信息
-    log::error!("❌ Fastboot executable not found in any location!");
-    log::error!("Searched paths:");
-    log::error!("  - App resources directory");
-    log::error!("  - Development resources directory");
-    log::error!("  - Relative path");
-    log::error!("  - System PATH");
-    log::error!("  - Common Android SDK locations");
-    log::error!("Please ensure fastboot.exe is available in one of these locations or in your system PATH");
-
-    PathBuf::from("fastboot.exe")
-}
-
-/// 在系统 PATH 中查找可执行文件
-fn find_in_system_path(executable_name: &str) -> Option<PathBuf> {
-    if let Ok(path_var) = std::env::var("PATH") {
-        log::info!("Searching for {} in system PATH", executable_name);
-
-        for path_dir in std::env::split_paths(&path_var) {
-            let full_path = path_dir.join(executable_name);
-            log::debug!("Checking PATH directory: {}", full_path.display());
-
-            if full_path.exists() && full_path.is_file() {
-                log::info!("Found {} in PATH: {}", executable_name, full_path.display());
-                return Some(full_path);
-            }
-        }
-
-        log::warn!("{} not found in any PATH directory", executable_name);
+    // 2. 开发环境：当前工作目录下的 resources（考虑当前目录可能已经在 src-tauri 中）
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let dev_path = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
+        // 如果当前目录已经是 src-tauri，直接使用 resources
+        current_dir.join("resources").join("fastboot.exe")
     } else {
-        log::error!("PATH environment variable not found");
+        // 否则添加 src-tauri 路径
+        current_dir.join("src-tauri").join("resources").join("fastboot.exe")
+    };
+    log::info!("Checking development resources path: {}", dev_path.display());
+    if dev_path.exists() {
+        log::info!("✅ Found Fastboot at development resources: {}", dev_path.display());
+        return dev_path;
+    } else {
+        log::warn!("❌ Fastboot not found at development resources: {}", dev_path.display());
     }
 
-    None
-}
-
-/// 展开环境变量（Windows 特定）
-fn expand_environment_variables(path_template: &str) -> PathBuf {
-    #[cfg(windows)]
-    {
-        // 简单的 %USERNAME% 替换
-        if path_template.contains("%USERNAME%") {
-            if let Ok(username) = std::env::var("USERNAME") {
-                let expanded = path_template.replace("%USERNAME%", &username);
-                return PathBuf::from(expanded);
-            }
-        }
-
-        // 简单的 %USERPROFILE% 替换
-        if path_template.contains("%USERPROFILE%") {
-            if let Ok(userprofile) = std::env::var("USERPROFILE") {
-                let expanded = path_template.replace("%USERPROFILE%", &userprofile);
-                return PathBuf::from(expanded);
-            }
-        }
+    // 3. 相对路径：src-tauri/resources（备用）
+    let relative_path = PathBuf::from("src-tauri/resources/fastboot.exe");
+    log::info!("Checking relative resources path: {}", relative_path.display());
+    if relative_path.exists() {
+        log::info!("✅ Found Fastboot at relative resources: {}", relative_path.display());
+        return relative_path;
+    } else {
+        log::warn!("❌ Fastboot not found at relative resources: {}", relative_path.display());
     }
 
-    PathBuf::from(path_template)
+    // 如果所有路径都找不到，记录错误并返回空路径
+    log::error!("❌ Fastboot executable not found in any resources directory!");
+    log::error!("Searched paths:");
+    log::error!("  - Production: {{exe_dir}}/resources/fastboot.exe");
+    log::error!("  - Development: src-tauri/resources/fastboot.exe");
+    log::error!("  - Relative: src-tauri/resources/fastboot.exe");
+    log::error!("Please ensure fastboot.exe is placed in the src-tauri/resources/ directory");
+
+    // 返回一个明显无效的路径，这样后续的存在性检查会失败
+    PathBuf::from("INVALID_FASTBOOT_PATH")
 }
+
+
 
 /// 缓存清理任务
 pub async fn cache_cleanup_task() {

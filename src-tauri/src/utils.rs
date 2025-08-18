@@ -156,6 +156,29 @@ pub async fn execute_command(
     args: &[&str],
     timeout_secs: Option<u64>,
 ) -> Result<crate::device::CommandResult> {
+    // 检查程序路径是否有效
+    let program_str = program.to_string_lossy();
+    if program_str.contains("INVALID_") {
+        let tool_name = if program_str.contains("ADB") { "ADB" } else { "Fastboot" };
+        return Err(HoutError::IoError {
+            message: format!(
+                "{} executable not found in resources directory. Please ensure {}.exe is placed in src-tauri/resources/",
+                tool_name,
+                tool_name.to_lowercase()
+            ),
+        });
+    }
+
+    // 检查程序文件是否存在
+    if !program.exists() {
+        return Err(HoutError::IoError {
+            message: format!(
+                "Program not found: {}. Please ensure the executable is placed in src-tauri/resources/",
+                program.display()
+            ),
+        });
+    }
+
     let mut cmd = TokioCommand::new(program);
     cmd.args(args)
         .stdout(Stdio::piped())
@@ -169,12 +192,12 @@ pub async fn execute_command(
     }
 
     let timeout_duration = Duration::from_secs(timeout_secs.unwrap_or(30));
-    
+
     match timeout(timeout_duration, cmd.output()).await {
         Ok(Ok(output)) => {
             let stdout = String::from_utf8_lossy(&output.stdout).to_string();
             let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            
+
             Ok(crate::device::CommandResult {
                 success: output.status.success(),
                 output: stdout,
@@ -182,9 +205,21 @@ pub async fn execute_command(
                 exit_code: output.status.code(),
             })
         }
-        Ok(Err(e)) => Err(HoutError::IoError {
-            message: format!("Failed to execute command: {}", e),
-        }),
+        Ok(Err(e)) => {
+            // 提供更详细的错误信息
+            let error_msg = if e.kind() == std::io::ErrorKind::NotFound {
+                format!(
+                    "Program not found: {}. Please ensure the executable is available in src-tauri/resources/",
+                    program.display()
+                )
+            } else {
+                format!("Failed to execute command: {}", e)
+            };
+
+            Err(HoutError::IoError {
+                message: error_msg,
+            })
+        }
         Err(_) => Err(HoutError::CommandTimeout {
             command: format!("{} {}", program.display(), args.join(" ")),
         }),

@@ -869,22 +869,24 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
     diagnosis.insert("cached_fastboot_path".to_string(), serde_json::Value::String(fastboot_path.display().to_string()));
     diagnosis.insert("fastboot_exists".to_string(), serde_json::Value::Bool(fastboot_path.exists()));
 
-    // 检查资源目录
+    // 检查资源目录（仅检查预期的路径）
     let mut resource_paths = Vec::new();
 
-    // 检查应用资源目录
+    // 1. 生产环境资源目录
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
             let resources_dir = parent.join("resources");
             resource_paths.push(serde_json::json!({
                 "path": resources_dir.display().to_string(),
                 "exists": resources_dir.exists(),
-                "type": "app_resources"
+                "type": "production_resources",
+                "adb_exists": resources_dir.join("adb.exe").exists(),
+                "fastboot_exists": resources_dir.join("fastboot.exe").exists()
             }));
         }
     }
 
-    // 检查开发模式资源目录
+    // 2. 开发环境资源目录
     let dev_resources = std::env::current_dir()
         .unwrap_or_else(|_| std::path::PathBuf::from("."))
         .join("src-tauri")
@@ -892,7 +894,19 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
     resource_paths.push(serde_json::json!({
         "path": dev_resources.display().to_string(),
         "exists": dev_resources.exists(),
-        "type": "dev_resources"
+        "type": "development_resources",
+        "adb_exists": dev_resources.join("adb.exe").exists(),
+        "fastboot_exists": dev_resources.join("fastboot.exe").exists()
+    }));
+
+    // 3. 相对路径资源目录
+    let relative_resources = std::path::PathBuf::from("src-tauri/resources");
+    resource_paths.push(serde_json::json!({
+        "path": relative_resources.display().to_string(),
+        "exists": relative_resources.exists(),
+        "type": "relative_resources",
+        "adb_exists": relative_resources.join("adb.exe").exists(),
+        "fastboot_exists": relative_resources.join("fastboot.exe").exists()
     }));
 
     diagnosis.insert("resource_directories".to_string(), serde_json::Value::Array(resource_paths));
