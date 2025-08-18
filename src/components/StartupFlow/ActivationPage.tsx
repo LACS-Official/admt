@@ -17,6 +17,12 @@ import {
   Button,
   Spinner,
   MessageBar,
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@fluentui/react-components';
 import {
   Key24Regular,
@@ -25,10 +31,10 @@ import {
   Dismiss24Regular,
   Info24Regular,
 } from '@fluentui/react-icons';
-import { useWelcomeStore, useAppConfigStore } from '../../../stores/welcomeStore';
-import { useStartupFlowStore } from '../../../stores/startupFlowStore';
-import { activationService } from '../../../services/activationService';
-import { ActivationStatus } from '../../../types/welcome';
+import { useWelcomeStore, useAppConfigStore } from '../../stores/welcomeStore';
+import { useStartupFlowStore } from '../../stores/startupFlowStore';
+import { activationService } from '../../services/activationService';
+import { ActivationStatus } from '../../types/welcome';
 
 const useStyles = makeStyles({
   Image: { 
@@ -43,7 +49,7 @@ const useStyles = makeStyles({
     height: '680px', // 固定高度，适合1024x720窗口（减去标题栏等）
     maxWidth: '1000px', // 稍微减小最大宽度
     margin: '0 auto',
-    padding: '16px', // 减少内边距
+    padding: '16px', // 减少内边角距
     gap: '16px', // 减少间距
     overflow: 'hidden', // 防止内容溢出
   },
@@ -203,6 +209,35 @@ const useStyles = makeStyles({
     textTransform: 'uppercase',
   },
 
+  // 激活码输入框容器
+  activationCodeContainer: {
+    display: 'flex',
+    gap: '8px',
+    justifyContent: 'center',
+    margin: '16px 0',
+  },
+
+  // 单个激活码输入框
+  activationCodeInput: {
+    width: '40px',
+    height: '50px',
+    textAlign: 'center',
+    fontSize: '20px',
+    fontWeight: 'bold',
+    borderRadius: '8px',
+    border: '2px solid var(--colorNeutralStroke2)',
+    textTransform: 'uppercase',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    color: 'var(--colorNeutralForeground1)',
+    '&:focus': {
+      border: '2px solid var(--colorBrandStroke1)',
+      outline: 'none',
+    },
+    '&::placeholder': {
+      color: 'var(--colorNeutralForeground4)',
+    }
+  },
+
   validateButton: {
     alignSelf: 'center',
     minWidth: '120px',
@@ -288,11 +323,51 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     message: string;
     details?: string;
   } | null>(null);
+  
+  // 控制弹窗显示的状态
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [dialogContent, setDialogContent] = useState<{
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+    details?: string;
+  } | null>(null);
 
   // 处理激活码输入
-  const handleActivationCodeChange = (value: string) => {
-    const formattedValue = value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-    setActivationCode(formattedValue);
+  const handleActivationCodeChange = (value: string, index?: number) => {
+    // 如果是通过单个输入框输入
+    if (index !== undefined) {
+      const newCode = activationCode.split('');
+      newCode[index] = value.toUpperCase();
+      const formattedValue = newCode.join('').slice(0, 8);
+      setActivationCode(formattedValue);
+      
+      // 自动聚焦到下一个输入框
+      if (value && index < 7) {
+        const nextInput = document.getElementById(`activation-code-${index + 1}`);
+        if (nextInput) {
+          (nextInput as HTMLInputElement).focus();
+        }
+      }
+    } else {
+      // 如果是通过粘贴或其他方式输入
+      const formattedValue = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+      setActivationCode(formattedValue);
+      
+      // 聚焦到最后一个非空输入框或第一个空输入框
+      const length = formattedValue.length;
+      if (length > 0 && length < 8) {
+        const nextInput = document.getElementById(`activation-code-${length}`);
+        if (nextInput) {
+          (nextInput as HTMLInputElement).focus();
+        }
+      } else if (length === 8) {
+        const lastInput = document.getElementById(`activation-code-7`);
+        if (lastInput) {
+          (lastInput as HTMLInputElement).focus();
+        }
+      }
+    }
     
     // 清除之前的验证结果
     if (validationResult) {
@@ -305,19 +380,63 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     }
   };
 
+  // 处理粘贴事件
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text/plain').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    
+    if (pastedData) {
+      setActivationCode(pastedData);
+      
+      // 填充所有输入框
+      for (let i = 0; i < Math.min(pastedData.length, 8); i++) {
+        const input = document.getElementById(`activation-code-${i}`);
+        if (input) {
+          (input as HTMLInputElement).value = pastedData[i];
+        }
+      }
+      
+      // 聚焦到最后一个输入框或最后一个字符位置
+      if (pastedData.length >= 8) {
+        const lastInput = document.getElementById(`activation-code-7`);
+        if (lastInput) {
+          (lastInput as HTMLInputElement).focus();
+        }
+      } else {
+        const nextInput = document.getElementById(`activation-code-${pastedData.length}`);
+        if (nextInput) {
+          (nextInput as HTMLInputElement).focus();
+        }
+      }
+    }
+  };
+
+  // 处理键盘事件
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Backspace' && !activationCode[index] && index > 0) {
+      const prevInput = document.getElementById(`activation-code-${index - 1}`);
+      if (prevInput) {
+        (prevInput as HTMLInputElement).focus();
+      }
+    }
+  };
+
   // 执行激活
   const handleActivate = async () => {
     if (!activationCode.trim()) {
-      setError('请输入激活码');
+      // 显示错误弹窗
+      setDialogContent({
+        title: "激活失败",
+        message: "请输入激活码",
+        type: "error",
+        details: "请检查激活码是否正确，或检查网络连接后重试"
+      });
+      setShowResultDialog(true);
       return;
     }
 
     setLoading(true);
     setActivationStatus(ActivationStatus.ACTIVATING);
-    setValidationResult({
-      isValid: true,
-      message: '正在验证激活码，请稍候...',
-    });
 
     try {
       // 使用激活服务
@@ -341,11 +460,6 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
       if (response.success) {
         // 更新欢迎页面状态
         setActivationStatus(ActivationStatus.ACTIVATED);
-        setValidationResult({
-          isValid: true,
-          message: response.message || '激活成功！',
-          details: response.features ? `已激活功能: ${response.features.join(', ')}` : undefined,
-        });
         setError(null);
 
         // 更新应用配置状态，优先使用API验证的过期时间
@@ -391,17 +505,31 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
 
         console.log('✅ 激活状态已同步到所有状态管理器');
 
+        // 显示成功弹窗
+        setDialogContent({
+          title: "激活成功",
+          message: response.message || '激活成功！',
+          type: "success",
+          details: response.features ? `已激活功能: ${response.features.join(', ')}` : undefined
+        });
+        setShowResultDialog(true);
+
         // 调用成功回调
         if (onSuccess) {
           onSuccess(response);
         }
       } else {
         setActivationStatus(ActivationStatus.ACTIVATION_FAILED);
-        setValidationResult({
-          isValid: false,
-          message: response.message || '激活失败',
-        });
         setError(response.message || '激活失败，请检查激活码是否正确');
+
+        // 显示失败弹窗
+        setDialogContent({
+          title: "激活失败",
+          message: response.message || '激活失败',
+          type: "error",
+          details: "请检查激活码是否正确，或检查网络连接后重试"
+        });
+        setShowResultDialog(true);
 
         // 不调用错误回调，避免触发上层的错误处理导致页面跳转或应用退出
         // 错误信息已经在当前页面显示，用户可以重试
@@ -410,13 +538,17 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     } catch (error) {
       console.error('激活过程中发生错误:', error);
       setActivationStatus(ActivationStatus.ACTIVATION_FAILED);
-      setValidationResult({
-        isValid: false,
-        message: '激活失败',
-        details: error instanceof Error ? error.message : '未知错误'
-      });
       const errorMessage = error instanceof Error ? error.message : '网络错误，请稍后重试';
       setError(errorMessage);
+
+      // 显示错误弹窗
+      setDialogContent({
+        title: "激活失败",
+        message: "网络错误，请稍后重试",
+        type: "error",
+        details: error instanceof Error ? error.message : '未知错误'
+      });
+      setShowResultDialog(true);
 
       // 不调用错误回调，避免触发上层的错误处理导致页面跳转或应用退出
       // 错误信息已经在当前页面显示，用户可以重试
@@ -432,6 +564,26 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     setValidationResult(null);
     setError(null);
     setActivationCode('');
+  };
+
+  // 关闭弹窗
+  const handleCloseDialog = () => {
+    setShowResultDialog(false);
+    setDialogContent(null);
+  };
+
+  // 处理弹窗中的重试操作
+  const handleDialogRetry = () => {
+    setShowResultDialog(false);
+    setDialogContent(null);
+    handleRetry();
+  };
+
+  // 处理弹窗中的重新验证操作
+  const handleDialogRevalidate = () => {
+    setShowResultDialog(false);
+    setDialogContent(null);
+    handleActivate();
   };
 
   return (
@@ -498,12 +650,28 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
         <div className={styles.bottomSection}>
           <Card className={styles.activationCard}>
             <Field label="激活码" validationMessage={error}>
-              <Input
-                className={styles.activationInput}
-                value={activationCode}
-                onChange={(e) => handleActivationCodeChange(e.target.value)}
-                placeholder="请输入激活码"
-              />
+              <div className={styles.activationCodeContainer}>
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <input
+                    key={index}
+                    id={`activation-code-${index}`}
+                    className={styles.activationCodeInput}
+                    value={activationCode[index] || ''}
+                    onChange={(e) => handleActivationCodeChange(e.target.value, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    onPaste={(e) => handlePaste(e, index)}
+                    maxLength={1}
+                    placeholder={index === 0 ? "A" : 
+                               index === 1 ? "B" : 
+                               index === 2 ? "C" : 
+                               index === 3 ? "1" : 
+                               index === 4 ? "2" : 
+                               index === 5 ? "D" : 
+                               index === 6 ? "3" : 
+                               "4"}
+                  />
+                ))}
+              </div>
             </Field>
             <Button
               className={styles.validateButton}
@@ -513,66 +681,68 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
             >
               {isLoading ? <Spinner /> : '验证激活码'}
             </Button>
-            {validationResult && (
-              <Card
-                className={styles.statusCard}
-                style={{
-                  backgroundColor: validationResult.isValid
-                    ? 'var(--colorPaletteGreenBackground2)'
-                    : 'var(--colorPaletteRedBackground2)',
-                  borderColor: validationResult.isValid
-                    ? 'var(--colorPaletteGreenBorder2)'
-                    : 'var(--colorPaletteRedBorder2)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {validationResult.isValid ? (
-                    <Checkmark24Regular className={styles.statusIcon} />
-                  ) : (
-                    <Dismiss24Regular className={styles.statusIcon} />
-                  )}
-                  <div>{validationResult.message}</div>
-                </div>
-                {validationResult.details && (
-                  <Caption1>{validationResult.details}</Caption1>
+          </Card>
+        </div>
+      </div>
+
+      {/* 结果弹窗 */}
+      <Dialog open={showResultDialog} modalType="modal">
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {dialogContent?.type === 'success' ? (
+                  <Checkmark24Regular style={{ color: 'var(--colorPaletteGreenForeground1)' }} />
+                ) : (
+                  <Dismiss24Regular style={{ color: 'var(--colorPaletteRedForeground1)' }} />
                 )}
-              </Card>
-            )}
-            {error && (
-              <div style={{ marginTop: '16px' }}>
-                <MessageBar intent="error" style={{ marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontWeight: 'bold' }}>激活失败</div>
-                    <div>{error}</div>
-                    <div style={{ fontSize: '12px', opacity: 0.8 }}>
-                      请检查激活码是否正确，或检查网络连接后重试
-                    </div>
-                  </div>
-                </MessageBar>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                {dialogContent?.title}
+              </div>
+            </DialogTitle>
+            <DialogContent>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <Text>{dialogContent?.message}</Text>
+                {dialogContent?.details && (
+                  <Text size={200} style={{ color: 'var(--colorNeutralForeground2)' }}>
+                    {dialogContent.details}
+                  </Text>
+                )}
+                {dialogContent?.type === 'error' && (
+                  <Text size={200} style={{ color: 'var(--colorNeutralForeground2)' }}>
+                    请检查激活码是否正确，或检查网络连接后重试
+                  </Text>
+                )}
+              </div>
+            </DialogContent>
+            <DialogActions>
+              {dialogContent?.type === 'error' ? (
+                <>
                   <Button
-                    className={styles.validateButton}
-                    onClick={handleRetry}
-                    appearance="primary"
-                    style={{ flex: 1 }}
+                    appearance="secondary"
+                    onClick={handleDialogRetry}
                   >
                     清空重试
                   </Button>
                   <Button
-                    className={styles.validateButton}
-                    onClick={handleActivate}
-                    appearance="secondary"
+                    appearance="primary"
+                    onClick={handleDialogRevalidate}
                     disabled={!activationCode.trim() || isLoading}
-                    style={{ flex: 1 }}
                   >
                     重新验证
                   </Button>
-                </div>
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
+                </>
+              ) : (
+                <Button
+                  appearance="primary"
+                  onClick={handleCloseDialog}
+                >
+                  确定
+                </Button>
+              )}
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };

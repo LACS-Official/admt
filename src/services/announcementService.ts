@@ -58,7 +58,7 @@ export class AnnouncementService {
       const baseUrl = isDevelopment ? '' : config.api_base_url;
 
       // 使用软件ID获取公告
-      const softwareId = config.software_id || 1; // 默认使用ID 1
+      const softwareId = 1; // 默认使用ID 1
       const apiUrl = `${baseUrl}/app/software/id/${softwareId}/announcements?${queryParams.toString()}`;
 
       console.log('📢 请求公告API:', apiUrl);
@@ -201,7 +201,7 @@ export class AnnouncementService {
       high: '高',
       urgent: '紧急',
     };
-    return priorityMap[priority] || '未知';
+    return priorityMap[priority] || priority;
   }
 
   /**
@@ -209,12 +209,14 @@ export class AnnouncementService {
    */
   public getTypeText(type: string): string {
     const typeMap: Record<string, string> = {
-      general: '一般公告',
-      update: '更新通知',
-      security: '安全提醒',
-      maintenance: '维护通知',
+      general: '一般',
+      update: '更新',
+      security: '安全',
+      maintenance: '维护',
+      feature: '功能',
+      bugfix: '修复',
     };
-    return typeMap[type] || '未知类型';
+    return typeMap[type] || type;
   }
 }
 

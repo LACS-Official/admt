@@ -15,16 +15,24 @@ import {
   Body1,
   Caption1,
   Title3,
+  Badge,
+  tokens,
 } from '@fluentui/react-components';
 import {
   CheckmarkCircle24Filled,
   Warning24Filled,
   ArrowDownload24Regular,
   ArrowClockwise24Regular,
+  Megaphone24Regular,
+  Info24Regular,
+  Shield24Regular,
+  Wrench24Regular,
 } from '@fluentui/react-icons';
 import { useStartupFlowStore, VersionCheckResult } from '../../stores/startupFlowStore';
 import { SecurityConfigManager } from '../../config/securityConfig';
 import { SecureDataTransmissionService } from '../../services/secureDataTransmissionService';
+import { announcementService } from '../../services/announcementService';
+import { Announcement } from '../../types/app';
 
 const useStyles = makeStyles({
   container: {
@@ -98,6 +106,42 @@ const useStyles = makeStyles({
     borderRadius: '8px',
     border: '1px solid #0078d4',
   },
+  announcementSection: {
+    marginTop: '24px',
+    padding: '16px',
+    backgroundColor: '#f3f2f1',
+    borderRadius: '8px',
+    maxHeight: '200px',
+    overflowY: 'auto',
+  },
+  announcementItem: {
+    marginBottom: '12px',
+    padding: '12px',
+    backgroundColor: '#ffffff',
+    borderRadius: '4px',
+    border: '1px solid #edebe9',
+  },
+  announcementHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px',
+  },
+  announcementTitle: {
+    fontWeight: '600',
+    fontSize: '14px',
+  },
+  announcementContent: {
+    fontSize: '13px',
+    color: '#605e5c',
+    marginBottom: '8px',
+    lineHeight: '1.4',
+  },
+  announcementMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
 });
 
 interface UnifiedLoadingVersionCheckerProps {
@@ -115,6 +159,10 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('正在加载应用...');
   const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcementError, setAnnouncementError] = useState<string | null>(null);
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
+  const [announcementCountdown, setAnnouncementCountdown] = useState(3);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
 
@@ -151,7 +199,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       setIsLoading(false);
       setIsChecking(true);
       
-      await performVersionCheck();
+      await performChecks();
 
     } catch (error) {
       console.error('加载或版本检查失败:', error);
@@ -163,7 +211,28 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     }
   };
 
-  const performVersionCheck = async () => {
+  // 开始公告倒计时
+  const startAnnouncementCountdown = (versionResult: VersionCheckResult) => {
+    console.log('📢 开始公告倒计时');
+    let countdown = 3;
+    setAnnouncementCountdown(countdown);
+
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      console.log(`📢 倒计时: ${countdown}秒`);
+      setAnnouncementCountdown(countdown);
+      setStatusMessage(`正在显示最新公告... (${countdown}秒后自动跳转)`);
+
+      if (countdown <= 0) {
+        console.log('📢 倒计时结束，跳转到下一步');
+        clearInterval(countdownInterval);
+        setShowAnnouncements(false);
+        onComplete(versionResult);
+      }
+    }, 1000);
+  };
+
+  const performChecks = async () => {
     try {
       setProgress(85);
       setStatusMessage('初始化安全配置...');
@@ -174,37 +243,56 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       setStatusMessage('获取当前版本信息...');
       const currentVersion = await getCurrentVersion();
 
+      // 并行执行版本检查和公告检查
       setProgress(95);
-      setStatusMessage('检查最新版本...');
-      const result = await checkLatestVersion(currentVersion);
+      setStatusMessage('检查最新版本和公告...');
+      
+      const [versionResult, announcementResult] = await Promise.all([
+        checkLatestVersion(currentVersion),
+        loadAnnouncements()
+      ]);
 
       setProgress(100);
-      setStatusMessage('版本检查完成');
-      setCheckResult(result);
-      setVersionCheckResult(result);
+      setStatusMessage('检查完成');
+      setCheckResult(versionResult);
+      setAnnouncements(announcementResult);
+      setVersionCheckResult(versionResult);
       setVersionCheckCompleted(true);
       resetRetryCount();
 
-      // 延迟调用完成回调，让用户看到完成状态
-      // 如果是最新版本，较快完成；如果有更新，显示更长时间
-      const delay = result.isLatest ? 2000 : 4000;
-      setTimeout(() => {
-        onComplete(result);
-      }, delay);
+      console.log('📢 公告检查结果:', {
+        announcementCount: announcementResult.length,
+        announcements: announcementResult,
+        versionResult
+      });
+
+      // 如果有公告，显示公告并开始倒计时
+      if (announcementResult.length > 0) {
+        console.log('📢 有公告，开始显示公告和倒计时');
+        setShowAnnouncements(true);
+        setStatusMessage('正在显示最新公告...');
+        startAnnouncementCountdown(versionResult);
+      } else {
+        console.log('📢 没有公告，直接跳转到下一个页面');
+        // 没有公告，直接进入下一个页面
+        setTimeout(() => {
+          onComplete(versionResult);
+        }, 1000);
+      }
 
     } catch (error) {
-      console.error('❌ 版本检查失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '版本检查失败';
+      console.error('❌ 检查失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '检查失败';
       setError(errorMessage);
       setIsChecking(false);
 
-      // 根据要求，版本检查失败或没联网就立刻提示用户并退出，不能重试
-      console.log('🚫 版本检查失败，应用将退出');
+      // 根据要求，检查失败或没联网就立刻提示用户并退出，不能重试
+      console.log('🚫 检查失败，应用将退出');
 
       // 显示错误信息一段时间后退出应用
       setTimeout(async () => {
         try {
-          const { exit } = await import('@tauri-apps/api/app');
+          const { exit } = await import('@tauri-apps/plugin-process');
           await exit(1);
         } catch (exitError) {
           console.error('退出应用失败:', exitError);
@@ -254,11 +342,12 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         currentVersion,
         latestVersion: latestVersionNumber,
         updateInfo: !isLatest ? {
-          title: `新版本 ${latestVersionNumber} 可用`,
+          version: latestVersionNumber,
+          releaseDate: new Date().toISOString(),
           description: softwareInfo.description || '发现新版本，建议更新',
           downloadUrl: softwareInfo.latestDownloadUrl || softwareInfo.officialWebsite || '',
           isForced: false, // 根据实际需求设置
-          releaseNotes: [softwareInfo.description || '新版本更新'],
+          title: `新版本 ${latestVersionNumber} 可用`,
         } : undefined,
       };
     } catch (error) {
@@ -270,6 +359,39 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       }
 
       throw new Error(`版本检查失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  };
+
+  // 获取公告
+  const loadAnnouncements = async () => {
+    try {
+      console.log('📢 开始获取公告...');
+      setAnnouncementError(null);
+
+      // 获取软件ID为1的公告
+      const response = await announcementService.getAnnouncements({
+        limit: 5,
+        isPublished: true,
+        sortBy: 'publishedAt',
+        sortOrder: 'desc'
+      });
+
+      console.log('📢 公告API响应:', response);
+
+      if (response.success) {
+        console.log('📢 公告获取成功:', {
+          count: response.data.announcements.length,
+          announcements: response.data.announcements
+        });
+        return response.data.announcements;
+      } else {
+        console.error('📢 公告API返回错误:', response.error);
+        throw new Error(response.error || '获取公告失败');
+      }
+    } catch (error) {
+      console.error('❌ 加载公告失败:', error);
+      setAnnouncementError(error instanceof Error ? error.message : '加载公告失败');
+      return [];
     }
   };
 
@@ -295,6 +417,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     setRetryCount(0);
     resetRetryCount();
     setCheckResult(null);
+    setAnnouncements([]);
     setIsLoading(true);
     setIsChecking(false);
     setProgress(0);
@@ -305,16 +428,125 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     if (checkResult?.updateInfo?.downloadUrl) {
       // 使用 Tauri 的 shell API 打开浏览器
       import('@tauri-apps/plugin-shell').then(({ open }) => {
-        open(checkResult.updateInfo!.downloadUrl).catch((error) => {
+        open(checkResult.updateInfo!.downloadUrl!).catch((error) => {
           console.error('无法打开浏览器:', error);
           // 降级到 window.open
-          window.open(checkResult.updateInfo!.downloadUrl, '_blank');
+          window.open(checkResult.updateInfo!.downloadUrl!, '_blank');
         });
       }).catch(() => {
         // 如果 Tauri shell 插件不可用，使用 window.open
-        window.open(checkResult.updateInfo!.downloadUrl, '_blank');
+        window.open(checkResult.updateInfo!.downloadUrl!, '_blank');
       });
     }
+  };
+
+  const getAnnouncementIcon = (type: string, priority: string) => {
+    if (priority === 'urgent') {
+      return <Warning24Filled style={{ color: '#d83b01' }} />;
+    }
+    
+    switch (type) {
+      case 'update':
+        return <Info24Regular style={{ color: '#0078d4' }} />;
+      case 'security':
+        return <Shield24Regular style={{ color: '#d83b01' }} />;
+      case 'maintenance':
+        return <Wrench24Regular style={{ color: '#ca5010' }} />;
+      default:
+        return <Megaphone24Regular style={{ color: '#107c10' }} />;
+    }
+  };
+
+  const getPriorityBadgeColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return 'danger';
+      case 'high':
+        return 'severe';
+      case 'normal':
+        return 'informative';
+      case 'low':
+        return 'subtle';
+      default:
+        return 'informative';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const renderAnnouncements = () => {
+    console.log('📢 renderAnnouncements 被调用:', {
+      announcementError,
+      announcementsLength: announcements.length,
+      announcements,
+      showAnnouncements
+    });
+
+    if (announcementError) {
+      console.log('📢 显示公告错误信息:', announcementError);
+      return (
+        <MessageBar intent="warning">
+          公告加载失败: {announcementError}
+        </MessageBar>
+      );
+    }
+
+    if (announcements.length === 0) {
+      console.log('📢 没有公告数据，返回null');
+      return null;
+    }
+
+    console.log('📢 开始渲染公告内容');
+
+    return (
+      <div className={styles.announcementSection}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <Megaphone24Regular style={{ color: '#0078d4' }} />
+          <Text weight="semibold">系统公告</Text>
+        </div>
+        {announcements.map((announcement) => {
+          const formattedAnnouncement = announcementService.formatAnnouncement(announcement);
+          
+          return (
+            <div key={announcement.id} className={styles.announcementItem}>
+              <div className={styles.announcementHeader}>
+                {getAnnouncementIcon(announcement.type, announcement.priority)}
+                <Text className={styles.announcementTitle}>
+                  {formattedAnnouncement.title}
+                </Text>
+              </div>
+              <Text className={styles.announcementContent}>
+                {formattedAnnouncement.content.length > 100
+                  ? `${formattedAnnouncement.content.substring(0, 100)}...`
+                  : formattedAnnouncement.content
+                }
+              </Text>
+              <div className={styles.announcementMeta}>
+                <Badge
+                  appearance="filled"
+                  color={getPriorityBadgeColor(announcement.priority)}
+                  size="small"
+                >
+                  {announcementService.getPriorityText(announcement.priority)}
+                </Badge>
+                <Text size={200}>
+                  {announcementService.getTypeText(announcement.type)}
+                </Text>
+                <Text size={200}>
+                  {formatDate(announcement.publishedAt)}
+                </Text>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const renderContent = () => {
@@ -370,17 +602,6 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
                 {checkResult.updateInfo.description}
               </Body1>
 
-              {checkResult.updateInfo.releaseNotes.length > 0 && (
-                <div className={styles.releaseNotes}>
-                  <Caption1 weight="semibold">更新内容:</Caption1>
-                  {checkResult.updateInfo.releaseNotes.map((note, index) => (
-                    <div key={index} className={styles.noteItem}>
-                      <Caption1>{note}</Caption1>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               {checkResult.updateInfo.downloadUrl && (
                 <div className={styles.actionSection} style={{ marginTop: '16px' }}>
                   <Button
@@ -392,6 +613,24 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
                   </Button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 显示公告 - 在版本检查完成后显示 */}
+          {showAnnouncements && renderAnnouncements()}
+
+          {/* 倒计时提示 */}
+          {showAnnouncements && announcementCountdown > 0 && (
+            <div style={{
+              marginTop: '16px',
+              textAlign: 'center',
+              padding: '8px',
+              backgroundColor: tokens.colorNeutralBackground2,
+              borderRadius: tokens.borderRadiusSmall
+            }}>
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                {announcementCountdown}秒后自动跳转到下一步
+              </Text>
             </div>
           )}
         </>
