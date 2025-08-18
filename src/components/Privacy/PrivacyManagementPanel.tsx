@@ -7,11 +7,9 @@ import React, { useState } from 'react';
 import {
   Card,
   CardHeader,
-  CardPreview,
   Text,
   Button,
   Switch,
-  Divider,
   MessageBar,
   Dialog,
   DialogSurface,
@@ -25,11 +23,13 @@ import {
 import {
   Shield24Regular,
   Warning24Regular,
-  Info24Regular,
   Settings24Regular,
-  Delete24Regular,
+  ArrowReset24Regular,
+  DismissCircle24Regular,
 } from '@fluentui/react-icons';
 import { usePrivacyConsentStore, DataCollectionTypes } from '../../stores/privacyConsentStore';
+import { ActivationService } from '../../services/activationService';
+import { clearPreservedUserConfig } from '../Common/UserConfigPreserver';
 
 const useStyles = makeStyles({
   container: {
@@ -98,8 +98,8 @@ const useStyles = makeStyles({
 
 const PrivacyManagementPanel: React.FC = () => {
   const styles = useStyles();
-  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
-  const [revokeType, setRevokeType] = useState<'all' | 'privacy' | 'agreement' | 'data'>('all');
+  const [showFirstConfirmDialog, setShowFirstConfirmDialog] = useState(false);
+  const [showSecondConfirmDialog, setShowSecondConfirmDialog] = useState(false);
 
   const {
     hasAcceptedPrivacyPolicy,
@@ -112,9 +112,6 @@ const PrivacyManagementPanel: React.FC = () => {
     privacyPolicyVersion,
     userAgreementVersion,
     updateDataCollectionTypes,
-    revokePrivacyPolicy,
-    revokeUserAgreement,
-    revokeDataCollection,
     revokeAll,
     canCollectData,
   } = usePrivacyConsentStore();
@@ -131,49 +128,82 @@ const PrivacyManagementPanel: React.FC = () => {
     updateDataCollectionTypes({ [type]: enabled });
   };
 
-  const handleRevoke = async (type: 'all' | 'privacy' | 'agreement' | 'data') => {
-    setRevokeType(type);
-    setShowRevokeDialog(true);
+  // 第一次点击重置按钮，显示第一个确认弹窗
+  const handleResetApp = async () => {
+    setShowFirstConfirmDialog(true);
   };
 
-  const confirmRevoke = async () => {
-    switch (revokeType) {
-      case 'all':
-        revokeAll();
-        break;
-      case 'privacy':
-        revokePrivacyPolicy();
-        break;
-      case 'agreement':
-        revokeUserAgreement();
-        break;
-      case 'data':
-        revokeDataCollection();
-        break;
-    }
-    
-    setShowRevokeDialog(false);
-    
-    // 撤销后退出应用
+  // 第一个确认弹窗中点击"确认重置"，显示第二个确认弹窗
+  const handleFirstConfirm = () => {
+    setShowFirstConfirmDialog(false);
+    setShowSecondConfirmDialog(true);
+  };
+
+  // 第二个确认弹窗中点击"重置"，执行实际的重置操作
+  const handleFinalReset = async () => {
     try {
-      const { exit } = await import('@tauri-apps/api/app');
-      await exit(0);
-    } catch (error) {
-      console.error('退出应用失败:', error);
-      if (window.close) {
-        window.close();
+      console.log('🗑️ 开始执行应用数据重置...');
+
+      // 1. 撤销所有隐私同意
+      revokeAll();
+
+      // 2. 清除激活码数据
+      const activationService = ActivationService.getInstance();
+      activationService.clearActivationData();
+
+      // 3. 清除保留的用户配置
+      clearPreservedUserConfig();
+
+      // 4. 清除所有localStorage数据
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          keysToRemove.push(key);
+        }
       }
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (error) {
+          console.warn(`清除localStorage项目失败: ${key}`, error);
+        }
+      });
+
+      console.log('✅ 应用数据重置完成，准备退出应用...');
+
+      setShowSecondConfirmDialog(false);
+
+      // 5. 重置后退出应用，下次启动将显示欢迎页面
+      try {
+        // 使用 Tauri v2 的 process 插件重启应用
+        const { relaunch } = await import('@tauri-apps/plugin-process');
+        await relaunch();
+      } catch (error) {
+        console.error('重启应用失败:', error);
+        // 如果重启失败，尝试退出应用
+        try {
+          const { exit } = await import('@tauri-apps/plugin-process');
+          await exit(0);
+        } catch (exitError) {
+          console.error('退出应用失败:', exitError);
+          // 如果 Tauri API 失败，尝试其他方法
+          if (window.close) {
+            window.close();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('重置应用数据失败:', error);
+      // 即使出错也要关闭弹窗
+      setShowSecondConfirmDialog(false);
     }
   };
 
-  const getRevokeTypeText = (type: string) => {
-    switch (type) {
-      case 'all': return '所有同意';
-      case 'privacy': return '隐私政策同意';
-      case 'agreement': return '用户协议同意';
-      case 'data': return '数据收集同意';
-      default: return '同意';
-    }
+  // 取消重置操作
+  const handleCancelReset = () => {
+    setShowFirstConfirmDialog(false);
+    setShowSecondConfirmDialog(false);
   };
 
   return (
@@ -325,7 +355,7 @@ const PrivacyManagementPanel: React.FC = () => {
         <CardHeader
           header={
             <Text weight="semibold" size={400}>
-              <Warning24Regular /> 撤销同意
+              <Warning24Regular /> 重置应用数据
             </Text>
           }
         />
@@ -335,81 +365,128 @@ const PrivacyManagementPanel: React.FC = () => {
               ⚠️ 危险操作
             </Text>
             <Text size={200} style={{ marginTop: tokens.spacingVerticalS }}>
-              撤销同意将导致应用无法正常运行并自动退出。请谨慎操作。
+              重置应用数据将完全清除所有用户数据和设置，撤销所有已同意的条款，并将应用恢复到首次安装时的初始状态。此操作不可逆转，请谨慎操作。
             </Text>
-            
-            <div style={{ 
-              display: 'flex', 
-              gap: tokens.spacingHorizontalM, 
+
+            <div style={{
+              display: 'flex',
+              gap: tokens.spacingHorizontalM,
               marginTop: tokens.spacingVerticalM,
               flexWrap: 'wrap'
             }}>
               <Button
-                size="small"
+                size="medium"
                 className={styles.dangerButton}
-                onClick={() => handleRevoke('privacy')}
-                disabled={!hasAcceptedPrivacyPolicy}
+                icon={<ArrowReset24Regular />}
+                onClick={handleResetApp}
               >
-                撤销隐私政策同意
-              </Button>
-              <Button
-                size="small"
-                className={styles.dangerButton}
-                onClick={() => handleRevoke('agreement')}
-                disabled={!hasAcceptedUserAgreement}
-              >
-                撤销用户协议同意
-              </Button>
-              <Button
-                size="small"
-                className={styles.dangerButton}
-                onClick={() => handleRevoke('data')}
-                disabled={!hasAcceptedDataCollection}
-              >
-                撤销数据收集同意
-              </Button>
-              <Button
-                size="small"
-                className={styles.dangerButton}
-                icon={<Delete24Regular />}
-                onClick={() => handleRevoke('all')}
-              >
-                撤销所有同意
+                重置应用数据
               </Button>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* 撤销确认对话框 */}
-      <Dialog open={showRevokeDialog} modalType="modal">
+      {/* 第一个确认对话框 */}
+      <Dialog open={showFirstConfirmDialog} modalType="modal">
         <DialogSurface>
           <DialogBody>
             <DialogTitle>
               <Warning24Regular />
-              确认撤销同意
+              确认重置应用数据
             </DialogTitle>
             <DialogContent>
               <Text>
-                您确定要撤销{getRevokeTypeText(revokeType)}吗？
+                您确定要重置应用数据吗？此操作将：
               </Text>
-              <Text style={{ marginTop: tokens.spacingVerticalS }}>
-                撤销后，应用将无法正常运行并会自动退出。您需要重新启动应用并重新同意相关条款才能继续使用。
+              <div style={{ marginTop: tokens.spacingVerticalS, marginLeft: tokens.spacingHorizontalM }}>
+                <Text>• 清除所有用户数据和设置</Text><br />
+                <Text>• 撤销所有已同意的条款和政策</Text><br />
+                <Text>• 将应用恢复到首次安装时的状态</Text><br />
+                <Text>• 删除本地激活码数据并不再支持使用本地储存的激活码</Text><br />
+                <Text>• 下次启动时显示欢迎页面和首次使用流程</Text>
+              </div>
+              <Text style={{ marginTop: tokens.spacingVerticalS, fontWeight: tokens.fontWeightSemibold }}>
+                此操作不可逆转，请谨慎操作！
               </Text>
             </DialogContent>
             <DialogActions>
               <Button
                 appearance="secondary"
-                onClick={() => setShowRevokeDialog(false)}
+                onClick={handleCancelReset}
               >
                 取消
               </Button>
               <Button
                 appearance="primary"
-                onClick={confirmRevoke}
+                onClick={handleFirstConfirm}
                 className={styles.dangerButton}
               >
-                确认撤销
+                确认重置
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* 第二个确认对话框 */}
+      <Dialog open={showSecondConfirmDialog} modalType="modal">
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>
+              <DismissCircle24Regular />
+              最终确认重置
+            </DialogTitle>
+            <DialogContent>
+              <Text style={{
+                fontSize: tokens.fontSizeBase300,
+                fontWeight: tokens.fontWeightSemibold,
+                color: tokens.colorPaletteRedForeground3
+              }}>
+                ⚠️ 这是最后一次确认机会！
+              </Text>
+              <Text style={{ marginTop: tokens.spacingVerticalM }}>
+                重置操作即将执行，这将：
+              </Text>
+              <div style={{
+                marginTop: tokens.spacingVerticalS,
+                marginLeft: tokens.spacingHorizontalM,
+                backgroundColor: tokens.colorPaletteRedBackground1,
+                padding: tokens.spacingVerticalS,
+                borderRadius: tokens.borderRadiusSmall,
+                border: `1px solid ${tokens.colorPaletteRedBorder1}`
+              }}>
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 永久删除所有应用数据</Text><br />
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 清除所有用户设置和偏好</Text><br />
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 撤销所有隐私政策同意</Text><br />
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 删除激活码和许可证信息</Text><br />
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 应用将自动退出并重启</Text>
+              </div>
+              <Text style={{
+                marginTop: tokens.spacingVerticalM,
+                fontWeight: tokens.fontWeightBold,
+                color: tokens.colorPaletteRedForeground3
+              }}>
+                此操作无法撤销！确定要继续吗？
+              </Text>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                appearance="secondary"
+                onClick={handleCancelReset}
+              >
+                取消
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={handleFinalReset}
+                className={styles.dangerButton}
+                style={{
+                  backgroundColor: tokens.colorPaletteRedBackground3,
+                  borderColor: tokens.colorPaletteRedBorder2
+                }}
+              >
+                重置
               </Button>
             </DialogActions>
           </DialogBody>

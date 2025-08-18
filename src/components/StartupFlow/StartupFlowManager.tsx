@@ -294,7 +294,10 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     });
 
     // 设置激活状态到store
-    setActivationStatus(activationInfo);
+    setActivationStatus({
+      ...activationInfo,
+      isValid: activationInfo.isActivated && !activationInfo.isExpired
+    });
 
     if (activationInfo.needsActivation || !activationInfo.isActivated) {
       console.log('❌ 需要激活码验证 - 原因:', activationInfo.expiredReason || '未激活');
@@ -394,7 +397,7 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     // 延迟退出应用
     setTimeout(async () => {
       try {
-        const { exit } = await import('@tauri-apps/api/app');
+        const { exit } = await import('@tauri-apps/plugin-process');
         await exit(1);
       } catch (exitError) {
         console.error('退出应用失败:', exitError);
@@ -431,7 +434,7 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
 
     try {
       // 使用动态导入获取 Tauri API
-      const { exit } = await import('@tauri-apps/api/app');
+      const { exit } = await import('@tauri-apps/plugin-process');
       await exit(0);
     } catch (error) {
       console.error('退出应用失败:', error);

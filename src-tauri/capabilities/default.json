@@ -13,6 +13,7 @@
     "core:window:allow-close",
     "core:window:allow-is-maximized",
     "shell:allow-open",
-    "shell:default"
+    "shell:default",
+    "process:default"
   ]
 }
