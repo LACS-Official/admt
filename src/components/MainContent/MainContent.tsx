@@ -28,14 +28,14 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { AppView } from "../../types/app";
 import HomePage from "../Home/HomePage";
-import AdbZonePanel from "../AdbZone/AdbZonePanel";
+import AdbZonePanel from "../AdbTools/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
 import DeviceManagementPanel from "../DeviceManagement/DeviceManagementPanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
 
 import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
-import CarouselComponent from "../Carousel/CarouselComponent";
+import CarouselComponent from "./CarouselComponent";
 
 const useStyles = makeStyles({
   container: {

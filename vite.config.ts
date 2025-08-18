@@ -23,14 +23,14 @@ export default defineConfig(async () => ({
         target: 'https://api-g.lacs.cc',
         changeOrigin: true,
         secure: true,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
+        configure: (proxy: any, _options: any) => {
+          proxy.on('error', (err: any, _req: any, _res: any) => {
             console.log('proxy error', err);
           });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (proxyReq: any, req: any, _res: any) => {
             console.log('Sending Request to the Target:', req.method, req.url);
           });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
+          proxy.on('proxyRes', (proxyRes: any, req: any, _res: any) => {
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
           });
         },
@@ -39,18 +39,30 @@ export default defineConfig(async () => ({
         target: 'https://api-g.lacs.cc',
         changeOrigin: true,
         secure: true,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
+        configure: (proxy: any, _options: any) => {
+          proxy.on('error', (err: any, _req: any, _res: any) => {
             console.log('proxy error', err);
           });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (proxyReq: any, req: any, _res: any) => {
             console.log('Sending Request to the Target:', req.method, req.url);
           });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
+          proxy.on('proxyRes', (proxyRes: any, req: any, _res: any) => {
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
           });
         },
       },
     },
   },
+  
+  // 添加路径别名解析
+  resolve: {
+    alias: {
+      "@": "/src",
+      "@/components": "/src/components",
+      "@/services": "/src/services",
+      "@/stores": "/src/stores",
+      "@/types": "/src/types",
+      "@/utils": "/src/utils"
+    }
+  }
 }));
