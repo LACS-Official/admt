@@ -28,7 +28,9 @@ export type AppView =
 
 export type SettingsView =
   | "about"
+  | "devices-settings"
   | "tool-settings"
+  | "display-settings"
   | "other-settings"
   | "privacy"
   | "logs";

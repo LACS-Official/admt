@@ -1,23 +1,24 @@
 import React, { useState } from "react";
 import {
   makeStyles,
-  Text,
   Tab,
   TabList,
   SelectTabEvent,
   SelectTabData,
 } from "@fluentui/react-components";
 import {
-  Settings24Regular,
   Info24Regular,
   Wrench24Regular,
   Options24Regular,
   Document24Regular,
   Shield24Regular,
+  DeviceEq24Regular,
+  Desktop24Regular,
 } from "@fluentui/react-icons";
 import { SettingsView } from "../../types/app";
 import AboutPanel from "./AboutPanel";
-import ToolSettingsPanel from "./ToolSettingsPanel";
+import DeviceSettingsPanel from "./DeviceSettingsPanel";
+import DisplaySettingsPanel from "./DisplaySettingsPanel";
 import OtherSettingsPanel from "./OtherSettingsPanel";
 import LogsPanel from "./LogsPanel";
 import PrivacyManagementPanel from "../Privacy/PrivacyManagementPanel";
@@ -55,15 +56,21 @@ const tabs = [
     icon: <Info24Regular />,
   },
   {
-    id: "tool-settings" as SettingsView,
-    label: "工具设置",
-    icon: <Wrench24Regular />,
+    id: "devices-settings" as SettingsView,
+    label: "设备检测设置",
+    icon: <DeviceEq24Regular />,
   },
-  {
+    {
     id: "other-settings" as SettingsView,
-    label: "其他设置",
+    label: "基础设置",
     icon: <Options24Regular />,
   },
+  {
+    id: "display-settings" as SettingsView,
+    label: "显示设置",
+    icon: <Desktop24Regular />,
+  },
+
   {
     id: "privacy" as SettingsView,
     label: "隐私政策",
@@ -88,16 +95,16 @@ const SettingsPanel: React.FC = () => {
     switch (currentView) {
       case "about":
         return <AboutPanel />;
-      case "tool-settings":
-        return <ToolSettingsPanel />;
+      case "devices-settings":
+        return <DeviceSettingsPanel />;
+      case "display-settings":
+        return <DisplaySettingsPanel />;
       case "other-settings":
         return <OtherSettingsPanel />;
       case "privacy":
         return <PrivacyManagementPanel />;
       case "logs":
         return <LogsPanel />;
-      default:
-        return <AboutPanel />;
     }
   };
 
@@ -105,10 +112,6 @@ const SettingsPanel: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <Settings24Regular />
-        <Text size={500} weight="semibold">设置</Text>
-      </div>
 
       <div className={styles.tabContainer}>
         <TabList

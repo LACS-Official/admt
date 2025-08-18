@@ -122,8 +122,9 @@ export const ActivationStatusManager: React.FC<ActivationStatusManagerProps> = (
       activationStatus: ActivationStatus.NOT_ACTIVATED,
       isActivated: false,
     });
-    // 重新加载页面以显示激活界面
-    window.location.reload();
+    // 不再刷新页面，通过状态管理来处理激活界面显示
+    // 这里可以触发一个事件或者通过状态管理来通知需要显示激活界面
+    console.log('🔄 激活状态已重置，需要重新激活');
   };
 
   // 处理警告消息关闭

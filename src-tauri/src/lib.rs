@@ -38,6 +38,7 @@ pub fn run() {
             check_adb_availability,
             check_fastboot_availability,
             scan_fastboot_devices,
+            diagnose_adb_fastboot_paths,
             get_device_memory_storage_info,
             check_device_connection,
             get_device_connection_info,

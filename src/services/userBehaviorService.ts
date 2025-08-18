@@ -39,8 +39,24 @@ class UserBehaviorService {
   constructor(config?: Partial<UserBehaviorConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config }
     this.secureTransmission = SecureDataTransmissionService.getInstance()
-    this.initializeServices()
+    // 延迟初始化，等待安全配置准备就绪
+    this.deferredInitialize()
     this.startRetryTimer()
+  }
+
+  /**
+   * 延迟初始化服务
+   */
+  private async deferredInitialize(): Promise<void> {
+    // 等待一小段时间，让安全配置有机会初始化
+    setTimeout(async () => {
+      try {
+        await this.initializeServices()
+      } catch (error) {
+        console.warn('用户行为服务延迟初始化失败，将在后续重试:', error)
+        // 如果初始化失败，可以在后续的操作中重试
+      }
+    }, 1000) // 延迟1秒
   }
 
   /**
@@ -54,9 +70,20 @@ class UserBehaviorService {
       // 初始化设备指纹
       await this.initializeDeviceFingerprint()
 
+      this.isInitialized = true
       console.log('✅ 用户行为服务初始化成功')
     } catch (error) {
       console.error('❌ 用户行为服务初始化失败:', error)
+      // 不抛出错误，允许服务在后续操作中重试初始化
+    }
+  }
+
+  /**
+   * 确保服务已初始化（懒加载）
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (!this.isInitialized) {
+      await this.initializeServices()
     }
   }
 
@@ -148,6 +175,8 @@ class UserBehaviorService {
    * 记录软件激活
    */
   async recordActivation(data: Partial<ActivationRequest>): Promise<boolean> {
+    await this.ensureInitialized()
+
     // 首先检查隐私政策同意状态
     if (!this.checkPrivacyConsent()) {
       console.log('🚫 隐私政策检查失败，跳过激活记录');
@@ -177,6 +206,8 @@ class UserBehaviorService {
    * 记录设备连接
    */
   async recordDeviceConnection(data: DeviceConnectionRequest): Promise<boolean> {
+    await this.ensureInitialized()
+
     if (!this.deviceFingerprint) {
       await this.initializeDeviceFingerprint()
     }

@@ -7,8 +7,8 @@
 export const isDevelopment = (): boolean => {
   // 检查多个开发环境标识
   return (
-    process.env.NODE_ENV === 'development' ||
-    process.env.TAURI_ENV === 'dev' ||
+    (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') ||
+    (typeof process !== 'undefined' && process.env?.TAURI_ENV === 'dev') ||
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1' ||
     window.location.protocol === 'tauri:' && window.__TAURI_INTERNALS__?.metadata?.debug === true
@@ -215,8 +215,8 @@ export class DevToolsManager {
   public logEnvironmentInfo(): void {
     console.group('🔍 环境信息');
     console.log('开发模式:', this.isDevMode);
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    console.log('TAURI_ENV:', process.env.TAURI_ENV);
+    console.log('NODE_ENV:', typeof process !== 'undefined' ? process.env?.NODE_ENV : 'undefined');
+    console.log('TAURI_ENV:', typeof process !== 'undefined' ? process.env?.TAURI_ENV : 'undefined');
     console.log('Location:', window.location.href);
     console.log('User Agent:', navigator.userAgent);
     console.log('Tauri 元数据:', (window as any).__TAURI_INTERNALS__?.metadata);

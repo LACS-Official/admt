@@ -63,6 +63,11 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     userSettings,
     error,
     retryCount,
+    versionCheckCompleted,
+    firstLaunchDetected,
+    privacyConsentCompleted,
+    activationVerified,
+    dataCollectionStarted,
     setCurrentPhase,
     setUserType,
     setIsFirstLaunch,
@@ -311,9 +316,9 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     console.log('📊 当前状态检查:', {
       versionCheckCompleted,
       firstLaunchDetected,
-      privacyConsentGiven,
+      privacyConsentCompleted,
       activationVerified,
-      dataCollectionEnabled
+      dataCollectionStarted
     });
 
     // 标记主应用已进入
@@ -454,9 +459,9 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
       currentPhase,
       versionCheckCompleted,
       firstLaunchDetected,
-      privacyConsentGiven,
+      privacyConsentCompleted,
       activationVerified,
-      dataCollectionEnabled
+      dataCollectionStarted
     });
 
     setActivationStatus(newActivationStatus);
@@ -479,22 +484,15 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     console.error('❌ 激活验证失败:', error);
     setError(error);
 
-    // 根据要求，强制激活验证失败时不允许继续使用
-    console.log('🚫 激活验证失败，应用将退出');
+    // 保持在激活页面，不退出应用
+    console.log('⚠️ 激活验证失败，保持在激活页面允许重试');
 
-    // 显示错误信息一段时间后退出应用
-    setTimeout(async () => {
-      try {
-        const { exit } = await import('@tauri-apps/api/app');
-        await exit(1);
-      } catch (exitError) {
-        console.error('退出应用失败:', exitError);
-        window.close();
-      }
-    }, 3000);
+    // 确保激活验证器保持显示状态
+    setShowActivationValidator(true);
 
-    // 调用错误回调
-    onError(`激活验证失败: ${error}\n\n应用将在3秒后退出`);
+    // 不调用错误回调，避免上层组件处理错误导致页面跳转
+    // onError 回调可能会导致应用退出或页面跳转，这里注释掉
+    // onError(`激活验证失败: ${error}`);
   };
 
   const handleActivationExpiredReactivate = (newStatus: any) => {

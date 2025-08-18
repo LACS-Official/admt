@@ -34,8 +34,24 @@ class OnlineResourcesService {
       retryCount: 3,
     };
     this.transmissionService = SecureDataTransmissionService.getInstance();
-    this.initialize();
+    // 延迟初始化，等待安全配置准备就绪
+    this.deferredInitialize();
     this.loadPersistedTasks();
+  }
+
+  /**
+   * 延迟初始化服务
+   */
+  private async deferredInitialize(): Promise<void> {
+    // 等待一小段时间，让安全配置有机会初始化
+    setTimeout(async () => {
+      try {
+        await this.initialize();
+      } catch (error) {
+        console.warn('在线资源服务延迟初始化失败，将在后续重试:', error);
+        // 如果初始化失败，可以在后续的操作中重试
+      }
+    }, 1000); // 延迟1秒
   }
 
   /**

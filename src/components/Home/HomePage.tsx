@@ -18,7 +18,7 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 
 // 导入新的组件
-
+import CarouselBanner from "./CarouselBanner";
 import DeviceOverviewCard from "../DeviceInfo/DeviceOverviewCard";
 import DeviceRebootCard from "./DeviceRebootCard";
 import MiscellaneousCard from "./MiscellaneousCard";
@@ -75,6 +75,12 @@ const useStyles = makeStyles({
     gap: "16px",
     flex: 1,
     height: "100%",
+  },
+  // 轮播图区域
+  bannerSection: {
+    height: "120px", // 固定高度
+    width: "100%",
+    marginBottom: "16px",
   },
   // 无设备状态下的全屏显示
   noDeviceFullScreen: {
@@ -239,6 +245,11 @@ const HomePage: React.FC = () => {
           <div className={styles.deviceSection}>
               {selectedDevice ? (
                 <>
+                  {/* 轮播图区域 */}
+                  <div className={styles.bannerSection}>
+                    <CarouselBanner />
+                  </div>
+
                   {/* 新的布局：上下两行布局 */}
                   <div className={styles.mainContentGrid}>
                     {/* 第一行：设备概览信息区域 - 占据60%高度 */}
