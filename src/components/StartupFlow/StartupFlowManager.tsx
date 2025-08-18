@@ -23,10 +23,11 @@ import { usePrivacyConsentStore, shouldShowPrivacyConsent, shouldExitApplication
 import VersionChecker from './VersionChecker';
 import UnifiedLoadingVersionChecker from './App_Loading';
 import ForceUpdateModal from './ForceUpdateModal';
-import WelcomePage from '../Welcome/WelcomePage';
+import WelcomePage from './WelcomePage';
 import InitialSetupWizard from './InitialSetupWizard';
-import ActivationPage from '../Welcome/pages/ActivationPage';
+import ActivationPage from './ActivationPage';
 import DebugPanel from '../Debug/DebugPanel';
+import PrivacyDebugPanel from '../Debug/PrivacyDebugPanel';
 import { devToolsManager, isDevelopment } from '../../utils/devtools';
 import ActivationExpiredHandler from './ActivationExpiredHandler';
 import PrivacyConsentDialog from './PrivacyConsentDialog';
@@ -50,6 +51,7 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
   const [showPrivacyConsent, setShowPrivacyConsent] = useState(false);
   const [showActivationValidator, setShowActivationValidator] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [showPrivacyDebugPanel, setShowPrivacyDebugPanel] = useState(false);
 
   const {
     currentPhase,
@@ -95,6 +97,27 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
       handlePhaseChange();
     }
   }, [currentPhase, isInitialized]);
+
+  // 监听键盘快捷键（开发模式）
+  useEffect(() => {
+    if (!isDevelopment()) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+Shift+P 显示隐私调试面板
+      if (event.ctrlKey && event.shiftKey && event.key === 'P') {
+        event.preventDefault();
+        setShowPrivacyDebugPanel(prev => !prev);
+      }
+      // Ctrl+Shift+D 显示通用调试面板
+      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        event.preventDefault();
+        setShowDebugPanel(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const initializeStartupFlow = async () => {
     try {
@@ -195,6 +218,10 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     }
   };
 
+  /**
+   * 处理启动流程阶段变化
+   * 根据当前阶段执行相应的处理逻辑，协调整个应用的启动流程
+   */
   const handlePhaseChange = () => {
     console.log(`🔄 进入启动阶段: ${currentPhase}`);
 
@@ -227,26 +254,32 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
   const handleFirstLaunchDetection = () => {
     console.log('🔍 开始首次使用检测...');
 
-    // 检查是否为首次启动
+    // 检查隐私政策同意状态
+    const needsPrivacyConsent = shouldShowPrivacyConsent();
     const isFirstTime = privacyConsentStore.isFirstLaunch || !privacyConsentStore.hasCompletedPrivacySetup;
 
     console.log('首次使用检测结果:', {
       isFirstLaunch: privacyConsentStore.isFirstLaunch,
       hasCompletedPrivacySetup: privacyConsentStore.hasCompletedPrivacySetup,
+      hasAcceptedPrivacyPolicy: privacyConsentStore.hasAcceptedPrivacyPolicy,
+      hasAcceptedUserAgreement: privacyConsentStore.hasAcceptedUserAgreement,
+      hasAcceptedDataCollection: privacyConsentStore.hasAcceptedDataCollection,
+      needsPrivacyConsent,
       isFirstTime,
     });
 
     setIsFirstLaunch(isFirstTime);
     setFirstLaunchDetected(true);
 
-    if (isFirstTime) {
-      console.log('✅ 检测到首次使用，进入隐私政策同意阶段');
+    // 无论是否首次使用，都要检查隐私政策同意状态
+    if (needsPrivacyConsent) {
+      console.log('📋 需要隐私政策同意，进入隐私政策同意阶段');
       console.log('📋 下一阶段: privacy-consent');
       setCurrentPhase('privacy-consent');
     } else {
-      console.log('✅ 非首次使用，跳过隐私政策，但仍需进行强制激活码检测');
-      console.log('📋 下一阶段: activation-verification (强制激活验证)');
-      // 根据要求，无论是否首次使用，都必须进行激活码检测
+      console.log('✅ 隐私政策已同意，直接进入激活验证阶段');
+      console.log('📋 下一阶段: activation-verification');
+      setPrivacyConsentCompleted(true);
       setCurrentPhase('activation-verification');
     }
   };
@@ -360,10 +393,14 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
   const handleVersionCheckComplete = async (result: any) => {
     console.log('✅ 版本检查完成，结果:', result);
     setVersionCheckCompleted(true);
+    
+    // 确保公告已标记为显示
     setAnnouncementDisplayed(true);
     
-    // 直接进入下一阶段，因为公告已经在UnifiedLoadingVersionChecker中显示过了
-    proceedToNextPhase();
+    // 在公告显示完成后，安全地进入下一阶段
+    setTimeout(() => {
+      proceedToNextPhase();
+    }, 0);
   };
 
   const handleVersionCheckError = async (error: string) => {
@@ -565,6 +602,11 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
       {/* 调试面板（仅开发模式） */}
       {isDevelopment() && showDebugPanel && (
         <DebugPanel onClose={() => setShowDebugPanel(false)} />
+      )}
+
+      {/* 隐私调试面板（仅开发模式） */}
+      {isDevelopment() && showPrivacyDebugPanel && (
+        <PrivacyDebugPanel onClose={() => setShowPrivacyDebugPanel(false)} />
       )}
     </div>
   );

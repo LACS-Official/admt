@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   makeStyles,
   Text,
@@ -84,7 +84,8 @@ const useStyles = makeStyles({
   },
   settingInfo: {
     flex: 1,
-  },  sliderContainer: {
+  },  
+  sliderContainer: {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -93,19 +94,57 @@ const useStyles = makeStyles({
 
 const DisplaySettingsPanel: React.FC = () => {
   const styles = useStyles();
-  const { isDarkMode, toggleTheme } = useThemeStore();
+  const { isDarkMode, followSystemTheme, toggleTheme, setFollowSystemTheme, updateThemeBasedOnSystem } = useThemeStore();
   const { updateConfig } = useAppStore();
   
   // 界面设置状态
   const [fontSize, setFontSize] = useState(14);
   const [enableAnimations, setEnableAnimations] = useState(true);
 
+  // 监听系统主题变化
+  useEffect(() => {
+    // 初始化时检查是否需要根据系统主题更新
+    if (followSystemTheme) {
+      updateThemeBasedOnSystem();
+    }
+    
+    // 监听系统主题变化
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = () => {
+      if (followSystemTheme) {
+        updateThemeBasedOnSystem();
+        updateConfig({ 
+          theme: mediaQuery.matches ? "dark" : "light" 
+        });
+      }
+    };
+    
+    mediaQuery.addEventListener('change', handler);
+    
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, [followSystemTheme, updateThemeBasedOnSystem, updateConfig]);
+
   const handleThemeChange = () => {
-    toggleTheme();
-    updateConfig({ theme: isDarkMode ? "light" : "dark" });
+    if (!followSystemTheme) {
+      toggleTheme();
+      updateConfig({ theme: isDarkMode ? "light" : "dark" });
+    }
   };
 
-
+  const handleFollowSystemChange = (_: React.ChangeEvent<HTMLInputElement>, data: { checked: boolean }) => {
+    const follow = data.checked === true;
+    setFollowSystemTheme(follow);
+    
+    if (follow) {
+      // 如果启用跟随系统，则立即更新主题
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      updateThemeBasedOnSystem();
+      updateConfig({ theme: systemPrefersDark ? "dark" : "light" });
+    } else {
+      // 如果禁用跟随系统，则保持当前主题设置
+      updateConfig({ theme: isDarkMode ? "dark" : "light" });
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -131,6 +170,21 @@ const DisplaySettingsPanel: React.FC = () => {
               <Switch
                 checked={isDarkMode}
                 onChange={handleThemeChange}
+                disabled={followSystemTheme}
+              />
+            </div>
+
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <Text weight="semibold">跟随系统设置</Text>
+                <br />
+                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                  根据系统主题自动切换深色/浅色模式
+                </Text>
+              </div>
+              <Switch
+                checked={followSystemTheme}
+                onChange={handleFollowSystemChange}
               />
             </div>
 
@@ -165,29 +219,8 @@ const DisplaySettingsPanel: React.FC = () => {
               <Switch checked={false} onChange={() => {}} />
             </div>
             
-            <div className={styles.inputGroup}>
-              <Label>侧边栏位置</Label>
-              <Select>
-                <Option value="left">左侧</Option>
-                <Option value="right">右侧</Option>
-                <Option value="top">顶部</Option>
-                <Option value="bottom">底部</Option>
-              </Select>
-            </div>
-            
-            <div className={styles.inputGroup}>
-              <Label>主内容区域宽度</Label>
-              <Select>
-                <Option value="narrow">窄</Option>
-                <Option value="normal">正常</Option>
-                <Option value="wide">宽</Option>
-                <Option value="full">全宽</Option>
-              </Select>
-            </div>
           </div>
         </Card>
-
-
 
       </div>
     </div>

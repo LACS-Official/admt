@@ -1,6 +1,6 @@
 /**
  * 隐私政策同意页面组件
- * 用于首次启动时显示隐私政策和用户协议，要求用户同意
+ * 用于显示隐私政策和用户协议，要求用户同意
  */
 
 import React, { useState } from 'react';
@@ -23,13 +23,20 @@ import {
   DialogContent,
   DialogActions,
   Link,
+  Avatar,
+  Tooltip
 } from '@fluentui/react-components';
 import { 
   Shield24Regular, 
   Document24Regular, 
   Warning24Regular,
   Dismiss24Regular,
-  Info24Regular
+  Info24Regular,
+  CheckmarkCircle24Regular,
+  DocumentBulletList24Regular,
+  Person24Regular,
+  ArrowRight24Regular,
+  ArrowLeft24Regular
 } from '@fluentui/react-icons';
 import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
 
@@ -40,32 +47,40 @@ const useStyles = makeStyles({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    padding: tokens.spacingHorizontalXL,
-    backgroundColor: tokens.colorNeutralBackground1,
+    backgroundColor: tokens.colorNeutralBackground2,
+    padding: tokens.spacingHorizontalXXXL,
   },
   card: {
     width: '100%',
     maxWidth: '800px',
-    padding: tokens.spacingVerticalL,
-    borderRadius: tokens.borderRadiusMedium,
+    padding: `${tokens.spacingVerticalXXL} ${tokens.spacingHorizontalXXL}`,
+    borderRadius: tokens.borderRadiusXLarge,
+    boxShadow: tokens.shadow28,
+    position: 'relative',
   },
   header: {
-    padding: tokens.spacingVerticalM,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    maxHeight: '20%',
+    padding: `${tokens.spacingVerticalXXL} ${tokens.spacingHorizontalMNudge}`,
     textAlign: 'center',
     width: '100%',
-    height: '100px',
-    //30px文字
-    marginBottom: tokens.spacingVerticalL,
-    marginTop: tokens.spacingVerticalL,
-    backgroundColor: tokens.colorNeutralBackground3,
+    // 30px文字
+    marginBottom: tokens.spacingVerticalXXL,
+    backgroundColor: tokens.colorNeutralBackground1,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
+    borderRadius: tokens.borderRadiusLarge,
+  },
+  iconContainer: {
+    marginBottom: tokens.spacingVerticalM,
   },
   title: {
     fontSize: tokens.fontSizeHero900,
     fontWeight: tokens.fontWeightSemibold,
     marginBottom: tokens.spacingVerticalS,
     marginTop: tokens.spacingVerticalS,
+    color: tokens.colorNeutralForeground1,
   },
   subtitle: {
     fontSize: tokens.fontSizeBase300,
@@ -76,7 +91,7 @@ const useStyles = makeStyles({
   content: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalL,
+    gap: tokens.spacingVerticalXXL,
   },
   section: {
     display: 'flex',
@@ -93,10 +108,31 @@ const useStyles = makeStyles({
   buttonGroup: {
     display: 'flex',
     gap: tokens.spacingHorizontalM,
-    flexWrap: 'wrap',
   },
   policyButton: {
-    minWidth: '150px',
+    flex: 1,
+    minHeight: '80px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: tokens.spacingVerticalXS,
+    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
+    borderRadius: tokens.borderRadiusMedium,
+    textAlign: 'center',
+    '&:hover': {
+      backgroundColor: tokens.colorNeutralBackground2,
+    },
+  },
+  policyButtonIcon: {
+    fontSize: '24px',
+  },
+  policyButtonText: {
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  policyButtonDesc: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground2,
   },
   checkboxSection: {
     display: 'flex',
@@ -123,20 +159,71 @@ const useStyles = makeStyles({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
-    marginTop: tokens.spacingVerticalL,
+    marginTop: tokens.spacingVerticalXXL,
   },
   exitButton: {
-    backgroundColor: tokens.colorPaletteRedBackground2,
-    color: tokens.colorPaletteRedForeground3,
+    backgroundColor: tokens.colorPaletteRedBackground1,
+    color: tokens.colorPaletteRedForeground1,
     '&:hover': {
       backgroundColor: tokens.colorPaletteRedBackground2,
+      color: tokens.colorPaletteRedForeground2,
     },
+    '&:active': {
+      backgroundColor: tokens.colorPaletteRedBackground3,
+    },
+  },
+  acceptButton: {
+    backgroundColor: tokens.colorBrandBackground,
+    color: tokens.colorNeutralForegroundInverted,
+    '&:hover': {
+      backgroundColor: tokens.colorBrandBackgroundHover,
+    },
+    '&:active': {
+      backgroundColor: tokens.colorBrandBackgroundPressed,
+    },
+    '&:disabled': {
+      backgroundColor: tokens.colorNeutralBackgroundDisabled,
+      color: tokens.colorNeutralForegroundDisabled,
+    }
   },
   dialogContent: {
     maxHeight: '60vh',
     overflowY: 'auto',
     whiteSpace: 'pre-wrap',
     lineHeight: '1.6',
+    padding: tokens.spacingHorizontalM,
+  },
+  dialogHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    padding: `${tokens.spacingVerticalS} 0`,
+  },
+  policyItem: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    '&:hover': {
+      backgroundColor: tokens.colorNeutralBackground2,
+    },
+  },
+  policyItemText: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
+  policyItemTitle: {
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  policyItemDesc: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground2,
+  },
+  policyItemIcon: {
+    color: tokens.colorNeutralForeground2,
   },
 });
 
@@ -289,22 +376,43 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
 请注意：这些数据收集对于软件的正常运行是必需的。如果您不同意，软件将无法正常工作。
   `;
 
-  const getPolicyTitle = () => {
-    switch (activePolicy) {
-      case 'privacy': return '隐私政策';
-      case 'agreement': return '用户协议';
-      case 'data': return '数据收集说明';
-      default: return '';
+  const policies = [
+    {
+      id: 'privacy',
+      title: '隐私政策',
+      description: '我们如何收集、使用和保护您的个人信息',
+      icon: <Shield24Regular />,
+      content: privacyPolicyContent
+    },
+    {
+      id: 'agreement',
+      title: '用户协议',
+      description: '使用本软件的服务条款和条件',
+      icon: <Document24Regular />,
+      content: userAgreementContent
+    },
+    {
+      id: 'data',
+      title: '数据收集说明',
+      description: '详细说明我们需要收集的数据类型',
+      icon: <DocumentBulletList24Regular />,
+      content: dataCollectionContent
     }
+  ];
+
+  const getPolicyTitle = () => {
+    const policy = policies.find(p => p.id === activePolicy);
+    return policy ? policy.title : '';
   };
 
   const getPolicyContent = () => {
-    switch (activePolicy) {
-      case 'privacy': return privacyPolicyContent;
-      case 'agreement': return userAgreementContent;
-      case 'data': return dataCollectionContent;
-      default: return '';
-    }
+    const policy = policies.find(p => p.id === activePolicy);
+    return policy ? policy.content : '';
+  };
+
+  const getPolicyIcon = () => {
+    const policy = policies.find(p => p.id === activePolicy);
+    return policy ? policy.icon : null;
   };
 
   return (
@@ -325,30 +433,18 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                 </div>
                 
                 <div className={styles.buttonGroup}>
-                  <Button 
-                    className={styles.policyButton}
-                    appearance="outline" 
-                    icon={<Shield24Regular />}
-                    onClick={() => setActivePolicy('privacy')}
-                  >
-                    隐私政策
-                  </Button>
-                  <Button 
-                    className={styles.policyButton}
-                    appearance="outline" 
-                    icon={<Document24Regular />}
-                    onClick={() => setActivePolicy('agreement')}
-                  >
-                    用户协议
-                  </Button>
-                  <Button 
-                    className={styles.policyButton}
-                    appearance="outline" 
-                    icon={<Info24Regular />}
-                    onClick={() => setActivePolicy('data')}
-                  >
-                    数据收集说明
-                  </Button>
+                  {policies.map((policy) => (
+                    <Button 
+                      key={policy.id}
+                      className={styles.policyButton}
+                      appearance="subtle" 
+                      onClick={() => setActivePolicy(policy.id as any)}
+                    >
+                      <div className={styles.policyButtonIcon}>{policy.icon}</div>
+                      <div className={styles.policyButtonText}>{policy.title}</div>
+                      <div className={styles.policyButtonDesc}>{policy.description}</div>
+                    </Button>
+                  ))}
                 </div>
               </div>
 
@@ -379,7 +475,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                 icon={<Dismiss24Regular />}
                 onClick={() => setShowExitConfirm(true)}
                 className={styles.exitButton}
-                                size='large'
+                size="large"
               >
                 不同意，退出应用
               </Button>
@@ -387,7 +483,9 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                 appearance="primary"
                 onClick={handleAccept}
                 disabled={!acceptedAll}
-                size='large'
+                className={styles.acceptButton}
+                size="large"
+                icon={<CheckmarkCircle24Regular />}
               >
                 同意并继续
               </Button>
@@ -405,7 +503,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
         <DialogSurface>
           <DialogBody>
             <DialogTitle>
-              {getPolicyTitle()}
+              <div className={styles.dialogHeader}>
+                {getPolicyIcon()}
+                {getPolicyTitle()}
+              </div>
             </DialogTitle>
             <DialogContent className={styles.dialogContent}>
               <Text>
@@ -416,8 +517,9 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
               <Button
                 appearance="primary"
                 onClick={() => setActivePolicy(null)}
+                icon={<ArrowLeft24Regular />}
               >
-                关闭
+                返回
               </Button>
             </DialogActions>
           </DialogBody>
@@ -429,8 +531,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
         <DialogSurface>
           <DialogBody>
             <DialogTitle>
-              <Warning24Regular />
-              确认退出
+              <div className={styles.dialogHeader}>
+                <Warning24Regular style={{ color: tokens.colorPaletteRedForeground1 }} />
+                确认退出
+              </div>
             </DialogTitle>
             <DialogContent>
               <Text>
@@ -444,6 +548,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
               <Button
                 appearance="secondary"
                 onClick={() => setShowExitConfirm(false)}
+                icon={<ArrowLeft24Regular />}
               >
                 返回重新考虑
               </Button>
@@ -451,6 +556,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                 appearance="primary"
                 onClick={handleReject}
                 className={styles.exitButton}
+                icon={<Dismiss24Regular />}
               >
                 确认退出应用
               </Button>
