@@ -1,19 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   makeStyles,
   Text,
   Card,
   CardHeader,
   Switch,
-  Field,
   Input,
+  Label,
   Select,
-  Textarea,
+  Option,
+  Field,
   Badge,
 } from "@fluentui/react-components";
 import {
-  Timer24Regular,
+  TvUsb24Regular,
   Settings24Regular,
+  Timer24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
 
@@ -39,36 +41,57 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "16px",
   },
+  fullWidthCard: {
+    gridColumn: "1 / -1",
+  },
   settingRow: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "12px",
   },
+  settingLabel: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  settingDescription: {
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground2)",
+  },
+  inputGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  buttonGroup: {
+    display: "flex",
+    gap: "12px",
+    justifyContent: "center",
+    flexWrap: "wrap",
+  },
+  statusIndicator: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+  },
+  statusOnline: {
+    backgroundColor: "var(--colorStatusSuccessBackground2)",
+    color: "var(--colorStatusSuccessForeground2)",
+  },
   settingInfo: {
     flex: 1,
   },
-
-  statusBadge: {
-    marginTop: "8px",
-  },
-  helpText: {
-    backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "6px",
-    padding: "12px",
-    marginTop: "8px",
-  },
-  fullWidth: {
-    gridColumn: "1 / -1",
-  },
 });
 
-const ToolSettingsPanel: React.FC = () => {
+const DeviceSettingsPanel: React.FC = () => {
   const styles = useStyles();
   const { config, updateConfig } = useAppStore();
-
-
-
+  const [usbEnabled, setUsbEnabled] = useState(true);
+  const [connectionTimeout, setConnectionTimeout] = useState("30000");
 
   const handleAutoDetectChange = (checked: boolean) => {
     updateConfig({ autoDetectDevices: checked });
@@ -88,16 +111,9 @@ const ToolSettingsPanel: React.FC = () => {
     }
   };
 
-
-
-
-
-
-
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-
 
         {/* 设备连接设置 */}
         <Card className={styles.card}>
@@ -132,17 +148,14 @@ const ToolSettingsPanel: React.FC = () => {
               />
             </div>
 
-            <Field
-              label="扫描间隔 (毫秒):"
-              disabled={!config.autoDetectDevices}
-            >
+            <Field label="扫描间隔 (毫秒):">
               <Input
                 type="number"
                 value={config.scanInterval.toString()}
                 onChange={(_, data) => handleScanIntervalChange(data.value)}
                 min={1000}
-                max={10000}
-                step={500}
+                max={5000}
+                step={1000}
                 disabled={!config.autoDetectDevices}
               />
               <Text size={200} style={{
@@ -151,74 +164,18 @@ const ToolSettingsPanel: React.FC = () => {
                   : "var(--colorNeutralForeground3)",
                 marginTop: "4px"
               }}>
-                建议值：2000-5000毫秒 {!config.autoDetectDevices && "(需要启用自动检测)"}
+                建议值：1000-5000毫秒 {!config.autoDetectDevices && "(需要启用自动检测)"}
               </Text>
             </Field>
 
-            <Field
-              label="设备检测频率:"
-              disabled={!config.autoDetectDevices}
-            >
-              <Select
-                value={(config.deviceDetectionInterval || 5000).toString()}
-                onChange={(_, data) => handleDeviceDetectionIntervalChange(data.value)}
-                disabled={!config.autoDetectDevices}
-              >
-                <option value="5000">每5秒检测一次</option>
-                <option value="10000">每10秒检测一次</option>
-                <option value="30000">每30秒检测一次</option>
-                <option value="60000">每分钟检测一次</option>
-              </Select>
-              <Text size={200} style={{
-                color: config.autoDetectDevices
-                  ? "var(--colorNeutralForeground2)"
-                  : "var(--colorNeutralForeground3)",
-                marginTop: "4px"
-              }}>
-                设备连接状态检测频率 {!config.autoDetectDevices && "(需要启用自动检测)"}
-              </Text>
-            </Field>
           </div>
         </Card>
 
-        {/* 高级设置 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Settings24Regular />}
-            header={<Text weight="semibold">高级设置</Text>}
-            description={<Text size={200}>专业用户选项</Text>}
-          />
 
-          <div className={styles.cardContent}>
-            <Field label="日志级别:">
-              <Select
-                value={config.logLevel}
-                onChange={(_, data) => updateConfig({ logLevel: data.value as "debug" | "info" | "warn" | "error" })}
-              >
-                <option value="error">错误 (Error)</option>
-                <option value="warn">警告 (Warning)</option>
-                <option value="info">信息 (Info)</option>
-                <option value="debug">调试 (Debug)</option>
-              </Select>
-              <Text size={200} style={{ color: "var(--colorNeutralForeground2)", marginTop: "4px" }}>
-                调试级别会显示更多详细信息，但可能影响性能
-              </Text>
-            </Field>
 
-            <Field label="自定义ADB参数:">
-              <Textarea
-                placeholder="例如: -H 127.0.0.1 -P 5037"
-                rows={3}
-              />
-              <Text size={200} style={{ color: "var(--colorNeutralForeground2)", marginTop: "4px" }}>
-                高级用户可以添加自定义ADB连接参数
-              </Text>
-            </Field>
-          </div>
-        </Card>
       </div>
     </div>
   );
 };
 
-export default ToolSettingsPanel;
+export default DeviceSettingsPanel;

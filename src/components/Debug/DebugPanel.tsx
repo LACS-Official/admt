@@ -30,6 +30,7 @@ import {
 import { useStartupFlowStore } from '../../stores/startupFlowStore';
 import { useWelcomeStore, useAppConfigStore } from '../../stores/welcomeStore';
 import { devToolsManager } from '../../utils/devtools';
+import AdbDiagnosticPanel from './AdbDiagnosticPanel';
 
 const useStyles = makeStyles({
   container: {
@@ -251,7 +252,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
                 </div>
                 <div className={styles.statusItem}>
                   <Text className={styles.statusLabel}>隐私政策同意:</Text>
-                  {getStatusBadge(startupFlowStore.privacyConsentGiven)}
+                  {getStatusBadge(startupFlowStore.privacyConsentCompleted)}
                 </div>
                 <div className={styles.statusItem}>
                   <Text className={styles.statusLabel}>激活验证:</Text>
@@ -259,7 +260,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
                 </div>
                 <div className={styles.statusItem}>
                   <Text className={styles.statusLabel}>数据收集启用:</Text>
-                  {getStatusBadge(startupFlowStore.dataCollectionEnabled)}
+                  {getStatusBadge(startupFlowStore.dataCollectionStarted)}
                 </div>
               </div>
             </AccordionPanel>
@@ -278,7 +279,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
                 </div>
                 <div className={styles.statusItem}>
                   <Text className={styles.statusLabel}>应用已激活:</Text>
-                  {getStatusBadge(appConfigStore.isActivated)}
+                  {getStatusBadge(appConfigStore.isActivated())}
                 </div>
                 <div className={styles.statusItem}>
                   <Text className={styles.statusLabel}>激活码:</Text>
@@ -313,6 +314,16 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ onClose }) => {
                   placeholder="日志将在这里显示..."
                 />
               </div>
+            </AccordionPanel>
+          </AccordionItem>
+
+          {/* ADB/Fastboot 诊断 */}
+          <AccordionItem value="adb-diagnostic">
+            <AccordionHeader icon={<Bug24Regular />}>
+              ADB/Fastboot 诊断
+            </AccordionHeader>
+            <AccordionPanel>
+              <AdbDiagnosticPanel />
             </AccordionPanel>
           </AccordionItem>
         </Accordion>

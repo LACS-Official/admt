@@ -76,8 +76,16 @@ pub struct VerifyResponse {
 pub struct VerifyResponseData {
     pub id: String,
     pub code: String,
-    #[serde(rename = "activatedAt")]
-    pub activated_at: String, // API返回的是字符串格式的时间
+    #[serde(rename = "createdAt")]
+    pub created_at: String, // API返回的是字符串格式的时间
+    #[serde(rename = "expiresAt")]
+    pub expires_at: String, // API返回的是字符串格式的时间
+    #[serde(rename = "isUsed")]
+    pub is_used: bool,
+    #[serde(rename = "usedAt")]
+    pub used_at: Option<String>, // API返回的是字符串格式的时间
+    #[serde(rename = "isExpired")]
+    pub is_expired: bool,
     #[serde(rename = "productInfo")]
     pub product_info: Option<ProductInfo>,
     pub metadata: Option<serde_json::Value>,
@@ -174,70 +182,17 @@ impl ActivationValidator {
         }
     }
     
-    /// 验证激活码格式（根据API文档更新）
+    /// 验证激活码格式（修改为8位大写字母和数字）
     pub fn validate_format(&self, code: &str) -> bool {
         // 安全性检查：防止空值和过长输入
-        if code.is_empty() || code.len() > 50 {
+        if code.is_empty() || code.len() != 8 {
             log::warn!("Invalid activation code length: {}", code.len());
             return false;
         }
 
-        // 安全性检查：防止过短输入
-        if code.len() < 15 {
-            log::debug!("Activation code too short: {}", code.len());
-            return false;
-        }
-
-        // 安全性检查：只允许字母数字和短横线
-        if !code.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        // 安全性检查：只允许大写字母和数字
+        if !code.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) {
             log::warn!("Invalid characters in activation code");
-            return false;
-        }
-
-        // 防止SQL注入和XSS攻击：检查危险字符
-        let dangerous_patterns = ["'", "\"", ";", "<", ">", "&", "script", "select", "insert", "update", "delete"];
-        let code_lower = code.to_lowercase();
-        for pattern in &dangerous_patterns {
-            if code_lower.contains(pattern) {
-                log::warn!("Potentially dangerous pattern detected in activation code: {}", pattern);
-                return false;
-            }
-        }
-
-        // 新格式验证：{timestamp}-{random}-{uuid}
-        let parts: Vec<&str> = code.split('-').collect();
-        if parts.len() != 3 {
-            log::debug!("Invalid activation code format: expected 3 parts, got {}", parts.len());
-            return false;
-        }
-
-        // 检查第一部分：时间戳（36进制）
-        if parts[0].len() < 6 || parts[0].len() > 10 {
-            log::debug!("Invalid timestamp part length: {}", parts[0].len());
-            return false;
-        }
-        if !parts[0].chars().all(|c| c.is_ascii_alphanumeric()) {
-            log::debug!("Invalid characters in timestamp part");
-            return false;
-        }
-
-        // 检查第二部分：随机字符串（6位）
-        if parts[1].len() != 6 {
-            log::debug!("Invalid random part length: {}", parts[1].len());
-            return false;
-        }
-        if !parts[1].chars().all(|c| c.is_ascii_alphanumeric()) {
-            log::debug!("Invalid characters in random part");
-            return false;
-        }
-
-        // 检查第三部分：UUID片段（8位）
-        if parts[2].len() != 8 {
-            log::debug!("Invalid UUID part length: {}", parts[2].len());
-            return false;
-        }
-        if !parts[2].chars().all(|c| c.is_ascii_alphanumeric()) {
-            log::debug!("Invalid characters in UUID part");
             return false;
         }
 
@@ -297,53 +252,89 @@ impl ActivationValidator {
                     log::debug!("API response received successfully");
                 } else {
                     log::warn!("API request failed with status: {}", status);
-                    // 只在调试模式下记录响应内容
-                    #[cfg(debug_assertions)]
-                    log::debug!("Response body: {}", response_text);
+                }
+
+                // 在调试模式下记录响应内容，用于诊断问题
+                #[cfg(debug_assertions)]
+                log::debug!("Response body: {}", response_text);
+
+                // 在生产环境中也记录响应长度和前100个字符，用于诊断
+                #[cfg(not(debug_assertions))]
+                {
+                    log::info!("Response length: {} bytes", response_text.len());
+                    let preview = if response_text.len() > 100 {
+                        format!("{}...", &response_text[..100])
+                    } else {
+                        response_text.clone()
+                    };
+                    log::info!("Response preview: {}", preview);
                 }
 
                 if status.is_success() {
-                    match serde_json::from_str::<VerifyResponse>(&response_text) {
-                        Ok(verify_response) => {
-                            if verify_response.success {
-                                if let Some(verify_data) = verify_response.data {
-                                    // 将VerifyResponseData转换为ActivationCode
-                                    // 由于API响应格式与ActivationCode结构不完全匹配，我们需要构造缺失的字段
-                                    let activated_at = chrono::DateTime::parse_from_rfc3339(&verify_data.activated_at)
-                                        .map(|dt| dt.with_timezone(&chrono::Utc))
-                                        .unwrap_or_else(|_| chrono::Utc::now());
+                    // 首先尝试解析为通用的JSON值，以便更好地诊断问题
+                    match serde_json::from_str::<serde_json::Value>(&response_text) {
+                        Ok(json_value) => {
+                            log::debug!("Successfully parsed JSON, attempting to deserialize to VerifyResponse");
 
-                                    // 从apiValidation中获取过期时间
-                                    let expires_at = if let Some(api_validation) = &verify_data.api_validation {
-                                        chrono::DateTime::parse_from_rfc3339(&api_validation.expires_at)
-                                            .map(|dt| dt.with_timezone(&chrono::Utc))
-                                            .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(365))
+                            // 现在尝试解析为VerifyResponse
+                            match serde_json::from_value::<VerifyResponse>(json_value.clone()) {
+                                Ok(verify_response) => {
+                                    if verify_response.success {
+                                        if let Some(verify_data) = verify_response.data {
+                                            // 将VerifyResponseData转换为ActivationCode
+                                            // 解析API返回的时间字段
+                                            let created_at = chrono::DateTime::parse_from_rfc3339(&verify_data.created_at)
+                                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                                .unwrap_or_else(|_| chrono::Utc::now());
+
+                                            let expires_at = chrono::DateTime::parse_from_rfc3339(&verify_data.expires_at)
+                                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                                .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(365));
+
+                                            let used_at = verify_data.used_at.as_ref().and_then(|used_at_str| {
+                                                chrono::DateTime::parse_from_rfc3339(used_at_str)
+                                                    .map(|dt| dt.with_timezone(&chrono::Utc))
+                                                    .ok()
+                                            });
+
+                                            let activation_code = ActivationCode {
+                                                id: verify_data.id,
+                                                code: verify_data.code,
+                                                created_at,
+                                                expires_at,
+                                                is_used: verify_data.is_used,
+                                                used_at,
+                                                metadata: verify_data.metadata,
+                                                product_info: verify_data.product_info,
+                                            };
+                                            Ok(activation_code)
+                                        } else {
+                                            Err(HoutError::Tool("API响应数据为空".to_string()))
+                                        }
                                     } else {
-                                        chrono::Utc::now() + chrono::Duration::days(365)
-                                    };
-
-                                    let activation_code = ActivationCode {
-                                        id: verify_data.id,
-                                        code: verify_data.code,
-                                        created_at: chrono::Utc::now(), // API没有返回，使用当前时间
-                                        expires_at,
-                                        is_used: true, // 验证成功说明已被使用
-                                        used_at: Some(activated_at),
-                                        metadata: verify_data.metadata,
-                                        product_info: verify_data.product_info,
-                                    };
-                                    Ok(activation_code)
-                                } else {
-                                    Err(HoutError::Tool("API响应数据为空".to_string()))
+                                        let error_msg = verify_response.error.unwrap_or("未知错误".to_string());
+                                        Err(HoutError::Tool(error_msg))
+                                    }
                                 }
-                            } else {
-                                let error_msg = verify_response.error.unwrap_or("未知错误".to_string());
-                                Err(HoutError::Tool(error_msg))
+                                Err(e) => {
+                                    log::error!("Failed to deserialize VerifyResponse: {}", e);
+                                    log::error!("JSON structure: {}", serde_json::to_string_pretty(&json_value).unwrap_or_default());
+
+                                    // 尝试提取错误信息
+                                    if let Some(error_msg) = json_value.get("error").and_then(|v| v.as_str()) {
+                                        Err(HoutError::Tool(error_msg.to_string()))
+                                    } else if let Some(message) = json_value.get("message").and_then(|v| v.as_str()) {
+                                        Err(HoutError::Tool(message.to_string()))
+                                    } else {
+                                        Err(HoutError::Tool(format!("API响应结构不匹配: {}", e)))
+                                    }
+                                }
                             }
                         }
                         Err(e) => {
-                            log::error!("Failed to parse API response: {}", e);
-                            Err(HoutError::Tool("API响应格式错误".to_string()))
+                            log::error!("Failed to parse response as JSON: {}", e);
+                            log::error!("Raw response: {}", response_text);
+                            Err(HoutError::Tool(format!("API响应不是有效的JSON格式: {}", e)))
                         }
                     }
                 } else {
@@ -390,7 +381,7 @@ impl ActivationValidator {
 
         // 验证激活码长度和格式
         let code = request.activation_code.trim();
-        if code.len() < 15 || code.len() > 50 {
+        if code.len() !=8 {
             log::warn!("Activation attempt with invalid code length: {}", code.len());
             return Ok(ActivationResponse {
                 success: false,
@@ -450,7 +441,7 @@ impl ActivationValidator {
                 Ok(ActivationResponse {
                     success: true,
                     status: ActivationStatus::Activated,
-                    message: "激活成功！欢迎使用HOUT工具箱。".to_string(),
+                    message: "激活成功！欢迎使用ADMT工具箱。".to_string(),
                     expiry_date: Some(activation_code.expires_at),
                     features: Some(features),
                     token: Some(format!("token_{}", uuid::Uuid::new_v4())),

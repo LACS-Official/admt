@@ -117,57 +117,6 @@ const OtherSettingsPanel: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        {/* 外观设置 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<WeatherMoon24Regular />}
-            header={<Text weight="semibold">外观</Text>}
-            description={<Text size={200}>主题和界面外观设置</Text>}
-          />
-
-          <div className={styles.cardContent}>
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">深色主题</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  切换应用主题外观
-                </Text>
-              </div>
-              <Switch
-                checked={isDarkMode}
-                onChange={handleThemeChange}
-              />
-            </div>
-
-            <Field label="字体大小:">
-              <div className={styles.sliderContainer}>
-                <Slider
-                  min={12}
-                  max={18}
-                  step={1}
-                  value={fontSize}
-                  onChange={(_, data) => setFontSize(data.value)}
-                />
-                <Text className={styles.sliderValue}>{fontSize}px</Text>
-              </div>
-            </Field>
-
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">启用动画效果</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  界面切换和交互动画
-                </Text>
-              </div>
-              <Switch
-                checked={enableAnimations}
-                onChange={(_, data) => setEnableAnimations(data.checked === true)}
-              />
-            </div>
-          </div>
-        </Card>
 
         {/* 语言和地区 */}
         <Card className={styles.card}>
@@ -184,28 +133,25 @@ const OtherSettingsPanel: React.FC = () => {
                 onChange={(_, data) => handleLanguageChange(data.value)}
               >
                 <option value="zh-CN">简体中文</option>
-                <option value="en-US">English (US)</option>
+                <option value="zh-CN">Chinese</option>
               </Select>
             </Field>
 
             <Field label="日期格式:">
               <Select defaultValue="yyyy-mm-dd">
                 <option value="yyyy-mm-dd">2024-01-01</option>
-                <option value="mm/dd/yyyy">01/01/2024</option>
-                <option value="dd/mm/yyyy">01/01/2024</option>
               </Select>
             </Field>
 
             <Field label="时间格式:">
               <Select defaultValue="24h">
                 <option value="24h">24小时制</option>
-                <option value="12h">12小时制</option>
               </Select>
             </Field>
           </div>
         </Card>
 
-        {/* 通知和声音 */}
+        {/* 通知和声音
         <Card className={styles.card}>
           <CardHeader
             image={<Speaker224Regular />}
@@ -228,19 +174,6 @@ const OtherSettingsPanel: React.FC = () => {
               />
             </div>
 
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">显示通知</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  显示系统通知消息
-                </Text>
-              </div>
-              <Switch
-                checked={showNotifications}
-                onChange={(_, data) => setShowNotifications(data.checked === true)}
-              />
-            </div>
 
             <Field label="通知类型:">
               <div className={styles.checkboxGroup}>
@@ -251,7 +184,7 @@ const OtherSettingsPanel: React.FC = () => {
               </div>
             </Field>
           </div>
-        </Card>
+        </Card> */}
 
         {/* 行为设置 */}
         <Card className={styles.card}>
@@ -262,19 +195,6 @@ const OtherSettingsPanel: React.FC = () => {
           />
 
           <div className={styles.cardContent}>
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">自动保存设置</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  自动保存配置更改
-                </Text>
-              </div>
-              <Switch
-                checked={autoSave}
-                onChange={(_, data) => setAutoSave(data.checked === true)}
-              />
-            </div>
 
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
@@ -306,51 +226,7 @@ const OtherSettingsPanel: React.FC = () => {
           </div>
         </Card>
 
-        {/* 隐私设置 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Eye24Regular />}
-            header={<Text weight="semibold">隐私</Text>}
-            description={<Text size={200}>数据收集和隐私保护</Text>}
-          />
 
-          <div className={styles.cardContent}>
-            <Field label="数据收集:">
-              <div className={styles.checkboxGroup}>
-                <Checkbox label="匿名使用统计（必需）" defaultChecked disabled />
-                <Checkbox label="错误报告（必需）" defaultChecked disabled />
-                <Checkbox label="性能数据（必需）" defaultChecked disabled />
-              </div>
-            </Field>
-
-            <Text size={200} style={{ color: "var(--colorPaletteRedForeground1)" }}>
-              ⚠️ 这些数据收集选项是软件正常运行所必需的，无法关闭。
-              所有数据都经过匿名化处理，仅用于改善产品体验和确保软件稳定性。
-            </Text>
-          </div>
-        </Card>
-
-        {/* 操作按钮 */}
-        <Card className={`${styles.card} ${styles.fullWidth}`}>
-          <div className={styles.cardContent}>
-            <div className={styles.buttonGroup}>
-              <Button 
-                appearance="secondary" 
-                icon={<ArrowReset24Regular />}
-                onClick={handleResetSettings}
-              >
-                重置设置
-              </Button>
-              <Button 
-                appearance="primary" 
-                icon={<Save24Regular />}
-                onClick={handleSaveSettings}
-              >
-                保存设置
-              </Button>
-            </div>
-          </div>
-        </Card>
       </div>
     </div>
   );

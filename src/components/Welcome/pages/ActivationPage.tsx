@@ -31,78 +31,224 @@ import { activationService } from '../../../services/activationService';
 import { ActivationStatus } from '../../../types/welcome';
 
 const useStyles = makeStyles({
+  Image: { 
+    width: '400px',
+    height: '90%',
+    objectFit: 'cover',
+    borderRadius: '8px',
+  },
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '32px',
-    maxWidth: '600px',
+    height: '680px', // 固定高度，适合1024x720窗口（减去标题栏等）
+    maxWidth: '1000px', // 稍微减小最大宽度
     margin: '0 auto',
-    height: '100%',
+    padding: '16px', // 减少内边距
+    gap: '16px', // 减少间距
+    overflow: 'hidden', // 防止内容溢出
   },
+
+  // 上半部分 - 标题区域
   header: {
     textAlign: 'center',
-    marginBottom: '16px',
+    padding: '12px 0', // 减少内边距
+    borderBottom: '1px solid var(--colorNeutralStroke2)',
+    flexShrink: 0, // 防止压缩
+    display: 'flex',
+    alignItems: 'center',
   },
   icon: {
-    fontSize: '48px',
+    fontSize: '36px', // 减小图标尺寸
     color: 'var(--colorBrandBackground)',
-    marginBottom: '16px',
+    marginBottom: '8px', // 减少间距
   },
   title: {
-    marginBottom: '8px',
+    marginBottom: '4px', // 减少间距
+    color: 'var(--colorNeutralForeground1)',
+    fontSize: '24px', // 稍微减小标题字体
+    fontWeight: 'bold',
+    textAlign: 'center',
+    flexGrow: 1,
+    
   },
   subtitle: {
     color: 'var(--colorNeutralForeground2)',
-    maxWidth: '500px',
+    maxWidth: '600px',
     margin: '0 auto',
+    fontSize: '20px', // 减小字体
+    lineHeight: '1.4', // 减少行高
+    textAlign: 'center',
+    padding: '16px 16px',
+    
   },
-  activationForm: {
+
+  // 下半部分 - 上下两部分布局
+  mainContent: {
+    display: 'flex',
+    flex: 1,
+    flexDirection: 'column',
+    gap: '20px', // 减少间距
+    minHeight: '0',
+    overflow: 'hidden',
+  },
+
+  // 上部分 - 激活方法说明
+  topSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px',
+    gap: '10px', // 减少间距
+    overflow: 'auto', // 允许滚动
   },
-  inputCard: {
-    padding: '32px',
+
+  // 下部分 - 激活功能区域
+  bottomSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px', // 减少间距
   },
+
+  // 左侧卡片样式
+  infoCard: {
+    padding: '8px',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    border: '1px solid var(--colorNeutralStroke2)',
+    borderRadius: '12px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+  },
+
+  qrCodeSection: {
+    textAlign: 'center',
+    padding: '8px',
+  },
+
+  qrCodeImage: {
+    width: '200px', // 减小二维码尺寸
+    height: '200px',
+    borderRadius: '8px', // 减小圆角
+    border: '1px solid var(--colorNeutralStroke2)', // 减小边框
+    marginBottom: '8px', // 减少间距
+  },
+
+  stepsList: {
+    paddingLeft: '0',
+    listStyle: 'none',
+    margin: '6px 0',
+    '& li': {
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: '8px', // 减少间距
+      margin: '6px 0', // 减少间距
+      padding: '8px', // 减少内边距
+      backgroundColor: 'var(--colorNeutralBackground2)',
+      borderRadius: '6px', // 减小圆角
+      border: '1px solid var(--colorNeutralStroke3)',
+    },
+  },
+
+  stepNumber: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '20px', // 减小尺寸
+    height: '20px',
+    borderRadius: '50%',
+    backgroundColor: 'var(--colorBrandBackground)',
+    color: 'white',
+    fontSize: '11px', // 减小字体
+    fontWeight: '600',
+    flexShrink: 0,
+  },
+
+  stepText: {
+    flex: 1,
+    color: 'var(--colorNeutralForeground1)',
+    lineHeight: '1.3', // 减少行高
+    fontSize: '16px', // 减小字体
+    maxWidth: '80%',
+  },
+
+  helpList: {
+    paddingLeft: '0',
+    listStyle: 'none',
+    margin: '8px 0', // 减少间距
+    '& li': {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px', // 减少间距
+      margin: '4px 0', // 减少间距
+      color: 'var(--colorNeutralForeground2)',
+      fontSize: '13px', // 减小字体
+      '&::before': {
+        content: '"•"',
+        color: 'var(--colorBrandBackground)',
+        fontWeight: 'bold',
+        fontSize: '14px', // 减小字体
+      },
+    },
+  },
+
+  // 右侧激活区域样式
+  activationCard: {
+    padding: '20px', // 减少内边距
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    border: '1px solid var(--colorNeutralStroke2)',
+    borderRadius: '8px', // 减小圆角
+    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1)', // 减小阴影
+  },
+
   activationInput: {
     fontFamily: 'monospace',
     fontSize: '16px',
     textAlign: 'center',
     textTransform: 'uppercase',
   },
+
   validateButton: {
     alignSelf: 'center',
     minWidth: '120px',
   },
+
   statusCard: {
-    padding: '20px',
+    padding: '12px', // 减少内边距
     textAlign: 'center',
     border: '1px solid var(--colorNeutralStroke2)',
+    borderRadius: '6px', // 减小圆角
+    marginTop: '12px', // 减少间距
   },
+
   statusSuccess: {
-    borderColor: 'var(--colorPaletteGreenBorder1)',
-    backgroundColor: 'var(--colorPaletteGreenBackground1)',
+    borderTopColor: 'var(--colorPaletteGreenBorder2)',
+    borderRightColor: 'var(--colorPaletteGreenBorder2)',
+    borderBottomColor: 'var(--colorPaletteGreenBorder2)',
+    borderLeftColor: 'var(--colorPaletteGreenBorder2)',
+    backgroundColor: 'var(--colorPaletteGreenBackground2)',
   },
+
   statusError: {
-    borderColor: 'var(--colorPaletteRedBorder1)',
-    backgroundColor: 'var(--colorPaletteRedBackground1)',
+    borderTopColor: 'var(--colorPaletteRedBorder2)',
+    borderRightColor: 'var(--colorPaletteRedBorder2)',
+    borderBottomColor: 'var(--colorPaletteRedBorder2)',
+    borderLeftColor: 'var(--colorPaletteRedBorder2)',
+    backgroundColor: 'var(--colorPaletteRedBackground2)',
   },
+
   statusIcon: {
     fontSize: '20px',
     marginRight: '8px',
   },
-  helpSection: {
-    padding: '20px',
-    backgroundColor: 'var(--colorNeutralBackground2)',
-    borderRadius: '8px',
+
+  sectionTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px', // 减少间距
+    marginBottom: '10px', // 减少间距
+    color: 'var(--colorNeutralForeground1)',
+    fontSize: '16px', // 减小字体
   },
-  helpList: {
-    paddingLeft: '20px',
-    margin: '12px 0',
-    '& li': {
-      margin: '8px 0',
-      color: 'var(--colorNeutralForeground2)',
-    },
+
+  sectionIcon: {
+    fontSize: '16px', // 减小图标尺寸
+    color: 'var(--colorBrandBackground)',
   },
 });
 
@@ -167,7 +313,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     }
 
     setLoading(true);
-    setActivationStatus('activating');
+    setActivationStatus(ActivationStatus.ACTIVATING);
     setValidationResult({
       isValid: true,
       message: '正在验证激活码，请稍候...',
@@ -178,7 +324,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
       const response = await activationService.activateApplication({
         activationCode: activationCode.trim(),
         userConfig: {
-          username: 'HOUT用户',
+          username: 'ADMT用户',
           language: 'zh-CN',
           theme: 'light',
           autoStart: false,
@@ -194,7 +340,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
 
       if (response.success) {
         // 更新欢迎页面状态
-        setActivationStatus('activated');
+        setActivationStatus(ActivationStatus.ACTIVATED);
         setValidationResult({
           isValid: true,
           message: response.message || '激活成功！',
@@ -220,7 +366,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
           expiryDate,
           features: response.features || [],
           userConfig: {
-            username: 'HOUT用户',
+            username: 'ADMT用户',
             language: 'zh-CN',
             theme: 'light',
             autoStart: false,
@@ -250,32 +396,31 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
           onSuccess(response);
         }
       } else {
-        setActivationStatus('activation_failed');
+        setActivationStatus(ActivationStatus.ACTIVATION_FAILED);
         setValidationResult({
           isValid: false,
           message: response.message || '激活失败',
         });
         setError(response.message || '激活失败，请检查激活码是否正确');
 
-        // 调用错误回调
-        if (onError) {
-          onError(response.message || '激活失败，请检查激活码是否正确');
-        }
+        // 不调用错误回调，避免触发上层的错误处理导致页面跳转或应用退出
+        // 错误信息已经在当前页面显示，用户可以重试
+        console.log('❌ 激活失败，错误信息已在页面显示，用户可重试');
       }
     } catch (error) {
       console.error('激活过程中发生错误:', error);
-      setActivationStatus('activation_failed');
+      setActivationStatus(ActivationStatus.ACTIVATION_FAILED);
       setValidationResult({
         isValid: false,
         message: '激活失败',
+        details: error instanceof Error ? error.message : '未知错误'
       });
       const errorMessage = error instanceof Error ? error.message : '网络错误，请稍后重试';
       setError(errorMessage);
 
-      // 调用错误回调
-      if (onError) {
-        onError(errorMessage);
-      }
+      // 不调用错误回调，避免触发上层的错误处理导致页面跳转或应用退出
+      // 错误信息已经在当前页面显示，用户可以重试
+      console.log('❌ 激活过程中发生错误，错误信息已在页面显示，用户可重试');
     } finally {
       setLoading(false);
     }
@@ -283,7 +428,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
 
   // 处理重试
   const handleRetry = () => {
-    setActivationStatus('not_activated');
+    setActivationStatus(ActivationStatus.NOT_ACTIVATED);
     setValidationResult(null);
     setError(null);
     setActivationCode('');
@@ -291,148 +436,141 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* 头部 */}
+      {/* 上半部分 - 页面标题区域 */}
       <div className={styles.header}>
-        <Key24Regular className={styles.icon} />
         <Title1 className={styles.title}>
-          激活玩机管家
+          激活玩机管家 -目前您还未激活/已过期，请按照步骤进行激活
         </Title1>
-        <Body1 className={styles.subtitle}>
-          请输入您的激活码以解锁完整功能。激活码通常由数字、字母和连字符组成。
-        </Body1>
+
       </div>
 
-      {/* 激活表单 */}
-      <div className={styles.activationForm}>
-        <Card className={styles.inputCard}>
-          <Field
-            label="激活码"
-            hint="格式示例：ABC123-DEF456-GHI789"
-            validationMessage={error || undefined}
-            validationState={error ? 'error' : 'none'}
-          >
-            <Input
-              className={styles.activationInput}
-              value={activationCode}
-              onChange={(_, data) => handleActivationCodeChange(data.value)}
-              placeholder="请输入激活码"
-              disabled={isLoading || activationStatus === 'activated'}
-              size="large"
-              autoComplete="off"
-              data-form-type="other"
-              data-lpignore="true"
-              spellCheck={false}
-              autoCorrect="off"
-              autoCapitalize="off"
-            />
-          </Field>
-
-          {/* 验证结果 */}
-          {validationResult && (
-            <Card className={`${styles.statusCard} ${validationResult.isValid ? styles.statusSuccess : styles.statusError}`}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                {validationResult.isValid ? (
-                  <Checkmark24Regular className={styles.statusIcon} style={{ color: 'var(--colorPaletteGreenForeground1)' }} />
-                ) : (
-                  <Dismiss24Regular className={styles.statusIcon} style={{ color: 'var(--colorPaletteRedForeground1)' }} />
-                )}
-                <div style={{ textAlign: 'center' }}>
-                  <Text size={400} weight="semibold">
-                    {validationResult.message}
-                  </Text>
-                  {validationResult.details && (
-                    <Text size={300} style={{ color: 'var(--colorNeutralForeground2)', marginTop: '4px', display: 'block' }}>
-                      {validationResult.details}
-                    </Text>
-                  )}
+      {/* 下半部分 - 上下两部分布局 */}
+      <div className={styles.mainContent}>
+        {/* 上部分 - 激活方法说明和帮助信息 */}
+        <div className={styles.topSection}>
+          {/* 激活步骤说明 */}
+          <Card className={styles.infoCard}>
+          <Body1 className={styles.subtitle}>
+        为了更好的维护和开发,也为了防范泛滥的盗卖，我们使用激活码来控制使用，激活码获取方式完全免费
+      </Body1>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <img
+                src="/wxgzh-qr.jpg"
+                alt="公众号二维码"
+                className={styles.qrCodeImage}
+              />
+                <img
+                src="/wxgzh-step2.jpg"
+                alt="公众号二维码2"
+                className={styles.Image}
+              />
+              <div style={{ flex: 1 }}>
+                <ol className={styles.stepsList}>
+                  <li>
+                    <div className={styles.stepNumber}>1</div>
+                    <div className={styles.stepText}>
+                      扫描二维码关注公众号
+                    </div>
+                  </li>
+                  <li>
+                    <div className={styles.stepNumber}>2</div>
+                    <div className={styles.stepText}>
+                      点击菜单的"领创账号"，再点击"ADMT激活码"
+                    </div>
+                  </li>
+                  <li>
+                    <div className={styles.stepNumber}>3</div>
+                    <div className={styles.stepText}>
+                      根据提示获取激活码并在下方输入
+                    </div>
+                  </li>
+                </ol>
                 </div>
               </div>
-            </Card>
-          )}
 
-          {/* 激活中状态 */}
-          {activationStatus === 'activating' && (
-            <Card className={styles.statusCard}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <Spinner size="medium" />
-                <Text size={400}>
-                  正在激活，请稍候...
-                </Text>
-              </div>
-            </Card>
-          )}
+            </div>
+          </Card>
 
-          {/* 激活按钮 */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-            {activationStatus === 'activated' ? (
-              <Button
-                appearance="primary"
-                className={styles.validateButton}
-                icon={<Checkmark24Regular />}
-                disabled
+        </div>
+
+        {/* 下部分 - 激活功能区域 */}
+        <div className={styles.bottomSection}>
+          <Card className={styles.activationCard}>
+            <Field label="激活码" validationMessage={error}>
+              <Input
+                className={styles.activationInput}
+                value={activationCode}
+                onChange={(e) => handleActivationCodeChange(e.target.value)}
+                placeholder="请输入激活码"
+              />
+            </Field>
+            <Button
+              className={styles.validateButton}
+              onClick={handleActivate}
+              disabled={isLoading}
+              appearance="primary"
+            >
+              {isLoading ? <Spinner /> : '验证激活码'}
+            </Button>
+            {validationResult && (
+              <Card
+                className={styles.statusCard}
+                style={{
+                  backgroundColor: validationResult.isValid
+                    ? 'var(--colorPaletteGreenBackground2)'
+                    : 'var(--colorPaletteRedBackground2)',
+                  borderColor: validationResult.isValid
+                    ? 'var(--colorPaletteGreenBorder2)'
+                    : 'var(--colorPaletteRedBorder2)',
+                }}
               >
-                已激活
-              </Button>
-            ) : activationStatus === 'activation_failed' ? (
-              <>
-                <Button
-                  appearance="secondary"
-                  onClick={handleRetry}
-                  disabled={isLoading}
-                >
-                  重新输入
-                </Button>
-                <Button
-                  appearance="primary"
-                  className={styles.validateButton}
-                  onClick={handleActivate}
-                  disabled={!activationCode.trim() || isLoading}
-                  icon={isLoading ? <Spinner size="tiny" /> : <Shield24Regular />}
-                >
-                  重试激活
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  appearance="secondary"
-                  onClick={onSkip}
-                  disabled={isLoading}
-                >
-                  退出应用
-                </Button>
-                <Button
-                  appearance="primary"
-                  className={styles.validateButton}
-                  onClick={handleActivate}
-                  disabled={!activationCode.trim() || isLoading}
-                  icon={isLoading ? <Spinner size="tiny" /> : <Shield24Regular />}
-                >
-                  {isLoading ? '激活中...' : '激活'}
-                </Button>
-              </>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {validationResult.isValid ? (
+                    <Checkmark24Regular className={styles.statusIcon} />
+                  ) : (
+                    <Dismiss24Regular className={styles.statusIcon} />
+                  )}
+                  <div>{validationResult.message}</div>
+                </div>
+                {validationResult.details && (
+                  <Caption1>{validationResult.details}</Caption1>
+                )}
+              </Card>
             )}
-          </div>
-        </Card>
-
-        {/* 帮助信息 */}
-        <div className={styles.helpSection}>
-          <Title2 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Info24Regular style={{ fontSize: '20px' }} />
-            激活帮助
-          </Title2>
-          <Body1 style={{ marginBottom: '12px' }}>
-            如果您在激活过程中遇到问题，请检查以下事项：
-          </Body1>
-          <ul className={styles.helpList}>
-            <li>确保激活码输入正确，注意大小写和连字符</li>
-            <li>检查网络连接是否正常</li>
-            <li>确认激活码未过期且未被使用</li>
-            <li>如果问题持续存在，请联系技术支持</li>
-          </ul>
-          <Caption1 style={{ color: 'var(--colorNeutralForeground2)' }}>
-            激活码格式通常为：字母数字-字母数字-字母数字，例如：ABC123-DEF456-GHI789
-          </Caption1>
+            {error && (
+              <div style={{ marginTop: '16px' }}>
+                <MessageBar intent="error" style={{ marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontWeight: 'bold' }}>激活失败</div>
+                    <div>{error}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                      请检查激活码是否正确，或检查网络连接后重试
+                    </div>
+                  </div>
+                </MessageBar>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <Button
+                    className={styles.validateButton}
+                    onClick={handleRetry}
+                    appearance="primary"
+                    style={{ flex: 1 }}
+                  >
+                    清空重试
+                  </Button>
+                  <Button
+                    className={styles.validateButton}
+                    onClick={handleActivate}
+                    appearance="secondary"
+                    disabled={!activationCode.trim() || isLoading}
+                    style={{ flex: 1 }}
+                  >
+                    重新验证
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
         </div>
       </div>
     </div>

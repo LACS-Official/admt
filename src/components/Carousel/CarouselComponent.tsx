@@ -79,38 +79,34 @@ interface CarouselSlide {
   gradient?: string;
 }
 
+// 默认轮播图数据
+const defaultSlides: CarouselSlide[] = [
+  {
+    id: "1",
+    title: "欢迎使用 HOUT 工具箱",
+    description: "现代化的Android设备管理工具",
+    gradient: "linear-gradient(135deg, #0078d4 0%, #106ebe 50%, #005a9e 100%)",
+  },
+  {
+    id: "2",
+    title: "强大的设备管理功能",
+    description: "实时设备检测、详细信息展示",
+    gradient: "linear-gradient(135deg, #16a085 0%, #27ae60 50%, #2ecc71 100%)",
+  },
+  {
+    id: "3",
+    title: "个性化设置体验",
+    description: "丰富的自定义选项和主题切换",
+    gradient: "linear-gradient(135deg, #8e44ad 0%, #9b59b6 50%, #e74c3c 100%)",
+  },
+];
+
 interface CarouselProps {
   slides?: CarouselSlide[];
   autoPlay?: boolean;
   autoPlayInterval?: number;
 }
 
-const defaultSlides: CarouselSlide[] = [
-  {
-    id: "1",
-    title: "欢迎使用 HOUT",
-    description: "专业的Android设备管理工具，让设备操作更简单高效",
-    gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-  },
-  {
-    id: "2", 
-    title: "ADB专区",
-    description: "强大的ADB工具集，轻松管理您的Android设备",
-    gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-  },
-  {
-    id: "3",
-    title: "刷机专区",
-    description: "安全的刷机工具，支持解锁、刷机、备份等功能",
-    gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-  },
-  {
-    id: "4",
-    title: "设备管理",
-    description: "文件管理、屏幕镜像等实用功能一应俱全",
-    gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-  },
-];
 
 const CarouselComponent: React.FC<CarouselProps> = ({
   slides = defaultSlides,
