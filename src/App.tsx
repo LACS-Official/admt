@@ -1,9 +1,9 @@
 
 import { useEffect, useState } from "react";
 import { makeStyles } from "@fluentui/react-components";
-import TitleBar from "./components/TitleBar/TitleBar";
+import TitleBar from "./components/Bar/TitleBar";
 import MainContent from "./components/MainContent/MainContent";
-import StatusBar from "./components/StatusBar/StatusBar";
+import StatusBar from "./components/Bar/StatusBar";
 
 import StartupFlowManager from "./components/StartupFlow/StartupFlowManager";
 

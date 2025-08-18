@@ -21,7 +21,7 @@ import DeviceSettingsPanel from "./DeviceSettingsPanel";
 import DisplaySettingsPanel from "./DisplaySettingsPanel";
 import OtherSettingsPanel from "./OtherSettingsPanel";
 import LogsPanel from "./LogsPanel";
-import PrivacyManagementPanel from "../Privacy/PrivacyManagementPanel";
+import PrivacyManagementPanel from "./PrivacyManagementPanel";
 
 const useStyles = makeStyles({
   container: {

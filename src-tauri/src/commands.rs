@@ -2601,14 +2601,12 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
 
                         // 退出当前应用
                         app_handle.exit(0);
-
-                        // 这行代码实际上不会执行，因为应用已经退出
-                        Ok(CommandResult {
+                        return Ok(CommandResult {
                             success: true,
                             output: "应用正在重启...".to_string(),
                             error: None,
                             exit_code: Some(0),
-                        })
+                        });
                     }
                     Err(e) => {
                         log::error!("Failed to launch restart script: {}", e);
@@ -2618,13 +2616,12 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
                         // 尝试使用Tauri的内置重启功能作为备用
                         log::info!("Falling back to Tauri restart method");
                         app_handle.restart();
-
-                        Ok(CommandResult {
+                        return Ok(CommandResult {
                             success: true,
                             output: "应用正在重启... (备用方法)".to_string(),
                             error: None,
                             exit_code: Some(0),
-                        })
+                        });
                     }
                 }
             }
@@ -2634,13 +2631,12 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
                 // 尝试使用Tauri的内置重启功能作为备用
                 log::info!("Falling back to Tauri restart method");
                 app_handle.restart();
-
-                Ok(CommandResult {
+                return Ok(CommandResult {
                     success: true,
                     output: "应用正在重启... (备用方法)".to_string(),
                     error: None,
                     exit_code: Some(0),
-                })
+                });
             }
         }
     }
@@ -2649,7 +2645,6 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
     {
         // 非Windows系统使用Tauri的内置重启功能
         app_handle.restart();
-
         Ok(CommandResult {
             success: true,
             output: "应用正在重启...".to_string(),

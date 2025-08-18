@@ -13,16 +13,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@fluentui/react-components';
-import { useStartupFlowStore, StartupPhase, UserType } from '../../stores/startupFlowStore';
-import { OptimizedUserBehaviorService } from '../../services/optimizedUserBehaviorService';
-import { SecurityConfigManager } from '../../config/securityConfig';
-import { activationService } from '../../services/activationService';
-import { usePrivacyConsentStore, shouldShowPrivacyConsent, shouldExitApplication } from '../../stores/privacyConsentStore';
-import { announcementService } from '../../services/announcementService';
+import { useStartupFlowStore, StartupPhase, UserType } from '@/stores/startupFlowStore';
+import { OptimizedUserBehaviorService } from '@/services/optimizedUserBehaviorService';
+import { SecurityConfigManager } from '@/config/securityConfig';
+import { activationService } from '@/services/activationService';
+import { usePrivacyConsentStore, shouldShowPrivacyConsent, shouldExitApplication } from '@/stores/privacyConsentStore';
 
 // 导入各个阶段的组件
 import VersionChecker from './VersionChecker';
-import UnifiedLoadingVersionChecker from './UnifiedLoadingVersionChecker';
+import UnifiedLoadingVersionChecker from './App_Loading';
 import ForceUpdateModal from './ForceUpdateModal';
 import WelcomePage from '../Welcome/WelcomePage';
 import InitialSetupWizard from './InitialSetupWizard';
@@ -30,8 +29,7 @@ import ActivationPage from '../Welcome/pages/ActivationPage';
 import DebugPanel from '../Debug/DebugPanel';
 import { devToolsManager, isDevelopment } from '../../utils/devtools';
 import ActivationExpiredHandler from './ActivationExpiredHandler';
-import PrivacyConsentDialog from '../Privacy/PrivacyConsentDialog';
-import AnnouncementDisplay from './AnnouncementDisplay';
+import PrivacyConsentDialog from './PrivacyConsentDialog';
 
 const useStyles = makeStyles({
   container: {
@@ -49,7 +47,6 @@ interface StartupFlowManagerProps {
 const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onError }) => {
   const styles = useStyles();
   const [isInitialized, setIsInitialized] = useState(false);
-  const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
   const [showPrivacyConsent, setShowPrivacyConsent] = useState(false);
   const [showActivationValidator, setShowActivationValidator] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
@@ -363,24 +360,10 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
   const handleVersionCheckComplete = async (result: any) => {
     console.log('✅ 版本检查完成，结果:', result);
     setVersionCheckCompleted(true);
-
-    // 检查是否有重要公告需要显示
-    try {
-      const hasImportantAnnouncements = await announcementService.hasImportantAnnouncements();
-
-      if (hasImportantAnnouncements) {
-        console.log('📢 检测到重要公告，显示公告对话框');
-        setShowAnnouncementDialog(true);
-      } else {
-        console.log('📢 无重要公告，直接进入下一阶段');
-        setAnnouncementDisplayed(true);
-        proceedToNextPhase();
-      }
-    } catch (error) {
-      console.warn('⚠️ 检查公告失败，继续启动流程:', error);
-      setAnnouncementDisplayed(true);
-      proceedToNextPhase();
-    }
+    setAnnouncementDisplayed(true);
+    
+    // 直接进入下一阶段，因为公告已经在UnifiedLoadingVersionChecker中显示过了
+    proceedToNextPhase();
   };
 
   const handleVersionCheckError = async (error: string) => {
@@ -407,12 +390,6 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     }, 3000);
   };
 
-  const handleAnnouncementClose = () => {
-    console.log('📢 公告对话框关闭');
-    setShowAnnouncementDialog(false);
-    setAnnouncementDisplayed(true);
-    proceedToNextPhase();
-  };
 
   const proceedToNextPhase = () => {
     // 版本检查和公告显示完成后，进入首次使用检测
@@ -577,12 +554,6 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
       {/* 主要启动流程界面 */}
       {renderCurrentPhase()}
 
-      {/* 公告显示对话框 */}
-      <AnnouncementDisplay
-        open={showAnnouncementDialog}
-        onClose={handleAnnouncementClose}
-        onContinue={handleAnnouncementClose}
-      />
 
       {/* 隐私政策同意对话框 */}
       <PrivacyConsentDialog

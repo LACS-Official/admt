@@ -352,13 +352,11 @@ export const shouldShowPrivacyConsent = (): boolean => {
   }
   
   // 任何一项被撤销
-  if (!state.hasAcceptedPrivacyPolicy || 
-      !state.hasAcceptedUserAgreement || 
-      !state.hasAcceptedDataCollection) {
-    return true;
-  }
+  return !state.hasAcceptedPrivacyPolicy ||
+      !state.hasAcceptedUserAgreement ||
+      !state.hasAcceptedDataCollection;
   
-  return false;
+
 };
 
 // 辅助函数：检查是否应该退出应用
