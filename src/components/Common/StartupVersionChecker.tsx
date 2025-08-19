@@ -22,14 +22,22 @@ import {
   ToastBody,
   Toaster,
   useToastController,
-  ToastIntent
+  ToastIntent,
+  Card,
+  CardHeader,
+  CardPreview,
+  CardFooter,
+  Link,
+  Divider
 } from '@fluentui/react-components';
 import {
   Open24Regular,
   Warning24Regular,
   Checkmark24Regular,
   Dismiss24Regular,
-  ArrowClockwise24Regular
+  ArrowClockwise24Regular,
+  CheckmarkCircle24Filled,
+  ArrowDownload24Regular
 } from '@fluentui/react-icons';
 import { versionService } from '../../services/versionService';
 import { VersionCheckResult } from '../../types/app';
@@ -47,7 +55,7 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
-    padding: tokens.spacingVerticalM,
+    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
     backgroundColor: tokens.colorNeutralBackground2,
     borderRadius: tokens.borderRadiusMedium,
   },
@@ -90,6 +98,37 @@ const useStyles = makeStyles({
     color: tokens.colorPaletteRedForeground1,
     marginBottom: tokens.spacingVerticalM,
   },
+  successCard: {
+    maxWidth: '400px',
+    margin: '0 auto',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  successHeader: {
+    textAlign: 'center',
+  },
+  successIcon: {
+    color: tokens.colorPaletteGreenForeground1,
+    fontSize: '32px',
+  },
+  updateCard: {
+    margin: `${tokens.spacingVerticalM} 0`,
+  },
+  updateHeader: {
+    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`,
+  },
+  updateBody: {
+    padding: `0 ${tokens.spacingHorizontalM}`,
+  },
+  updateFooter: {
+    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM} ${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
+  },
+  downloadLink: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalXS,
+    marginTop: tokens.spacingVerticalXS,
+  }
 });
 
 interface StartupVersionCheckerProps {
@@ -135,7 +174,7 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     setIsChecking(true);
     setError(null);
     setTimeoutReached(false);
-    
+
     // 设置10秒超时
     const timeoutId = setTimeout(() => {
       setTimeoutReached(true);
@@ -156,9 +195,9 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
 
       console.log('版本检查结果:', result);
       setCheckResult(result);
-      
-      if (result.needsUpdate && result.isForceUpdate) {
-        // 需要强制更新
+
+      if (result.needsUpdate) {
+        // 有更新时统一按强制更新处理
         setShowDialog(true);
         onCheckComplete(true, result);
       } else {
@@ -166,14 +205,14 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
         showSuccessToast();
         onCheckComplete(false, result);
       }
-      
+
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (timeoutReached) {
         return;
       }
-      
+
       const errorMessage = error instanceof Error ? error.message : '版本检查失败';
       console.error('版本检查失败:', error);
       setError(errorMessage);
@@ -196,8 +235,9 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       downloadUrl = checkResult.updateInfo.downloadLinks.official;
     } else if (checkResult?.updateInfo?.downloadLinks?.github) {
       downloadUrl = checkResult.updateInfo.downloadLinks.github;
-    } else if (checkResult?.updateInfo?.downloadUrl) {
-      downloadUrl = checkResult.updateInfo.downloadUrl;
+    } else if (checkResult?.updateInfo && 'downloadUrl' in checkResult.updateInfo) {
+      // 兼容旧版本的 downloadUrl 字段
+      downloadUrl = (checkResult.updateInfo as any).downloadUrl;
     }
 
     if (downloadUrl) {
@@ -259,6 +299,8 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     onCheckComplete(false);
   }, [onAllowOfflineUse, onCheckComplete]);
 
+
+
   // 组件挂载时开始版本检查
   useEffect(() => {
     performVersionCheck();
@@ -274,6 +316,38 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     );
   }
 
+  // 如果不需要显示对话框且没有错误，显示成功卡片
+  if (!showDialog && !error && checkResult && !checkResult.needsUpdate) {
+    return (
+      <>
+        <Toaster />
+        <Card className={styles.successCard}>
+          <CardHeader
+            header={
+              <Text weight="semibold" className={styles.successHeader}>
+                版本检查完成
+              </Text>
+            }
+            description="您的应用程序已是最新版本"
+            image={<CheckmarkCircle24Filled className={styles.successIcon} />}
+          />
+          <CardPreview>
+            <div style={{ padding: tokens.spacingVerticalS }}>
+              <Text size={300} align="center">
+                当前版本: {checkResult.currentVersion}
+              </Text>
+            </div>
+          </CardPreview>
+          <CardFooter>
+            <Button appearance="primary" onClick={() => onCheckComplete(false, checkResult)}>
+              继续使用
+            </Button>
+          </CardFooter>
+        </Card>
+      </>
+    );
+  }
+
   // 如果不需要显示对话框，返回空
   if (!showDialog) {
     return <Toaster />;
@@ -282,19 +356,20 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
   return (
     <>
       <Toaster />
-      <Dialog 
-        open={showDialog} 
-        onOpenChange={() => {
-          // 强制更新时不允许关闭对话框
-          if (!checkResult?.isForceUpdate && error) {
-            setShowDialog(false);
+      <Dialog
+        open={showDialog}
+        onOpenChange={(_event, data) => {
+          // 有更新时不允许关闭对话框，只有错误状态时才允许关闭
+          if (error && !checkResult?.needsUpdate) {
+            setShowDialog(data.open);
           }
+          // 有更新时强制阻止关闭对话框
         }}
         modalType="modal"
       >
         <DialogSurface className={styles.dialog}>
           <DialogTitle>
-            {error ? '版本检查失败' : '发现新版本'}
+            {error ? '版本检查失败' : checkResult?.needsUpdate ? '发现新版本' : '版本检查完成'}
           </DialogTitle>
           <DialogBody>
             <div className={styles.content}>
@@ -318,46 +393,83 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
                     </Text>
                   )}
                 </>
-              ) : checkResult ? (
-                // 强制更新状态
-                <>
-                  <div className={styles.forceUpdateContainer}>
-                    <Warning24Regular className={styles.warningIcon} />
-                    <Text size={600} weight="semibold" block style={{ marginBottom: '16px' }}>
-                      需要更新到最新版本
-                    </Text>
-                    <Text size={400} style={{ color: tokens.colorNeutralForeground2 }}>
-                      检测到新版本，请更新后继续使用
-                    </Text>
-                  </div>
-                  
-                  <div className={styles.versionInfo}>
-                    <div className={styles.versionRow}>
-                      <Text weight="semibold">当前版本:</Text>
-                      <Text>{checkResult.currentVersion}</Text>
-                    </div>
-                    <div className={styles.versionRow}>
-                      <Text weight="semibold">最新版本:</Text>
-                      <Text>{checkResult.latestVersion}</Text>
-                    </div>
-                  </div>
-                  
-                  {checkResult.updateInfo && (
-                    <div className={styles.releaseNotes}>
-                      <Text weight="semibold" block style={{ marginBottom: '8px' }}>
-                        更新说明:
+              ) : checkResult && checkResult.needsUpdate ? (
+                // 有更新状态 - 统一按强制更新处理
+                <Card className={styles.updateCard}>
+                  <CardHeader
+                    header={
+                      <Text weight="semibold">
+                        需要强制更新
                       </Text>
-                      <Text size={300}>
-                        {checkResult.updateInfo.releaseNotes || '暂无更新说明'}
+                    }
+                    description={
+                      <Text size={200}>
+                        检测到新版本，必须更新后才能继续使用应用
                       </Text>
-                      {checkResult.updateInfo.fileSize && (
-                        <Text size={200} style={{ marginTop: '8px', color: tokens.colorNeutralForeground3 }}>
-                          文件大小: {checkResult.updateInfo.fileSize}
+                    }
+                    image={<Warning24Regular />}
+                  />
+                  
+                  <div className={styles.updateBody}>
+                    <div className={styles.versionInfo}>
+                      <div className={styles.versionRow}>
+                        <Text weight="semibold">当前版本:</Text>
+                        <Text>{checkResult.currentVersion}</Text>
+                      </div>
+                      <div className={styles.versionRow}>
+                        <Text weight="semibold">最新版本:</Text>
+                        <Text>{checkResult.latestVersion}</Text>
+                      </div>
+                    </div>
+                    
+                    {checkResult.updateInfo && (
+                      <>
+                        <Divider style={{ margin: `${tokens.spacingVerticalM} 0` }} />
+                        
+                        <Text weight="semibold" block>
+                          更新说明:
                         </Text>
-                      )}
+                        <div className={styles.releaseNotes}>
+                          <Text size={300}>
+                            {checkResult.updateInfo.releaseNotes || '暂无更新说明'}
+                          </Text>
+                          {checkResult.updateInfo.fileSize && (
+                            <Text size={200} style={{ marginTop: '8px', color: tokens.colorNeutralForeground3 }}>
+                              文件大小: {checkResult.updateInfo.fileSize}
+                            </Text>
+                          )}
+                        </div>
+
+                      </>
+                    )}
+                  </div>
+                  
+                  <CardFooter className={styles.updateFooter}>
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                      此更新包含重要修复，必须更新后才能继续使用
+                    </Text>
+                  </CardFooter>
+                </Card>
+              ) : checkResult ? (
+                // 无更新状态（在对话框中显示）
+                <Card className={styles.updateCard}>
+                  <CardHeader
+                    header={
+                      <Text weight="semibold">
+                        当前是最新版本
+                      </Text>
+                    }
+                    description="您的应用程序已是最新版本"
+                    image={<CheckmarkCircle24Filled className={styles.successIcon} />}
+                  />
+                  <CardPreview>
+                    <div style={{ padding: tokens.spacingVerticalS }}>
+                      <Text size={300} align="center">
+                        当前版本: {checkResult.currentVersion}
+                      </Text>
                     </div>
-                  )}
-                </>
+                  </CardPreview>
+                </Card>
               ) : null}
             </div>
           </DialogBody>
@@ -365,30 +477,43 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
             {error ? (
               // 错误状态的按钮
               <div className={styles.errorActions}>
-                <Button 
-                  appearance="secondary" 
+                <Button
+                  appearance="secondary"
                   onClick={handleOfflineUse}
-                  icon={<Dismiss24Regular />}
                 >
                   离线使用
                 </Button>
-                <Button 
-                  appearance="primary" 
+                <Button
+                  appearance="primary"
                   onClick={handleRetry}
                   icon={<ArrowClockwise24Regular />}
                 >
                   重试
                 </Button>
               </div>
-            ) : (
-              // 强制更新状态的按钮
+            ) : checkResult?.needsUpdate ? (
+              // 有更新时统一显示立即更新按钮
               <div className={styles.actions}>
                 <Button
                   appearance="primary"
                   onClick={handleUpdateNow}
-                  icon={<Open24Regular />}
+                  icon={<ArrowDownload24Regular />}
+                  size='large'
                 >
-                  前往下载
+                  立即更新
+                </Button>
+              </div>
+            ) : (
+              // 无更新状态的按钮
+              <div className={styles.actions}>
+                <Button
+                  appearance="primary"
+                  onClick={() => {
+                    setShowDialog(false);
+                    onCheckComplete(false, checkResult || undefined);
+                  }}
+                >
+                  继续使用
                 </Button>
               </div>
             )}

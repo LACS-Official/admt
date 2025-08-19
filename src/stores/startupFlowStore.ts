@@ -32,9 +32,6 @@ export interface VersionCheckResult {
     releaseDate: string;
     downloadLinks?: {
       official?: string;
-      quark?: string;
-      baidu?: string;
-      github?: string;
     };
     fileSize?: string;
     isStable?: boolean;

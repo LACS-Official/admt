@@ -605,7 +605,7 @@ curl "https://your-domain.com/app/software/tags?includeCount=true&minCount=5" \
       }
     ]
   }
-}
+
 ```
 
 ### 🆕 版本相关字段说明
