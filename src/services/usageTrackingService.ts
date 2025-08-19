@@ -43,6 +43,7 @@ export class UsageTrackingService {
   private sessionId: string;
   private hasTrackedThisSession = false;
   private deviceFingerprint: string | null = null;
+  private lastRequestTimes: Map<string, number> = new Map(); // IP级别频率限制
 
   private constructor() {
     this.sessionId = this.generateSessionId();
@@ -86,28 +87,53 @@ export class UsageTrackingService {
    */
   public async trackMainPageEntry(): Promise<void> {
     try {
+      console.log('🚀 trackMainPageEntry 方法被调用');
+
       // 检查是否已初始化
       if (!this.isInitialized) {
+        console.log('🔧 服务未初始化，开始初始化...');
         await this.initialize();
+      } else {
+        console.log('✅ 服务已初始化');
       }
 
       // 检查本会话是否已经发送过数据
       if (this.hasTrackedThisSession) {
         console.log('📊 本会话已发送过使用数据，跳过重复发送');
         return;
+      } else {
+        console.log('📊 本会话尚未发送使用数据，继续检查...');
       }
 
       // 检查用户是否同意隐私政策
-      if (!this.canCollectData()) {
+      const canCollect = this.canCollectData();
+      if (!canCollect) {
         console.log('🚫 用户未同意数据收集，跳过使用数据发送');
         return;
+      } else {
+        console.log('✅ 用户已同意数据收集，继续发送...');
       }
 
       console.log('📊 开始发送用户使用数据...');
 
       // 获取安全配置
       const securityConfig = SecurityConfigManager.getInstance();
+
+      // 确保安全配置已初始化
+      try {
+        await securityConfig.initialize();
+        console.log('✅ 安全配置初始化成功');
+      } catch (error) {
+        console.error('❌ 安全配置初始化失败:', error);
+        throw error;
+      }
+
       const config = securityConfig.getConfig();
+      console.log('📋 获取到安全配置:', {
+        api_base_url: config.api_base_url,
+        software_id: config.software_id,
+        app_version: config.app_version
+      });
 
       // 准备使用数据
       const usageData: UsageData = {
@@ -119,11 +145,19 @@ export class UsageTrackingService {
       };
 
       // 发送数据到API
+      console.log('📤 准备发送使用数据:', {
+        softwareId: usageData.softwareId,
+        softwareName: usageData.softwareName,
+        softwareVersion: usageData.softwareVersion,
+        deviceFingerprint: usageData.deviceFingerprint.substring(0, 8) + '...',
+        used: usageData.used
+      });
+
       const success = await this.sendUsageData(usageData);
 
       if (success) {
         this.hasTrackedThisSession = true;
-        console.log('✅ 用户使用数据发送成功');
+        console.log('✅ 用户使用数据发送成功，会话状态已更新');
       } else {
         console.warn('⚠️ 用户使用数据发送失败，但不影响应用正常使用');
       }
@@ -139,7 +173,16 @@ export class UsageTrackingService {
    */
   private canCollectData(): boolean {
     const privacyStore = usePrivacyConsentStore.getState();
-    
+
+    // 详细检查每个隐私政策状态
+    const privacyStatus = {
+      hasCompletedPrivacySetup: privacyStore.hasCompletedPrivacySetup,
+      hasAcceptedPrivacyPolicy: privacyStore.hasAcceptedPrivacyPolicy,
+      hasAcceptedUserAgreement: privacyStore.hasAcceptedUserAgreement,
+      hasAcceptedDataCollection: privacyStore.hasAcceptedDataCollection,
+      dataCollectionTypes: privacyStore.dataCollectionTypes,
+    };
+
     // 检查用户是否已完成隐私设置并同意数据收集
     const hasConsent = privacyStore.hasCompletedPrivacySetup &&
                       privacyStore.hasAcceptedPrivacyPolicy &&
@@ -149,10 +192,11 @@ export class UsageTrackingService {
     // 检查是否允许收集用户行为数据
     const canCollectBehavior = privacyStore.canCollectUserBehavior();
 
-    console.log('🔍 数据收集权限检查:', {
+    console.log('🔍 详细的数据收集权限检查:', {
+      privacyStatus,
       hasConsent,
       canCollectBehavior,
-      canCollect: hasConsent && canCollectBehavior
+      finalResult: hasConsent && canCollectBehavior
     });
 
     return hasConsent && canCollectBehavior;
@@ -178,25 +222,16 @@ export class UsageTrackingService {
         used: data.used
       });
 
-      // 准备请求头
+      // 检查IP级别频率限制（10秒内只能发送一次）
+      if (!this.canSendRequest('usage')) {
+        console.log('⏰ IP频率限制：10秒内已发送过使用数据请求，跳过本次发送');
+        return true; // 返回true避免重复尝试
+      }
+
+      // 准备请求头 - 根据API文档，软件使用记录API无需任何认证头部
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'X-API-Key': config.api_key,
       };
-
-      // 如果启用严格用户代理验证，添加标准用户代理
-      if (config.enable_strict_user_agent) {
-        headers['User-Agent'] = `${config.app_id}/${config.app_version}`;
-      }
-
-      // 如果启用签名验证，生成请求签名
-      if (config.enable_signature) {
-        const timestamp = Date.now().toString();
-        const signature = await this.generateRequestSignature(data, timestamp, config);
-        headers['X-Timestamp'] = timestamp;
-        headers['X-Signature'] = signature;
-        headers['X-App-ID'] = config.app_id;
-      }
 
       const response = await fetch(url, {
         method: 'POST',
@@ -216,6 +251,10 @@ export class UsageTrackingService {
       }
 
       console.log('✅ 使用数据发送成功:', result.message);
+
+      // 记录请求时间用于频率限制
+      this.recordRequestTime('usage');
+
       return true;
 
     } catch (error) {
@@ -229,13 +268,21 @@ export class UsageTrackingService {
    */
   private async generateDeviceFingerprint(): Promise<void> {
     try {
+      console.log('🔑 开始生成设备指纹...');
       // 调用Tauri命令获取设备指纹
       const fingerprint: DetailedDeviceFingerprint = await invoke('get_detailed_device_fingerprint');
       this.deviceFingerprint = fingerprint.fingerprint;
 
       console.log('🔑 设备指纹生成成功:', this.deviceFingerprint.substring(0, 8) + '...');
+      console.log('🔑 设备指纹详细信息:', {
+        os: fingerprint.os,
+        arch: fingerprint.arch,
+        hostname: fingerprint.hostname,
+        timestamp: fingerprint.timestamp
+      });
     } catch (error) {
       console.error('❌ 生成设备指纹失败:', error);
+      console.log('🔄 尝试使用备用方案生成设备指纹...');
       // 使用备用方案生成简单指纹
       this.deviceFingerprint = this.generateFallbackFingerprint();
       console.log('🔑 使用备用设备指纹:', this.deviceFingerprint.substring(0, 8) + '...');
@@ -247,10 +294,10 @@ export class UsageTrackingService {
    */
   private generateFallbackFingerprint(): string {
     const userAgent = navigator.userAgent;
-    const platform = navigator.platform;
+    const platform = (navigator as any).userAgentData?.platform || 'unknown';
     const language = navigator.language;
     const timestamp = Date.now();
-    
+
     const data = `${userAgent}-${platform}-${language}-${timestamp}`;
     return this.simpleHash(data);
   }
@@ -275,47 +322,7 @@ export class UsageTrackingService {
     return `session_${Date.now()}_${Math.random().toString(36).substring(2)}`;
   }
 
-  /**
-   * 生成请求签名
-   */
-  private async generateRequestSignature(
-    data: UsageData,
-    timestamp: string,
-    config: any
-  ): Promise<string> {
-    try {
-      // 构建签名字符串
-      const signatureData = {
-        method: 'POST',
-        endpoint: '/api/user-behavior/usage',
-        timestamp,
-        app_id: config.app_id,
-        data: JSON.stringify(data)
-      };
 
-      // 按字母顺序排序并构建签名字符串
-      const sortedKeys = Object.keys(signatureData).sort();
-      const signatureString = sortedKeys
-        .map(key => `${key}=${signatureData[key as keyof typeof signatureData]}`)
-        .join('&');
-
-      // 添加签名密钥
-      const stringToSign = `${signatureString}&secret=${config.signature_secret}`;
-
-      console.log('🔐 生成签名字符串:', stringToSign.substring(0, 100) + '...');
-
-      // 使用简单哈希算法生成签名（生产环境应使用 HMAC-SHA256）
-      const signature = this.simpleHash(stringToSign);
-
-      console.log('🔐 生成签名:', signature.substring(0, 16) + '...');
-      return signature;
-
-    } catch (error) {
-      console.error('❌ 生成请求签名失败:', error);
-      // 返回一个默认签名，避免请求失败
-      return this.simpleHash(`${timestamp}_${config.app_id}_fallback`);
-    }
-  }
 
   /**
    * 重置会话状态（用于测试或重新启动）
@@ -336,6 +343,33 @@ export class UsageTrackingService {
       isInitialized: this.isInitialized,
       canCollectData: this.canCollectData()
     };
+  }
+
+  /**
+   * 检查是否可以发送请求（IP级别频率限制）
+   * @param endpoint API端点标识符
+   * @returns 是否可以发送请求
+   */
+  private canSendRequest(endpoint: string): boolean {
+    const now = Date.now();
+    const lastRequestTime = this.lastRequestTimes.get(endpoint);
+
+    if (!lastRequestTime) {
+      return true; // 首次请求
+    }
+
+    const timeDiff = now - lastRequestTime;
+    const rateLimitMs = 10 * 1000; // 10秒
+
+    return timeDiff >= rateLimitMs;
+  }
+
+  /**
+   * 记录请求时间
+   * @param endpoint API端点标识符
+   */
+  private recordRequestTime(endpoint: string): void {
+    this.lastRequestTimes.set(endpoint, Date.now());
   }
 }
 

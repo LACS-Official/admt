@@ -36,6 +36,7 @@ import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
 import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
+import { usageTrackingService } from "../../services/usageTrackingService";
 
 const useStyles = makeStyles({
   container: {
@@ -513,6 +514,33 @@ const MainContent: React.FC = () => {
       });
     }
   }, [selectedDevice?.properties]);
+
+  // 用户行为追踪 - 在MainContent组件挂载时发送使用数据（备用方案）
+  useEffect(() => {
+    const trackMainContentEntry = async () => {
+      try {
+        console.log('🏢 MainContent组件已挂载，开始备用追踪...');
+        console.log('🏢 当前时间:', new Date().toISOString());
+        console.log('🏢 组件挂载位置: MainContent.tsx useEffect');
+
+        // 延迟一段时间，确保HomePage组件有机会先执行
+        setTimeout(async () => {
+          try {
+            await usageTrackingService.trackMainPageEntry();
+            console.log('🏢 MainContent备用追踪调用完成');
+          } catch (error) {
+            console.error('❌ MainContent备用追踪失败:', error);
+          }
+        }, 2000); // 2秒延迟
+
+      } catch (error) {
+        console.error('❌ MainContent备用追踪设置失败:', error);
+      }
+    };
+
+    console.log('🏢 MainContent useEffect 被触发');
+    trackMainContentEntry();
+  }, []); // 空依赖数组，确保只在组件挂载时执行一次
 
   const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setCurrentView(data.value as AppView);
