@@ -459,18 +459,6 @@ const AdbToolsPanel: React.FC = () => {
                   <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                     <Button
                       appearance="subtle"
-                      icon={<ChevronDown24Regular />}
-                      size="small"
-                      onClick={() => setIsOutputCollapsed(!isOutputCollapsed)}
-                      style={{
-                        transform: isOutputCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-                        transition: "transform 0.2s ease",
-                      }}
-                    >
-                      {isOutputCollapsed ? "展开" : "折叠"}
-                    </Button>
-                    <Button
-                      appearance="subtle"
                       icon={<Copy24Regular />}
                       size="small"
                       onClick={copyOutput}

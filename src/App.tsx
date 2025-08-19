@@ -75,7 +75,7 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        logService.info('开始初始化 HOUT 应用...', 'App');
+        logService.info('开始初始化ADMT应用...', 'App');
 
         // 初始化应用状态
         initialize();
@@ -86,7 +86,7 @@ function App() {
         // 初始化过程
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        logService.info('HOUT 应用初始化完成', 'App');
+        logService.info('ADMT 应用初始化完成', 'App');
         setIsLoading(false);
         // 初始化完成后，启动流程会自动开始
       } catch (err) {

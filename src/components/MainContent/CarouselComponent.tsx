@@ -83,7 +83,7 @@ interface CarouselSlide {
 const defaultSlides: CarouselSlide[] = [
   {
     id: "1",
-    title: "欢迎使用 HOUT 工具箱",
+    title: "欢迎使用",
     description: "现代化的Android设备管理工具",
     gradient: "linear-gradient(135deg, #0078d4 0%, #106ebe 50%, #005a9e 100%)",
   },

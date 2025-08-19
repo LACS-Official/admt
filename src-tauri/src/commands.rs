@@ -2805,8 +2805,8 @@ pub async fn get_security_config() -> Result<SecurityConfig> {
         app_id: "wanjiguanjia-desktop-v1.0.0".to_string(),
         app_secret: "wjgj_2024_secure_app_secret_key_for_user_behavior_stats".to_string(),
         signature_secret: "signature_secret_2024_wanjiguanjia_user_behavior_api_protection".to_string(),
-        enable_signature: false, // 开发环境暂时禁用
-        enable_strict_user_agent: false, // 开发环境暂时禁用
+        enable_signature: true, // 启用签名验证
+        enable_strict_user_agent: true, // 启用严格用户代理验证
         app_version: "1.0.0".to_string(), // 应用版本号（测试强制更新）
         software_id: 1, // 软件ID，对应API中的软件ID
     };
@@ -2858,6 +2858,64 @@ pub async fn get_platform_info() -> Result<String> {
 #[tauri::command]
 pub async fn get_system_arch() -> Result<String> {
     Ok(std::env::consts::ARCH.to_string())
+}
+
+/// 详细设备指纹结构体
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetailedDeviceFingerprint {
+    pub fingerprint: String,
+    pub os: String,
+    pub arch: String,
+    pub hostname: String,
+    pub timestamp: i64,
+}
+
+/// 获取详细设备指纹（用于用户行为统计）
+#[tauri::command]
+pub async fn get_detailed_device_fingerprint() -> Result<DetailedDeviceFingerprint> {
+    log::info!("Generating detailed device fingerprint for usage tracking");
+
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    // 获取系统信息
+    let os = std::env::consts::OS.to_string();
+    let arch = std::env::consts::ARCH.to_string();
+    let hostname = hostname::get()
+        .unwrap_or_else(|_| std::ffi::OsString::from("unknown"))
+        .to_string_lossy()
+        .to_string();
+
+    // 获取当前时间戳
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    // 生成设备指纹
+    let mut hasher = DefaultHasher::new();
+    os.hash(&mut hasher);
+    arch.hash(&mut hasher);
+    hostname.hash(&mut hasher);
+
+    // 添加一些系统特征信息
+    if let Ok(username) = std::env::var("USERNAME").or_else(|_| std::env::var("USER")) {
+        username.hash(&mut hasher);
+    }
+
+    let fingerprint_hash = hasher.finish();
+    let fingerprint = format!("fp_{:016x}", fingerprint_hash);
+
+    let device_fingerprint = DetailedDeviceFingerprint {
+        fingerprint,
+        os,
+        arch,
+        hostname,
+        timestamp,
+    };
+
+    log::info!("Detailed device fingerprint generated successfully");
+    Ok(device_fingerprint)
 }
 
 /// 打开开发者工具（仅在调试模式下可用）

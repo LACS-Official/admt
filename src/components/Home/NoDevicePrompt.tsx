@@ -11,9 +11,21 @@ import {
   Phone24Regular,
   Settings24Regular,
   ArrowClockwise24Regular,
+  PlugDisconnected24Regular,
+  Open24Regular,
 } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
+  Bigcontainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    width: "100%",
+    padding: "40px 20px",
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
   container: {
     display: "flex",
     flexDirection: "column",
@@ -26,15 +38,136 @@ const useStyles = makeStyles({
     position: "relative",
     overflow: "hidden",
   },
+
+  // 添加水平排列容器的样式
+  horizontalContainer: {
+    display: "flex",
+    flexDirection: "row",
+    gap: "24px",
+    width: "100%",
+    maxWidth: "1100px",
+    marginBottom: "24px",
+    "@media screen and (max-width: 768px)": {
+      flexDirection: "column",
+      gap: "16px",
+    },
+  },
+
+  modeCard: {
+    padding: "20px",
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderRadius: "16px",
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    boxShadow: tokens.shadow16,
+    width: "100%",
+    flex: 1,
+    transition: "all 0.3s ease",
+    "&:hover": {
+      transform: "translateY(-4px)",
+      boxShadow: tokens.shadow28,
+    },
+    maxWidth: "200px",
+  },
+
+  modeTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: tokens.colorNeutralForeground1,
+    marginBottom: "16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  modeLink: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    backgroundColor: tokens.colorNeutralBackground2,
+    textDecoration: "none",
+    color: tokens.colorNeutralForeground1,
+    transition: "all 0.2s ease",
+    marginBottom: "8px",
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    "&:hover": {
+      backgroundColor: tokens.colorBrandBackground2,
+      borderColor: tokens.colorBrandStroke1,
+      color: tokens.colorBrandForeground1,
+    },
+    "&:last-child": {
+      marginBottom: "0",
+    }
+  },
+
+  linkText: {
+    fontSize: "15px",
+    fontWeight: "500",
+  },
+
+  linkIcon: {
+    fontSize: "16px",
+    color: tokens.colorNeutralForeground2,
+  },
+
+  troubleshooting: {
+    padding: "20px",
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderRadius: "16px",
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    boxShadow: tokens.shadow16,
+    width: "100%",
+    flex: 1,
+    transition: "all 0.3s ease",
+    "&:hover": {
+      transform: "translateY(-4px)",
+      boxShadow: tokens.shadow28,
+    },
+    minWidth: "300px",
+  },
+
+  troubleshootingTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: tokens.colorNeutralForeground1,
+    marginBottom: "16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  troubleshootingItem: {
+    fontSize: "16px",
+    color: tokens.colorNeutralForeground2,
+    lineHeight: "1.6",
+    padding: "10px 16px",
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: "12px",
+    marginBottom: "8px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    "&::before": {
+      content: "'•'",
+      color: tokens.colorBrandForeground1,
+      fontSize: "20px",
+    },
+    "&:last-child": {
+      marginBottom: "0",
+    }
+  },
   
   backgroundDecoration: {
     position: "absolute",
     top: "50%",
     left: "50%",
     transform: "translate(-50%, -50%)",
-    width: "400px",
-    height: "400px",
-    background: `radial-gradient(circle, ${tokens.colorBrandBackground2}15 0%, transparent 70%)`,
+    width: "600px",
+    height: "600px",
+    background: `radial-gradient(circle, ${tokens.colorBrandBackground2}25 0%, transparent 70%)`,
     borderRadius: "50%",
     pointerEvents: "none",
   },
@@ -43,8 +176,8 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "24px",
-    maxWidth: "500px",
+    gap: "32px",
+    maxWidth: "600px",
     textAlign: "center",
     position: "relative",
     zIndex: 1,
@@ -54,33 +187,33 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "16px",
-    marginBottom: "8px",
+    gap: "20px",
+    marginBottom: "12px",
   },
   
   mainIcon: {
-    fontSize: "64px",
+    fontSize: "72px",
     color: tokens.colorBrandForeground1,
-    filter: "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))",
+    filter: "drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15))",
   },
   
   connectionIcon: {
-    fontSize: "24px",
+    fontSize: "28px",
     color: tokens.colorNeutralForeground2,
     animation: "pulse 2s infinite",
   },
   
   title: {
-    fontSize: "24px",
-    fontWeight: "600",
+    fontSize: "28px",
+    fontWeight: "700",
     color: tokens.colorNeutralForeground1,
-    marginBottom: "8px",
+    marginBottom: "12px",
   },
   
   subtitle: {
-    fontSize: "16px",
+    fontSize: "17px",
     color: tokens.colorNeutralForeground2,
-    lineHeight: "1.5",
+    lineHeight: "1.6",
     marginBottom: "16px",
   },
   
@@ -89,7 +222,6 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "12px",
     width: "100%",
-    maxWidth: "400px",
   },
   
   step: {
@@ -106,47 +238,59 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "24px",
-    height: "24px",
+    width: "28px",
+    height: "28px",
     borderRadius: "50%",
     backgroundColor: tokens.colorBrandBackground,
     color: tokens.colorNeutralForegroundOnBrand,
-    fontSize: "12px",
+    fontSize: "14px",
     fontWeight: "600",
     flexShrink: 0,
   },
   
   stepText: {
-    fontSize: "14px",
+    fontSize: "15px",
     color: tokens.colorNeutralForeground1,
-    lineHeight: "1.4",
+    lineHeight: "1.5",
+    fontWeight: "500",
   },
   
   scanningIndicator: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "12px 20px",
+    gap: "10px",
+    padding: "14px 24px",
     backgroundColor: tokens.colorBrandBackground2,
-    borderRadius: "20px",
+    borderRadius: "24px",
     border: `1px solid ${tokens.colorBrandStroke1}`,
+    boxShadow: tokens.shadow4,
   },
   
   scanningText: {
-    fontSize: "14px",
+    fontSize: "16px",
     color: tokens.colorBrandForeground1,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   
   refreshButton: {
-    marginTop: "8px",
+    marginTop: "12px",
   },
   
   "@keyframes pulse": {
     "0%": { opacity: 1 },
-    "50%": { opacity: 0.5 },
+    "50%": { opacity: 0.4 },
     "100%": { opacity: 1 },
   },
+  
+  "@keyframes float": {
+    "0%": { transform: "translateY(0px)" },
+    "50%": { transform: "translateY(-10px)" },
+    "100%": { transform: "translateY(0px)" },
+  },
+  
+  floatingIcon: {
+    animation: "float 4s ease-in-out infinite",
+  }
 });
 
 interface NoDevicePromptProps {
@@ -173,57 +317,62 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
       <div className={styles.backgroundDecoration} />
       
       <div className={styles.content}>
-        {/* 图标区域 */}
-        <div className={styles.iconContainer}>
-          <Phone24Regular className={styles.mainIcon} />
-          <UsbStick24Regular className={styles.connectionIcon} />
-        </div>
         
         {/* 主标题 */}
         <Text className={styles.title}>
-          未检测到设备
+          未检测到设备，请确保设备已正确连接
         </Text>
-        
-        {/* 副标题 */}
-        <Text className={styles.subtitle}>
-          请连接Android设备并启用USB调试功能
-        </Text>
-        
-        {/* 连接步骤 */}
-        <div className={styles.stepsContainer}>
-          {connectionSteps.map((step, index) => (
-            <div key={index} className={styles.step}>
-              <div className={styles.stepNumber}>
-                {index + 1}
-              </div>
-              <Text className={styles.stepText}>
-                {step}
-              </Text>
-            </div>
-          ))}
-        </div>
-        
         {/* 扫描状态指示器 */}
         {isScanning && (
-          <div className={styles.scanningIndicator}>
-            <Spinner size="extra-small" />
-            <Text className={styles.scanningText}>
-              正在扫描设备...
-            </Text>
-          </div>
+        <div className={styles.scanningIndicator}>
+          <Spinner size="extra-small" />
+          <Text className={styles.scanningText}>
+            正在扫描设备...
+          </Text>
+        </div>
         )}
         
-        {/* 刷新按钮 */}
-        {onRefresh && (
-          <Button
-            appearance="primary"
-            icon={<ArrowClockwise24Regular />}
-            onClick={onRefresh}
-            className={styles.refreshButton}
-          >
-            手动刷新
-          </Button>
-        )}
+        {/* 水平排列容器 */}
+        <div className={styles.horizontalContainer}>
+          {/* 连接模式卡片 */}
+          <div className={styles.modeCard}>
+            <Text className={styles.modeTitle}>
+              <Settings24Regular /> 连接模式指南
+            </Text>
+            <div className={styles.stepsContainer}>
+              <a href="https://admt.lacs.cc/docs/device/linksys" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+                <Text className={styles.linkText}>系统模式</Text>
+                <Open24Regular className={styles.linkIcon} />
+              </a>
+              <a href="https://admt.lacs.cc/docs/device/linkrec" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+                <Text className={styles.linkText}>恢复模式</Text>
+                <Open24Regular className={styles.linkIcon} />
+              </a>
+              <a href="https://admt.lacs.cc/docs/device/linkfb" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+                <Text className={styles.linkText}>引导模式</Text>
+                <Open24Regular className={styles.linkIcon} />
+              </a>
+              <a href="https://admt.lacs.cc/docs/device/linkedl" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+                <Text className={styles.linkText}>EDL模式</Text>
+                <Open24Regular className={styles.linkIcon} />
+              </a>
+            </div>
+          </div>
+
+          {/* 问题排查提示 */}
+          <div className={styles.troubleshooting}>
+            <Text className={styles.troubleshootingTitle}>
+              <Settings24Regular /> 连接设备后仍然检测不到？
+            </Text>
+            <Text className={styles.troubleshootingItem}>检查USB接口是否正常工作</Text>
+            <Text className={styles.troubleshootingItem}>检查设备尾插是否有损坏</Text>
+            <Text className={styles.troubleshootingItem}>确保已安装正确的USB驱动</Text>
+            <Text className={styles.troubleshootingItem}>检查自动检测设备开关是否开启</Text>
+          </div>
+        </div>
+
+
+      
       </div>
     </div>
   );

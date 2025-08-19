@@ -33,6 +33,7 @@ export type SettingsView =
   | "display-settings"
   | "other-settings"
   | "privacy"
+  | "usage-tracking"
   | "logs";
 
 export interface NotificationMessage {
