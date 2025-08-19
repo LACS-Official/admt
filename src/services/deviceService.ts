@@ -4,7 +4,7 @@ import { useDeviceStore } from "../stores/deviceStore";
 import { useAppStore } from "../stores/appStore";
 import { DeviceInfo, DeviceProperties, CommandResult, InstalledApp, ApkInfo, BatchOperation, DeviceFile } from "../types/device";
 import { logService } from "./logService";
-import { userBehaviorService } from "./userBehaviorService";
+import { deviceConnectionTrackingService } from "./deviceConnectionTrackingService";
 import { generateDeviceUniqueIdFromProperties } from "../utils/deviceIdentification";
 
 export class DeviceService {
@@ -460,11 +460,10 @@ export class DeviceService {
         deviceSerial: device.serial,
         deviceBrand: properties?.brand,
         deviceModel: properties?.model,
-        softwareId: 1001, // 玩机管家软件ID
-        softwareVersion: '1.0.0', // 可以从配置中获取
+        osVersion: properties?.android_version,
       };
 
-      await userBehaviorService.recordDeviceConnection(connectionData);
+      await deviceConnectionTrackingService.recordDeviceConnection(connectionData);
       console.log('设备连接统计已记录:', device.serial);
     } catch (error) {
       console.error('记录设备连接失败:', error);

@@ -214,14 +214,25 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const trackMainPageEntry = async () => {
       try {
-        console.log('📊 HomePage组件已挂载，开始追踪主页面进入...');
+        console.log('🏠 HomePage组件已挂载，开始追踪主页面进入...');
+        console.log('🏠 当前时间:', new Date().toISOString());
+        console.log('🏠 组件挂载位置: HomePage.tsx useEffect');
+
         await usageTrackingService.trackMainPageEntry();
+
+        console.log('🏠 主页面追踪调用完成');
       } catch (error) {
         console.error('❌ 追踪主页面进入失败:', error);
-        // 不显示错误通知，避免影响用户体验
+        // 显示错误通知以便调试
+        addNotification({
+          type: "error",
+          title: "追踪失败",
+          message: `主页面追踪失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        });
       }
     };
 
+    console.log('🏠 HomePage useEffect 被触发');
     trackMainPageEntry();
   }, []); // 空依赖数组，确保只在组件挂载时执行一次
 
