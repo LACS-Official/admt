@@ -6,6 +6,7 @@
 import { VersionCheckResult, VersionCheckResponse, SoftwareInfo } from '../types/app';
 import { API_CONFIG, API_ENDPOINTS, getApiBaseUrl, getDefaultHeaders } from '../config/api';
 import { getVersion } from '@tauri-apps/api/app';
+import { SecurityConfigManager } from '../config/securityConfig';
 
 // 扩展Window接口以支持Tauri
 declare global {
@@ -97,14 +98,22 @@ export class VersionService {
    */
   public async getCurrentVersion(): Promise<string> {
     try {
-      // 在Tauri环境中，优先使用Tauri API获取版本
+      // 优先从配置文件获取版本号
+      const configManager = SecurityConfigManager.getInstance();
+      if (configManager.isConfigInitialized()) {
+        const configVersion = configManager.getAppVersion();
+        console.log('从配置文件获取版本号:', configVersion);
+        return configVersion;
+      }
+
+      // 在Tauri环境中，使用Tauri API获取版本
       if (typeof window !== 'undefined' && window.__TAURI__) {
         const version = await getVersion();
         console.log('从Tauri获取版本:', version);
         return version;
       }
 
-      // 在开发环境或非Tauri环境中，使用package.json的版本
+      // 在开发环境或非Tauri环境中，使用默认版本
       console.log('使用默认版本: 1.0.0');
       return '1.0.0';
     } catch (error) {
@@ -114,15 +123,15 @@ export class VersionService {
   }
 
   /**
-   * 调用版本管理API获取最新版本信息
+   * 调用软件信息API获取最新版本信息
    */
   private async fetchLatestVersionFromAPI(): Promise<VersionCheckResponse> {
     try {
       console.log(`正在检查软件版本，软件ID: ${API_CONFIG.SOFTWARE_ID}`);
 
       const baseUrl = getApiBaseUrl();
-      const endpoint = API_ENDPOINTS.VERSIONS.LIST(API_CONFIG.SOFTWARE_ID);
-      const url = `${baseUrl}${endpoint}?limit=1&sortBy=releaseDate&sortOrder=desc&isStable=true`;
+      // 使用软件基本信息API而不是版本历史API
+      const url = `${baseUrl}/app/software/id/${API_CONFIG.SOFTWARE_ID}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -140,10 +149,10 @@ export class VersionService {
         throw new Error(`API返回错误: ${data.error || '未知错误'}`);
       }
 
-      console.log('成功获取版本信息:', data);
+      console.log('成功获取软件信息:', data);
       return data;
     } catch (error) {
-      console.error('获取版本信息失败:', error);
+      console.error('获取软件信息失败:', error);
       throw error;
     }
   }
@@ -159,7 +168,7 @@ export class VersionService {
       // 调用API获取最新版本信息
       const apiResponse = await this.fetchLatestVersionFromAPI();
       
-      if (!apiResponse.data || !apiResponse.data.versions || apiResponse.data.versions.length === 0) {
+      if (!apiResponse.data) {
         return {
           needsUpdate: false,
           currentVersion,
@@ -169,8 +178,9 @@ export class VersionService {
         };
       }
 
-      const latestVersion = apiResponse.data.versions[0];
-      const latestVersionNumber = latestVersion.version;
+      // 使用新的API响应格式
+      const softwareInfo = apiResponse.data;
+      const latestVersionNumber = softwareInfo.currentVersion || currentVersion;
       
       console.log(`最新版本: ${latestVersionNumber}`);
 
@@ -191,12 +201,25 @@ export class VersionService {
         message = '目前已是最新版本';
       }
 
+      // 构造更新信息
+      const updateInfo = needsUpdate ? {
+        id: softwareInfo.id,
+        version: latestVersionNumber,
+        releaseNotes: softwareInfo.description || '发现新版本，请立即更新',
+        releaseDate: softwareInfo.updatedAt || new Date().toISOString(),
+        downloadLinks: {
+          official: softwareInfo.latestDownloadUrl || softwareInfo.officialWebsite
+        },
+        isStable: true,
+        versionType: "release" as const
+      } : undefined;
+
       return {
         needsUpdate,
         currentVersion,
         latestVersion: latestVersionNumber,
         isForceUpdate,
-        updateInfo: needsUpdate ? latestVersion : undefined,
+        updateInfo,
         message
       };
 

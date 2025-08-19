@@ -16,6 +16,8 @@ export interface SecurityConfig {
   signature_secret: string
   enable_signature: boolean
   enable_strict_user_agent: boolean
+  app_version: string
+  software_id: number
 }
 
 /**
@@ -67,7 +69,7 @@ export class SecurityConfigManager {
    * 验证配置完整性
    */
   private validateConfig(config: SecurityConfig): void {
-    const requiredFields = ['api_base_url', 'api_key', 'app_id', 'app_secret']
+    const requiredFields = ['api_base_url', 'api_key', 'app_id', 'app_secret', 'app_version']
 
     for (const field of requiredFields) {
       if (!config[field as keyof SecurityConfig]) {
@@ -83,6 +85,16 @@ export class SecurityConfigManager {
     // 验证应用密钥强度
     if (config.app_secret.length < 16) {
       throw new Error('App secret is too weak (minimum 16 characters required)')
+    }
+
+    // 验证版本号格式
+    if (!/^\d+\.\d+\.\d+/.test(config.app_version)) {
+      throw new Error('Invalid app version format (expected: x.y.z)')
+    }
+
+    // 验证软件ID
+    if (!config.software_id || config.software_id <= 0) {
+      throw new Error('Invalid software ID')
     }
   }
 
@@ -143,6 +155,20 @@ export class SecurityConfigManager {
    */
   isStrictUserAgentEnabled(): boolean {
     return this.getConfig().enable_strict_user_agent
+  }
+
+  /**
+   * 获取应用版本号
+   */
+  getAppVersion(): string {
+    return this.getConfig().app_version
+  }
+
+  /**
+   * 获取软件ID
+   */
+  getSoftwareId(): number {
+    return this.getConfig().software_id
   }
 
   /**

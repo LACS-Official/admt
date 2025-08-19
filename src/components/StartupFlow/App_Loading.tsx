@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { compareVersions } from 'compare-versions';
 import {
   makeStyles,
   Spinner,
@@ -16,7 +17,6 @@ import {
   Caption1,
   Title3,
   Badge,
-  tokens,
 } from '@fluentui/react-components';
 import {
   CheckmarkCircle24Filled,
@@ -33,6 +33,7 @@ import { SecurityConfigManager } from '../../config/securityConfig';
 import { SecureDataTransmissionService } from '../../services/secureDataTransmissionService';
 import { announcementService } from '../../services/announcementService';
 import { Announcement } from '../../types/app';
+import StartupVersionChecker from '../Common/StartupVersionChecker';
 
 const useStyles = makeStyles({
   container: {
@@ -109,10 +110,11 @@ const useStyles = makeStyles({
   announcementSection: {
     marginTop: '24px',
     padding: '16px',
-    backgroundColor: '#f3f2f1',
+    backgroundColor: '#f0f9ff',
     borderRadius: '8px',
     maxHeight: '200px',
     overflowY: 'auto',
+    border: '1px solid #edebe9',
   },
   announcementItem: {
     marginBottom: '12px',
@@ -162,15 +164,13 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [announcementError, setAnnouncementError] = useState<string | null>(null);
   const [showAnnouncements, setShowAnnouncements] = useState(false);
-  const [announcementCountdown, setAnnouncementCountdown] = useState(3);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 3;
+  const [showEnterButton, setShowEnterButton] = useState(false);
+  const [showVersionChecker, setShowVersionChecker] = useState(false);
 
   const {
     setVersionCheckResult,
     setVersionCheckCompleted,
     setError,
-    incrementRetryCount,
     resetRetryCount,
   } = useStartupFlowStore();
 
@@ -211,25 +211,29 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     }
   };
 
-  // 开始公告倒计时
-  const startAnnouncementCountdown = (versionResult: VersionCheckResult) => {
-    console.log('📢 开始公告倒计时');
-    let countdown = 3;
-    setAnnouncementCountdown(countdown);
+  // 处理进入应用按钮点击
+  const handleEnterApp = () => {
+    if (checkResult) {
+      console.log('用户点击进入应用');
+      onComplete(checkResult);
+    }
+  };
 
-    const countdownInterval = setInterval(() => {
-      countdown--;
-      console.log(`📢 倒计时: ${countdown}秒`);
-      setAnnouncementCountdown(countdown);
-      setStatusMessage(`正在显示最新公告... (${countdown}秒后自动跳转)`);
+  // 处理版本检查完成
+  const handleVersionCheckComplete = (needsUpdate: boolean, result?: any) => {
+    console.log('📋 版本检查完成:', { needsUpdate, result });
+    if (!needsUpdate) {
+      // 不需要更新，隐藏版本检查弹窗
+      setShowVersionChecker(false);
+    }
+    // 如果需要更新，保持弹窗显示，用户必须更新
+  };
 
-      if (countdown <= 0) {
-        console.log('📢 倒计时结束，跳转到下一步');
-        clearInterval(countdownInterval);
-        setShowAnnouncements(false);
-        onComplete(versionResult);
-      }
-    }, 1000);
+  // 处理离线使用（版本检查失败时的降级选项）
+  const handleAllowOfflineUse = () => {
+    console.log('📋 用户选择离线使用');
+    setShowVersionChecker(false);
+    // 继续正常流程
   };
 
   const performChecks = async () => {
@@ -266,18 +270,26 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         versionResult
       });
 
-      // 如果有公告，显示公告并开始倒计时
+      // 如果有公告，显示公告
       if (announcementResult.length > 0) {
-        console.log('📢 有公告，开始显示公告和倒计时');
+        console.log('📢 有公告，显示公告内容');
         setShowAnnouncements(true);
-        setStatusMessage('正在显示最新公告...');
-        startAnnouncementCountdown(versionResult);
+        setStatusMessage('检查完成，请查看最新公告');
       } else {
-        console.log('📢 没有公告，直接跳转到下一个页面');
-        // 没有公告，直接进入下一个页面
-        setTimeout(() => {
-          onComplete(versionResult);
-        }, 1000);
+        console.log('📢 没有公告');
+        setStatusMessage('检查完成');
+      }
+
+      // 根据版本检查结果决定是否显示进入应用按钮
+      if (versionResult.isLatest) {
+        console.log('✅ 当前是最新版本，显示进入应用按钮');
+        setShowEnterButton(true);
+        setStatusMessage(announcementResult.length > 0 ? '检查完成，请查看最新公告' : '当前已是最新版本');
+      } else {
+        console.log('⚠️ 发现新版本，需要强制更新，不显示进入应用按钮');
+        console.log('📋 更新信息:', versionResult.updateInfo);
+        setShowEnterButton(false);
+        setStatusMessage('发现新版本，请立即更新');
       }
 
     } catch (error) {
@@ -309,10 +321,21 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   // 获取当前版本号
   const getCurrentVersion = async (): Promise<string> => {
     try {
+      // 优先从配置文件获取版本号
+      const configManager = SecurityConfigManager.getInstance();
+      if (configManager.isConfigInitialized()) {
+        const configVersion = configManager.getAppVersion();
+        console.log('📋 从配置文件获取版本号:', configVersion);
+        return configVersion;
+      }
+
+      // 降级到Tauri API获取版本号
       const { getVersion } = await import('@tauri-apps/api/app');
-      return await getVersion();
+      const tauriVersion = await getVersion();
+      console.log('📋 从Tauri API获取版本号:', tauriVersion);
+      return tauriVersion;
     } catch (error) {
-      console.warn('无法获取Tauri版本，使用默认版本号');
+      console.warn('无法获取版本号，使用默认版本号');
       return '1.0.0';
     }
   };
@@ -324,18 +347,34 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       const transmissionService = SecureDataTransmissionService.getInstance();
       await transmissionService.initialize();
 
-      // 根据API文档，使用正确的端点获取软件详情
-      // 假设HOUT应用的ID为1，实际应用中应该从配置获取
-      const softwareId = 1;
-      const response = await transmissionService.sendSecureRequest(`/app/software/id/${softwareId}`);
+      // 从配置获取软件ID
+      const configManager = SecurityConfigManager.getInstance();
+      const softwareId = configManager.getSoftwareId();
+      console.log('🔍 检查软件ID:', softwareId, '的版本信息');
 
-      if (!response.success || !response.data) {
-        throw new Error(response.error || '版本检查失败：无效的响应数据');
+      // 获取软件基本信息
+      const softwareResponse = await transmissionService.sendSecureRequest(`/app/software/id/${softwareId}`);
+      if (!softwareResponse.success || !softwareResponse.data) {
+        throw new Error(softwareResponse.error || '获取软件信息失败');
       }
 
-      const softwareInfo = response.data;
+      const softwareInfo = softwareResponse.data;
       const latestVersionNumber = softwareInfo.currentVersion || currentVersion;
       const isLatest = compareVersions(currentVersion, latestVersionNumber) >= 0;
+
+      console.log('📋 版本比较结果:', {
+        currentVersion,
+        latestVersion: latestVersionNumber,
+        isLatest,
+        compareResult: compareVersions(currentVersion, latestVersionNumber),
+        softwareInfo
+      });
+
+      // 如果需要更新，显示版本检查弹窗
+      if (!isLatest) {
+        console.log('⚠️ 发现新版本，显示版本检查弹窗');
+        setShowVersionChecker(true);
+      }
 
       return {
         isLatest,
@@ -344,9 +383,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         updateInfo: !isLatest ? {
           version: latestVersionNumber,
           releaseDate: new Date().toISOString(),
-          description: softwareInfo.description || '发现新版本，建议更新',
+          description: softwareInfo.description || '发现新版本，需要更新后才能继续使用',
           downloadUrl: softwareInfo.latestDownloadUrl || softwareInfo.officialWebsite || '',
-          isForced: false, // 根据实际需求设置
+          isForced: true, // 强制更新
           title: `新版本 ${latestVersionNumber} 可用`,
         } : undefined,
       };
@@ -414,10 +453,11 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   };
 
   const handleRetry = () => {
-    setRetryCount(0);
     resetRetryCount();
     setCheckResult(null);
     setAnnouncements([]);
+    setShowEnterButton(false);
+    setShowAnnouncements(false);
     setIsLoading(true);
     setIsChecking(false);
     setProgress(0);
@@ -425,19 +465,45 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   };
 
   const handleDownload = () => {
-    if (checkResult?.updateInfo?.downloadUrl) {
-      // 使用 Tauri 的 shell API 打开浏览器
-      import('@tauri-apps/plugin-shell').then(({ open }) => {
-        open(checkResult.updateInfo!.downloadUrl!).catch((error) => {
-          console.error('无法打开浏览器:', error);
-          // 降级到 window.open
-          window.open(checkResult.updateInfo!.downloadUrl!, '_blank');
-        });
-      }).catch(() => {
-        // 如果 Tauri shell 插件不可用，使用 window.open
-        window.open(checkResult.updateInfo!.downloadUrl!, '_blank');
-      });
+    if (!checkResult?.updateInfo) {
+      console.error('没有更新信息');
+      return;
     }
+
+    const updateInfo = checkResult.updateInfo;
+    let downloadUrl = '';
+
+    // 优先选择下载链接
+    if (updateInfo.downloadLinks) {
+      const links = updateInfo.downloadLinks as any;
+      downloadUrl = links.official ||
+                   links.github ||
+                   links.quark ||
+                   links.baidu ||
+                   updateInfo.downloadUrl || '';
+    } else {
+      downloadUrl = updateInfo.downloadUrl || '';
+    }
+
+    if (!downloadUrl) {
+      console.error('没有可用的下载链接');
+      return;
+    }
+
+    console.log('🔗 打开下载链接:', downloadUrl);
+
+    // 使用 Tauri 的 shell API 打开浏览器
+    import('@tauri-apps/plugin-shell').then(({ open }) => {
+      open(downloadUrl).catch((error) => {
+        console.error('无法使用Tauri打开浏览器:', error);
+        // 降级到 window.open
+        window.open(downloadUrl, '_blank');
+      });
+    }).catch(() => {
+      // 如果 Tauri shell 插件不可用，使用 window.open
+      console.log('Tauri shell插件不可用，使用window.open');
+      window.open(downloadUrl, '_blank');
+    });
   };
 
   const getAnnouncementIcon = (type: string, priority: string) => {
@@ -550,6 +616,15 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   };
 
   const renderContent = () => {
+    console.log('🎨 renderContent 调用:', {
+      isLoading,
+      isChecking,
+      checkResult: !!checkResult,
+      showEnterButton,
+      showAnnouncements,
+      hasUpdateInfo: !!checkResult?.updateInfo
+    });
+
     if (isLoading || isChecking) {
       return (
         <>
@@ -562,6 +637,24 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
             <Text className={styles.progressText}>{statusMessage}</Text>
             <ProgressBar value={progress / 100} />
           </div>
+
+          {/* 公告内容 */}
+          <div className={styles.progressSection}>
+            {renderAnnouncements()}
+          </div>
+
+          {/* 在检查完成后显示进入应用按钮 */}
+          {showEnterButton && (
+            <div className={styles.actionSection} style={{ marginTop: '24px' }}>
+              <Button
+                appearance="primary"
+                size="large"
+                onClick={handleEnterApp}
+              >
+                进入应用
+              </Button>
+            </div>
+          )}
         </>
       );
     }
@@ -578,7 +671,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
               )}
             </div>
             <Title3>
-              {checkResult.isLatest ? '当前已是最新版本' : '发现新版本'}
+              {checkResult.isLatest ? '当前已是最新版本' : '需要更新到最新版本'}
             </Title3>
           </div>
 
@@ -599,38 +692,55 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
             <div className={styles.updateInfo}>
               <Text weight="semibold">{checkResult.updateInfo.title}</Text>
               <Body1 style={{ marginTop: '8px' }}>
-                {checkResult.updateInfo.description}
+                {checkResult.updateInfo.description || checkResult.updateInfo.releaseNotes}
               </Body1>
 
-              {checkResult.updateInfo.downloadUrl && (
-                <div className={styles.actionSection} style={{ marginTop: '16px' }}>
+              {/* 显示文件大小信息 */}
+              {checkResult.updateInfo.fileSize && (
+                <Body1 style={{ marginTop: '4px', color: '#605e5c' }}>
+                  文件大小: {checkResult.updateInfo.fileSize}
+                </Body1>
+              )}
+
+              {checkResult.updateInfo.isForced && (
+                <MessageBar intent="warning" style={{ marginTop: '12px' }}>
+                  此更新为强制更新，必须更新到最新版本才能继续使用应用
+                </MessageBar>
+              )}
+
+              {/* 下载按钮区域 */}
+              <div className={styles.actionSection} style={{ marginTop: '16px' }}>
+                {checkResult.updateInfo.downloadUrl ? (
                   <Button
                     appearance="primary"
+                    size="large"
                     icon={<ArrowDownload24Regular />}
                     onClick={handleDownload}
                   >
                     立即下载更新
                   </Button>
-                </div>
-              )}
+                ) : (
+                  <MessageBar intent="info">
+                    暂无可用的下载链接，请访问官方网站获取最新版本
+                  </MessageBar>
+                )}
+              </div>
             </div>
           )}
 
           {/* 显示公告 - 在版本检查完成后显示 */}
           {showAnnouncements && renderAnnouncements()}
 
-          {/* 倒计时提示 */}
-          {showAnnouncements && announcementCountdown > 0 && (
-            <div style={{
-              marginTop: '16px',
-              textAlign: 'center',
-              padding: '8px',
-              backgroundColor: tokens.colorNeutralBackground2,
-              borderRadius: tokens.borderRadiusSmall
-            }}>
-              <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                {announcementCountdown}秒后自动跳转到下一步
-              </Text>
+          {/* 进入应用按钮 */}
+          {showEnterButton && (
+            <div className={styles.actionSection} style={{ marginTop: '24px' }}>
+              <Button
+                appearance="primary"
+                size="large"
+                onClick={handleEnterApp}
+              >
+                进入应用
+              </Button>
             </div>
           )}
         </>
@@ -644,7 +754,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     <div className={styles.container}>
       <Card className={styles.card}>
         {renderContent()}
-        
+
         {!isLoading && !isChecking && !checkResult && (
           <div className={styles.actionSection}>
             <Button
@@ -657,6 +767,14 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
           </div>
         )}
       </Card>
+
+      {/* 版本检查弹窗 */}
+      {showVersionChecker && (
+        <StartupVersionChecker
+          onCheckComplete={handleVersionCheckComplete}
+          onAllowOfflineUse={handleAllowOfflineUse}
+        />
+      )}
     </div>
   );
 };

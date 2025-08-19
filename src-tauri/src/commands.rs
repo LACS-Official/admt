@@ -2788,6 +2788,8 @@ pub struct SecurityConfig {
     pub signature_secret: String,
     pub enable_signature: bool,
     pub enable_strict_user_agent: bool,
+    pub app_version: String,
+    pub software_id: i32,
 }
 
 /// 获取安全配置
@@ -2805,6 +2807,8 @@ pub async fn get_security_config() -> Result<SecurityConfig> {
         signature_secret: "signature_secret_2024_wanjiguanjia_user_behavior_api_protection".to_string(),
         enable_signature: false, // 开发环境暂时禁用
         enable_strict_user_agent: false, // 开发环境暂时禁用
+        app_version: "1.0.0".to_string(), // 应用版本号（测试强制更新）
+        software_id: 1, // 软件ID，对应API中的软件ID
     };
 
     log::info!("Security configuration loaded successfully");
