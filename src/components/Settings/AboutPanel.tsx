@@ -274,11 +274,11 @@ const AboutPanel: React.FC = () => {
 
   // 链接数据
   const links = {
-    checkUpdate: "https://github.com/your-organization/admt/releases",
-    userManual: "https://github.com/your-organization/admt/wiki",
-    feedback: "https://github.com/your-organization/admt/issues",
-    github: "https://github.com/your-organization/admt",
+    checkUpdate: "https://admt.lacs.cc/download",
+    userManual: "https://admt.lacs.cc/docs",
+    feedback: "https://admt.lacs.cc/about-contact",
     officialWebsite: "https://www.lacs.cc",
+    officialADMTWeb: "https://admt.lacs.cc",
     officialGroup: "https://your-organization.com/group",
     contact: "https://your-organization.com/contact"
   };
@@ -295,8 +295,8 @@ const AboutPanel: React.FC = () => {
     openUrl(links.feedback);
   };
 
-  const handleOpenGithub = () => {
-    openUrl(links.github);
+  const handleOpenOfficialWebsite = () => {
+    openUrl(links.officialWebsite);
   };
 
   const handleOpenSourceInfo = () => {
@@ -305,6 +305,10 @@ const AboutPanel: React.FC = () => {
 
   const handleThanksInfo = () => {
     setIsThanksDialogOpen(true);
+  };
+
+  const OpenofficialADMTWeb = () => {
+    openUrl(links.officialADMTWeb);
   };
 
   return (
@@ -354,9 +358,9 @@ const AboutPanel: React.FC = () => {
                 appearance="secondary" 
                 size="medium"
                 icon={<Code24Regular />}
-                onClick={handleOpenGithub}
+                onClick={OpenofficialADMTWeb}
               >
-                GitHub
+                官方网站
               </Button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   makeStyles,
   Text,
@@ -16,6 +16,7 @@ import {
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
+import { usageTrackingService } from "../../services/usageTrackingService";
 
 // 导入新的组件
 import CarouselBanner from "./CarouselBanner";
@@ -208,6 +209,21 @@ const HomePage: React.FC = () => {
   // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
 
   const connectedDevices = devices.filter(d => d.connected);
+
+  // 用户行为追踪 - 在组件挂载时发送使用数据
+  useEffect(() => {
+    const trackMainPageEntry = async () => {
+      try {
+        console.log('📊 HomePage组件已挂载，开始追踪主页面进入...');
+        await usageTrackingService.trackMainPageEntry();
+      } catch (error) {
+        console.error('❌ 追踪主页面进入失败:', error);
+        // 不显示错误通知，避免影响用户体验
+      }
+    };
+
+    trackMainPageEntry();
+  }, []); // 空依赖数组，确保只在组件挂载时执行一次
 
   // 手动刷新设备扫描
   const handleManualRefresh = () => {

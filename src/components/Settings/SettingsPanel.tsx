@@ -14,6 +14,7 @@ import {
   Shield24Regular,
   DeviceEq24Regular,
   Desktop24Regular,
+  DataUsage24Regular,
 } from "@fluentui/react-icons";
 import { SettingsView } from "../../types/app";
 import AboutPanel from "./AboutPanel";
@@ -22,6 +23,7 @@ import DisplaySettingsPanel from "./DisplaySettingsPanel";
 import OtherSettingsPanel from "./OtherSettingsPanel";
 import LogsPanel from "./LogsPanel";
 import PrivacyManagementPanel from "./PrivacyManagementPanel";
+import UsageTrackingSettings from "./UsageTrackingSettings";
 
 const useStyles = makeStyles({
   container: {
@@ -77,6 +79,11 @@ const tabs = [
     icon: <Shield24Regular />,
   },
   {
+    id: "usage-tracking" as SettingsView,
+    label: "使用数据追踪",
+    icon: <DataUsage24Regular />,
+  },
+  {
     id: "logs" as SettingsView,
     label: "日志",
     icon: <Document24Regular />,
@@ -103,6 +110,8 @@ const SettingsPanel: React.FC = () => {
         return <OtherSettingsPanel />;
       case "privacy":
         return <PrivacyManagementPanel />;
+      case "usage-tracking":
+        return <UsageTrackingSettings />;
       case "logs":
         return <LogsPanel />;
     }

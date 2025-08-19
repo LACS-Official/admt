@@ -94,9 +94,27 @@ curl "https://your-domain.com/api/admin/dashboard/stats" \
 
 ## 🔐 认证方式
 
-### API Key 认证
+### 双重认证支持
 
-所有API请求都需要在请求头中包含API Key：
+激活码管理API支持两种认证方式：
+
+#### 1. JWT Token 认证（推荐）
+
+通过GitHub OAuth登录后获取的JWT Token，适用于前端管理界面：
+
+```http
+Authorization: Bearer your-jwt-token
+```
+
+**获取方式**：
+1. 访问 `/admin` 页面
+2. 通过GitHub OAuth登录
+3. JWT Token自动存储在Cookie中
+4. 前端自动在请求头中包含Token
+
+#### 2. API Key 认证（传统方式）
+
+适用于服务器端API调用：
 
 ```http
 X-API-Key: your-api-key-here
@@ -104,10 +122,22 @@ X-API-Key: your-api-key-here
 
 **示例**:
 ```bash
+# 使用API Key
 curl -H "X-API-Key: your-api-key" \
      -H "Content-Type: application/json" \
-     https://your-domain.com/api/endpoint
+     https://your-domain.com/api/activation-codes
+
+# 使用JWT Token
+curl -H "Authorization: Bearer your-jwt-token" \
+     -H "Content-Type: application/json" \
+     https://your-domain.com/api/activation-codes
 ```
+
+### 认证优先级
+
+1. **JWT Token优先**：首先检查Authorization头中的Bearer Token
+2. **API Key备用**：如果JWT认证失败，检查X-API-Key头
+3. **权限验证**：JWT Token需要验证GitHub用户的管理员权限
 
 ### 响应格式
 
@@ -154,12 +184,14 @@ const response = await fetch('/admin/endpoint', {
 
 | 方法 | 端点 | 描述 | 认证 |
 |------|------|------|------|
-| POST | `/api/activation-codes` | 生成激活码 | API Key |
-| POST | `/api/activation-codes/verify` | 验证激活码 | API Key |
-| GET | `/api/activation-codes` | 查询激活码列表 | API Key |
-| GET | `/api/activation-codes/stats` | 获取统计信息 | API Key |
-| POST | `/api/activation-codes/cleanup` | 清理过期激活码 | API Key |
-| POST | `/api/activation-codes/cleanup-unused` | 清理未使用激活码 | API Key |
+| POST | `/api/activation-codes` | 生成激活码 | JWT Token 或 API Key |
+| POST | `/api/activation-codes/verify` | 验证激活码 | 无需认证 |
+| GET | `/api/activation-codes` | 查询激活码列表 | JWT Token 或 API Key |
+| GET | `/api/activation-codes/{id}` | 获取激活码详情 | JWT Token 或 API Key |
+| DELETE | `/api/activation-codes/{id}` | 删除激活码 | JWT Token 或 API Key |
+| GET | `/api/activation-codes/stats` | 获取统计信息 | JWT Token 或 API Key |
+| POST | `/api/activation-codes/cleanup` | 清理过期激活码 | JWT Token 或 API Key |
+| POST | `/api/activation-codes/cleanup-unused` | 清理未使用激活码 | JWT Token 或 API Key |
 
 ### 🎲 生成激活码
 
@@ -187,7 +219,7 @@ const response = await fetch('/admin/endpoint', {
 {
   "success": true,
   "data": {
-    "code": "MDMNBPJX-3S0P6E-B1360C10",
+    "code": "A1B2C3D4",
     "id": 123,
     "createdAt": "2025-01-29T10:00:00.000Z",
     "expiresAt": "2026-01-29T10:00:00.000Z",
@@ -208,7 +240,7 @@ const response = await fetch('/admin/endpoint', {
 **请求参数**：
 ```json
 {
-  "code": "MDMNBPJX-3S0P6E-B1360C10"  // 激活码（必需）
+  "code": "A1B2C3D4"  // 激活码（必需）
 }
 ```
 
@@ -217,7 +249,7 @@ const response = await fetch('/admin/endpoint', {
 {
   "success": true,
   "data": {
-    "code": "MDMNBPJX-3S0P6E-B1360C10",
+    "code": "A1B2C3D4",
     "isValid": true,
     "isActivated": true,
     "activatedAt": "2025-01-29T10:05:00.000Z",
@@ -244,7 +276,7 @@ const response = await fetch('/admin/endpoint', {
 ?page=1              # 页码（默认：1）
 &limit=10            # 每页数量（默认：10，最大：100）
 &status=all          # 状态筛选：all|active|expired|used
-&search=MDMNBPJX     # 搜索关键词
+&search=A1B2C3     # 搜索关键词
 &sortBy=createdAt    # 排序字段：createdAt|expiresAt|activatedAt
 &sortOrder=desc      # 排序方向：asc|desc
 ```
@@ -256,7 +288,7 @@ const response = await fetch('/admin/endpoint', {
   "data": [
     {
       "id": 123,
-      "code": "MDMNBPJX-3S0P6E-B1360C10",
+      "code": "A1B2C3D4",
       "createdAt": "2025-01-29T10:00:00.000Z",
       "expiresAt": "2026-01-29T10:00:00.000Z",
       "isActivated": true,
@@ -605,7 +637,7 @@ curl "https://your-domain.com/app/software/tags?includeCount=true&minCount=5" \
       }
     ]
   }
-
+}
 ```
 
 ### 🆕 版本相关字段说明
@@ -1143,8 +1175,8 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 | 方法 | 端点 | 描述 | 认证 |
 |------|------|------|------|
 | GET | `/api/user-behavior/stats` | 获取综合统计信息 | API Key |
-| POST | `/api/user-behavior/activations` | 记录软件激活 | API Key |
-| GET | `/api/user-behavior/activations` | 获取激活统计 | API Key |
+| POST | `/api/user-behavior/usage` | 记录软件使用 | API Key |
+| GET | `/api/user-behavior/usage` | 获取使用统计 | API Key |
 | POST | `/api/user-behavior/device-connections` | 记录设备连接 | API Key |
 | GET | `/api/user-behavior/device-connections` | 获取设备连接统计 | API Key |
 
@@ -1165,14 +1197,15 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
   "success": true,
   "data": {
     "summary": {
-      "totalActivations": 1000,
-      "uniqueActivatedDevices": 800,
+      "totalUsage": 1000,
+      "uniqueUsedDevices": 800,
       "totalConnections": 1500,
       "uniqueConnectedDevices": 900,
+      "averageUsagePerDevice": "1.25",
       "averageConnectionsPerDevice": "1.67"
     },
     "trends": {
-      "activationTrend": [
+      "usageTrend": [
         {"date": "2025-08-01", "count": 50},
         {"date": "2025-08-02", "count": 45}
       ],
@@ -1181,10 +1214,6 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
         {"date": "2025-08-02", "count": 68}
       ]
     },
-    "geoDistribution": [
-      {"country": "中国", "region": "北京市", "count": 100},
-      {"country": "中国", "region": "上海市", "count": 85}
-    ],
     "brandDistribution": [
       {"brand": "Samsung", "count": 200},
       {"brand": "Xiaomi", "count": 150}
@@ -1201,9 +1230,9 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 }
 ```
 
-### 📱 记录软件激活
+### 📱 记录软件使用
 
-**端点**：`POST /api/user-behavior/activations`
+**端点**：`POST /api/user-behavior/usage`
 
 **请求参数**：
 ```json
@@ -1212,15 +1241,7 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
   "softwareName": "玩机管家",          // 软件名称（可选，默认：玩机管家）
   "softwareVersion": "1.0.0",         // 软件版本（可选）
   "deviceFingerprint": "device-123",  // 设备指纹（必需，用于唯一标识设备）
-  "deviceOs": "Windows 11",           // 操作系统（可选）
-  "deviceArch": "x64",                // 系统架构（可选）
-  "activationCode": "XXXX-XXXX",      // 激活码（可选）
-  "username": "用户名",                // 用户名（可选）
-  "userEmail": "user@example.com",    // 用户邮箱（可选）
-  "ipAddress": "192.168.1.1",         // IP地址（可选）
-  "country": "中国",                   // 国家（可选）
-  "region": "北京市",                  // 地区（可选）
-  "city": "北京"                       // 城市（可选）
+  "used": 1                           // 使用次数增量（必需，每次调用自增1）
 }
 ```
 
@@ -1229,26 +1250,23 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 {
   "success": true,
   "data": {
-    "id": "uuid-123",
     "softwareId": 1,
     "deviceFingerprint": "device-123",
-    "activatedAt": "2025-08-01T00:00:00.000Z"
+    "usedAt": "2025-08-01T00:00:00.000Z"
   },
-  "message": "激活记录成功"
+  "message": "使用记录成功"
 }
 ```
 
-### 📊 获取激活统计
+### 📊 获取使用统计
 
-**端点**：`GET /api/user-behavior/activations`
+**端点**：`GET /api/user-behavior/usage`
 
 **查询参数**：
 ```bash
 ?softwareId=1        # 软件ID（可选）
 &startDate=2025-01-01 # 开始日期（可选）
 &endDate=2025-01-31   # 结束日期（可选）
-&page=1              # 页码（默认：1）
-&limit=10            # 每页数量（默认：10）
 ```
 
 **响应示例**：
@@ -1256,22 +1274,22 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 {
   "success": true,
   "data": {
-    "totalActivations": 500,
+    "totalUsage": 500,
     "uniqueDevices": 400,
-    "recentActivations": [
+    "recentUsage": [
       {
         "id": "uuid-123",
-        "softwareId": 1,
+        "softwareName": "玩机管家",
+        "softwareVersion": "1.0.0",
         "deviceFingerprint": "device-123",
-        "activatedAt": "2025-08-01T00:00:00.000Z",
-        "country": "中国",
-        "region": "北京市"
+        "used": 5,
+        "usedAt": "2025-08-01T00:00:00.000Z"
       }
     ],
     "summary": {
-      "totalActivations": 500,
+      "totalUsage": 500,
       "uniqueDevices": 400,
-      "averageActivationsPerDevice": "1.25"
+      "averageUsagePerDevice": "1.25"
     }
   }
 }
@@ -1285,8 +1303,6 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
 ```json
 {
   "deviceSerial": "device-serial-123",     // 设备序列号（必需）
-  "deviceBrand": "Samsung",                // 设备品牌（可选）
-  "deviceModel": "Galaxy S21",             // 设备型号（可选）
   "softwareId": 1,                         // 软件ID（必需）
   "userDeviceFingerprint": "fingerprint"   // 用户设备指纹（可选）
 }
@@ -1299,10 +1315,9 @@ curl -X POST "https://your-domain.com/admin/software/view-count" \
   "data": {
     "id": "uuid-456",
     "deviceSerial": "device-serial-123",
-    "softwareId": 1,
-    "connectedAt": "2025-08-01T00:00:00.000Z"
+    "softwareId": 1
   },
-  "message": "设备连接记录成功"
+  "message": "设备连接记录已保存"
 }
 ```
 
@@ -2194,6 +2209,40 @@ curl "https://your-domain.com/api/admin/dashboard/activities?days=30&limit=50" \
 ---
 
 ## 📚 更新日志
+
+### v2.3.0 - 激活码格式优化与认证增强 (2025-08-17)
+
+#### 🔄 激活码格式变更
+- **新格式**：激活码从带连字符格式（如 `MDMNBPJX-3S0P6E-B1360C10`）更改为8位大写字母和数字组合（如 `A1B2C3D4`）
+- **兼容性**：验证逻辑同时支持新旧两种格式，确保现有激活码仍可正常使用
+- **生成规则**：新激活码使用8位随机大写字母（A-Z）和数字（0-9）组合
+- **格式验证**：添加激活码格式验证，拒绝格式不正确的激活码
+
+#### � 认证系统增强
+- **双重认证支持**：激活码管理API现在支持JWT Token和API Key两种认证方式
+- **GitHub OAuth集成**：通过GitHub OAuth登录的用户可以直接使用激活码功能
+- **前端自动认证**：前端API客户端自动从Cookie中获取JWT Token
+- **向后兼容**：保持API Key认证方式的完全兼容性
+
+#### �🔧 技术改进
+- 优化激活码生成算法，提高唯一性和安全性
+- 简化激活码格式，便于用户输入和记忆
+- 实现JWT认证优先，API Key备用的认证策略
+- 更新API文档中的所有激活码示例和认证说明
+- 保持向后兼容性，旧格式激活码继续有效
+
+#### 🛠️ 问题修复
+- **修复GitHub OAuth登录后无法生成激活码的问题**
+- **解决前端401身份验证失败错误**
+- **优化错误消息，提供更清晰的认证失败提示**
+
+#### 📊 示例对比
+- **旧格式**：`MDMNBPJX-3S0P6E-B1360C10`（带连字符，长度不固定）
+- **新格式**：`A1B2C3D4`（8位固定长度，无连字符）
+
+#### 🔑 认证方式
+- **JWT Token**：`Authorization: Bearer <jwt-token>`（GitHub OAuth用户）
+- **API Key**：`X-API-Key: <api-key>`（传统API调用）
 
 ### v2.2.0 - 网站管理功能 (2025-08-17)
 

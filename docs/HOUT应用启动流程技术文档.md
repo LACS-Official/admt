@@ -57,7 +57,7 @@ const initializeApp = async () => {
     // 初始化过程（800ms延迟）
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    logService.info('HOUT 应用初始化完成', 'App');
+    logService.info('ADMT 应用初始化完成', 'App');
     setIsLoading(false);
   } catch (err) {
     logService.error('应用初始化失败', 'App', err);

@@ -85,7 +85,8 @@ pub fn run() {
             install_device_driver,
             fix_usb3_connection,
             open_device_manager,
-            restart_application
+            restart_application,
+            get_detailed_device_fingerprint
         ])
         .setup(|app| {
             // 只在调试模式下初始化日志插件
