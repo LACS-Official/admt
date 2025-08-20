@@ -1,17 +1,12 @@
-import React from "react";
+import React  from 'react';
 import {
   makeStyles,
   Text,
-  Button,
   Spinner,
   tokens,
 } from "@fluentui/react-components";
 import {
-  UsbStick24Regular,
-  Phone24Regular,
   Settings24Regular,
-  ArrowClockwise24Regular,
-  PlugDisconnected24Regular,
   Open24Regular,
 } from "@fluentui/react-icons";
 
@@ -94,7 +89,7 @@ const useStyles = makeStyles({
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     "&:hover": {
       backgroundColor: tokens.colorBrandBackground2,
-      borderColor: tokens.colorBrandStroke1,
+      border: `1px solid ${tokens.colorBrandStroke1}`,
       color: tokens.colorBrandForeground1,
     },
     "&:last-child": {
@@ -299,17 +294,9 @@ interface NoDevicePromptProps {
 }
 
 const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({ 
-  isScanning = false, 
-  onRefresh 
-}) => {
+  isScanning = false}) => {
   const styles = useStyles();
 
-  const connectionSteps = [
-    "使用USB数据线连接Android设备到电脑",
-    "在设备上启用开发者选项",
-    "开启USB调试功能",
-    "允许电脑的USB调试授权"
-  ];
 
   return (
     <div className={styles.container}>

@@ -18,12 +18,6 @@ import {
   Code24Regular,
   Globe24Regular,
   ArrowUpload24Regular,
-  DeviceEq24Regular,
-  Wrench24Regular,
-  Desktop24Regular,
-  Options24Regular,
-  Shield24Regular,
-  Document24Regular,
   Person24Regular,
   Building24Regular,
 } from "@fluentui/react-icons";
@@ -301,9 +295,7 @@ const AboutPanel: React.FC = () => {
     openUrl(links.feedback);
   };
 
-  const handleOpenOfficialWebsite = () => {
-    openUrl(links.officialWebsite);
-  };
+
 
   const handleOpenSourceInfo = () => {
     setIsOpenSourceDialogOpen(true);
@@ -459,7 +451,7 @@ const AboutPanel: React.FC = () => {
         </Card>
 
         {/* 开源项目详情弹窗 */}
-        <Dialog open={isOpenSourceDialogOpen} onOpenChange={(e, data) => setIsOpenSourceDialogOpen(data.open)}>
+        <Dialog open={isOpenSourceDialogOpen} onOpenChange={(_e, data) => setIsOpenSourceDialogOpen(data.open)}>
           <DialogSurface className={styles.openSourceDialog}>
             <DialogBody>
               <DialogTitle>开源项目详情</DialogTitle>
@@ -489,7 +481,7 @@ const AboutPanel: React.FC = () => {
           </DialogSurface>
         </Dialog>
         {/* 致谢列表弹窗 */}
-        <Dialog open={isThanksDialogOpen} onOpenChange={(e, data) => setIsThanksDialogOpen(data.open)}>
+        <Dialog open={isThanksDialogOpen} onOpenChange={(_e, data) => setIsThanksDialogOpen(data.open)}>
           <DialogSurface className={styles.openSourceDialog}>
             <DialogBody>
               <DialogTitle>致谢列表</DialogTitle>

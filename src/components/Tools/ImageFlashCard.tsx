@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef, useState }  from 'react';
 import {
   makeStyles,
   Card,
@@ -15,16 +15,12 @@ import {
   DialogContent,
   DialogBody,
   DialogActions,
-  Spinner,
-  Badge,
 } from "@fluentui/react-components";
 import {
   CloudArrowUp24Regular,
   Warning24Regular,
   Document24Regular,
   Play24Regular,
-  CheckmarkCircle24Regular,
-  ErrorCircle24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 
@@ -194,20 +190,6 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
     }
   };
 
-  const getStatusBadge = () => {
-    switch (flashStatus) {
-      case "preparing":
-        return <Badge appearance="outline" color="brand" icon={<Spinner size="tiny" />}>准备中</Badge>;
-      case "flashing":
-        return <Badge appearance="outline" color="important" icon={<Spinner size="tiny" />}>刷入中</Badge>;
-      case "success":
-        return <Badge appearance="outline" color="success" icon={<CheckmarkCircle24Regular />}>成功</Badge>;
-      case "error":
-        return <Badge appearance="outline" color="danger" icon={<ErrorCircle24Regular />}>失败</Badge>;
-      default:
-        return <Badge appearance="outline">就绪</Badge>;
-    }
-  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -224,7 +206,6 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
           image={<CloudArrowUp24Regular />}
           header={<Text weight="semibold">镜像刷入工具</Text>}
           description={<Text size={200}>刷入自定义镜像文件到指定分区</Text>}
-          action={getStatusBadge()}
         />
         
         <div className={styles.content}>

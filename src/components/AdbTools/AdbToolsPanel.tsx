@@ -472,6 +472,14 @@ const AdbToolsPanel: React.FC = () => {
                     >
                       清空
                     </Button>
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      onClick={() => setIsOutputCollapsed(prev => !prev)}
+                      disabled={!output}
+                    >
+                      {isOutputCollapsed ? "展开" : "折叠"}
+                    </Button>
                   </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, {  useState } from "react";
 import {
   makeStyles,
   Card,
@@ -10,18 +10,15 @@ import {
 } from "@fluentui/react-components";
 import {
   FullScreenMaximize24Regular,
-  FullScreenMinimize24Regular,
   Record24Regular,
   RecordStop24Regular,
   Desktop24Regular,
-  Settings24Regular,
   Screenshot24Regular,
   PhoneDesktop24Regular,
   Info24Regular,
 } from "@fluentui/react-icons";
 import { ScreenMirrorSession } from "../../types/screenMirror";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
-import { invoke } from "@tauri-apps/api/core";
 
 const useStyles = makeStyles({
   card: {

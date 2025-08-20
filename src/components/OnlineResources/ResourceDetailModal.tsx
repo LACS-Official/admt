@@ -3,23 +3,18 @@ import {
   makeStyles,
   Text,
   Button,
-  Card,
   Badge,
   Divider,
   Body1,
   Caption1,
-  Title2,
   Title3,
   Subtitle1,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogContent,
-  DialogActions,
   DialogBody,
   Spinner,
-  Link,
   Image,
   Tab,
   TabList,
@@ -28,11 +23,6 @@ import {
 } from '@fluentui/react-components';
 import {
   Dismiss24Regular,
-  ArrowDownload24Regular,
-  Globe24Regular,
-  Calendar24Regular,
-  Person24Regular,
-  Tag24Regular,
   Info24Regular,
   DocumentText24Regular,
   History24Regular,
@@ -240,7 +230,6 @@ const useStyles = makeStyles({
     transition: 'all 0.2s ease',
     '&:hover': {
       backgroundColor: 'var(--colorNeutralBackground1Hover)',
-      borderColor: 'var(--colorBrandStroke1)',
     },
   },
 });
@@ -256,11 +245,10 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   software,
   isOpen,
   onClose,
-  onDownload,
 }) => {
   const styles = useStyles();
   const [selectedTab, setSelectedTab] = useState<string>('overview');
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [] = useState(false);
   const [detailData, setDetailData] = useState<OnlineSoftware | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -289,17 +277,6 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   }, [isOpen, software.id]);
 
   // 处理下载
-  const handleDownload = async () => {
-    if (onDownload) {
-      setIsDownloading(true);
-      try {
-        // 使用详细数据或基础数据
-        await onDownload(detailData || software);
-      } finally {
-        setIsDownloading(false);
-      }
-    }
-  };
 
   // 格式化文件大小
   const formatFileSize = (bytes?: number): string => {

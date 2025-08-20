@@ -4,7 +4,6 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { compareVersions } from 'compare-versions';
 import {
   makeStyles,
   Spinner,
@@ -14,7 +13,6 @@ import {
   Button,
   Card,
   Body1,
-  Caption1,
   Title3,
   Badge,
 } from '@fluentui/react-components';
@@ -168,7 +166,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const [showAnnouncements, setShowAnnouncements] = useState(false);
   const [showEnterButton, setShowEnterButton] = useState(false);
   const [showVersionChecker, setShowVersionChecker] = useState(false);
-  const [autoRedirectTimer, setAutoRedirectTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     setVersionCheckResult,
@@ -286,19 +284,6 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
           message: `您有 ${announcementResult.length} 条新公告，请查看`,
           duration: 5000,
         });
-        
-        // 设置3秒后自动跳转
-        const timer = setTimeout(() => {
-          console.log('📢 公告显示3秒后自动进入应用');
-          // 确保调用onComplete，即使checkResult还没有设置完成
-          if (versionResult) {
-            onComplete(versionResult);
-          } else if (checkResult) {
-            onComplete(checkResult);
-          }
-        }, 3000);
-        
-        setAutoRedirectTimer(timer);
       } else {
         console.log('📢 没有公告');
         setStatusMessage('检查完成');

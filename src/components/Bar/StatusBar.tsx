@@ -160,8 +160,8 @@ const StatusBar: React.FC = () => {
   const [currentNotification, setCurrentNotification] = useState<NotificationMessage | null>(null);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [progressWidth, setProgressWidth] = useState(100);
-  const [notificationTimer, setNotificationTimer] = useState<number | null>(null);
-  const [progressTimer, setProgressTimer] = useState<number | null>(null);
+  const [notificationTimer, setNotificationTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [progressTimer, setProgressTimer] = useState<ReturnType<typeof setInterval> | null>(null);
 
   // 手动关闭通知
   const handleCloseNotification = () => {

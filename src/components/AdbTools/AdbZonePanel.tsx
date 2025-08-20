@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+
+import React, { useState }  from 'react';
+
 import {
   makeStyles,
   Text,
@@ -15,7 +17,6 @@ import AdbToolsPanel from "../AdbTools/AdbToolsPanel";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
 import AppManagementCard from "../DeviceControl/AppManagementCard";
 import FileOperationCard from "../DeviceControl/FileOperationCard";
-import NetworkDebugCard from "../DeviceControl/NetworkDebugCard";
 
 const useStyles = makeStyles({
   container: {
@@ -119,7 +120,6 @@ const AdbZonePanel: React.FC = () => {
             <SystemControlCard device={selectedDevice} />
             <AppManagementCard device={selectedDevice} />
             <FileOperationCard device={selectedDevice} />
-            <NetworkDebugCard device={selectedDevice} />
           </div>
         );
       default:

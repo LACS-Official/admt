@@ -6,7 +6,7 @@
 import React from 'react';
 import {
   Dialog,
-  DialogTrigger,
+
   DialogSurface,
   DialogTitle,
   DialogBody,
@@ -19,8 +19,7 @@ import {
   Warning24Regular,
   Dismiss24Regular,
 } from '@fluentui/react-icons';
-import { exit } from '@tauri-apps/api/process';
-
+import { exit } from '@tauri-apps/plugin-process';
 const useStyles = makeStyles({
   dialogContent: {
     display: 'flex',
@@ -56,11 +55,9 @@ const useStyles = makeStyles({
   },
   exitButton: {
     backgroundColor: 'var(--colorPaletteRedBackground3)',
-    borderColor: 'var(--colorPaletteRedBorder2)',
     color: 'var(--colorPaletteRedForeground3)',
     '&:hover': {
       backgroundColor: 'var(--colorPaletteRedBackground2)',
-      borderColor: 'var(--colorPaletteRedBorder1)',
     },
   },
 });
@@ -75,7 +72,6 @@ interface ExitConfirmDialogProps {
 const ExitConfirmDialog: React.FC<ExitConfirmDialogProps> = ({
   open,
   onOpenChange,
-  onConfirmExit,
   missingConsents,
 }) => {
   const styles = useStyles();

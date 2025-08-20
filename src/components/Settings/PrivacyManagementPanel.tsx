@@ -9,7 +9,6 @@ import {
   CardHeader,
   Text,
   Button,
-  Switch,
   MessageBar,
   Dialog,
   DialogSurface,
@@ -23,11 +22,10 @@ import {
 import {
   Shield24Regular,
   Warning24Regular,
-  Settings24Regular,
   ArrowReset24Regular,
   DismissCircle24Regular,
 } from '@fluentui/react-icons';
-import { usePrivacyConsentStore, DataCollectionTypes } from '../../stores/privacyConsentStore';
+import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
 import { ActivationService } from '../../services/activationService';
 import { clearPreservedUserConfig } from '../Common/UserConfigPreserver';
 
@@ -105,13 +103,11 @@ const PrivacyManagementPanel: React.FC = () => {
     hasAcceptedPrivacyPolicy,
     hasAcceptedUserAgreement,
     hasAcceptedDataCollection,
-    dataCollectionTypes,
     privacyPolicyAcceptedAt,
     userAgreementAcceptedAt,
     dataCollectionAcceptedAt,
     privacyPolicyVersion,
     userAgreementVersion,
-    updateDataCollectionTypes,
     revokeAll,
     canCollectData,
   } = usePrivacyConsentStore();
@@ -121,12 +117,6 @@ const PrivacyManagementPanel: React.FC = () => {
     return new Date(timestamp).toLocaleString('zh-CN');
   };
 
-  const handleDataCollectionToggle = (type: keyof DataCollectionTypes, enabled: boolean) => {
-    if (!hasAcceptedDataCollection) {
-      return;
-    }
-    updateDataCollectionTypes({ [type]: enabled });
-  };
 
   // 第一次点击重置按钮，显示第一个确认弹窗
   const handleResetApp = async () => {

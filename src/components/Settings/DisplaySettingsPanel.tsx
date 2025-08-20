@@ -5,17 +5,12 @@ import {
   Card,
   CardHeader,
   Switch,
-  Select,
-  Option,
-  Slider,
   Label,
-  Field,
 } from "@fluentui/react-components";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
 import {
   Grid24Regular,
-  Eye24Regular,
   WeatherMoon24Regular,
 } from "@fluentui/react-icons";
 
@@ -98,7 +93,7 @@ const DisplaySettingsPanel: React.FC = () => {
   const { updateConfig } = useAppStore();
   
   // 界面设置状态
-  const [fontSize, setFontSize] = useState(14);
+
   const [enableAnimations, setEnableAnimations] = useState(true);
 
   // 监听系统主题变化

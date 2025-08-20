@@ -6,7 +6,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogBody,
@@ -23,7 +22,8 @@ import {
   Open24Regular,
   Info24Regular,
   Warning24Regular,
-  Checkmark24Regular
+  Checkmark24Regular,
+  ArrowDownload24Regular
 } from '@fluentui/react-icons';
 import { versionService } from '../../services/versionService';
 import { VersionCheckResult } from '../../types/app';
@@ -147,10 +147,9 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
     // 优先使用官方下载链接
     if (checkResult?.updateInfo?.downloadLinks?.official) {
       downloadUrl = checkResult.updateInfo.downloadLinks.official;
-    } else if (checkResult?.updateInfo?.downloadLinks?.github) {
-      downloadUrl = checkResult.updateInfo.downloadLinks.github;
-    } else if (checkResult?.updateInfo?.downloadUrl) {
-      downloadUrl = checkResult.updateInfo.downloadUrl;
+    } else {
+      // 默认使用 app.lacs.cc
+      downloadUrl = 'https://app.lacs.cc';
     }
 
     if (downloadUrl) {
@@ -169,19 +168,8 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
       // 如果没有下载链接，跳转到官网或显示提示
       console.warn('没有可用的下载链接');
       // 可以跳转到官网或项目页面
-      const fallbackUrl = 'https://github.com/your-repo/releases'; // 替换为实际的项目地址
+      const fallbackUrl = 'https://app.lacs.cc/'; // 替换为实际的项目地址
       window.open(fallbackUrl, '_blank');
-    }
-    setIsDialogOpen(false);
-  };
-
-  /**
-   * 处理稍后更新
-   */
-  const handleUpdateLater = () => {
-    if (checkResult?.isForceUpdate) {
-      // 强制更新时不允许稍后更新，直接返回
-      return;
     }
     setIsDialogOpen(false);
   };

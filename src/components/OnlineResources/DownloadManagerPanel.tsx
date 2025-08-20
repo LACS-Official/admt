@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
-  Text,
   Button,
   Card,
   Badge,
   ProgressBar,
-  Divider,
   Body1,
   Caption1,
   Title2,
-  Title3,
   SearchBox,
   Dropdown,
   Option,
@@ -25,7 +22,6 @@ import {
   ArrowDownload24Regular,
   CheckmarkCircle24Filled,
   ErrorCircle24Filled,
-  Warning24Filled,
   Broom24Regular,
   FolderZip24Regular,
 } from '@fluentui/react-icons';
@@ -200,7 +196,7 @@ interface DownloadManagerPanelProps {
   onBack: () => void;
 }
 
-export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBack }) => {
+export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) => {
   const styles = useStyles();
   const [tasks, setTasks] = useState<DownloadTask[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<DownloadTask[]>([]);
@@ -264,42 +260,10 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
   };
 
   // 获取状态徽章属性
-  const getStatusBadgeProps = (status: DownloadTask['status']) => {
-    switch (status) {
-      case 'downloading':
-        return { appearance: 'filled' as const, color: 'brand' as const, icon: <ArrowDownload24Regular /> };
-      case 'extracting':
-        return { appearance: 'filled' as const, color: 'warning' as const, icon: <FolderZip24Regular /> };
-      case 'paused':
-        return { appearance: 'filled' as const, color: 'warning' as const, icon: <Pause24Regular /> };
-      case 'completed':
-        return { appearance: 'filled' as const, color: 'success' as const, icon: <CheckmarkCircle24Filled /> };
-      case 'failed':
-        return { appearance: 'filled' as const, color: 'danger' as const, icon: <ErrorCircle24Filled /> };
-      case 'cancelled':
-        return { appearance: 'outline' as const, color: 'subtle' as const, icon: <Dismiss24Regular /> };
-      default:
-        return { appearance: 'outline' as const, color: 'subtle' as const };
-    }
-  };
 
   // 获取状态文本
-  const getStatusText = (status: DownloadTask['status']) => {
-    switch (status) {
-      case 'downloading': return '下载中';
-      case 'extracting': return '正在解压';
-      case 'paused': return '已暂停';
-      case 'completed': return '已完成';
-      case 'failed': return '失败';
-      case 'cancelled': return '已取消';
-      default: return '未知';
-    }
-  };
 
   // 格式化时间
-  const formatTime = (date: Date) => {
-    return date.toLocaleString('zh-CN');
-  };
 
   const stats = getStats();
 
@@ -490,14 +454,6 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
     }
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleDateString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const formatShortTime = (date: Date) => {
     return date.toLocaleTimeString('zh-CN', {
