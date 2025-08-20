@@ -44,6 +44,10 @@ const useStyles = makeStyles({
   },
   cardHeader: {
     paddingBottom: "12px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+
   },
   cardTitle: {
     fontSize: "12px", // 减少标题字体大小
@@ -67,6 +71,7 @@ const useStyles = makeStyles({
   },
   functionItem: {
     display: "flex",
+    marginTop:"5px",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
@@ -76,7 +81,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground2,
     transition: "all 0.2s ease",
     cursor: "pointer",
-    minHeight: "32px", // 增加最小高度以适应3x3网格
+    minHeight: "62px", // 增加最小高度以适应3x3网格
     textAlign: "center",
     position: "relative", // 添加相对定位以支持绝对定位的徽章
     ":hover": {
@@ -168,15 +173,12 @@ interface MiscFunction {
 
 const MiscellaneousCard: React.FC = () => {
   const styles = useStyles();
-  const { addNotification } = useAppStore();
+  const { setStatusBarMessage } = useAppStore();
 
   const [executingFunction, setExecutingFunction] = useState<string | null>(null);
 
   // 对话框状态
   const [showRestartDialog, setShowRestartDialog] = useState(false);
-  const [showStopAdbDialog, setShowStopAdbDialog] = useState(false);
-  const [showDriverDialog, setShowDriverDialog] = useState(false);
-  const [showUsbDialog, setShowUsbDialog] = useState(false);
 
   // 通用命令执行函数
   const executeCommand = async (
@@ -186,10 +188,11 @@ const MiscellaneousCard: React.FC = () => {
     isRisky: boolean = false
   ) => {
     if (isRisky) {
-      addNotification({
+      setStatusBarMessage({
         type: "warning",
-        title: "风险操作",
-        message: `即将执行: ${description}，请确认操作`,
+        message: `请再次点击 确认执行重启操作`,
+        icon: <Warning24Regular />,
+        duration: 5000,
       });
     }
 
@@ -197,23 +200,26 @@ const MiscellaneousCard: React.FC = () => {
     try {
       const result = await command();
       if (result.success) {
-        addNotification({
+        setStatusBarMessage({
           type: "success",
-          title: "操作成功",
+          icon: <Info24Regular />,
           message: `${description}成功`,
+          duration: 1000,
         });
       } else {
-        addNotification({
+        setStatusBarMessage({
+          icon: <Warning24Regular />,
           type: "error",
-          title: "操作失败",
           message: result.error || `${description}失败`,
+          duration: 5000,
         });
       }
     } catch (error) {
-      addNotification({
+      setStatusBarMessage({
+        icon: <Warning24Regular />,
         type: "error",
-        title: "操作失败",
         message: `${description}失败: ${error}`,
+        duration: 5000,
       });
     } finally {
       setExecutingFunction(null);
@@ -244,11 +250,11 @@ const MiscellaneousCard: React.FC = () => {
   };
 
   const handleStopAdb = async () => {
-    setShowStopAdbDialog(true);
+    /* 执行adb进程停止操作 */
+
   };
 
   const confirmStopAdb = async () => {
-    setShowStopAdbDialog(false);
     await executeCommand(
       "stop-adb",
       () => invoke("stop_adb_process"),
@@ -258,6 +264,12 @@ const MiscellaneousCard: React.FC = () => {
   };
 
   const handleRestartAdb = async () => {
+    setStatusBarMessage({
+      type: "info",
+      icon: <Info24Regular />,
+      message: "正在重启ADB服务...",
+      duration: 1000,
+      });
     await executeCommand(
       "restart-adb",
       () => invoke("restart_adb_service"),
@@ -266,11 +278,9 @@ const MiscellaneousCard: React.FC = () => {
   };
 
   const handleInstallDriver = async () => {
-    setShowDriverDialog(true);
   };
 
   const confirmInstallDriver = async () => {
-    setShowDriverDialog(false);
     await executeCommand(
       "install-driver",
       () => invoke("install_device_driver"),
@@ -280,7 +290,7 @@ const MiscellaneousCard: React.FC = () => {
   };
 
   const handleFixUsb3 = async () => {
-    setShowUsbDialog(true);
+
   };
 
   const confirmFixUsb3 = async () => {
@@ -368,12 +378,15 @@ const MiscellaneousCard: React.FC = () => {
   return (
     <>
       <Card className={styles.card}>
-        <CardHeader className={styles.cardHeader}>
-          <Text className={styles.cardTitle}>
-            <Wrench24Regular className={styles.titleIcon} />
-            杂项控制
-          </Text>
-        </CardHeader>
+        <CardHeader
+        header={
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Info24Regular className={styles.titleIcon} />
+            <Text weight="semibold">辅助功能</Text>
+          </div>
+        }
+      />
+
 
         <div className={styles.cardContent}>
           {miscFunctions.map((func) => (

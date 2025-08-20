@@ -147,27 +147,27 @@ const DeviceRebootCard: React.FC = () => {
       id: "normal",
       label: "System",
       description: "重启到Android系统",
-      command: "system", // 后端期望的参数
+      command: "system", 
     },
     {
       id: "recovery",
       label: "Recovery",
       description: "进入恢复模式",
-      command: "recovery", // 后端期望的参数
+      command: "recovery", 
       warning: true,
     },
     {
       id: "bootloader",
       label: "Bootloader",
       description: "进入引导加载程序模式",
-      command: "bootloader", // 后端期望的参数
+      command: "bootloader", 
       warning: true,
     },
     {
       id: "fastboot",
       label: "Fastboot",
       description: "进入快速启动模式",
-      command: "fastboot", // 后端期望的参数
+      command: "fastboot", 
       warning: true,
     },
   ];
