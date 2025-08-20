@@ -3,7 +3,7 @@
  * 用于显示隐私政策和用户协议，要求用户同意
  */
 
-import React, { useState } from 'react';
+import React, { useState }  from 'react';
 import {
   Button,
   Checkbox,

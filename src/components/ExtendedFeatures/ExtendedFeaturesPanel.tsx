@@ -1,17 +1,15 @@
-import React, { useState } from "react";
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Text,
   Badge,
   TabList,
   Tab,
-  Card,
-  CardHeader,
+
 } from "@fluentui/react-components";
 import {
   Wrench24Regular,
   Settings24Regular,
-  Info24Regular,
   Apps24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";

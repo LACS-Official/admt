@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
-  Text,
   Button,
-  Card,
   SearchBox,
   Spinner,
-  Badge,
   Body1,
   Caption1,
   Title2,
-  Title3,
 } from '@fluentui/react-components';
 import {
   CloudArrowDown24Regular,

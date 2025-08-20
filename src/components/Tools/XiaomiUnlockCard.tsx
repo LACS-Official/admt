@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Card,
@@ -13,12 +13,6 @@ import {
   DialogBody,
   DialogActions,
   Spinner,
-  Accordion,
-  AccordionItem,
-  AccordionHeader,
-  AccordionPanel,
-  SearchBox,
-  Textarea,
 } from "@fluentui/react-components";
 import {
   LockOpen24Regular,
@@ -104,14 +98,14 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [selectedAction, setSelectedAction] = useState<string>("");
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [commandOutputs, setCommandOutputs] = useState<Array<{
+  const [, setCommandOutputs] = useState<Array<{
     id: string;
     command: string;
     output: string;
     timestamp: Date;
     success: boolean;
   }>>([]);
-  const [outputSearchQuery, setOutputSearchQuery] = useState("");
+  const [] = useState("");
 
   // 添加命令输出到历史记录
   const addCommandOutput = (command: string, output: string, success: boolean) => {
@@ -126,10 +120,6 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   };
 
   // 过滤命令输出
-  const filteredOutputs = commandOutputs.filter(output =>
-    output.command.toLowerCase().includes(outputSearchQuery.toLowerCase()) ||
-    output.output.toLowerCase().includes(outputSearchQuery.toLowerCase())
-  );
 
   const xiaomiTools = [
     {

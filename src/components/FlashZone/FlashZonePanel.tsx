@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Text,
-  Badge,
   Card,
   CardHeader,
   TabList,
@@ -68,7 +67,7 @@ const useStyles = makeStyles({
   },
   warningCard: {
     backgroundColor: "var(--colorPaletteRedBackground1)",
-    borderColor: "var(--colorPaletteRedBorder1)",
+    border: "1px solid var(--colorPaletteRedBorder1)",
   },
   warningContent: {
     padding: "16px",

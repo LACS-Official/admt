@@ -8,15 +8,11 @@ import {
   makeStyles,
   Text,
   Title1,
-  Title2,
   Body1,
-  Caption1,
   Card,
   Field,
-  Input,
   Button,
   Spinner,
-  MessageBar,
   Dialog,
   DialogSurface,
   DialogBody,
@@ -25,11 +21,8 @@ import {
   DialogActions,
 } from '@fluentui/react-components';
 import {
-  Key24Regular,
-  Shield24Regular,
   Checkmark24Regular,
   Dismiss24Regular,
-  Info24Regular,
 } from '@fluentui/react-icons';
 import { useWelcomeStore, useAppConfigStore } from '../../stores/welcomeStore';
 import { useStartupFlowStore } from '../../stores/startupFlowStore';
@@ -295,13 +288,11 @@ interface ActivationPageProps {
 
 const ActivationPage: React.FC<ActivationPageProps> = ({
   onSuccess,
-  onError,
-  onSkip
+
 }) => {
   const styles = useStyles();
   const {
     activationCode,
-    activationStatus,
     isLoading,
     error,
     setActivationCode,
@@ -381,7 +372,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
   };
 
   // 处理粘贴事件
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, _index: number) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text/plain').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
     

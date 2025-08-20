@@ -2,8 +2,7 @@
  * 启动时版本检查组件
  * 在应用启动时执行版本检查，根据结果显示相应的UI
  */
-
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState }  from 'react';
 import {
   Dialog,
   DialogSurface,
@@ -27,14 +26,12 @@ import {
   CardHeader,
   CardPreview,
   CardFooter,
-  Link,
   Divider
 } from '@fluentui/react-components';
 import {
   Open24Regular,
   Warning24Regular,
   Checkmark24Regular,
-  Dismiss24Regular,
   ArrowClockwise24Regular,
   CheckmarkCircle24Filled,
   ArrowDownload24Regular

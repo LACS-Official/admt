@@ -20,9 +20,7 @@ import { activationService } from '@/services/activationService';
 import { usePrivacyConsentStore, shouldShowPrivacyConsent, shouldExitApplication } from '@/stores/privacyConsentStore';
 
 // 导入各个阶段的组件
-import VersionChecker from './VersionChecker';
 import UnifiedLoadingVersionChecker from './App_Loading';
-import ForceUpdateModal from './ForceUpdateModal';
 import ActivationPage from './ActivationPage';
 import DebugPanel from '../Debug/DebugPanel';
 import PrivacyDebugPanel from '../Debug/PrivacyDebugPanel';
@@ -446,13 +444,6 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     }
   };
 
-  const handleActivationComplete = () => {
-    console.log('✅ 激活验证完成');
-    setActivationVerified(true);
-
-    // 激活完成后，进入主应用
-    setCurrentPhase('main-app');
-  };
 
   const handleActivationSuccess = (newActivationStatus: any) => {
     console.log('✅ 激活成功:', newActivationStatus);

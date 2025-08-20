@@ -3,7 +3,7 @@
  * 调用后端API检查当前版本是否为最新版本
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState }  from 'react';
 import {
   makeStyles,
   Spinner,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Card,
@@ -138,9 +138,9 @@ const DeviceRebootCard: React.FC = () => {
   const { setStatusBarMessage } = useAppStore();
   const [isRebooting, setIsRebooting] = useState(false);
   const [pendingRebootOption, setPendingRebootOption] = useState<RebootOption | null>(null);
-  const [confirmationTimeout, setConfirmationTimeout] = useState<number | null>(null);
+  const [confirmationTimeout, setConfirmationTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [_rebootCountdown, setRebootCountdown] = useState<number | null>(null);
-  const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
+  const [countdownTimer, setCountdownTimer] = useState<ReturnType<typeof setInterval> | null>(null);
 
   const rebootOptions: RebootOption[] = [
     {

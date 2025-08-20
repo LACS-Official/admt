@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Card,
@@ -97,7 +97,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
 
     setExecutingCommand(commandId);
     try {
-      const result = await deviceService.executeAdbCommand(device.serial, command);
+      const result = await deviceService.executeAdbCommand(device.serial, command[0], command.slice(1));
       if (result.success) {
         addNotification({
           type: "success",
