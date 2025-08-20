@@ -15,10 +15,7 @@ import {
   Play24Regular,
   Delete24Regular,
   Copy24Regular,
-  ChevronDown24Regular,
   Search24Regular,
-  ChevronUp24Regular,
-  ChevronDown24Filled,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";

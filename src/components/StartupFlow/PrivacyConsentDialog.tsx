@@ -13,29 +13,20 @@ import {
   Divider,
   MessageBar,
   Card,
-  CardHeader,
-  CardPreview,
-  CardFooter,
   Dialog,
   DialogSurface,
   DialogBody,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Link,
-  Avatar,
-  Tooltip
 } from '@fluentui/react-components';
 import { 
   Shield24Regular, 
   Document24Regular, 
   Warning24Regular,
   Dismiss24Regular,
-  Info24Regular,
   CheckmarkCircle24Regular,
   DocumentBulletList24Regular,
-  Person24Regular,
-  ArrowRight24Regular,
   ArrowLeft24Regular
 } from '@fluentui/react-icons';
 import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';

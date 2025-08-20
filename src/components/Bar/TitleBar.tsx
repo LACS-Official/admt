@@ -72,7 +72,7 @@ const TitleBar: React.FC = () => {
   const styles = useStyles();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const { setCurrentView } = useAppStore();
-  const { config } = useAppConfigStore();
+  useAppConfigStore();
   const [isMaximized, setIsMaximized] = React.useState(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = React.useState(false);
 

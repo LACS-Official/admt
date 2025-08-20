@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@fluentui/react-components';
-import { useStartupFlowStore, StartupPhase, UserType } from '@/stores/startupFlowStore';
+import { useStartupFlowStore } from '@/stores/startupFlowStore';
 import { OptimizedUserBehaviorService } from '@/services/optimizedUserBehaviorService';
 import { SecurityConfigManager } from '@/config/securityConfig';
 import { activationService } from '@/services/activationService';
@@ -23,13 +23,10 @@ import { usePrivacyConsentStore, shouldShowPrivacyConsent, shouldExitApplication
 import VersionChecker from './VersionChecker';
 import UnifiedLoadingVersionChecker from './App_Loading';
 import ForceUpdateModal from './ForceUpdateModal';
-import WelcomePage from './WelcomePage';
-import InitialSetupWizard from './InitialSetupWizard';
 import ActivationPage from './ActivationPage';
 import DebugPanel from '../Debug/DebugPanel';
 import PrivacyDebugPanel from '../Debug/PrivacyDebugPanel';
 import { devToolsManager, isDevelopment } from '../../utils/devtools';
-import ActivationExpiredHandler from './ActivationExpiredHandler';
 import PrivacyConsentDialog from './PrivacyConsentDialog';
 
 const useStyles = makeStyles({
@@ -55,24 +52,16 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
 
   const {
     currentPhase,
-    userType,
     isFirstLaunch,
-    versionCheckResult,
-    activationStatus,
-    userSettings,
-    error,
-    retryCount,
     versionCheckCompleted,
     firstLaunchDetected,
     privacyConsentCompleted,
     activationVerified,
     dataCollectionStarted,
     setCurrentPhase,
-    setUserType,
     setIsFirstLaunch,
     setError,
     resetRetryCount,
-    incrementRetryCount,
     setActivationStatus,
     updateUserSettings,
     setActivationVerified,
@@ -465,11 +454,6 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     setCurrentPhase('main-app');
   };
 
-  const handleForceUpdateComplete = () => {
-    // 强制更新完成后，应用会重启
-    onComplete();
-  };
-
   const handleActivationSuccess = (newActivationStatus: any) => {
     console.log('✅ 激活成功:', newActivationStatus);
     console.log('📊 激活成功时的状态:', {
@@ -510,17 +494,6 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     // 不调用错误回调，避免上层组件处理错误导致页面跳转
     // onError 回调可能会导致应用退出或页面跳转，这里注释掉
     // onError(`激活验证失败: ${error}`);
-  };
-
-  const handleActivationExpiredReactivate = (newStatus: any) => {
-    console.log('✅ 重新激活成功:', newStatus);
-    setActivationStatus(newStatus);
-    handleActivationComplete();
-  };
-
-  const handleContinueWithLimitations = () => {
-    console.log('⚠️ 用户选择继续使用受限功能');
-    handleActivationComplete();
   };
 
   const handleStartupComplete = () => {

@@ -9,11 +9,8 @@ import {
   Spinner,
   Text,
   ProgressBar,
-  MessageBar,
   Button,
   Card,
-  CardHeader,
-  CardPreview,
   Body1,
   Caption1,
   Title3,
@@ -21,12 +18,11 @@ import {
 import {
   CheckmarkCircle24Filled,
   Warning24Filled,
-  ArrowDownload24Regular,
   ArrowClockwise24Regular,
 } from '@fluentui/react-icons';
 import { useStartupFlowStore, VersionCheckResult } from '../../stores/startupFlowStore';
 import { SecurityConfigManager } from '../../config/securityConfig';
-import { SecureDataTransmissionService } from '../../services/secureDataTransmissionService';
+
 
 const useStyles = makeStyles({
   container: {
@@ -249,11 +245,17 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({ onComplete, onError }) 
       currentVersion,
       latestVersion: latestVersionNumber,
       updateInfo: !isLatest ? {
-        title: `新版本 ${latestVersionNumber} 可用`,
-        description: softwareInfo.description || '发现新版本，建议更新',
-        downloadUrl: softwareInfo.officialWebsite || '',
+        version: latestVersionNumber,
+        releaseNotes: softwareInfo.description || '新版本更新',
+        releaseNotesEn: softwareInfo.description_en || '',
+        releaseDate: new Date().toISOString(),
+        downloadLinks: { 
+          official: softwareInfo.officialWebsite || '',
+        },
         isForced: true, // 根据需求设置是否强制更新
-        releaseNotes: [softwareInfo.description || '新版本更新'],
+        // 添加新的必需字段
+        id: softwareInfo.id || 1,
+        versionType: "release",
       } : undefined,
     };
   };
@@ -315,14 +317,12 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({ onComplete, onError }) 
                 {checkResult.updateInfo.description}
               </Body1>
               
-              {checkResult.updateInfo.releaseNotes.length > 0 && (
+              {checkResult.updateInfo.releaseNotes && (
                 <div className={styles.releaseNotes}>
-                  <Caption1 weight="semibold">更新内容:</Caption1>
-                  {checkResult.updateInfo.releaseNotes.map((note, index) => (
-                    <div key={index} className={styles.noteItem}>
-                      <Caption1>{note}</Caption1>
-                    </div>
-                  ))}
+                  <Caption1>更新内容:</Caption1>
+                  <div className={styles.noteItem}>
+                    <Caption1>{checkResult.updateInfo.releaseNotes}</Caption1>
+                  </div>
                 </div>
               )}
             </div>
