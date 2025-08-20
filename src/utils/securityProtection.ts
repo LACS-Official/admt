@@ -37,7 +37,7 @@ export class SecurityProtection {
     this.disableContextMenu();
     this.disableKeyboardShortcuts();
     this.startDevToolsDetection();
-    this.disableTextSelection();
+    this.disableAllTextSelection();
     this.preventDragAndDrop();
   }
 
@@ -318,6 +318,32 @@ export class SecurityProtection {
         return false;
       }
     });
+  }
+
+  /**
+   * 禁用所有文本选择
+   */
+  private disableAllTextSelection(): void {
+    // 添加全局禁用文本选择的类
+    document.documentElement.classList.add('security-protected');
+
+    // 禁用文本选择事件
+    document.addEventListener('selectstart', (e) => {
+      if (this.protectionEnabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }, true);
+
+    // 禁用复制事件
+    document.addEventListener('copy', (e) => {
+      if (this.protectionEnabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }, true);
   }
 
   /**

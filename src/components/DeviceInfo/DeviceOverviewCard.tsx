@@ -13,6 +13,14 @@ import {
   Spinner,
   Tab,
   TabList,
+  Dialog,
+  DialogTrigger,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogContent,
+  DialogActions,
+  Checkbox,
 } from "@fluentui/react-components";
 import {
   Phone24Regular,
@@ -21,9 +29,18 @@ import {
   DesktopPulse24Regular,
   ArrowClockwise24Regular,
   Copy24Regular,
+  Edit24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
-import { DeviceService } from "../../services/deviceService";
+import { deviceService } from "../../services/deviceService";
+import { useDeviceStore } from "../../stores/deviceStore";
+
+// 定义信息面板组件的props类型
+interface InfoPanelProps {
+  device: DeviceInfo;
+  onCopyValue: (value: string, label: string) => void;
+  styles: any;
+}
 
 // 格式化存储大小
 const formatStorageSize = (sizeInMB: number): string => {
@@ -60,6 +77,13 @@ interface MemoryStorageInfo {
 }
 
 const useStyles = makeStyles({
+  title: {
+    selector: ".MuiCardContent-root",
+    fontSize: "1.2rem",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
+    lineHeight: "1.2",
+  },
   card: {
     height: "100%",
     display: "flex",
@@ -264,6 +288,7 @@ const useStyles = makeStyles({
       backgroundColor: "var(--colorNeutralBackground2Hover)",
       border: "1px solid var(--colorNeutralStroke2)",
     },
+    position: "relative", // 添加相对定位以支持绝对定位的替换按钮
   },
   infoLabel: {
     fontSize: "10px",
@@ -294,6 +319,33 @@ const useStyles = makeStyles({
       backgroundColor: "var(--colorNeutralBackground3Pressed)",
     },
   },
+  // 添加替换按钮样式
+  replaceButton: {
+    position: "absolute",
+    top: "4px",
+    right: "4px",
+    minWidth: "24px",
+    width: "24px",
+    height: "24px",
+    padding: "0",
+  },
+  // 添加选项对话框中的选项样式
+  optionItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "8px",
+    cursor: "pointer",
+    borderRadius: "4px",
+    ":hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)",
+    },
+  },
+  optionCheckbox: {
+    marginRight: "8px",
+  },
+  optionText: {
+    fontSize: "14px",
+  },
   batteryIcon: {
     color: "var(--colorPaletteGreenForeground1)",
   },
@@ -303,19 +355,43 @@ const useStyles = makeStyles({
   batteryIconMedium: {
     color: "var(--colorPaletteYellowForeground1)",
   },
+  noSelect: {
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    MozUserSelect: 'none',
+    msUserSelect: 'none',
+  },
 });
 
 interface DeviceOverviewCardProps {
   device: DeviceInfo;
+  onShowDetails: () => void;
+  onCopyInfo: () => void;
+  onCustomize: () => void; // 添加自定义按钮回调
 }
 
-const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device }) => {
+
+const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowDetails, onCopyInfo, onCustomize }) => {
   const styles = useStyles();
   const { dispatchToast } = useToastController();
-  const [deviceService] = useState(() => new DeviceService());
+
   const [memoryStorageInfo, setMemoryStorageInfo] = useState<MemoryStorageInfo | null>(null);
   const [isLoadingMemoryStorage, setIsLoadingMemoryStorage] = useState(false);
   const [selectedTab, setSelectedTab] = useState("basic");
+  // 添加替换功能相关状态
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [currentReplaceItem, setCurrentReplaceItem] = useState<string | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({
+    deviceName: true,
+    brand: true,
+    model: true,
+    serial: true,
+    androidVersion: true,
+    sdkVersion: true,
+    deviceCode: true,      // 设备代号
+    buildTime: true,       // 编译时间
+    boardId: true,        // 主板ID
+  });
 
   // 获取内存和存储信息
   const fetchMemoryStorageInfo = async () => {
@@ -339,6 +415,74 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device }) => {
   useEffect(() => {
     fetchMemoryStorageInfo();
   }, [device.serial, device.connected]);
+
+  // 处理打开替换对话框
+  const handleOpenReplaceDialog = (itemId: string) => {
+    setCurrentReplaceItem(itemId);
+    setReplaceDialogOpen(true);
+  };
+
+  // 处理关闭替换对话框
+  const handleCloseReplaceDialog = () => {
+    setReplaceDialogOpen(false);
+    setCurrentReplaceItem(null);
+  };
+
+  // 处理选择项变化
+  const handleItemToggle = (itemId: string) => {
+    setSelectedItems(prev => {
+      // 计算当前选中的数量
+      const currentSelectedCount = Object.values(prev).filter(Boolean).length;
+      const isCurrentlySelected = prev[itemId];
+
+      // 如果要取消选中，检查是否会低于最小值（1个）
+      if (isCurrentlySelected && currentSelectedCount <= 1) {
+        dispatchToast(
+          <Toast>
+            <ToastTitle>提示</ToastTitle>
+            至少需要保留1个显示项
+          </Toast>,
+          { intent: "warning", timeout: 2000 }
+        );
+        return prev;
+      }
+
+      // 如果要选中，检查是否会超过最大值（9个）
+      if (!isCurrentlySelected && currentSelectedCount >= 9) {
+        dispatchToast(
+          <Toast>
+            <ToastTitle>提示</ToastTitle>
+            最多只能选择9个显示项
+          </Toast>,
+          { intent: "warning", timeout: 2000 }
+        );
+        return prev;
+      }
+
+      // 更新选中状态
+      return {
+        ...prev,
+        [itemId]: !prev[itemId]
+      };
+    });
+  };
+
+  // 处理确认替换
+  const handleConfirmReplace = () => {
+    // 保存当前选中状态并关闭弹窗
+    onCustomize(); // 通知父组件保存更改
+    setReplaceDialogOpen(false);
+    setCurrentReplaceItem(null);
+    
+    // 显示保存成功提示
+    dispatchToast(
+      <Toast>
+        <ToastTitle>保存成功</ToastTitle>
+        信息面板已更新
+      </Toast>,
+      { intent: "success", timeout: 2000 }
+    );
+  };
 
   // 复制文本到剪贴板的函数
   const handleCopyValue = async (value: string, label: string) => {
@@ -402,21 +546,38 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device }) => {
       <Toaster />
       <Card className={styles.card}>
         {/* 卡片头部 */}
-        <div className={styles.header}>
+        <div className={`${styles.header} ${styles.noSelect}`}>
           {/* 左半部分：设备信息、标签页、刷新按钮 */}
           <div className={styles.headerLeft}>
-            {/* 第一行：设备基本信息 */}
+            {/* 第一行：信息面板标题 */}
             <div className={styles.deviceInfoRow}>
-              <Phone24Regular style={{
-                fontSize: "20px",
-                color: "var(--colorBrandForeground1)",
-                flexShrink: 0
-              }} />
-              <Text className={styles.deviceName}>{getDeviceName()}</Text>
-              <Text className={styles.deviceSubtitle}>{getDeviceSubtitle()}</Text>
+              <div className={styles.title}>信息面板</div>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {/* 刷新按钮 */}
+                {device.connected && (
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
+                    onClick={fetchMemoryStorageInfo}
+                    disabled={isLoadingMemoryStorage}
+                    title="刷新内存和存储信息"
+                    className={styles.headerRefreshButton}
+                  />
+                )}
+                {/* 自定义信息面板 */}
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  icon={<Edit24Regular />}
+                  onClick={() => setReplaceDialogOpen(true)}
+                  title="自定义信息面板"
+                  className={styles.headerRefreshButton}
+                />
+              </div>
             </div>
 
-            {/* 第二行：标签页和刷新按钮 */}
+            {/* 第二行：标签页 */}
             <div className={styles.controlsRow}>
               <TabList
                 selectedValue={selectedTab}
@@ -428,18 +589,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device }) => {
                 <Tab value="system">系统信息</Tab>
               </TabList>
 
-              {/* 刷新按钮 */}
-              {device.connected && (
-                <Button
-                  appearance="subtle"
-                  size="small"
-                  icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
-                  onClick={fetchMemoryStorageInfo}
-                  disabled={isLoadingMemoryStorage}
-                  title="刷新内存和存储信息"
-                  className={styles.headerRefreshButton}
-                />
-              )}
+
             </div>
           </div>
 
@@ -521,28 +671,127 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device }) => {
         <div className={styles.content}>
           <div className={styles.tabPanel}>
             {selectedTab === "basic" && (
-              <BasicInfoPanel device={device} onCopyValue={handleCopyValue} styles={styles} />
+              <BasicInfoPanel 
+                device={device} 
+                onCopyValue={handleCopyValue} 
+                styles={styles} 
+              />
             )}
             {selectedTab === "hardware" && (
-              <HardwareInfoPanel device={device} onCopyValue={handleCopyValue} styles={styles} />
+              <HardwareInfoPanel 
+                device={device} 
+                onCopyValue={handleCopyValue} 
+                styles={styles} 
+              />
             )}
             {selectedTab === "system" && (
-              <SystemInfoPanel device={device} onCopyValue={handleCopyValue} styles={styles} />
+              <SystemInfoPanel 
+                device={device} 
+                onCopyValue={handleCopyValue} 
+                styles={styles} 
+              />
             )}
           </div>
         </div>
       </Card>
+
+      {/* 自定义替换弹窗 */}
+      <Dialog open={replaceDialogOpen} onOpenChange={(_, data) => {
+        if (!data.open) {
+          handleCloseReplaceDialog();
+        }
+      }}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>自定义信息面板显示项（正在开发中）</DialogTitle>
+            <DialogContent>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className={styles.noSelect}>
+                <div style={{ marginBottom: '8px', color: 'var(--colorNeutralForeground2)' }}>
+                  已选择 {Object.values(selectedItems).filter(Boolean).length}/9 项
+                </div>
+                <Checkbox
+                  label="设备名称"
+                  checked={selectedItems.deviceName}
+                  onChange={() => handleItemToggle('deviceName')}
+                />
+                <Checkbox
+                  label="品牌"
+                  checked={selectedItems.brand}
+                  onChange={() => handleItemToggle('brand')}
+                />
+                <Checkbox
+                  label="型号"
+                  checked={selectedItems.model}
+                  onChange={() => handleItemToggle('model')}
+                />
+                <Checkbox
+                  label="序列号"
+                  checked={selectedItems.serial}
+                  onChange={() => handleItemToggle('serial')}
+                />
+                <Checkbox
+                  label="Android版本"
+                  checked={selectedItems.androidVersion}
+                  onChange={() => handleItemToggle('androidVersion')}
+                />
+                <Checkbox
+                  label="API级别"
+                  checked={selectedItems.sdkVersion}
+                  onChange={() => handleItemToggle('sdkVersion')}
+                />
+                <Checkbox
+                  label="设备代号"
+                  checked={selectedItems.deviceCode}
+                  onChange={() => handleItemToggle('deviceCode')}
+                />
+                <Checkbox
+                  label="编译时间"
+                  checked={selectedItems.buildTime}
+                  onChange={() => handleItemToggle('buildTime')}
+                />
+                <Checkbox
+                  label="主板ID"
+                  checked={selectedItems.boardId}
+                  onChange={() => handleItemToggle('boardId')}
+                />
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={handleCloseReplaceDialog}>取消</Button>
+              <Button appearance="primary" onClick={handleConfirmReplace}>确定</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </>
   );
 };
 
 // 基本信息面板
-const BasicInfoPanel: React.FC<{
-  device: DeviceInfo;
-  onCopyValue: (value: string, label: string) => void;
-  styles: any;
-}> = ({ device, onCopyValue, styles }) => (
-  <div className={styles.infoGrid}>
+const BasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
+  const [boardSerialNumber, setBoardSerialNumber] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBoardSerialNumber = async () => {
+      if (device.connected && device.serial) {
+        try {
+          const number = await deviceService.getBoardSerialNumber(device.serial);
+          if (number) {
+            setBoardSerialNumber(number);
+            // Update the device info with the board serial number
+            useDeviceStore.getState().updateDevice(device.serial, { boardSerialNumber: number });
+          }
+        } catch (error) {
+          console.error("Failed to fetch board serial number:", error);
+        }
+      }
+    };
+
+    fetchBoardSerialNumber();
+  }, [device.serial, device.connected]);
+
+  return (
+  <div className={`${styles.infoGrid} ${styles.noSelect}`}>
     <div className={styles.infoItem}>
       <Text className={styles.infoLabel}>设备名称</Text>
       <div
@@ -602,16 +851,43 @@ const BasicInfoPanel: React.FC<{
         <Text>{device.properties?.sdkVersion || "未知"}</Text>
       </div>
     </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>设备代号</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.deviceName || "未知", "设备代号")}
+      >
+        <Text>{device.properties?.deviceName || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>编译时间</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.buildId || "未知", "编译时间")}
+      >
+        <Text>{device.properties?.buildId || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>主板ID</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(boardSerialNumber || "未知", "主板ID")}
+      >
+        <Text>{boardSerialNumber || "未知"}</Text>
+      </div>
+    </div>
   </div>
-);
+  );
+};
 
 // 硬件信息面板
-const HardwareInfoPanel: React.FC<{
-  device: DeviceInfo;
-  onCopyValue: (value: string, label: string) => void;
-  styles: any;
-}> = ({ device, onCopyValue, styles }) => (
-  <div className={styles.infoGrid}>
+const HardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => (
+  <div className={`${styles.infoGrid} ${styles.noSelect}`}>
     <div className={styles.infoItem}>
       <Text className={styles.infoLabel}>CPU架构</Text>
       <div
@@ -675,12 +951,8 @@ const HardwareInfoPanel: React.FC<{
 );
 
 // 系统信息面板
-const SystemInfoPanel: React.FC<{
-  device: DeviceInfo;
-  onCopyValue: (value: string, label: string) => void;
-  styles: any;
-}> = ({ device, onCopyValue, styles }) => (
-  <div className={styles.infoGrid}>
+const SystemInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => (
+  <div className={`${styles.infoGrid} ${styles.noSelect}`}>
     <div className={styles.infoItem}>
       <Text className={styles.infoLabel}>Bootloader锁</Text>
       <div
@@ -732,9 +1004,9 @@ const SystemInfoPanel: React.FC<{
       <Text className={styles.infoLabel}>安全补丁</Text>
       <div
         className={styles.infoValue}
-        onClick={() => onCopyValue(device.properties?.securityPatch || "未知", "安全补丁")}
+        onClick={() => onCopyValue((device.properties as any)?.securityPatch || "未知", "安全补丁")}
       >
-        <Text>{device.properties?.securityPatch || "未知"}</Text>
+        <Text>{(device.properties as any)?.securityPatch || "未知"}</Text>
       </div>
     </div>
 
@@ -742,9 +1014,9 @@ const SystemInfoPanel: React.FC<{
       <Text className={styles.infoLabel}>语言区域</Text>
       <div
         className={styles.infoValue}
-        onClick={() => onCopyValue(device.properties?.locale || "未知", "语言区域")}
+        onClick={() => onCopyValue((device.properties as any)?.locale || "未知", "语言区域")}
       >
-        <Text>{device.properties?.locale || "未知"}</Text>
+        <Text>{(device.properties as any)?.locale || "未知"}</Text>
       </div>
     </div>
   </div>

@@ -497,6 +497,19 @@ export class DeviceService {
       }
     }
   }
+
+  async getBoardSerialNumber(serial: string): Promise<string | null> {
+    try {
+      const result = await this.executeAdbCommand(serial, 'shell', ['cat', '/sys/devices/soc0/serial_number']);
+      if (result.success && result.output) {
+        return result.output.trim();
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to get board serial number:", error);
+      return null;
+    }
+  }
 }
 
 // 单例实例将在文件末尾创建
