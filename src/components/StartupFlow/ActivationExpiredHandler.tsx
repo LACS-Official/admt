@@ -156,7 +156,6 @@ interface ActivationExpiredHandlerProps {
 
 const ActivationExpiredHandler: React.FC<ActivationExpiredHandlerProps> = ({
   activationStatus,
-  onReactivate,
   onContinueWithLimitations,
   onPurchase,
 }) => {

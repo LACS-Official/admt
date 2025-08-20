@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   makeStyles,
   Card,
-  CardHeader,
   Text,
   Button,
   ProgressBar,
@@ -14,7 +13,6 @@ import {
   Tab,
   TabList,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogBody,
@@ -23,7 +21,6 @@ import {
   Checkbox,
 } from "@fluentui/react-components";
 import {
-  Phone24Regular,
   Battery024Regular,
   Storage24Regular,
   DesktopPulse24Regular,
@@ -373,7 +370,7 @@ interface DeviceOverviewCardProps {
 }
 
 
-const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowDetails, onCopyInfo, onCustomize }) => {
+const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCustomize }) => {
   const styles = useStyles();
   const { setStatusBarMessage } = useAppStore();
   const { dispatchToast } = useToastController();
@@ -383,7 +380,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowD
   const [selectedTab, setSelectedTab] = useState("basic");
   // 添加替换功能相关状态
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
-  const [currentReplaceItem, setCurrentReplaceItem] = useState<string | null>(null);
+  const [, setCurrentReplaceItem] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({
     deviceName: true,
     brand: true,
@@ -420,10 +417,6 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowD
   }, [device.serial, device.connected]);
 
   // 处理打开替换对话框
-  const handleOpenReplaceDialog = (itemId: string) => {
-    setCurrentReplaceItem(itemId);
-    setReplaceDialogOpen(true);
-  };
 
   // 处理关闭替换对话框
   const handleCloseReplaceDialog = () => {
@@ -433,7 +426,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowD
 
   // 处理选择项变化
   const handleItemToggle = (itemId: string) => {
-    const { setStatusBarMessage } = useAppStore();
+    useAppStore();
     setSelectedItems(prev => {
       // 计算当前选中的数量
       const currentSelectedCount = Object.values(prev).filter(Boolean).length;
@@ -509,40 +502,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowD
     }
   };
 
-  const getDeviceName = () => {
-    if (device.properties?.marketName) {
-      return device.properties.marketName;
-    }
-    if (device.properties?.brand && device.properties?.model) {
-      if (device.properties.model.toLowerCase().includes(device.properties.brand.toLowerCase())) {
-        return device.properties.model;
-      }
-      return `${device.properties.brand} ${device.properties.model}`;
-    }
-    if (device.properties?.model) {
-      return device.properties.model;
-    }
-    return "未知设备";
-  };
 
-  const getDeviceSubtitle = () => {
-    const parts = [];
-    if (device.properties?.brand && device.properties?.model) {
-      if (!device.properties.model.toLowerCase().includes(device.properties.brand.toLowerCase())) {
-        parts.push(`${device.properties.brand} ${device.properties.model}`);
-      } else {
-        parts.push(device.properties.model);
-      }
-    } else if (device.properties?.model) {
-      parts.push(device.properties.model);
-    }
-
-    if (device.properties?.deviceName) {
-      parts.push(`${device.properties.deviceName}`);
-    }
-
-    return parts.length > 0 ? parts.join(" 代号: ") : device.serial;
-  };
 
   return (
     <>

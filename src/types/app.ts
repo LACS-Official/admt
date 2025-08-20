@@ -170,6 +170,7 @@ export interface AnnouncementResponse {
 
 // 在线资源相关类型
 export interface OnlineSoftware {
+  fileSize(fileSize: any): import("react").ReactNode;
   id: number;
   name: string;
   nameEn?: string;

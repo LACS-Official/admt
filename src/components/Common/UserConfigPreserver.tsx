@@ -16,7 +16,6 @@ import {
   Badge,
 } from '@fluentui/react-components';
 import {
-  Person24Regular,
   Settings24Regular,
   Checkmark24Regular,
   ArrowClockwise24Regular,
@@ -65,7 +64,6 @@ interface UserConfigPreserverProps {
 
 export const UserConfigPreserver: React.FC<UserConfigPreserverProps> = ({
   onReactivateClick,
-  onConfigRestored,
 }) => {
   const styles = useStyles();
   const { config } = useAppConfigStore();
@@ -101,11 +99,6 @@ export const UserConfigPreserver: React.FC<UserConfigPreserverProps> = ({
   }, [config]);
 
   // 恢复用户配置
-  const handleRestoreConfig = () => {
-    if (preservedConfig && onConfigRestored) {
-      onConfigRestored(preservedConfig);
-    }
-  };
 
   // 清除保留的配置
   const handleClearPreservedConfig = () => {

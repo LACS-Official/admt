@@ -3,7 +3,7 @@
  * 用于诊断和解决设备检测问题
  */
 
-import React, { useState } from 'react';
+import React, { useState }  from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
   Button,

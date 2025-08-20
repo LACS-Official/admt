@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Card,
@@ -89,7 +89,7 @@ const DeviceActionsCard: React.FC<DeviceActionsCardProps> = ({ device }) => {
   const styles = useStyles();
   const { deviceService } = useDeviceService();
   const { addNotification } = useAppStore();
-  const [isRebooting, setIsRebooting] = useState(false);
+  const [, setIsRebooting] = useState(false);
   const [rebootDialogOpen, setRebootDialogOpen] = useState(false);
   const [selectedRebootMode, setSelectedRebootMode] = useState<string>("");
   const [isExecuting, setIsExecuting] = useState(false);
@@ -135,13 +135,6 @@ const DeviceActionsCard: React.FC<DeviceActionsCardProps> = ({ device }) => {
     { id: "settings", label: "设置", icon: <Settings24Regular />, command: "shell", args: ["am", "start", "-a", "android.settings.SETTINGS"] },
   ];
 
-  const handleRebootClick = (mode: string) => {
-    const modeInfo = rebootModes.find(m => m.id === mode);
-    if (modeInfo) {
-      setSelectedRebootMode(mode);
-      setRebootDialogOpen(true);
-    }
-  };
 
   const confirmReboot = async () => {
     if (!selectedRebootMode) return;

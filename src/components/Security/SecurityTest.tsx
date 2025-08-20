@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState }  from 'react';
 import {
   Card,
   CardHeader,
@@ -134,7 +134,7 @@ export const SecurityTest: React.FC = () => {
   const runTest = (testId: string) => {
     // 模拟测试结果
     const success = isProtectionEnabled;
-    setTestResults(prev => ({
+    setTestResults((prev: any) => ({
       ...prev,
       [testId]: success
     }));

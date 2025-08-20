@@ -3,7 +3,7 @@
  * 当检测到新版本且需要强制更新时显示
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState }  from 'react';
 import {
   makeStyles,
   Dialog,

@@ -3,7 +3,7 @@
  * 用于开发和测试隐私政策显示逻辑
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState }  from 'react';
 import {
   Card,
   CardHeader,
@@ -21,7 +21,7 @@ import {
   ArrowReset24Regular,
   Info24Regular,
 } from '@fluentui/react-icons';
-import { usePrivacyConsentStore, shouldShowPrivacyConsent } from '../../stores/privacyConsentStore';
+import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
 import { runPrivacyTests, getCurrentPrivacyState, resetPrivacyStateForTesting, simulatePrivacyConsentFlow } from '../../utils/privacyTestUtils';
 import { runCompleteVerification } from '../../utils/testPrivacyFix';
 

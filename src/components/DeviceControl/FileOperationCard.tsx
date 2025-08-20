@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Card,
@@ -7,7 +7,6 @@ import {
   Button,
   Spinner,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogContent,
@@ -18,7 +17,6 @@ import {
 } from "@fluentui/react-components";
 import {
   Folder24Regular,
-  DocumentArrowUp24Regular,
   DocumentArrowDown24Regular,
   Delete24Regular,
   FolderAdd24Regular,
@@ -96,7 +94,7 @@ const FileOperationCard: React.FC<FileOperationCardProps> = ({ device }) => {
 
     setExecutingCommand(commandId);
     try {
-      const result = await deviceService.executeAdbCommand(device.serial, command);
+      const result = await deviceService.executeAdbCommand(device.serial, command[0], command.slice(1));
       if (result.success) {
         addNotification({
           type: "success",

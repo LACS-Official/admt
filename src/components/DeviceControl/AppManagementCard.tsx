@@ -7,7 +7,6 @@ import {
   Button,
   Spinner,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogContent,
@@ -22,7 +21,6 @@ import {
   Stop24Regular,
   Delete24Regular,
   Archive24Regular,
-  Settings24Regular,
   Info24Regular,
   DataUsage24Regular,
 } from "@fluentui/react-icons";
@@ -95,7 +93,11 @@ const AppManagementCard: React.FC<AppManagementCardProps> = ({ device }) => {
 
     setExecutingCommand(commandId);
     try {
-      const result = await deviceService.executeAdbCommand(device.serial, command);
+      const result = await deviceService.executeAdbCommand(
+        device.serial,
+        command[0],
+        command.slice(1)
+      );
       if (result.success) {
         addNotification({
           type: "success",

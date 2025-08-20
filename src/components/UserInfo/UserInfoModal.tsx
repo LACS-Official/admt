@@ -3,7 +3,7 @@
  * 显示激活码信息、过期时间，并提供删除本地激活数据的功能
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState }  from 'react';
 import {
   makeStyles,
   Dialog,
@@ -97,11 +97,9 @@ const useStyles = makeStyles({
   },
   deleteButton: {
     backgroundColor: 'var(--colorPaletteRedBackground2)',
-    borderColor: 'var(--colorPaletteRedBorder2)',
     color: 'var(--colorPaletteRedForeground2)',
     ':hover': {
       backgroundColor: 'var(--colorPaletteRedBackground3)',
-      borderColor: 'var(--colorPaletteRedBorder3)',
     },
   },
   loadingContainer: {

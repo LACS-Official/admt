@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef, useState }  from 'react';
 import {
   makeStyles,
   Card,
@@ -138,7 +138,7 @@ type FlashStatus = "idle" | "checking" | "flashing" | "success" | "error";
 
 const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   const styles = useStyles();
-  const { deviceService } = useDeviceService();
+  useDeviceService();
   const folderInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedPackage, setSelectedPackage] = useState<string>("");
