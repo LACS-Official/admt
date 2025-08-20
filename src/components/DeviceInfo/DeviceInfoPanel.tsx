@@ -153,6 +153,7 @@ const DeviceInfoPanel: React.FC = () => {
         type: "success",
         title: "复制成功",
         message: "设备信息已复制到剪贴板",
+        duration: 2000,
       });
     } catch (error) {
       addNotification({

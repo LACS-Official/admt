@@ -34,6 +34,7 @@ import {
 import { DeviceInfo } from "../../types/device";
 import { deviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
+import { useAppStore } from "../../stores/appStore";
 
 // 定义信息面板组件的props类型
 interface InfoPanelProps {
@@ -183,6 +184,7 @@ const useStyles = makeStyles({
     gap: "8px",
     minWidth: "240px",
     maxWidth: "280px",
+    padding: "10px",
   },
   progressItem: {
     display: "flex",
@@ -373,6 +375,7 @@ interface DeviceOverviewCardProps {
 
 const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowDetails, onCopyInfo, onCustomize }) => {
   const styles = useStyles();
+  const { setStatusBarMessage } = useAppStore();
   const { dispatchToast } = useToastController();
 
   const [memoryStorageInfo, setMemoryStorageInfo] = useState<MemoryStorageInfo | null>(null);
@@ -430,6 +433,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowD
 
   // 处理选择项变化
   const handleItemToggle = (itemId: string) => {
+    const { setStatusBarMessage } = useAppStore();
     setSelectedItems(prev => {
       // 计算当前选中的数量
       const currentSelectedCount = Object.values(prev).filter(Boolean).length;
@@ -488,13 +492,12 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onShowD
   const handleCopyValue = async (value: string, label: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      dispatchToast(
-        <Toast>
-          <ToastTitle>复制成功</ToastTitle>
-          已复制 "{label}": {value}
-        </Toast>,
-        { intent: "success", timeout: 2000 }
-      );
+        setStatusBarMessage({
+          type: "info",
+          message: `已复制 ${label} 到剪贴板`,
+          icon: <Copy24Regular />,
+          duration: 1000,
+        });
     } catch (error) {
       dispatchToast(
         <Toast>
