@@ -111,21 +111,20 @@ const useStyles = makeStyles({
     flex: "1 1 50%", // 占据剩余高度（40%）
     display: "flex",
     flexDirection: "row", // 水平排列两个卡片
-    gap: "16px",
+    gap: "26px",
     minHeight: "260px", // 增加最小高度以适应40%的空间
   },
-  // 重启卡片 - 40%宽度
+  // 重启卡片 - 调整宽度
   rebootCard: {
-    flex: "0 0 40%", // 占据40%宽度
+    flex: "0 0 48%", // 稍微减少宽度
     minHeight: "100%",
     display: "flex",
     flexDirection: "column",
   },
-  // 杂项功能卡片 - 60%宽度
+  // 杂项功能卡片 - 调整宽度
   miscCard: {
-    flex: "0 0 60%", // 占据60%宽度
+    flex: "0 0 48%", // 稍微减少宽度
     minHeight: "100%",
-    overflow: "auto",
     display: "flex",
     flexDirection: "column",
   },

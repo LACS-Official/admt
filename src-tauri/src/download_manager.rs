@@ -69,13 +69,13 @@ impl DownloadManager {
 
         // 如果无法获取可执行文件目录，使用应用数据目录作为备选
         if let Some(data_dir) = dirs::data_dir() {
-            let app_data_dir = data_dir.join("HOUT").join("downloads");
+            let app_data_dir = data_dir.join("ADMT").join("downloads");
             println!("🎯 使用应用数据目录: {}", app_data_dir.display());
             return Ok(app_data_dir);
         }
 
         // 最后回退到临时目录
-        let temp_dir = std::env::temp_dir().join("hout_downloads");
+        let temp_dir = std::env::temp_dir().join("admt_downloads");
         println!("🎯 使用临时目录: {}", temp_dir.display());
         Ok(temp_dir)
     }

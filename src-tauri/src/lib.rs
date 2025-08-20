@@ -78,7 +78,6 @@ pub fn run() {
             clear_all_cache,
             invalidate_device_cache,
             // 杂项控制功能命令
-            stop_adb_process,
             restart_adb_service,
             install_device_driver,
             fix_usb3_connection,
