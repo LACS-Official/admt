@@ -10,10 +10,7 @@ import {
   Field,
   Input,
   Switch,
-  Textarea,
-  MessageBar,
-  MessageBarBody,
-  MessageBarTitle,
+
 } from "@fluentui/react-components";
 import {
   Document24Regular,
@@ -22,10 +19,6 @@ import {
   Filter24Regular,
   ArrowClockwise24Regular,
   Settings24Regular,
-  Info24Regular,
-  Warning24Regular,
-  ErrorCircle24Regular,
-  CheckmarkCircle24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
 import { logService, LogEntry, LogLevel } from "../../services/logService";
@@ -184,20 +177,6 @@ const LogsPanel: React.FC = () => {
     logService.setMaxLogs(value);
   };
 
-  const getLevelIcon = (level: string) => {
-    switch (level) {
-      case "error":
-        return <ErrorCircle24Regular className={styles.logError} />;
-      case "warning":
-        return <Warning24Regular className={styles.logWarning} />;
-      case "info":
-        return <Info24Regular className={styles.logInfo} />;
-      case "debug":
-        return <CheckmarkCircle24Regular className={styles.logDebug} />;
-      default:
-        return null;
-    }
-  };
 
   const getLevelBadge = (level: string) => {
     const colors = {

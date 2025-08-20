@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Tab,
@@ -8,13 +8,11 @@ import {
 } from "@fluentui/react-components";
 import {
   Info24Regular,
-  Wrench24Regular,
   Options24Regular,
   Document24Regular,
   Shield24Regular,
   DeviceEq24Regular,
   Desktop24Regular,
-  DataUsage24Regular,
 } from "@fluentui/react-icons";
 import { SettingsView } from "../../types/app";
 import AboutPanel from "./AboutPanel";
@@ -104,8 +102,6 @@ const SettingsPanel: React.FC = () => {
         return <OtherSettingsPanel />;
       case "privacy":
         return <PrivacyManagementPanel />;
-      case "usage-tracking":
-        return <UsageTrackingSettings />;
       case "logs":
         return <LogsPanel />;
     }

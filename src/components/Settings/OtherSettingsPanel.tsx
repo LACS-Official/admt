@@ -7,21 +7,11 @@ import {
   Switch,
   Field,
   Select,
-  Slider,
-  Button,
-  Checkbox,
 } from "@fluentui/react-components";
 import {
-  Options24Regular,
-  WeatherMoon24Regular,
   Globe24Regular,
-  Speaker224Regular,
-  Eye24Regular,
-  Save24Regular,
-  ArrowReset24Regular,
   Accessibility24Regular,
 } from "@fluentui/react-icons";
-import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
@@ -83,35 +73,15 @@ const useStyles = makeStyles({
 
 const OtherSettingsPanel: React.FC = () => {
   const styles = useStyles();
-  const { isDarkMode, toggleTheme } = useThemeStore();
+
   const { config, updateConfig } = useAppStore();
   
   // 界面设置状态
-  const [fontSize, setFontSize] = useState(14);
-  const [enableAnimations, setEnableAnimations] = useState(true);
-  const [enableSounds, setEnableSounds] = useState(true);
-  const [autoSave, setAutoSave] = useState(true);
-  const [showNotifications, setShowNotifications] = useState(true);
   const [minimizeToTray, setMinimizeToTray] = useState(false);
   const [startWithSystem, setStartWithSystem] = useState(false);
 
-  const handleThemeChange = () => {
-    toggleTheme();
-    updateConfig({ theme: isDarkMode ? "light" : "dark" });
-  };
-
   const handleLanguageChange = (value: string) => {
     updateConfig({ language: value as "zh-CN" | "en-US" });
-  };
-
-  const handleSaveSettings = () => {
-    // TODO: 保存所有设置到配置文件
-    console.log("保存设置");
-  };
-
-  const handleResetSettings = () => {
-    // TODO: 重置所有设置到默认值
-    console.log("重置设置");
   };
 
   return (

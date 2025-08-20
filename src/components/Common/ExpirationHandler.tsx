@@ -7,7 +7,6 @@ import React, { useEffect, useState } from 'react';
 import {
   makeStyles,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogContent,
@@ -16,7 +15,6 @@ import {
   Button,
   Text,
   MessageBar,
-  MessageBarType,
   tokens,
   ProgressBar,
 } from '@fluentui/react-components';
@@ -27,7 +25,7 @@ import {
   ArrowClockwise24Regular,
 } from '@fluentui/react-icons';
 import { activationService } from '../../services/activationService';
-import { formatActivationExpiryDate, formatRemainingTime } from '../../utils/dateFormatter';
+import { formatActivationExpiryDate } from '../../utils/dateFormatter';
 
 const useStyles = makeStyles({
   dialogContent: {

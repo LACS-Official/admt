@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   makeStyles,
   Text,
@@ -6,15 +6,10 @@ import {
   CardHeader,
   Switch,
   Input,
-  Label,
-  Select,
-  Option,
   Field,
   Badge,
 } from "@fluentui/react-components";
 import {
-  TvUsb24Regular,
-  Settings24Regular,
   Timer24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
@@ -90,9 +85,6 @@ const useStyles = makeStyles({
 const DeviceSettingsPanel: React.FC = () => {
   const styles = useStyles();
   const { config, updateConfig } = useAppStore();
-  const [usbEnabled, setUsbEnabled] = useState(true);
-  const [connectionTimeout, setConnectionTimeout] = useState("30000");
-
   const handleAutoDetectChange = (checked: boolean) => {
     updateConfig({ autoDetectDevices: checked });
   };
@@ -104,12 +96,7 @@ const DeviceSettingsPanel: React.FC = () => {
     }
   };
 
-  const handleDeviceDetectionIntervalChange = (value: string) => {
-    const interval = parseInt(value);
-    if (!isNaN(interval) && interval >= 5000) {
-      updateConfig({ deviceDetectionInterval: interval });
-    }
-  };
+
 
   return (
     <div className={styles.container}>

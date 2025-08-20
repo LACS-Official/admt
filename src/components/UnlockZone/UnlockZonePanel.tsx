@@ -1,8 +1,7 @@
-import React from "react";
+import React  from 'react';
 import {
   makeStyles,
   Text,
-  Badge,
   Card,
   CardHeader,
 } from "@fluentui/react-components";
@@ -50,7 +49,6 @@ const useStyles = makeStyles({
   warningCard: {
     gridColumn: "1 / -1",
     backgroundColor: "var(--colorPaletteRedBackground1)",
-    borderColor: "var(--colorPaletteRedBorder1)",
   },
   warningContent: {
     padding: "16px",

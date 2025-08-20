@@ -3,11 +3,9 @@ import {
   makeStyles,
   Text,
   Button,
-  Badge,
   Divider,
   Body1,
   Caption1,
-  Title3,
   Subtitle1,
   Dialog,
   DialogSurface,
@@ -188,7 +186,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   }, [cooldownTimer]);
 
   // 处理下载
-  const handleDownload = async (forceRedownload = false) => {
+  const handleDownload = async (_forceRedownload = false) => {
     const currentData = detailData || software;
 
     // 检查下载限制

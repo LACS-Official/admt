@@ -4,7 +4,6 @@ import {
   Card,
   CardHeader,
   Text,
-  Badge,
   Spinner,
   tokens,
   Dialog,
@@ -130,10 +129,9 @@ const useStyles = makeStyles({
     opacity: 0.5,
     cursor: "not-allowed",
     backgroundColor: tokens.colorNeutralBackground3,
-    borderColor: tokens.colorNeutralStroke3,
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground3,
-      borderColor: tokens.colorNeutralStroke3,
+
       transform: "none",
       boxShadow: "none",
     },
@@ -254,14 +252,6 @@ const MiscellaneousCard: React.FC = () => {
 
   };
 
-  const confirmStopAdb = async () => {
-    await executeCommand(
-      "stop-adb",
-      () => invoke("stop_adb_process"),
-      "停止ADB进程",
-      true
-    );
-  };
 
   const handleRestartAdb = async () => {
     setStatusBarMessage({
@@ -280,28 +270,11 @@ const MiscellaneousCard: React.FC = () => {
   const handleInstallDriver = async () => {
   };
 
-  const confirmInstallDriver = async () => {
-    await executeCommand(
-      "install-driver",
-      () => invoke("install_device_driver"),
-      "安装设备驱动",
-      true
-    );
-  };
 
   const handleFixUsb3 = async () => {
 
   };
 
-  const confirmFixUsb3 = async () => {
-    setShowUsbDialog(false);
-    await executeCommand(
-      "fix-usb3",
-      () => invoke("fix_usb3_connection"),
-      "修复USB 3.0连接",
-      true
-    );
-  };
 
 
 

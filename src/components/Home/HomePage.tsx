@@ -1,25 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   makeStyles,
   Text,
-  Button,
-  Badge,
-  Spinner,
-  Field,
-  Select,
+
   tokens,
 } from "@fluentui/react-components";
 import {
   Home24Regular,
-  ArrowClockwise24Regular,
-  Info24Regular,
+
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
-import { usageTrackingService } from "../../services/usageTrackingService";
 
 // 导入新的组件
-import CarouselBanner from "./CarouselBanner";
 import DeviceOverviewCard from "../DeviceInfo/DeviceOverviewCard";
 import DeviceRebootCard from "./DeviceRebootCard";
 import MiscellaneousCard from "./MiscellaneousCard";
@@ -248,6 +241,20 @@ const HomePage: React.FC = () => {
                       <div className={styles.deviceInfoCard}>
                         <DeviceOverviewCard
                           device={selectedDevice}
+                          onShowDetails={() => {
+                            // 处理显示详情的逻辑
+                          }}
+                          onCopyInfo={() => {
+                            // 处理复制信息的逻辑
+                            addNotification({
+                              type: "success",
+                              title: "复制成功",
+                              message: "设备信息已复制到剪贴板",
+                            });
+                          }}
+                          onCustomize={() => {
+                            // 处理自定义设置的逻辑
+                          }}
                         />
                       </div>
                     </div>

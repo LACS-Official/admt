@@ -2616,12 +2616,6 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
                         // 尝试使用Tauri的内置重启功能作为备用
                         log::info!("Falling back to Tauri restart method");
                         app_handle.restart();
-                        return Ok(CommandResult {
-                            success: true,
-                            output: "应用正在重启... (备用方法)".to_string(),
-                            error: None,
-                            exit_code: Some(0),
-                        });
                     }
                 }
             }
@@ -2631,12 +2625,7 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
                 // 尝试使用Tauri的内置重启功能作为备用
                 log::info!("Falling back to Tauri restart method");
                 app_handle.restart();
-                return Ok(CommandResult {
-                    success: true,
-                    output: "应用正在重启... (备用方法)".to_string(),
-                    error: None,
-                    exit_code: Some(0),
-                });
+
             }
         }
     }

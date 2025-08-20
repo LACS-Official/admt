@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect }  from 'react';
 import {
   makeStyles,
   TabList,
@@ -7,18 +7,15 @@ import {
   SelectTabData,
   Text,
   Badge,
-  Title3,
-  Caption1,
-  Body2,
+
 } from "@fluentui/react-components";
 import {
   Phone24Regular,
-  Folder24Regular,
+
   Code24Regular,
   Settings24Regular,
   Wrench24Regular,
-  Apps24Regular,
-  CloudArrowUp24Regular,
+    CloudArrowUp24Regular,
   CloudArrowDown24Regular,
   Circle12Filled,
 } from "@fluentui/react-icons";

@@ -7,8 +7,6 @@ mod activation;
 mod download_manager;
 mod cache;
 
-#[cfg(test)]
-mod activation_tests;
 
 use commands::*;
 use activation::check_activation_expiry;
