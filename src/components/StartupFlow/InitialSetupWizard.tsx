@@ -12,9 +12,6 @@ import {
   Title2,
   Body1,
   Caption1,
-  Card,
-  RadioGroup,
-  Radio,
   Checkbox,
   ProgressBar,
   MessageBar,
@@ -96,11 +93,11 @@ const useStyles = makeStyles({
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     '&:hover': {
-      borderColor: '#6264a7',
+      border: '2px solid #6264a7',
       backgroundColor: '#f8f7ff',
     },
     '&[data-selected="true"]': {
-      borderColor: '#6264a7',
+      border: '2px solid #6264a7',
       backgroundColor: '#f8f7ff',
     },
   },

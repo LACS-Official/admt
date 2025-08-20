@@ -17,20 +17,17 @@ import {
   DialogActions,
   Spinner,
   Badge,
-  Textarea,
 } from "@fluentui/react-components";
 import {
   CloudArrowUp24Regular,
   Warning24Regular,
   Document24Regular,
   Play24Regular,
-  Dismiss24Regular,
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
-import { useDeviceService } from "../../services/deviceService";
-import { invoke } from "@tauri-apps/api/core";
+
 
 const useStyles = makeStyles({
   card: {
@@ -93,7 +90,7 @@ const useStyles = makeStyles({
   },
   warningSection: {
     backgroundColor: "var(--colorPaletteRedBackground1)",
-    borderColor: "var(--colorPaletteRedBorder1)",
+    border: "1px solid var(--colorPaletteRedBorder1)",
     padding: "12px",
     borderRadius: "6px",
   },
@@ -112,7 +109,6 @@ type FlashStatus = "idle" | "preparing" | "flashing" | "success" | "error";
 
 const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
   const styles = useStyles();
-  const { deviceService } = useDeviceService();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -347,7 +343,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
                 </div>
                 
                 <div style={{ padding: "12px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "4px" }}>
-                  <div>设备: {device.model} ({device.serial})</div>
+                  <div>设备: {device.properties?.model} ({device.serial})</div>
                   <div>文件: {selectedFile?.name}</div>
                   <div>分区: {partitions.find(p => p.value === selectedPartition)?.label}</div>
                 </div>

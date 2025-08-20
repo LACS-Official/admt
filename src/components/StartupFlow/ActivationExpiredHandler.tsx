@@ -20,12 +20,11 @@ import {
   Warning24Filled,
   Clock24Regular,
   Key24Regular,
-  ArrowClockwise24Regular,
   StoreMicrosoft24Regular,
   Info24Regular,
 } from '@fluentui/react-icons';
 import { ActivationStatus } from '../../stores/startupFlowStore';
-import ActivationCodeValidator from './ActivationCodeValidator';
+
 import { formatActivationExpiryDate } from '../../utils/dateFormatter';
 
 const useStyles = makeStyles({
@@ -120,7 +119,7 @@ const useStyles = makeStyles({
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     '&:hover': {
-      borderColor: '#6264a7',
+      border: '2px solid #6264a7',
       backgroundColor: '#f8f7ff',
     },
   },
@@ -209,28 +208,11 @@ const ActivationExpiredHandler: React.FC<ActivationExpiredHandlerProps> = ({
     setShowActivationInput(true);
   };
 
-  const handleActivationSuccess = (newStatus: ActivationStatus) => {
-    setShowActivationInput(false);
-    onReactivate(newStatus);
-  };
 
-  const handleActivationError = (error: string) => {
-    console.error('重新激活失败:', error);
-    // 可以显示错误消息，但保持在激活输入界面
-  };
 
-  const handleActivationCancel = () => {
-    setShowActivationInput(false);
-  };
-
+  // TODO: 添加激活码验证器组件
   if (showActivationInput) {
-    return (
-      <ActivationCodeValidator
-        onSuccess={handleActivationSuccess}
-        onError={handleActivationError}
-        onCancel={handleActivationCancel}
-      />
-    );
+    return null;
   }
 
   const isInGracePeriod = timeRemaining !== null;

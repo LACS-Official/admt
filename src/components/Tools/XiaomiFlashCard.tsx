@@ -5,7 +5,6 @@ import {
   CardHeader,
   Text,
   Button,
-  Field,
   ProgressBar,
   Dialog,
   DialogSurface,
@@ -15,7 +14,6 @@ import {
   DialogActions,
   Spinner,
   Badge,
-  Textarea,
   Accordion,
   AccordionItem,
   AccordionHeader,
@@ -26,15 +24,13 @@ import {
   Warning24Regular,
   Folder24Regular,
   Play24Regular,
-  Dismiss24Regular,
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   Info24Regular,
-  Shield24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
-import { invoke } from "@tauri-apps/api/core";
+
 
 const useStyles = makeStyles({
   card: {
@@ -106,13 +102,13 @@ const useStyles = makeStyles({
   },
   warningSection: {
     backgroundColor: "var(--colorPaletteRedBackground1)",
-    borderColor: "var(--colorPaletteRedBorder1)",
+    border: "1px solid var(--colorPaletteRedBorder1)",
     padding: "12px",
     borderRadius: "6px",
   },
   infoSection: {
     backgroundColor: "var(--colorPaletteBlueBackground1)",
-    borderColor: "var(--colorPaletteBlueBorder1)",
+    border: "1px solid var(--colorPaletteBlueBorder1)",
     padding: "12px",
     borderRadius: "6px",
   },
@@ -217,7 +213,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
     return new Promise((resolve) => {
       setTimeout(() => {
         // 简单的兼容性检查逻辑
-        const deviceModel = device.model.toLowerCase();
+        const deviceModel = device.properties?.model?.toLowerCase() || '';
         const packageCodename = packageInfo.codename.toLowerCase();
         
         resolve(deviceModel.includes(packageCodename) || packageCodename.includes("star"));
@@ -368,9 +364,9 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
           <div className={styles.section}>
             <Text weight="semibold">当前设备信息</Text>
             <div className={styles.deviceInfo}>
-              <div>型号: {device.model}</div>
+              <div>型号: {device.properties?.model}</div>
               <div>序列号: {device.serial}</div>
-              <div>Android版本: {device.androidVersion}</div>
+              <div>Android版本: {device.properties?.androidVersion}</div>
               <div>状态: {device.connected ? "已连接" : "未连接"}</div>
             </div>
           </div>
@@ -454,7 +450,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
       <input
         ref={folderInputRef}
         type="file"
-        webkitdirectory=""
+        directory
         style={{ display: "none" }}
         onChange={handlePackageChange}
       />
@@ -472,7 +468,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
                 </div>
                 
                 <div style={{ padding: "12px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "4px" }}>
-                  <div>设备: {device.model} ({device.serial})</div>
+                  <div>设备: {device.properties?.model} ({device.serial})</div>
                   <div>线刷包: {packageInfo?.version}</div>
                   <div>机型: {packageInfo?.model}</div>
                   <div>兼容性: {deviceCompatible ? "✓ 兼容" : "⚠️ 未知"}</div>
