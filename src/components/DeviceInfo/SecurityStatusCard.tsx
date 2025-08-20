@@ -15,7 +15,6 @@ import {
   LockOpen24Regular,
   Bug24Regular,
   CheckmarkCircle24Regular,
-  ErrorCircle24Regular,
   Warning24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
@@ -52,15 +51,12 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
   },
   securityItemSafe: {
-    borderColor: "var(--colorPaletteGreenBorder1)",
     backgroundColor: "var(--colorPaletteGreenBackground1)",
   },
   securityItemWarning: {
-    borderColor: "var(--colorPaletteYellowBorder1)",
     backgroundColor: "var(--colorPaletteYellowBackground1)",
   },
   securityItemDanger: {
-    borderColor: "var(--colorPaletteRedBorder1)",
     backgroundColor: "var(--colorPaletteRedBackground1)",
   },
   securityHeader: {
@@ -100,17 +96,14 @@ const useStyles = makeStyles({
     marginTop: "auto",
   },
   overallStatusSafe: {
-    borderColor: "var(--colorPaletteGreenBorder1)",
     backgroundColor: "var(--colorPaletteGreenBackground1)",
     color: "var(--colorPaletteGreenForeground1)",
   },
   overallStatusWarning: {
-    borderColor: "var(--colorPaletteYellowBorder1)",
     backgroundColor: "var(--colorPaletteYellowBackground1)",
     color: "var(--colorPaletteYellowForeground1)",
   },
   overallStatusDanger: {
-    borderColor: "var(--colorPaletteRedBorder1)",
     backgroundColor: "var(--colorPaletteRedBackground1)",
     color: "var(--colorPaletteRedForeground1)",
   },

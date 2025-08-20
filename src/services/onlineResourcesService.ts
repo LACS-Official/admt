@@ -23,7 +23,7 @@ class OnlineResourcesService {
   private transmissionService: SecureDataTransmissionService;
   private downloadTasks: Map<string, DownloadTask> = new Map();
   private isInitialized: boolean = false;
-  private readonly STORAGE_KEY = 'hout_download_tasks';
+  private readonly STORAGE_KEY = 'download_tasks';
   private lastDownloadTime: number = 0;
   private readonly DOWNLOAD_COOLDOWN = 60 * 1000; // 1分钟冷却时间
 

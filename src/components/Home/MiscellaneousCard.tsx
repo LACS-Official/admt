@@ -63,9 +63,9 @@ const useStyles = makeStyles({
   cardContent: {
     flex: 1,
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr", // 改为3列布局
-    gridTemplateRows: "1fr 1fr 1fr", // 保持3行布局
-    gap: "4px", // 稍微增加间距
+    gridTemplateColumns: "1fr 1fr", // 改为2列布局
+    gridTemplateRows: "1fr 1fr", // 改为2行布局
+    gap: "4px",
     padding: "0 8px 8px 8px",
   },
   functionItem: {
@@ -233,26 +233,6 @@ const MiscellaneousCard: React.FC = () => {
     );
   };
 
-  const handleRestartApp = async () => {
-    setShowRestartDialog(true);
-  };
-
-  const confirmRestartApp = async () => {
-    setShowRestartDialog(false);
-    await executeCommand(
-      "restart-app",
-      () => invoke("restart_application"),
-      "重启应用",
-      true
-    );
-  };
-
-  const handleStopAdb = async () => {
-    /* 执行adb进程停止操作 */
-
-  };
-
-
   const handleRestartAdb = async () => {
     setStatusBarMessage({
       type: "info",
@@ -279,14 +259,6 @@ const MiscellaneousCard: React.FC = () => {
 
 
   const miscFunctions: MiscFunction[] = [
-    {
-      id: "stop-adb",
-      title: "停止ADB进程",
-      description: "强制终止当前运行的ADB进程",
-      icon: <Stop24Regular />,
-      isRisky: true,
-      action: handleStopAdb,
-    },
     {
       id: "restart-adb",
       title: "重启ADB服务",
@@ -319,14 +291,7 @@ const MiscellaneousCard: React.FC = () => {
       isRisky: false,
       action: handleOpenDeviceManager,
     },
-    {
-      id: "restart-app",
-      title: "重启应用",
-      description: "重新启动HOUT应用程序",
-      icon: <ArrowClockwise24Regular />,
-      isRisky: true,
-      action: handleRestartApp,
-    },
+    
   ];
 
   const handleFunctionClick = async (func: MiscFunction) => {
@@ -385,55 +350,7 @@ const MiscellaneousCard: React.FC = () => {
         </div>
       </Card>
 
-      {/* 重启应用确认对话框 */}
-      <Dialog open={showRestartDialog} onOpenChange={(_, data) => setShowRestartDialog(data.open)}>
-        <DialogSurface className={styles.warningDialog}>
-          <DialogTitle>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Warning24Regular className={styles.warningDialogIcon} />
-              确认重启应用
-            </div>
-          </DialogTitle>
-          <DialogContent>
-            <DialogBody>
-              <div className={styles.warningContent}>
-                <Text className={styles.warningText}>
-                  您即将重启HOUT应用程序。
-                </Text>
-                <div className={styles.infoBox}>
-                  <Text style={{ fontWeight: "500", marginBottom: "8px" }}>
-                    <Info24Regular style={{ marginRight: "6px" }} />
-                    注意事项：
-                  </Text>
-                  <Text className={styles.warningText}>
-                    • 当前所有操作将被中断<br/>
-                    • 未保存的设置可能丢失<br/>
-                    • 设备连接将被重新建立
-                  </Text>
-                </div>
-                <Text className={styles.warningText}>
-                  是否确认重启？
-                </Text>
-              </div>
-            </DialogBody>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              appearance="secondary"
-              onClick={() => setShowRestartDialog(false)}
-            >
-              取消
-            </Button>
-            <Button
-              appearance="primary"
-              onClick={confirmRestartApp}
-              style={{ backgroundColor: "var(--colorPaletteRedBackground1)" }}
-            >
-              确认重启
-            </Button>
-          </DialogActions>
-        </DialogSurface>
-      </Dialog>
+
 
     </>
   );

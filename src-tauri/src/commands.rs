@@ -1430,12 +1430,12 @@ fn get_app_downloads_dir() -> Result<std::path::PathBuf> {
 
     // 如果无法获取安装目录，使用应用数据目录
     if let Some(data_dir) = dirs::data_dir() {
-        let app_data_dir = data_dir.join("HOUT").join("downloads");
+        let app_data_dir = data_dir.join("ADMT").join("downloads");
         return Ok(app_data_dir);
     }
 
     // 最后回退到临时目录
-    Ok(std::env::temp_dir().join("hout_downloads"))
+    Ok(std::env::temp_dir().join("admt_downloads"))
 }
 
 /// 下载APK文件
@@ -2008,156 +2008,6 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
 
 // ==================== 杂项控制功能命令 ====================
 
-/// 停止ADB进程
-#[tauri::command]
-pub async fn stop_adb_process() -> Result<CommandResult> {
-    log::info!("Attempting to stop ADB process");
-
-    #[cfg(windows)]
-    {
-        use std::process::Command;
-
-        // 首先检查是否有ADB进程在运行
-        let mut check_cmd = Command::new("tasklist");
-        check_cmd.args(&["/FI", "IMAGENAME eq adb.exe", "/FO", "CSV"]);
-
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        check_cmd.creation_flags(CREATE_NO_WINDOW);
-
-        let mut processes_found = false;
-        let mut process_count = 0;
-
-        match check_cmd.output() {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                // 检查输出中是否包含adb.exe进程
-                for line in stdout.lines() {
-                    if line.contains("adb.exe") && !line.contains("映像名称") {
-                        processes_found = true;
-                        process_count += 1;
-                    }
-                }
-                log::info!("Found {} ADB processes running", process_count);
-            }
-            Err(e) => {
-                log::warn!("Failed to check ADB processes: {}", e);
-            }
-        }
-
-        if !processes_found {
-            return Ok(CommandResult {
-                success: true,
-                output: "没有发现正在运行的ADB进程".to_string(),
-                error: None,
-                exit_code: Some(0),
-            });
-        }
-
-        // 使用taskkill命令强制终止所有ADB进程
-        let mut cmd = Command::new("taskkill");
-        cmd.args(&["/F", "/IM", "adb.exe", "/T"]); // /T 参数终止子进程
-        cmd.creation_flags(CREATE_NO_WINDOW);
-
-        match cmd.output() {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-                log::info!("Taskkill output: {}", stdout);
-                if !stderr.is_empty() {
-                    log::warn!("Taskkill stderr: {}", stderr);
-                }
-
-                if output.status.success() {
-                    // 再次验证进程是否已终止
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
-                    let mut verify_cmd = Command::new("tasklist");
-                    verify_cmd.args(&["/FI", "IMAGENAME eq adb.exe", "/FO", "CSV"]);
-                    verify_cmd.creation_flags(CREATE_NO_WINDOW);
-
-                    let mut still_running = false;
-                    if let Ok(verify_output) = verify_cmd.output() {
-                        let verify_stdout = String::from_utf8_lossy(&verify_output.stdout);
-                        for line in verify_stdout.lines() {
-                            if line.contains("adb.exe") && !line.contains("映像名称") {
-                                still_running = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if still_running {
-                        log::warn!("Some ADB processes may still be running");
-                        Ok(CommandResult {
-                            success: false,
-                            output: format!("已尝试终止{}个ADB进程，但部分进程可能仍在运行", process_count),
-                            error: Some("部分ADB进程可能需要管理员权限才能终止".to_string()),
-                            exit_code: Some(1),
-                        })
-                    } else {
-                        log::info!("All ADB processes stopped successfully");
-                        Ok(CommandResult {
-                            success: true,
-                            output: format!("已成功终止{}个ADB进程", process_count),
-                            error: None,
-                            exit_code: Some(0),
-                        })
-                    }
-                } else {
-                    // 检查是否是因为进程不存在而失败
-                    if stderr.contains("找不到进程") || stderr.contains("not found") || stderr.contains("ERROR: The process") {
-                        Ok(CommandResult {
-                            success: true,
-                            output: "ADB进程未运行或已停止".to_string(),
-                            error: None,
-                            exit_code: Some(0),
-                        })
-                    } else {
-                        Ok(CommandResult {
-                            success: false,
-                            output: stdout,
-                            error: Some(format!("终止ADB进程失败: {}", stderr)),
-                            exit_code: output.status.code(),
-                        })
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("Failed to execute taskkill command: {}", e);
-                Err(HoutError::IoError {
-                    message: format!("执行停止ADB进程命令失败: {}", e),
-                })
-            }
-        }
-    }
-
-    #[cfg(not(windows))]
-    {
-        // 非Windows系统的实现
-        use std::process::Command;
-
-        let mut cmd = Command::new("pkill");
-        cmd.args(&["-f", "adb"]);
-
-        match cmd.output() {
-            Ok(output) => {
-                Ok(CommandResult {
-                    success: output.status.success(),
-                    output: if output.status.success() { "ADB进程已停止".to_string() } else { "ADB进程未运行".to_string() },
-                    error: if output.status.success() { None } else { Some("停止ADB进程失败".to_string()) },
-                    exit_code: output.status.code(),
-                })
-            }
-            Err(e) => {
-                Err(HoutError::IoError {
-                    message: format!("执行停止ADB进程命令失败: {}", e),
-                })
-            }
-        }
-    }
-}
 
 /// 重启ADB服务
 #[tauri::command]
@@ -2363,69 +2213,27 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
     {
         use std::process::Command;
 
-        // 重新扫描硬件变化
-        let mut cmd = Command::new("devcon");
-        cmd.args(&["rescan"]);
-
-        // 隐藏命令行窗口
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        cmd.creation_flags(CREATE_NO_WINDOW);
+        let bat_path = std::path::Path::new("tools").join("lacs").join("Usb_fix.bat");
+        let mut cmd = Command::new("cmd");
+        cmd.args(&["/C", bat_path.to_str().unwrap()]);
 
         match cmd.output() {
-            Ok(output) => {
-                if output.status.success() {
-                    log::info!("USB 3.0 connection fix completed");
-                    Ok(CommandResult {
-                        success: true,
-                        output: "USB 3.0连接修复完成，请重新连接设备".to_string(),
-                        error: None,
-                        exit_code: Some(0),
-                    })
-                } else {
-                    // 如果devcon不可用，尝试使用PowerShell命令
-                    let mut ps_cmd = Command::new("powershell");
-                    ps_cmd.args(&["-Command", "Get-PnpDevice | Where-Object {$_.Class -eq 'USB'} | Disable-PnpDevice -Confirm:$false; Start-Sleep 2; Get-PnpDevice | Where-Object {$_.Class -eq 'USB'} | Enable-PnpDevice -Confirm:$false"]);
-                    ps_cmd.creation_flags(CREATE_NO_WINDOW);
-
-                    match ps_cmd.output() {
-                        Ok(ps_output) => {
-                            if ps_output.status.success() {
-                                Ok(CommandResult {
-                                    success: true,
-                                    output: "USB设备已重新初始化，请重新连接设备".to_string(),
-                                    error: None,
-                                    exit_code: Some(0),
-                                })
-                            } else {
-                                Ok(CommandResult {
-                                    success: false,
-                                    output: String::new(),
-                                    error: Some("USB 3.0修复失败，请手动重新插拔USB设备".to_string()),
-                                    exit_code: ps_output.status.code(),
-                                })
-                            }
-                        }
-                        Err(e) => {
-                            log::error!("Failed to execute PowerShell USB fix command: {}", e);
-                            Ok(CommandResult {
-                                success: false,
-                                output: String::new(),
-                                error: Some("USB 3.0修复失败，请手动重新插拔USB设备".to_string()),
-                                exit_code: Some(1),
-                            })
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("Failed to execute devcon command: {}", e);
-                // 尝试备用方案
+            Ok(_) => {
+                log::info!("USB 3.0 registry modifications completed");
                 Ok(CommandResult {
                     success: true,
-                    output: "已尝试修复USB连接，请重新插拔USB设备".to_string(),
+                    output: "USB 3.0注册表修改完成，请重新连接设备".to_string(),
                     error: None,
                     exit_code: Some(0),
+                })
+            }
+            Err(e) => {
+                log::error!("Failed to modify USB 3.0 registry: {}", e);
+                Ok(CommandResult {
+                    success: false,
+                    output: "USB 3.0注册表修改失败".to_string(),
+                    error: Some(e.to_string()),
+                    exit_code: Some(1),
                 })
             }
         }
@@ -2441,6 +2249,7 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
         })
     }
 }
+
 
 /// 打开设备管理器
 #[tauri::command]

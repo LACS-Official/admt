@@ -514,7 +514,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
           <div className={styles.headerLeft}>
             {/* 第一行：信息面板标题 */}
             <div className={styles.deviceInfoRow}>
-              <div className={styles.title}>信息面板</div>
+              <div className={styles.title}>设备信息面板</div>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {/* 刷新按钮 */}
                 {device.connected && (
