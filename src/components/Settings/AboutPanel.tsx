@@ -242,6 +242,12 @@ const THANKS_PROJECTS = [
     url: "https://github.com/MlgmXyysd/Xiaomi-HyperOS-BootLoader-Bypass",
     category: "Android工具"
   },
+    {
+    name: "雪糕小豪,酷安@24524599",
+    description: "感谢大佬提供的部分思路，在此致敬",
+    url: "https://b23.tv/ka645O6",
+    category: "思路"
+  },
 ];
 
 // 按分类组织项目
@@ -494,7 +500,7 @@ const AboutPanel: React.FC = () => {
               </DialogActions>
               <DialogContent>
                 <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
-                  本项目使用到了以下优秀的项目，感谢所有开源贡献者
+                  感谢以下所有开贡献者与大佬
                 </Text>
                 <div className={styles.openSourceGrid}>
                   {Object.entries(GROUPED_PROJECTS).map(([category, projects]) => (
@@ -511,7 +517,7 @@ const AboutPanel: React.FC = () => {
                             size="medium"
                             onClick={() => openUrl(project.url)}
                           >
-                            查看项目
+                            查看
                           </Button>
                         </div>
                       ))}

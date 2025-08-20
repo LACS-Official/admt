@@ -34,6 +34,7 @@ import { SecureDataTransmissionService } from '../../services/secureDataTransmis
 import { announcementService } from '../../services/announcementService';
 import { Announcement } from '../../types/app';
 import StartupVersionChecker from '../Common/StartupVersionChecker';
+import { useAppStore } from '../../stores/appStore';
 
 const useStyles = makeStyles({
   container: {
@@ -156,6 +157,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   onError 
 }) => {
   const styles = useStyles();
+  const { addNotification } = useAppStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -166,6 +168,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const [showAnnouncements, setShowAnnouncements] = useState(false);
   const [showEnterButton, setShowEnterButton] = useState(false);
   const [showVersionChecker, setShowVersionChecker] = useState(false);
+  const [autoRedirectTimer, setAutoRedirectTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     setVersionCheckResult,
@@ -275,6 +278,27 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         console.log('📢 有公告，显示公告内容');
         setShowAnnouncements(true);
         setStatusMessage('检查完成，请查看最新公告');
+        
+        // 添加通知
+        addNotification({
+          type: "info",
+          title: "系统公告",
+          message: `您有 ${announcementResult.length} 条新公告，请查看`,
+          duration: 5000,
+        });
+        
+        // 设置3秒后自动跳转
+        const timer = setTimeout(() => {
+          console.log('📢 公告显示3秒后自动进入应用');
+          // 确保调用onComplete，即使checkResult还没有设置完成
+          if (versionResult) {
+            onComplete(versionResult);
+          } else if (checkResult) {
+            onComplete(checkResult);
+          }
+        }, 3000);
+        
+        setAutoRedirectTimer(timer);
       } else {
         console.log('📢 没有公告');
         setStatusMessage('检查完成');
@@ -285,11 +309,29 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         console.log('✅ 当前是最新版本，显示进入应用按钮');
         setShowEnterButton(true);
         setStatusMessage(announcementResult.length > 0 ? '检查完成，请查看最新公告' : '当前已是最新版本');
+        
+        // 添加通知
+        if (announcementResult.length === 0) {
+          addNotification({
+            type: "success",
+            title: "版本检查",
+            message: "当前已是最新版本",
+            duration: 3000,
+          });
+        }
       } else {
         console.log('⚠️ 发现新版本，需要强制更新，不显示进入应用按钮');
         console.log('📋 更新信息:', versionResult.updateInfo);
         setShowEnterButton(false);
         setStatusMessage('发现新版本，请立即更新');
+        
+        // 添加通知
+        addNotification({
+          type: "warning",
+          title: "版本更新",
+          message: "发现新版本，请立即更新",
+          duration: 5000,
+        });
       }
 
     } catch (error) {
@@ -297,6 +339,14 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       const errorMessage = error instanceof Error ? error.message : '检查失败';
       setError(errorMessage);
       setIsChecking(false);
+
+      // 添加错误通知
+      addNotification({
+        type: "error",
+        title: "检查失败",
+        message: errorMessage,
+        duration: 5000,
+      });
 
       // 根据要求，检查失败或没联网就立刻提示用户并退出，不能重试
       console.log('🚫 检查失败，应用将退出');
