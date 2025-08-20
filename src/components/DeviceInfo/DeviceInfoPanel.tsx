@@ -7,11 +7,18 @@ import {
   Spinner,
   Field,
   Select,
+  Dialog,
+  DialogSurface,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogBody,
 } from "@fluentui/react-components";
 import {
   Phone24Regular,
   ArrowClockwise24Regular,
   Info24Regular,
+  Edit24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -19,6 +26,8 @@ import { useAppStore } from "../../stores/appStore";
 import DeviceCoreInfoCard from "./DeviceCoreInfoCard";
 import SecurityStatusCard from "./SecurityStatusCard";
 import DeviceDetailsModal from "./DeviceDetailsModal";
+import DeviceOverviewCard from "./DeviceOverviewCard"; // 添加导入
+import CustomInfoPanel from "./CustomInfoPanel";
 import { useResponsiveLayout } from "../../hooks/useResponsiveLayout";
 
 const useStyles = makeStyles({
@@ -96,6 +105,7 @@ const DeviceInfoPanel: React.FC = () => {
   const { addNotification } = useAppStore();
   const { layoutSize } = useResponsiveLayout();
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false); // 添加自定义弹窗状态
 
   // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
 
@@ -114,6 +124,11 @@ const DeviceInfoPanel: React.FC = () => {
 
   const handleShowDetails = () => {
     setShowDetailsModal(true);
+  };
+
+  // 添加自定义弹窗处理函数
+  const handleCustomize = () => {
+    setShowCustomizeModal(true);
   };
 
   const handleCopyInfo = async () => {
@@ -246,10 +261,11 @@ const DeviceInfoPanel: React.FC = () => {
         <>
           <div className={getContentClassName()}>
             <div className={styles.coreInfoCard}>
-              <DeviceCoreInfoCard
+              <DeviceOverviewCard
                 device={selectedDevice}
                 onShowDetails={handleShowDetails}
                 onCopyInfo={handleCopyInfo}
+                onCustomize={handleCustomize} // 添加自定义回调
               />
             </div>
             <div className={styles.securityCard}>
@@ -263,6 +279,23 @@ const DeviceInfoPanel: React.FC = () => {
             open={showDetailsModal}
             onOpenChange={setShowDetailsModal}
           />
+          
+          {/* 自定义信息面板弹窗 */}
+          <Dialog open={showCustomizeModal} onOpenChange={(_, data) => setShowCustomizeModal(data.open)}>
+            <DialogSurface style={{ maxWidth: '800px', width: '80vw', height: '80vh' }}>
+              <DialogBody style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <DialogTitle>自定义信息面板</DialogTitle>
+                <DialogContent style={{ flex: 1, overflow: 'hidden' }}>
+                  <CustomInfoPanel device={selectedDevice} />
+                </DialogContent>
+                <DialogActions>
+                  <Button appearance="primary" onClick={() => setShowCustomizeModal(false)}>
+                    完成
+                  </Button>
+                </DialogActions>
+              </DialogBody>
+            </DialogSurface>
+          </Dialog>
         </>
       ) : (
         <div className={styles.noDevice}>

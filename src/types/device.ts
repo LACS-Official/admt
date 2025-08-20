@@ -4,6 +4,7 @@ export interface DeviceInfo {
   properties?: DeviceProperties;
   connected: boolean;
   lastSeen?: Date;
+  boardSerialNumber?: string;
 }
 
 export type DeviceMode = 
