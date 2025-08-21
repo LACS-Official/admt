@@ -248,6 +248,12 @@ const MiscellaneousCard: React.FC = () => {
   };
 
   const handleInstallDriver = async () => {
+      setStatusBarMessage({
+      type: "info",
+      icon: <Info24Regular />,
+      message: "请前往在线资源板块下载并安装",
+      duration: 1000,
+      });
   };
 
 

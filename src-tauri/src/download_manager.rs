@@ -328,7 +328,7 @@ impl DownloadManager {
     fn create_config_file(&self, extract_dir: &Path, openname: &str) -> Result<()> {
         let config_path = extract_dir.join("launch.cfg");
         let config_content = format!(
-            "# HOUT软件启动配置文件\n# 生成时间: {}\n\n[launch]\nopenname={}\n",
+            "# ADMT软件启动配置文件\n# 生成时间: {}\n\n[launch]\nopenname={}\n",
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
             openname
         );
