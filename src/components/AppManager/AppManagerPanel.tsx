@@ -19,7 +19,6 @@ import AppListCard from "./AppListCard";
 import ApkInfoCard from "./ApkInfoCard";
 import InstallHistoryCard from "./InstallHistoryCard";
 import DeviceConnectionStatus from "./DeviceConnectionStatus";
-import ApkMarketCard from "./ApkMarketCard";
 import ErrorDialog from "../Common/ErrorDialog";
 import { InstalledApp } from "../../types/device";
 import { ErrorInfo } from "../../utils/errorHandler";
@@ -90,12 +89,6 @@ const AppManagerPanel: React.FC = () => {
 
   const renderTabContent = () => {
     switch (selectedTab) {
-      case "market":
-        return (
-          <div className={styles.fullLayout}>
-            <ApkMarketCard />
-          </div>
-        );
       case "install":
         return (
           <div className={styles.threeColumnLayout}>

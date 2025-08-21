@@ -15,8 +15,6 @@ import {
 import { useDeviceStore } from "../../stores/deviceStore";
 import AdbToolsPanel from "../AdbTools/AdbToolsPanel";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
-import AppManagementCard from "../DeviceControl/AppManagementCard";
-import FileOperationCard from "../DeviceControl/FileOperationCard";
 
 const useStyles = makeStyles({
   container: {
@@ -118,8 +116,6 @@ const AdbZonePanel: React.FC = () => {
             padding: "16px"
           }}>
             <SystemControlCard device={selectedDevice} />
-            <AppManagementCard device={selectedDevice} />
-            <FileOperationCard device={selectedDevice} />
           </div>
         );
       default:

@@ -26,6 +26,8 @@ import {
   Home24Regular,
   ArrowLeft24Regular,
   Apps24Regular,
+  Navigation24Regular,
+  Phone24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
@@ -36,6 +38,7 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
+    minHeight: "200px",
   },
   content: {
     flex: 1,
@@ -46,7 +49,7 @@ const useStyles = makeStyles({
   },
   commandGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: "12px",
   },
   commandButton: {
@@ -55,14 +58,15 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: "6px",
-    padding: "8px",
+    gap: "8px",
+    padding: "12px",
+    borderRadius: "6px",
   },
   commandIcon: {
     fontSize: "24px",
   },
   commandLabel: {
-    fontSize: "12px",
+    fontSize: "14px",
     textAlign: "center",
     lineHeight: "1.2",
   },
@@ -200,6 +204,20 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
       icon: <Power24Regular />,
       command: ["shell", "input", "keyevent", "224"],
       description: "唤醒设备屏幕",
+    },
+    {
+      id: "navigation",
+      label: "导航栏",
+      icon: <Navigation24Regular />,
+      command: ["shell", "wm", "overscan", "0,0,0,0"],
+      description: "重置导航栏边距",
+    },
+    {
+      id: "rotation",
+      label: "旋转屏幕",
+      icon: <Phone24Regular />,
+      command: ["shell", "settings", "put", "system", "accelerometer_rotation", "1"],
+      description: "启用自动旋转",
     },
   ];
 
