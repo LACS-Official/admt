@@ -7,6 +7,8 @@ import {
   Body1,
   Caption1,
   Title2,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
 import {
   CloudArrowDown24Regular,
@@ -165,6 +167,7 @@ const OnlineResourcesPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('ADMT');
 
   // 加载软件列表
   const loadSoftwareList = async (params: SearchParams = {}) => {
@@ -172,7 +175,18 @@ const OnlineResourcesPanel: React.FC = () => {
     setError(null);
     
     try {
-      const response = await onlineResourcesService.getSoftwareList(params);
+      // 根据活动分类设置标签参数
+      let tags = 'admt'; // 默认包含admt标签
+      
+      // 如果不是默认的ADMT分类，添加分类标签
+      if (activeCategory !== 'ADMT') {
+        tags = `admt,${activeCategory}`;
+      }
+      
+      const response = await onlineResourcesService.getSoftwareList({
+        ...params,
+        tags: tags,
+      });
       
       if (response.success) {
         setSoftwareList(response.data);
@@ -289,6 +303,23 @@ const OnlineResourcesPanel: React.FC = () => {
           onChange={(_, data) => setSearchKeyword(data.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
         />
+        <Body1>分类:(选中后点击搜索)</Body1>
+        <Dropdown
+          placeholder="选择分类"
+          selectedOptions={[activeCategory]}
+          onOptionSelect={(_, data) => {
+            setActiveCategory(data.optionValue || 'ADMT');
+            handleSearch();
+          }}
+          style={{ minWidth: '120px' }}
+        >
+          <Option value="ADMT">ADMT</Option>
+          <Option value="脚本">脚本</Option>
+          <Option value="驱动">驱动</Option>
+          <Option value="设置文件">设置文件</Option>
+          <Option value="小米解锁">小米解锁</Option>
+          <Option value="其它">其它</Option>
+        </Dropdown>
         <Button
           icon={<Search24Regular />}
           onClick={handleSearch}

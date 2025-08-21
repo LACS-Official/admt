@@ -161,8 +161,42 @@ class OnlineResourcesService {
   async getSoftwareByTags(tags: string[], params: Omit<SearchParams, 'tags'> = {}): Promise<OnlineSoftwareResponse> {
     return this.getSoftwareList({
       ...params,
-      tags: tags.join(','),
+      tags: tags.join(',')
     });
+  }
+
+  async getSoftwareByCategories(): Promise<Record<string, OnlineSoftware[]>> {
+    try {
+      await this.ensureInitialized();
+      
+      // 首先获取所有ADMT标签的软件
+      const admtResponse = await this.getSoftwareByTags(['admt']);
+      const admtSoftware = admtResponse.data || [];
+      
+      // 获取其他分类的软件
+      const categories = ['脚本', '驱动', '设置文件', '小米解锁', '其它'];
+      const result: Record<string, OnlineSoftware[]> = {
+        'ADMT': admtSoftware
+      };
+
+      // 并行获取其他分类
+      await Promise.all(categories.map(async category => {
+        const response = await this.getSoftwareByTags([category]);
+        result[category] = response.data || [];
+      }));
+
+      return result;
+    } catch (error) {
+      console.error('Failed to get software by categories:', error);
+      return {
+        'ADMT': [],
+        '脚本': [],
+        '驱动': [],
+        '设置文件': [],
+        '小米解锁': [],
+        '其它': []
+      };
+    }
   }
 
   /**

@@ -18,7 +18,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
     height: "100%",
     width: "100%",
-    padding: "40px 20px",
+    padding: "20px 20px",
     backgroundColor: tokens.colorNeutralBackground1,
   },
   container: {
@@ -28,7 +28,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
     height: "100%",
     width: "100%",
-    padding: "40px 20px",
+    padding: "20px 20px",
     background: `linear-gradient(135deg, ${tokens.colorNeutralBackground1} 0%, ${tokens.colorNeutralBackground2} 100%)`,
     position: "relative",
     overflow: "hidden",
@@ -40,7 +40,7 @@ const useStyles = makeStyles({
     flexDirection: "row",
     gap: "24px",
     width: "100%",
-    maxWidth: "1100px",
+    maxWidth: "1200px",
     marginBottom: "24px",
     "@media screen and (max-width: 768px)": {
       flexDirection: "column",
@@ -120,11 +120,11 @@ const useStyles = makeStyles({
       transform: "translateY(-4px)",
       boxShadow: tokens.shadow28,
     },
-    minWidth: "300px",
+    minWidth: "200px",
   },
 
   troubleshootingTitle: {
-    fontSize: "18px",
+    fontSize: "16px",
     fontWeight: "600",
     color: tokens.colorNeutralForeground1,
     marginBottom: "16px",
@@ -199,7 +199,7 @@ const useStyles = makeStyles({
   },
   
   title: {
-    fontSize: "28px",
+    fontSize: "20px",
     fontWeight: "700",
     color: tokens.colorNeutralForeground1,
     marginBottom: "12px",
@@ -307,7 +307,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
         
         {/* 主标题 */}
         <Text className={styles.title}>
-          未检测到设备，请确保设备已正确连接
+          未检测到设备，请确保设备已正确连接，对应的驱动已安装
         </Text>
         {/* 扫描状态指示器 */}
         {isScanning && (
@@ -355,6 +355,17 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
             <Text className={styles.troubleshootingItem}>检查设备尾插是否有损坏</Text>
             <Text className={styles.troubleshootingItem}>确保已安装正确的USB驱动</Text>
             <Text className={styles.troubleshootingItem}>检查自动检测设备开关是否开启</Text>
+          </div>
+
+          {/* 驱动安装指示器 */}
+          <div className={styles.troubleshooting}> 
+            <Text className={styles.troubleshootingTitle}>
+              <Settings24Regular /> 如何安装对应的驱动？
+            </Text>
+            <Text className={styles.troubleshootingItem}>点击在线资源标签页</Text>
+            <Text className={styles.troubleshootingItem}>选择驱动分类点击搜索</Text>
+            <Text className={styles.troubleshootingItem}>选择对应的驱动并安装</Text>
+            <Text className={styles.troubleshootingItem}>尝试重新连接</Text>
           </div>
         </div>
 

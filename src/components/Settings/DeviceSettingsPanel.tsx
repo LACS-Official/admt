@@ -116,17 +116,7 @@ const DeviceSettingsPanel: React.FC = () => {
                 <Text weight="semibold">自动检测设备</Text>
                 <br />
                 <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  自动扫描连接的Android设备
-                  {config.autoDetectDevices && (
-                    <Badge
-                      appearance="filled"
-                      color="brand"
-                      size="small"
-                      style={{ marginLeft: "8px" }}
-                    >
-                      已启用
-                    </Badge>
-                  )}
+                  自动扫描连接的Android设备 
                 </Text>
               </div>
               <Switch
