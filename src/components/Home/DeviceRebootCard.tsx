@@ -1,11 +1,20 @@
 import React, { useState }  from 'react';
 import {
   makeStyles,
+  mergeClasses,
   Card,
   CardHeader,
   Text,
   Badge,
   Spinner,
+  Button,
+  Dialog,
+  DialogTrigger,
+  DialogSurface,
+  DialogTitle,
+  DialogContent,
+  DialogBody,
+  DialogActions,
 } from "@fluentui/react-components";
 import {
   Power24Regular,
@@ -61,7 +70,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
     padding: "6px 4px", // 增加垂直内边距以适应网格布局
     border: "1px solid var(--colorNeutralStroke3)",
-    borderRadius: "6px", // 稍微增加圆角
+    borderRadius: "6px", // 稍稍微增加圆角
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.2s ease",
     cursor: "pointer",
@@ -93,7 +102,7 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   rebootOptionTitle: {
-    fontSize: "11px", // 稍微增大文字以适配垂直布局
+    fontSize: "11px", // 稍稍微增大文字以适配垂直布局
     fontWeight: "600",
     textAlign: "center", // 居中对齐
     lineHeight: "1.2",
@@ -354,9 +363,10 @@ const DeviceRebootCard: React.FC = () => {
           {rebootOptions.map((option) => (
             <div
               key={option.id}
-              className={`${styles.rebootOption} ${
-                pendingRebootOption?.id === option.id ? styles.rebootOptionPending : ""
-              }`}
+              className={mergeClasses(
+                styles.rebootOption,
+                pendingRebootOption?.id === option.id && styles.rebootOptionPending
+              )}
               onClick={() => handleReboot(option)}
             >
               <div className={styles.rebootOptionContent}>

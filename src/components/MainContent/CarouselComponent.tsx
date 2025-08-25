@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState }  from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   makeStyles,
+  mergeClasses,
   Text,
 } from "@fluentui/react-components";
 
@@ -160,12 +161,12 @@ const CarouselComponent: React.FC<CarouselProps> = ({
       </div>
 
       <div
-        className={`${styles.navButton} ${styles.prevButton}`}
+        className={mergeClasses(styles.navButton, styles.prevButton)}
         onClick={prevSlide}
       />
 
       <div
-        className={`${styles.navButton} ${styles.nextButton}`}
+        className={mergeClasses(styles.navButton, styles.nextButton)}
         onClick={nextSlide}
       />
     </div>

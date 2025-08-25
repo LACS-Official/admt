@@ -17,7 +17,6 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import FileManagerPanel from "../FileManager/FileManagerPanel";
 import AppManagerPanel from "../AppManager/AppManagerPanel";
 import ScreenMirrorPanel from "../ScreenMirror/ScreenMirrorPanel";
-import DeveloperToolCard from "../Tools/DeveloperToolCard";
 
 const useStyles = makeStyles({
   container: {
@@ -93,11 +92,6 @@ const OtherToolsPanel: React.FC = () => {
       label: "屏幕镜像",
       icon: <Desktop24Regular />,
     },
-    {
-      id: "developer-tools" as OtherToolsView,
-      label: "开发工具",
-      icon: <Code24Regular />,
-    },
   ];
 
   const renderContent = () => {
@@ -110,8 +104,6 @@ const OtherToolsPanel: React.FC = () => {
         return <AppManagerPanel />;
       case "screen-mirror":
         return <ScreenMirrorPanel />;
-      case "developer-tools":
-        return <DeveloperToolCard device={selectedDevice} />;
       default:
         return <FileManagerPanel />;
     }

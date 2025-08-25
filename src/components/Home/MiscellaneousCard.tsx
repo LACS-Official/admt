@@ -177,6 +177,9 @@ const MiscellaneousCard: React.FC = () => {
 
   // 对话框状态
   const [showRestartDialog, setShowRestartDialog] = useState(false);
+  const [showUsbFixDialog, setShowUsbFixDialog] = useState(false);
+  const [usbFixStatus, setUsbFixStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [usbFixOutput, setUsbFixOutput] = useState<string>('');
 
   // 通用命令执行函数
   const executeCommand = async (
@@ -200,24 +203,18 @@ const MiscellaneousCard: React.FC = () => {
       if (result.success) {
         setStatusBarMessage({
           type: "success",
-          icon: <Info24Regular />,
           message: `${description}成功`,
-          duration: 1000,
         });
       } else {
         setStatusBarMessage({
-          icon: <Warning24Regular />,
           type: "error",
           message: result.error || `${description}失败`,
-          duration: 5000,
         });
       }
     } catch (error) {
       setStatusBarMessage({
-        icon: <Warning24Regular />,
         type: "error",
         message: `${description}失败: ${error}`,
-        duration: 5000,
       });
     } finally {
       setExecutingFunction(null);
@@ -236,9 +233,7 @@ const MiscellaneousCard: React.FC = () => {
   const handleRestartAdb = async () => {
     setStatusBarMessage({
       type: "info",
-      icon: <Info24Regular />,
       message: "正在重启ADB服务...",
-      duration: 1000,
       });
     await executeCommand(
       "restart-adb",
@@ -250,15 +245,41 @@ const MiscellaneousCard: React.FC = () => {
   const handleInstallDriver = async () => {
       setStatusBarMessage({
       type: "info",
-      icon: <Info24Regular />,
       message: "请前往在线资源板块下载并安装",
-      duration: 1000,
       });
   };
 
 
   const handleFixUsb3 = async () => {
+    setShowUsbFixDialog(true);
+  };
 
+  // USB修复对话框处理函数
+  const handleUsbFixStart = async () => {
+    setUsbFixStatus('running');
+    setUsbFixOutput('正在启动USB 3.0修复工具...\n');
+    
+    try {
+      // 调用Tauri后端执行bat脚本
+      const result = await invoke('run_usb_fix_script') as { success: boolean; output?: string; error?: string };
+      
+      if (result.success) {
+        setUsbFixStatus('success');
+        setUsbFixOutput(prev => prev + '\n修复完成！\n' + (result.output || ''));
+      } else {
+        setUsbFixStatus('error');
+        setUsbFixOutput(prev => prev + '\n修复失败：' + (result.error || '未知错误'));
+      }
+    } catch (error) {
+      setUsbFixStatus('error');
+      setUsbFixOutput(prev => prev + '\n修复失败：' + String(error));
+    }
+  };
+
+  const handleUsbFixClose = () => {
+    setShowUsbFixDialog(false);
+    setUsbFixStatus('idle');
+    setUsbFixOutput('');
   };
 
 
@@ -356,7 +377,106 @@ const MiscellaneousCard: React.FC = () => {
         </div>
       </Card>
 
-
+      {/* USB修复对话框 */}
+      <Dialog 
+        open={showUsbFixDialog} 
+        onOpenChange={(event, data) => {
+          if (!data.open && usbFixStatus !== 'running') {
+            handleUsbFixClose();
+          }
+        }}
+        modalType="modal"
+      >
+        <DialogSurface style={{ minWidth: '500px', maxWidth: '600px' }}>
+          <DialogTitle>USB 3.0 修复工具</DialogTitle>
+          <DialogContent>
+            <DialogBody>
+              <div style={{ marginBottom: '16px' }}>
+                <Text>此工具将修复USB 3.0连接问题，确保Android设备能够正常识别。</Text>
+              </div>
+              
+              {usbFixStatus === 'idle' && (
+                <div style={{ 
+                  padding: '16px', 
+                  backgroundColor: 'var(--colorNeutralBackground2)',
+                  borderRadius: '8px',
+                  marginBottom: '16px'
+                }}>
+                  <Text weight="semibold" style={{ color: 'var(--colorPaletteYellowForeground1)' }}>
+                    ⚠️ 注意事项：
+                  </Text>
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>此操作需要管理员权限</li>
+                    <li>将修改系统注册表以修复USB 3.0问题</li>
+                    <li>建议在执行前关闭其他USB调试工具</li>
+                  </ul>
+                </div>
+              )}
+              
+              {(usbFixStatus === 'running' || usbFixStatus === 'success' || usbFixStatus === 'error') && (
+                <div style={{
+                  backgroundColor: 'var(--colorNeutralBackground6)',
+                  border: '1px solid var(--colorNeutralStroke2)',
+                  borderRadius: '4px',
+                  padding: '12px',
+                  fontFamily: 'Consolas, "Courier New", monospace',
+                  fontSize: '12px',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  marginBottom: '16px'
+                }}>
+                  {usbFixOutput}
+                  {usbFixStatus === 'running' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                      <Spinner size="tiny" />
+                      <Text size={200}>正在执行...</Text>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogBody>
+          </DialogContent>
+          <DialogActions>
+            {usbFixStatus === 'idle' && (
+              <>
+                <Button 
+                  appearance="secondary" 
+                  onClick={handleUsbFixClose}
+                >
+                  取消
+                </Button>
+                <Button 
+                  appearance="primary" 
+                  onClick={handleUsbFixStart}
+                  icon={<Wrench24Regular />}
+                >
+                  开始修复
+                </Button>
+              </>
+            )}
+            
+            {usbFixStatus === 'running' && (
+              <Button 
+                appearance="secondary" 
+                disabled
+                icon={<Spinner size="tiny" />}
+              >
+                正在执行...
+              </Button>
+            )}
+            
+            {(usbFixStatus === 'success' || usbFixStatus === 'error') && (
+              <Button 
+                appearance="primary" 
+                onClick={handleUsbFixClose}
+              >
+                完成
+              </Button>
+            )}
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
 
     </>
   );

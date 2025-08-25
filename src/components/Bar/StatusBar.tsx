@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import {
   makeStyles,
+  mergeClasses,
   Text,
   Spinner,
+  Button,
+  Tooltip,
   tokens,
 } from "@fluentui/react-components";
 import {
@@ -300,7 +303,10 @@ const StatusBar: React.FC = () => {
   return (
     <div className={styles.statusBar}>
       {/* 默认内容 */}
-      <div className={`${styles.defaultContent} ${(currentNotification && isNotificationVisible) || statusBarMessage ? styles.defaultContentHidden : ''}`}>
+      <div className={mergeClasses(
+        styles.defaultContent, 
+        ((currentNotification && isNotificationVisible) || statusBarMessage) && styles.defaultContentHidden
+      )}>
         {/* 左侧状态信息 */}
         <div className={styles.leftSection}>
           {isLoading && (

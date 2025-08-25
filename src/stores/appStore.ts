@@ -96,17 +96,31 @@ export const useAppStore = create<AppStoreState>()(
           return;
         }
 
+        // 根据 type 自动匹配默认持续时间（毫秒）。
+        // 若外部已显式传入 duration，则优先生效，不会被覆盖。
+        const defaultDurationByType: Record<StatusBarMessage['type'], number> = {
+          info: 1500,
+          success: 1500,
+          warning: 5000,
+          error: 5000,
+        };
+
+        const resolvedDuration =
+          message.duration ?? defaultDurationByType[message.type];
+
         const id = Date.now().toString();
         const newMessage: StatusBarMessage = {
           ...message,
           id,
           timestamp: new Date(),
+          // 应用自动匹配的持续时间（可被外部传入覆盖）
+          duration: resolvedDuration,
         };
 
         set({ statusBarMessage: newMessage });
 
         // 如果设置了持续时间，自动清除消息
-        if (message.duration && message.duration > 0) {
+        if (newMessage.duration && newMessage.duration > 0) {
           setTimeout(() => {
             set((state) => {
               // 只有当前消息ID匹配时才清除，避免清除新消息
@@ -115,7 +129,7 @@ export const useAppStore = create<AppStoreState>()(
               }
               return state;
             });
-          }, message.duration);
+          }, newMessage.duration);
         }
       },
 

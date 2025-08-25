@@ -81,6 +81,7 @@ pub fn run() {
             restart_adb_service,
             install_device_driver,
             fix_usb3_connection,
+            run_usb_fix_script,
             open_device_manager,
             restart_application,
             get_detailed_device_fingerprint

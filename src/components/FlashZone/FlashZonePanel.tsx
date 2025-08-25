@@ -112,7 +112,7 @@ const FlashZonePanel: React.FC = () => {
     },
     {
       id: "xiaomi-flash" as FlashZoneView,
-      label: "小米线刷",
+      label: "线刷工具",
       icon: <Flash24Regular />,
     },
     {
@@ -160,21 +160,6 @@ const FlashZonePanel: React.FC = () => {
         </div>
       ) : (
         <div className={styles.content}>
-          <Card className={styles.warningCard}>
-            <CardHeader>
-              <div className={styles.warningContent}>
-                <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-                <div className={styles.warningText}>
-                  <Text weight="semibold" style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                    ⚠️ 刷机风险警告
-                  </Text>
-                  <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
-                    刷机操作具有极高风险，可能导致设备永久损坏（变砖）、保修失效或数据完全丢失。请确保您完全了解操作风险，已备份所有重要数据，并准备好相应的救砖工具。
-                  </Text>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
 
           <div className={styles.tabContainer}>
             <TabList

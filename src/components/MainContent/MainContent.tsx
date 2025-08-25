@@ -1,4 +1,4 @@
-import React, { useEffect }  from 'react';
+import React, { useEffect, useRef }  from 'react';
 import {
   makeStyles,
   TabList,
@@ -11,13 +11,13 @@ import {
 } from "@fluentui/react-components";
 import {
   Phone24Regular,
-
   Code24Regular,
   Settings24Regular,
   Wrench24Regular,
     CloudArrowUp24Regular,
   CloudArrowDown24Regular,
   Circle12Filled,
+  Home24Regular,
 } from "@fluentui/react-icons";
 import { getDeviceIcon } from "../../assets/icons";
 import { useAppStore } from "../../stores/appStore";
@@ -29,13 +29,21 @@ import AdbZonePanel from "../AdbTools/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
 import DeviceManagementPanel from "../DeviceManagement/DeviceManagementPanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
-
 import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import { usageTrackingService } from "../../services/usageTrackingService";
 
+
 const useStyles = makeStyles({
+  '@keyframes pulse': {
+    '0%, 100%': {
+      opacity: 1,
+    },
+    '50%': {
+      opacity: 0.8,
+    },
+  },
   container: {
     flex: 1,
     display: "flex",
@@ -307,96 +315,131 @@ const useStyles = makeStyles({
     wordBreak: "break-word",
   },
   sidebarHeader: {
-    padding: "8px 12px 6px 12px", // 减少内边距
-    borderBottom: "1px solid var(--colorNeutralStroke2)", // 简化边框
-    marginBottom: "6px", // 减少间距
+    padding: "12px 16px 10px",
+    borderBottom: "1px solid var(--colorNeutralStroke2)",
+    marginBottom: "8px",
     position: "relative",
     backgroundColor: "var(--colorNeutralBackground1)",
     boxSizing: "border-box",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+    
+    // Add a subtle gradient overlay
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      bottom: "-8px",
+      left: 0,
+      right: 0,
+      height: "8px",
+      background: "linear-gradient(to bottom, var(--colorNeutralBackground1), transparent)",
+      pointerEvents: "none",
+      zIndex: 1,
+    }
   },
   tabList: {
     backgroundColor: "transparent",
-    padding: "3px 8px 8px 8px", // 进一步减少内边距
+    padding: "8px 10px 16px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "5px", // 减少标签间距
+    gap: "8px",
     flex: 1,
-    overflow: "auto",
+    overflowY: "auto",
+    overflowX: "hidden",
     boxSizing: "border-box",
-
-    // 简化滚动条样式
+    scrollBehavior: "smooth",
+    scrollPaddingTop: "8px",
+    scrollPaddingBottom: "16px",
+    
+    // Enhanced scrollbar styling
     "&::-webkit-scrollbar": {
-      width: "2px",
+      width: "4px",
     },
     "&::-webkit-scrollbar-track": {
-      background: "transparent",
+      background: "var(--colorNeutralBackground1)",
+      borderRadius: "4px",
     },
     "&::-webkit-scrollbar-thumb": {
       background: "var(--colorNeutralStroke2)",
-      borderRadius: "1px",
+      borderRadius: "4px",
+      "&:hover": {
+        background: "var(--colorNeutralStroke1)",
+      },
     },
   },
   tab: {
     width: "100%",
     justifyContent: "flex-start",
-    padding: "6px 8px", // 减小内边距
-    borderRadius: "8px", // 减小圆角
-    minHeight: "28px", // 减小高度
-    maxWidth: "90%",
-    fontSize: "11px", // 减小字体
+    padding: "10px 12px", // Increased padding for better touch targets
+    borderRadius: "8px",
+    minHeight: "42px", // Increased height for better visibility
+    maxWidth: "92%",
+    fontSize: "12px",
     fontWeight: "500",
-    transition: "all 0.2s ease", // 简化过渡
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)", // Smoother transition
     position: "relative",
     backgroundColor: "var(--colorNeutralBackground1)",
     color: "var(--colorNeutralForeground2)",
     cursor: "pointer",
     overflow: "hidden",
     boxSizing: "border-box",
-    border: "1px solid var(--colorNeutralStroke2)", // 添加默认灰色边框
-    // 简化图标样式
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)", // Subtle shadow for depth
+    
+    // Icon styles
     "& .fui-Tab__icon": {
       color: "var(--colorNeutralForeground3)",
-      fontSize: "14px", // 减小图标
-      marginRight: "6px", // 减少间距
-      transition: "color 0.2s ease",
+      fontSize: "16px", // Slightly larger icons
+      marginRight: "8px",
+      transition: "all 0.2s ease",
       flexShrink: 0,
     },
 
-    // 简化悬停效果
+    // Hover state
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground2)",
       color: "var(--colorNeutralForeground1)",
-      border: "1px solid var(--colorNeutralStroke2)",
+      transform: "translateY(-1px)",
+      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
 
       "& .fui-Tab__icon": {
         color: "var(--colorBrandForeground1)",
+        transform: "scale(1.05)",
       },
     },
 
-    // 简化选中状态
+    // Selected state
     "&[aria-selected='true']": {
-      backgroundColor: "var(--colorBrandBackground)",
-      color: "var(--colorNeutralForegroundOnBrand)",
-      border: "1px solid var(--colorBrandStroke1)",
+      backgroundColor: "var(--colorBrandBackground2)",
+      color: "var(--colorBrandForeground1)",
+      border: "1px solid var(--colorBrandStroke2)",
       fontWeight: "600",
+      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+      paddingLeft: "16px", // Indent selected tab
 
       "& .fui-Tab__icon": {
-        color: "var(--colorNeutralForegroundOnBrand)",
+        color: "var(--colorBrandForeground1)",
+        transform: "scale(1.1)",
       },
 
-      // 简化左侧指示器
+      // Left indicator for selected tab
       "&::before": {
         content: '""',
         position: "absolute",
-        left: "-1px",
+        left: "0",
         top: "50%",
         transform: "translateY(-50%)",
-        width: "3px",
-        height: "60%",
+        width: "4px",
+        height: "70%",
         backgroundColor: "var(--colorBrandForeground1)",
-        borderRadius: "0 2px 2px 0",
+        borderRadius: "0 3px 3px 0",
+        transition: "all 0.3s ease",
       },
+      
+      // Add subtle pulse animation on selection
+      "@media (prefers-reduced-motion: no-preference)": {
+        animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      }
     },
 
     // 简化活跃状态
@@ -437,22 +480,17 @@ const tabs = [
   {
     id: "home" as AppView,
     label: "主页",
-    icon: <Phone24Regular />,
+    icon: <Home24Regular />,
   },
   {
     id: "adb-zone" as AppView,
-    label: "ADB专区",
+    label: "系统专区",
     icon: <Code24Regular />,
   },
   {
     id: "flash-zone" as AppView,
     label: "刷机专区",
     icon: <CloudArrowUp24Regular />,
-  },
-  {
-    id: "device-management" as AppView,
-    label: "设备管理",
-    icon: <Phone24Regular />,
   },
   {
     id: "extended-features" as AppView,
@@ -474,9 +512,10 @@ const tabs = [
 
 const MainContent: React.FC = () => {
   const styles = useStyles();
-  const { currentView, setCurrentView, config } = useAppStore();
+  const { currentView, setCurrentView, config, setStatusBarMessage } = useAppStore();
   const { selectedDevice, devices, selectDevice } = useDeviceStore();
   const { startScanning, stopScanning, refreshDeviceInfo } = useDeviceService();
+  const prevConnectedCount = useRef<number>(0);
 
   // 全局设备扫描 - 根据配置控制是否启用和扫描间隔
   useEffect(() => {
@@ -490,10 +529,44 @@ const MainContent: React.FC = () => {
     return () => stopScanning();
   }, [config.autoDetectDevices, config.scanInterval, startScanning, stopScanning]);
 
+  // 监听设备连接/断开，提示状态栏消息
+  useEffect(() => {
+    const connectedCount = devices.filter(d => d.connected).length;
+    const prev = prevConnectedCount.current;
+
+    if (prev === 0 && connectedCount > 0) {
+      // 首次检测到设备
+      setStatusBarMessage({
+        type: "success",
+        message: connectedCount === 1 ? "已检测到 1 台设备" : `已检测到 ${connectedCount} 台设备`,
+      });
+    } else if (prev > 0 && connectedCount === 0) {
+      // 所有设备断开
+      setStatusBarMessage({
+        type: "warning",
+        message: "设备已断开",
+      });
+    } else if (connectedCount < prev && connectedCount > 0) {
+      // 有设备断开但仍有设备连接
+      setStatusBarMessage({
+        type: "warning",
+        message: "有设备断开连接",
+      });
+    } else if (connectedCount > prev && prev > 0) {
+      // 新增设备连接
+      setStatusBarMessage({
+        type: "success",
+        message: "有新设备已连接",
+      });
+    }
+
+    prevConnectedCount.current = connectedCount;
+  }, [devices]);
+
   // 当选择设备时自动获取设备属性
   useEffect(() => {
     if (selectedDevice && selectedDevice.connected && !selectedDevice.properties) {
-      console.log('自动获取设备属性:', selectedDevice.serial);
+      setStatusBarMessage({ type: "info", message: "正在获取设备信息..." });
       refreshDeviceInfo(selectedDevice.serial);
     }
   }, [selectedDevice, refreshDeviceInfo]);
@@ -509,6 +582,7 @@ const MainContent: React.FC = () => {
         deviceName: selectedDevice.properties.deviceName,
         serial: selectedDevice.serial
       });
+      setStatusBarMessage({ type: "success", message: "设备信息已获取" });
     }
   }, [selectedDevice?.properties]);
 

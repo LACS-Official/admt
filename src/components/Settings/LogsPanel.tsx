@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   makeStyles,
+  mergeClasses,
   Text,
   Card,
   CardHeader,
@@ -200,7 +201,7 @@ const LogsPanel: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.content}>
         {/* 日志查看器 */}
-        <Card className={`${styles.card} ${styles.logViewer}`}>
+        <Card className={mergeClasses(styles.card, styles.logViewer)}>
           <CardHeader
             image={<Document24Regular />}
             header={<Text weight="semibold">应用日志</Text>}

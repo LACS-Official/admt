@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   makeStyles,
+  mergeClasses,
   Text,
   Card,
   CardHeader,
@@ -313,7 +314,7 @@ const AboutPanel: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.content}>
         {/* 关于 - 应用信息 */}
-        <Card className={`${styles.card} ${styles.aboutSection}`}>
+        <Card className={mergeClasses(styles.card, styles.aboutSection)}>
           <CardHeader
             image={<Info24Regular />}
             header={<Text weight="semibold">关于</Text>}
@@ -367,7 +368,7 @@ const AboutPanel: React.FC = () => {
         
 
         {/* 开发团队信息 */}
-        <Card className={`${styles.card} ${styles.aboutSection}`}>
+        <Card className={mergeClasses(styles.card, styles.aboutSection)}>
           <CardHeader
             image={<Building24Regular />}
             header={<Text weight="semibold">开发团队信息</Text>}

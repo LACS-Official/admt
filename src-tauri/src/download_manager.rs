@@ -326,18 +326,8 @@ impl DownloadManager {
 
     /// 创建配置文件
     fn create_config_file(&self, extract_dir: &Path, openname: &str) -> Result<()> {
-        let config_path = extract_dir.join("launch.cfg");
-        let config_content = format!(
-            "# ADMT软件启动配置文件\n# 生成时间: {}\n\n[launch]\nopenname={}\n",
-            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
-            openname
-        );
-
-        fs::write(&config_path, config_content)
-            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
-
-        // 同时创建JSON格式的配置文件
-        let json_config_path = extract_dir.join("config.json");
+        // 只创建一个 lacs_config.json 文件
+        let json_config_path = extract_dir.join("lacs_config.json");
         let json_config = serde_json::json!({
             "openname": openname,
             "created_at": chrono::Utc::now().to_rfc3339(),

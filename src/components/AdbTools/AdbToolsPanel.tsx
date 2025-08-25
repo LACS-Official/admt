@@ -1,14 +1,31 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   makeStyles,
+  shorthands,
+  mergeClasses,
   Text,
   Card,
   CardHeader,
-  Button,
   Field,
   Input,
-  Dropdown,
+  Button,
+  Spinner,
+  Checkbox,
+  Select,
   Option,
+  Divider,
+  Tag,
+  TagGroup,
+  TagGroupProps,
+  TagProps,
+  Tooltip,
+  Overflow,
+  OverflowItem,
+  Menu,
+  MenuTrigger,
+  MenuPopover,
+  MenuList,
+  MenuItem,
 } from "@fluentui/react-components";
 import {
   Code24Regular,
@@ -39,19 +56,36 @@ const useStyles = makeStyles({
   },
   content: {
     display: "flex",
-    flexDirection: "column",
     gap: "16px",
     height: "calc(100% - 80px)",
+  },
+  leftPanel: {
+    flex: "0 0 40%",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    maxWidth: '500px',
+  },
+  rightPanel: {
+    flex: "0 0 50%",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    overflow: 'hidden',
+    minHeight:"450px",
+    borderRadius: "4px",
+    boxShadow: "0 0 4px rgba(0, 0, 0, 0.1)",
   },
   card: {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    minHeight:"500px"
+    overflow: 'hidden',
+    minHeight:"450px"
   },
   cardContent: {
     flex: 1,
-    padding: "16px",
+    padding: "6px",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
@@ -59,7 +93,7 @@ const useStyles = makeStyles({
   commandSection: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "2px",
   },
   commandInput: {
     display: "flex",
@@ -120,9 +154,27 @@ const useStyles = makeStyles({
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    border: "1px solid var(--colorNeutralStroke2)",
+    border: "1px solid var(--colorNeutralStroke2)", 
     borderRadius: "4px",
     overflow: "hidden",
+    minHeight: "200px",
+    maxHeight: "500px",
+    resize: "vertical",
+    position: "relative",
+  },
+  outputContent: {
+    flex: 1,
+    overflow: "auto",
+    padding: "8px",
+    backgroundColor: "#fff",
+    '& pre': {
+      margin: 0,
+      fontFamily: '"Cascadia Code", Consolas, monospace',
+      fontSize: '13px',
+      lineHeight: '1.5',
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+    }
   },
   outputHeader: {
     display: "flex",
@@ -132,23 +184,49 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground3)",
     borderBottom: "1px solid var(--colorNeutralStroke2)",
   },
-  outputContent: {
-    flex: 1,
-    fontFamily: "Consolas, 'Courier New', monospace",
-    fontSize: "12px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    padding: "8px",
-    overflow: "auto",
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-all",
-    maxHeight: "300px",
-  },
   outputContentCollapsed: {
     maxHeight: "60px",
   },
   highlightedText: {
     backgroundColor: "yellow",
     color: "black",
+  },
+  commandInputContainer: {
+    display: 'flex',
+    gap: '8px',
+    marginBottom: '16px',
+  },
+  commandInputField: {
+    flex: 1,
+  },
+  quickCommandsContainer: {
+    flex: 1,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  quickCommandsList: {
+    flex: 1,
+    overflowY: 'auto',
+    border: '1px solid #e1e1e1',
+    borderRadius: '4px',
+    padding: '8px',
+    backgroundColor: '#fff',
+    /*支持下拉 */
+    position:'relative',
+    maxHeight:'250px'
+  },
+  quickCommandItem: {
+    padding: '8px',
+    cursor: 'pointer',
+    borderRadius: '4px',
+    marginBottom: '4px',
+    '&:hover': {
+      backgroundColor: '#f5f5f5',
+    },
+  },
+  selectedCommand: {
+    backgroundColor: '#f0f0f0',
   },
 });
 
@@ -190,7 +268,7 @@ const AdbToolsPanel: React.FC = () => {
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [selectedQuickCommand, setSelectedQuickCommand] = useState("");
 
-  const outputRef = useRef<HTMLDivElement>(null);
+  const outputRef = useRef<HTMLPreElement>(null);
 
   // 计算匹配项数量和位置
   const searchMatches = useMemo(() => {
@@ -282,9 +360,13 @@ const AdbToolsPanel: React.FC = () => {
   ];
 
   const executeCommand = async () => {
-    if (!selectedDevice || !command.trim()) return;
+    // Clear output immediately when starting new command
+    setOutput("");
+    
+    if (!command.trim() || !selectedDevice) return;
 
     setIsExecuting(true);
+
     try {
       const parts = command.trim().split(" ");
       const cmd = parts[0];
@@ -314,6 +396,8 @@ const AdbToolsPanel: React.FC = () => {
   };
 
   const executeQuickCommand = async (cmd: string) => {
+    // Clear output immediately when starting new command
+    setOutput("");
     setCommand(cmd);
     if (!selectedDevice) return;
 
@@ -355,6 +439,10 @@ const AdbToolsPanel: React.FC = () => {
     }
   };
 
+  const handleCommandChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCommand(e.target.value);
+  };
+
   const clearOutput = () => {
     setOutput("");
   };
@@ -366,134 +454,129 @@ const AdbToolsPanel: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Code24Regular />}
-            header={<Text weight="semibold">ADB命令执行</Text>}
-            description={<Text size={200}>执行自定义ADB命令和快捷操作</Text>}
-          />
+        <div className={styles.leftPanel}>
+          <Card className={styles.card}>
 
-          <div className={styles.cardContent}>
-            {/* 快捷命令选择器 */}
-            <div className={styles.quickCommandSection}>
-              <Field label="快捷命令:">
-                <Dropdown
-                  placeholder="选择常用命令快速执行"
-                  value={selectedQuickCommand}
-                  onOptionSelect={(_, data) => handleQuickCommandSelect(data.optionText || "")}
-                  disabled={!selectedDevice || isExecuting}
-                >
-                  {quickCommands.map((cmd, index) => (
-                    <Option key={index} text={cmd.label} value={cmd.label}>
-                      {cmd.label}
-                    </Option>
-                  ))}
-                </Dropdown>
-              </Field>
-            </div>
-
-            <div className={styles.commandSection}>
-              <div className={styles.commandInput}>
-                <Field label="自定义ADB命令:" style={{ flex: 1 }}>
-                  <Input
-                    value={command}
-                    onChange={(_, data) => setCommand(data.value)}
-                    placeholder="例如: shell getprop"
-                    disabled={!selectedDevice || isExecuting}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        executeCommand();
-                      }
-                    }}
-                  />
+            <div className={styles.cardContent}>
+              <div className={styles.commandSection}>
+                <Field label="自定义ADB命令:">
+                  <div className={styles.commandInputContainer}>
+                    <div className={styles.commandInputField}>
+                      <Input
+                        value={command}
+                        onChange={(_, data) => setCommand(data.value)}
+                        placeholder="例如: shell getprop"
+                        disabled={!selectedDevice || isExecuting}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            executeCommand();
+                          }
+                        }}
+                      />
+                    </div>
+                    <Button
+                      appearance="primary"
+                      icon={<Play24Regular />}
+                      onClick={executeCommand}
+                      disabled={!selectedDevice || isExecuting || !command.trim()}
+                    >
+                      {isExecuting ? '执行中...' : '执行'}
+                    </Button>
+                  </div>
                 </Field>
-
-                <Button
-                  appearance="primary"
-                  icon={<Play24Regular />}
-                  onClick={executeCommand}
-                  disabled={!selectedDevice || !command.trim() || isExecuting}
-                >
-                  {isExecuting ? "执行中..." : "执行"}
-                </Button>
-              </div>
-            </div>
-
-            <div className={styles.outputSection}>
-              {/* 搜索区域 */}
-              <div className={styles.searchSection}>
-                <Field label="搜索输出内容:" style={{ flex: 1 }}>
-                  <Input
-                    value={searchTerm}
-                    onChange={(_, data) => setSearchTerm(data.value)}
-                    placeholder="输入关键词搜索..."
-                    disabled={!output}
-                  />
-                </Field>
-                <div className={styles.searchControls}>
-                  <Button
-                    appearance="subtle"
-                    icon={<Search24Regular />}
-                    size="small"
-                    onClick={navigateToMatch}
-                    disabled={!output || !searchTerm.trim() || searchMatches.length === 0}
-                  >
-                    导航
-                  </Button>
-                  {searchMatches.length > 0 && (
-                    <Text className={styles.searchInfo}>
-                      第{currentMatchIndex + 1}个，共{searchMatches.length}个匹配
-                    </Text>
-                  )}
-                </div>
               </div>
 
-              {/* 输出容器 */}
-              <div className={styles.outputContainer}>
-                <div className={styles.outputHeader}>
-                  <Text weight="semibold">输出结果</Text>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <div className={styles.quickCommandsContainer}>
+                <Field label="快捷命令:">
+                  <div className={styles.quickCommandsList}>
+                    {quickCommands.map((cmd, index) => (
+                      <div 
+                        key={index} 
+                        className={mergeClasses(
+                          styles.quickCommandItem, 
+                          selectedQuickCommand === cmd.label && styles.selectedCommand
+                        )}
+                        onClick={() => setSelectedQuickCommand(cmd.label)}
+                      >
+                        <Text size={200}>{cmd.label}</Text>
+                      </div>
+                    ))}
+                  </div>
+                </Field>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className={styles.rightPanel}>
+          <Card className={styles.card}>
+            <CardHeader
+              header={
+                <div className={styles.header}>
+                  <Text weight="semibold">命令输出</Text>
+                  <div>
                     <Button
                       appearance="subtle"
                       icon={<Copy24Regular />}
-                      size="small"
                       onClick={copyOutput}
                       disabled={!output}
-                    >
-                      复制
-                    </Button>
+                      title="复制输出"
+                    />
                     <Button
                       appearance="subtle"
                       icon={<Delete24Regular />}
-                      size="small"
                       onClick={clearOutput}
                       disabled={!output}
-                    >
-                      清空
-                    </Button>
-                    <Button
-                      appearance="subtle"
-                      size="small"
-                      onClick={() => setIsOutputCollapsed(prev => !prev)}
-                      disabled={!output}
-                    >
-                      {isOutputCollapsed ? "展开" : "折叠"}
-                    </Button>
+                      title="清空输出"
+                    />
+                  </div>
+                </div>
+              }
+            />
+            <div className={styles.cardContent}>
+              <div className={styles.outputSection}>
+                <div className={styles.searchSection}>
+                  <Input
+                    placeholder="搜索输出..."
+                    value={searchTerm}
+                    onChange={(_, data) => setSearchTerm(data.value)}
+                    contentBefore={<Search24Regular />}
+                    disabled={!output}
+                    style={{ marginBottom: '12px' }}
+                  />
+                  {searchTerm && searchMatches.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <Text size={200}>
+                        找到 {searchMatches.length} 个匹配项
+                      </Text>
+                      <Button
+                        appearance="subtle"
+                        size="small"
+                        onClick={navigateToMatch}
+                        disabled={!searchTerm || searchMatches.length === 0}
+                      >
+                        下一个匹配项
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.outputContainer}>
+                  <div className={styles.outputContent}>
+                    <pre
+                      ref={outputRef}
+                      dangerouslySetInnerHTML={{
+                        __html: highlightedOutput || '<span style="color: #888">命令输出将显示在这里...</span>'
+                      }}
+                    />
                   </div>
                 </div>
 
-                <div
-                  ref={outputRef}
-                  className={`${styles.outputContent} ${isOutputCollapsed ? styles.outputContentCollapsed : ""}`}
-                  dangerouslySetInnerHTML={{
-                    __html: highlightedOutput || "命令输出将显示在这里..."
-                  }}
-                />
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );

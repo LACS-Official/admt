@@ -4,7 +4,10 @@
  */
 
 import React from 'react';
-import { makeStyles } from '@fluentui/react-components';
+import {
+  makeStyles,
+  mergeClasses,
+} from "@fluentui/react-components";
 
 const useStyles = makeStyles({
   icon: {
@@ -64,7 +67,7 @@ const AppIcon: React.FC<AppIconProps> = ({ size = 'medium', className }) => {
 
   return (
     <div
-      className={`${styles.icon} ${sizeClass} ${className || ''}`}
+      className={mergeClasses(styles.icon, sizeClass, className)}
       role="img"
       aria-label="玩机管家图标"
     >

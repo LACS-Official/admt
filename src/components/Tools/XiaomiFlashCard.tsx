@@ -18,6 +18,8 @@ import {
   AccordionItem,
   AccordionHeader,
   AccordionPanel,
+  Dropdown,
+  Option,
 } from "@fluentui/react-components";
 import {
   Flash24Regular,
@@ -30,6 +32,9 @@ import {
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
+import CommandRunnerDialog from "../Common/CommandRunnerDialog";
+import { open } from "@tauri-apps/plugin-dialog";
+import { readDir } from "@tauri-apps/plugin-fs";
 
 
 const useStyles = makeStyles({
@@ -52,81 +57,89 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "8px",
+    borderRadius: "12px",
     backgroundColor: "var(--colorNeutralBackground1)",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
   },
   packageSection: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "12px",
   },
   packageInput: {
     display: "flex",
-    gap: "8px",
+    gap: "12px",
     alignItems: "flex-end",
   },
   packageInfo: {
-    padding: "12px",
+    padding: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "4px",
-    fontSize: "12px",
-    fontFamily: "monospace",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontFamily: "'Inter', sans-serif",
+    lineHeight: 1.5,
   },
   deviceInfo: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "8px",
-    padding: "12px",
+    gap: "12px",
+    padding: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "4px",
-    fontSize: "12px",
+    borderRadius: "8px",
+    fontSize: "14px",
   },
   progressSection: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "12px",
   },
   statusBadge: {
     alignSelf: "flex-start",
+    transition: "all 0.2s ease",
+    ":hover": {
+      transform: "translateY(-1px)",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+    },
   },
   logOutput: {
-    fontFamily: "Consolas, 'Courier New', monospace",
-    fontSize: "12px",
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
-    padding: "8px",
+    borderRadius: "8px",
+    padding: "12px",
     maxHeight: "300px",
     overflow: "auto",
     whiteSpace: "pre-wrap",
+    lineHeight: 1.5,
   },
   warningSection: {
     backgroundColor: "var(--colorPaletteRedBackground1)",
     border: "1px solid var(--colorPaletteRedBorder1)",
-    padding: "12px",
-    borderRadius: "6px",
+    padding: "16px",
+    borderRadius: "8px",
   },
   infoSection: {
     backgroundColor: "var(--colorPaletteBlueBackground1)",
     border: "1px solid var(--colorPaletteBlueBorder1)",
-    padding: "12px",
-    borderRadius: "6px",
+    padding: "16px",
+    borderRadius: "8px",
   },
   actions: {
     display: "flex",
-    gap: "8px",
+    gap: "12px",
     justifyContent: "flex-end",
   },
   stepList: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "12px",
     paddingLeft: "16px",
   },
   stepItem: {
     display: "flex",
     alignItems: "flex-start",
-    gap: "8px",
+    gap: "12px",
   },
 });
 
@@ -149,9 +162,56 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [deviceCompatible, setDeviceCompatible] = useState<boolean | null>(null);
+  const [mode, setMode] = useState<string>("miui");
+  const [riskAccepted, setRiskAccepted] = useState<boolean>(false);
+  const [showDisclaimerDialog, setShowDisclaimerDialog] = useState<boolean>(false);
+  const [selectedFolderPath, setSelectedFolderPath] = useState<string>("");
+  const [missingFiles, setMissingFiles] = useState<string[]>([]);
+  const [runnerOpen, setRunnerOpen] = useState(false);
+  const [runnerTitle, setRunnerTitle] = useState<string>("");
+  const [runnerProgram, setRunnerProgram] = useState<string>("cmd");
+  const [runnerArgs, setRunnerArgs] = useState<string[]>([]);
+  const [runnerCwd, setRunnerCwd] = useState<string>("");
 
-  const handlePackageSelect = () => {
-    folderInputRef.current?.click();
+  const handlePackageSelect = async () => {
+    try {
+      // 使用 Tauri v2 的对话框API打开目录选择器
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: '选择线刷包目录'
+      }) as string | string[] | null;
+      
+      if (!selected) return;
+      
+      // 确保路径是字符串类型
+      const dir = Array.isArray(selected) ? selected[0] : selected;
+      setSelectedFolderPath(dir);
+
+      // 读取目录下文件，校验必要脚本是否存在
+      const entries = await readDir(dir);
+      const names = entries.map(e => e.name || "");
+      const required = [
+        "flash_all.bat",
+        "flash_all_lock.bat",
+        "flash_all_except_storage.bat",
+      ];
+      const missing = required.filter(r => !names.includes(r));
+      setMissingFiles(missing);
+
+      // 将选择结果映射到旧字段以沿用展示（包名等后续仍为模拟）
+      setSelectedPackage(dir.split(/[/\\]/).pop() || dir);
+      // 清空旧的解析/状态
+      setPackageInfo(null);
+      setDeviceCompatible(null);
+      setFlashLog("");
+      setFlashStatus("idle");
+    } catch (e) {
+      console.error("读取目录失败", e);
+      setMissingFiles(["读取目录失败"]);
+    }
   };
 
   const handlePackageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,13 +282,13 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   };
 
   const handleFlashStart = () => {
-    if (!selectedPackage || !packageInfo) return;
+    if (!selectedFolderPath) return;
     setShowConfirmDialog(true);
   };
 
   const handleFlashConfirm = async () => {
-    if (!selectedPackage || !packageInfo) return;
-    
+    if (!selectedFolderPath) return;
+    // 这里保留模拟线刷逻辑；实际运行 .bat 使用下方三个专用按钮
     setShowConfirmDialog(false);
     setIsFlashing(true);
     setFlashStatus("checking");
@@ -280,15 +340,15 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   const getStatusBadge = () => {
     switch (flashStatus) {
       case "checking":
-        return <Badge appearance="outline" color="brand" icon={<Spinner size="tiny" />}>检查中</Badge>;
+        return <Badge appearance="outline" color="brand" icon={<Spinner size="tiny" />} style={{ display: 'flex', flexDirection: 'row' }}>检查中</Badge>;
       case "flashing":
-        return <Badge appearance="outline" color="important" icon={<Spinner size="tiny" />}>刷入中</Badge>;
+        return <Badge appearance="outline" color="important" icon={<Spinner size="tiny" />} style={{ display: 'flex', flexDirection: 'row' }}>刷入中</Badge>;
       case "success":
-        return <Badge appearance="outline" color="success" icon={<CheckmarkCircle24Regular />}>成功</Badge>;
+        return <Badge appearance="outline" color="success" icon={<CheckmarkCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>成功</Badge>;
       case "error":
-        return <Badge appearance="outline" color="danger" icon={<ErrorCircle24Regular />}>失败</Badge>;
+        return <Badge appearance="outline" color="danger" icon={<ErrorCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>失败</Badge>;
       default:
-        return <Badge appearance="outline">就绪</Badge>;
+        return <Badge appearance="outline" style={{ display: 'flex', flexDirection: 'row' }}>就绪</Badge>;
     }
   };
 
@@ -305,144 +365,170 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
       <Card className={styles.card}>
         <CardHeader
           image={<Flash24Regular />}
-          header={<Text weight="semibold">小米线刷工具</Text>}
-          description={<Text size={200}>使用官方线刷包完整刷入MIUI系统</Text>}
-          action={getStatusBadge()}
+          header={<Text weight="semibold">线刷工具</Text>}
+          description={<Text size={200}>提供小米线刷模式；其他模式开发中</Text>}
+          action={
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              {getStatusBadge()}
+              <Dropdown
+                aria-label="选择模式"
+                selectedOptions={[mode]}
+                onOptionSelect={(_, data) => setMode((data.optionValue as string) ?? "miui")}
+                style={{ minWidth: 160 }}
+              >
+                <Option value="default">小米线刷</Option>
+                <Option value="wip" disabled>正在开发中</Option>
+              </Dropdown>
+            </div>
+          }
         />
         
         <div className={styles.content}>
-          {/* 警告提示 */}
-          <div className={styles.warningSection}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+          {/* 风险与步骤合并卡片 */}
+          <div className={styles.section}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-              <Text weight="semibold" style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                线刷风险警告
-              </Text>
+              <Text weight="semibold">线刷风险与准备事项</Text>
             </div>
-            <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
-              线刷会完全清除设备数据并重新安装系统。请确保设备已解锁Bootloader，电量充足，并使用原装数据线。
-            </Text>
+
+            {!riskAccepted ? (
+              <>
+                <div className={styles.warningSection}>
+                  <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
+                    线刷将之前请同意《免责声明》和《风险提示》后才可以进行下一步操作。
+                  </Text>
+                  <Button appearance="primary" onClick={() => setShowDisclaimerDialog(true)}>
+                    阅读免责声明
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.infoSection}>
+                  <Text size={300}>
+                    你已同意《免责声明》和《风险提示》。可以继续进行线刷操作。
+                  </Text>
+                  <Button className="ml-2 mr-2" appearance="secondary" onClick={() => setShowDisclaimerDialog(true)}>
+                    查看详情
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* 操作步骤说明 */}
-          <Accordion collapsible>
-            <AccordionItem value="steps">
-              <AccordionHeader>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Info24Regular />
-                  <Text weight="semibold">线刷前准备步骤</Text>
+          {riskAccepted && (
+            <>
+              {/* 设备信息 */}
+              <div className={styles.section}>
+                <Text weight="semibold">当前设备信息</Text>
+                <div className={styles.deviceInfo}>
+                  <div>型号: {device.properties?.model}</div>
+                  <div>序列号: {device.serial}</div>
+                  <div>Android版本: {device.properties?.androidVersion}</div>
+                  <div>状态: {device.connected ? "已连接" : "未连接"}</div>
                 </div>
-              </AccordionHeader>
-              <AccordionPanel>
-                <div className={styles.stepList}>
-                  <div className={styles.stepItem}>
-                    <Text>1.</Text>
-                    <Text size={300}>确保设备Bootloader已解锁</Text>
-                  </div>
-                  <div className={styles.stepItem}>
-                    <Text>2.</Text>
-                    <Text size={300}>设备电量保持在50%以上</Text>
-                  </div>
-                  <div className={styles.stepItem}>
-                    <Text>3.</Text>
-                    <Text size={300}>使用原装或高质量数据线</Text>
-                  </div>
-                  <div className={styles.stepItem}>
-                    <Text>4.</Text>
-                    <Text size={300}>关闭杀毒软件和防火墙</Text>
-                  </div>
-                  <div className={styles.stepItem}>
-                    <Text>5.</Text>
-                    <Text size={300}>备份重要数据（线刷会清除所有数据）</Text>
-                  </div>
-                </div>
-              </AccordionPanel>
-            </AccordionItem>
-          </Accordion>
-
-          {/* 设备信息 */}
-          <div className={styles.section}>
-            <Text weight="semibold">当前设备信息</Text>
-            <div className={styles.deviceInfo}>
-              <div>型号: {device.properties?.model}</div>
-              <div>序列号: {device.serial}</div>
-              <div>Android版本: {device.properties?.androidVersion}</div>
-              <div>状态: {device.connected ? "已连接" : "未连接"}</div>
-            </div>
-          </div>
-
-          {/* 线刷包选择 */}
-          <div className={styles.section}>
-            <Text weight="semibold">1. 选择线刷包</Text>
-            <div className={styles.packageSection}>
-              <div className={styles.packageInput}>
-                <Button
-                  appearance="outline"
-                  icon={<Folder24Regular />}
-                  onClick={handlePackageSelect}
-                  disabled={isFlashing}
-                >
-                  选择文件夹
-                </Button>
-                <Text size={300}>选择包含flash_all.bat的线刷包文件夹</Text>
               </div>
-              
-              {packageInfo && (
-                <div className={styles.packageInfo}>
-                  <div>包名: {selectedPackage}</div>
-                  <div>版本: {packageInfo.version}</div>
-                  <div>机型: {packageInfo.model} ({packageInfo.codename})</div>
-                  <div>地区: {packageInfo.region}</div>
-                  <div>Android: {packageInfo.android}</div>
-                  <div>大小: {formatFileSize(packageInfo.size)}</div>
-                  <div>文件数: {packageInfo.fileCount}</div>
-                  <div style={{ 
-                    color: deviceCompatible === true ? "green" : 
-                           deviceCompatible === false ? "red" : "orange",
-                    fontWeight: "bold"
-                  }}>
-                    兼容性: {
-                      deviceCompatible === true ? "✓ 兼容" :
-                      deviceCompatible === false ? "✗ 不兼容" : "检查中..."
-                    }
+
+              {/* 线刷包选择 */}
+              <div className={styles.section}>
+                <Text weight="semibold">1. 选择线刷包</Text>
+                <div className={styles.packageSection}>
+                  <div className={styles.packageInput}>
+                    <Button
+                      appearance="outline"
+                      icon={<Folder24Regular />}
+                      onClick={handlePackageSelect}
+                      disabled={isFlashing || !riskAccepted}
+                    >
+                      选择文件夹
+                    </Button>
+                    {!selectedFolderPath ? (
+                      <Text size={300}>选择包含 flash_all*.bat 的线刷包目录</Text>
+                    ) : (
+                      <>
+                        <Text size={300}>已选择：{selectedFolderPath}</Text>
+                        <Button appearance="secondary" onClick={() => {
+                          setSelectedFolderPath("");
+                          setMissingFiles([]);
+                          setSelectedPackage("");
+                          setPackageInfo(null);
+                          setDeviceCompatible(null);
+                        }}>清除</Button>
+                      </>
+                    )}
+                  </div>
+                  {selectedFolderPath && (
+                    <div className={styles.packageInfo}>
+                      <div>目录: {selectedFolderPath}</div>
+                      {missingFiles.length > 0 ? (
+                        <div style={{ color: "var(--colorPaletteRedForeground2)", fontWeight: 600 }}>
+                          当前包体不完整，缺少: {missingFiles.join(", ")}
+                        </div>
+                      ) : (
+                        <div style={{ color: "var(--colorPaletteGreenForeground1)", fontWeight: 600 }}>
+                          已检测到必要脚本：flash_all.bat / flash_all_except_storage.bat / flash_all_lock.bat
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 刷入进度 */}
+              {flashStatus !== "idle" && (
+                <div className={styles.section}>
+                  <Text weight="semibold">线刷进度</Text>
+                  <div className={styles.progressSection}>
+                    <ProgressBar value={progress / 100} />
+                    <Text size={300}>{progress.toFixed(1)}%</Text>
                   </div>
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* 刷入进度 */}
-          {flashStatus !== "idle" && (
-            <div className={styles.section}>
-              <Text weight="semibold">线刷进度</Text>
-              <div className={styles.progressSection}>
-                <ProgressBar value={progress / 100} />
-                <Text size={300}>{progress.toFixed(1)}%</Text>
-              </div>
-            </div>
+              {/* 日志输出 */}
+              {flashLog && (
+                <div className={styles.section}>
+                  <Text weight="semibold">线刷日志</Text>
+                  <div className={styles.logOutput}>
+                    {flashLog}
+                  </div>
+                </div>
+              )}
+
+              {/* 操作按钮（仅当三个脚本都存在时显示） */}
+              {selectedFolderPath && missingFiles.length === 0 && (
+                <div className={styles.actions}>
+                  <Button appearance="primary" icon={<Play24Regular />} onClick={() => {
+                    setRunnerTitle("线刷清数据 (flash_all.bat)");
+                    setRunnerProgram("cmd");
+                    setRunnerArgs(["/c", "flash_all.bat"]);
+                    setRunnerCwd(selectedFolderPath);
+                    setRunnerOpen(true);
+                  }}>
+                    线刷清数据
+                  </Button>
+                  <Button appearance="secondary" icon={<Play24Regular />} onClick={() => {
+                    setRunnerTitle("线刷不清数据 (flash_all_except_storage.bat)");
+                    setRunnerProgram("cmd");
+                    setRunnerArgs(["/c", "flash_all_except_storage.bat"]);
+                    setRunnerCwd(selectedFolderPath);
+                    setRunnerOpen(true);
+                  }}>
+                    线刷不清数据
+                  </Button>
+                  <Button appearance="outline" icon={<Play24Regular />} onClick={() => {
+                    setRunnerTitle("线刷回锁 (flash_all_lock.bat)");
+                    setRunnerProgram("cmd");
+                    setRunnerArgs(["/c", "flash_all_lock.bat"]);
+                    setRunnerCwd(selectedFolderPath);
+                    setRunnerOpen(true);
+                  }}>
+                    线刷回锁
+                  </Button>
+                </div>
+              )}
+            </>
           )}
-
-          {/* 日志输出 */}
-          {flashLog && (
-            <div className={styles.section}>
-              <Text weight="semibold">线刷日志</Text>
-              <div className={styles.logOutput}>
-                {flashLog}
-              </div>
-            </div>
-          )}
-
-          {/* 操作按钮 */}
-          <div className={styles.actions}>
-            <Button
-              appearance="primary"
-              icon={<Play24Regular />}
-              onClick={handleFlashStart}
-              disabled={!selectedPackage || !packageInfo || isFlashing || deviceCompatible === false}
-            >
-              {isFlashing ? "线刷中..." : "开始线刷"}
-            </Button>
-          </div>
         </div>
       </Card>
 
@@ -455,7 +541,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
         onChange={handlePackageChange}
       />
 
-      {/* 确认对话框 */}
+      {/* 确认线刷对话框 */}
       <Dialog open={showConfirmDialog} onOpenChange={(_, data) => setShowConfirmDialog(data.open)}>
         <DialogSurface>
           <DialogTitle>确认线刷操作</DialogTitle>
@@ -490,6 +576,92 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
           </DialogActions>
         </DialogSurface>
       </Dialog>
+
+      {/* 风险免责声明对话框 */}
+      <Dialog open={showDisclaimerDialog} onOpenChange={(_, data) => setShowDisclaimerDialog(data.open)}>
+        <DialogSurface>
+          <DialogTitle>风险提示与免责声明</DialogTitle>
+          <DialogContent>
+            <DialogBody>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className={styles.warningSection}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
+                    <Text weight="semibold">重要风险提示</Text>
+                  </div>
+                  <Text size={300}>
+                    线刷可能导致数据丢失、设备不可用或失去保修。请确保您了解并自行承担相关风险。
+                  </Text>
+                </div>
+                <div className={styles.infoSection}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <Info24Regular />
+                    <Text weight="semibold">免责声明</Text>
+                  </div>
+                  <Text size={300}>
+                    本工具按“现状”提供，不对因使用本工具进行线刷所造成的任何直接或间接损失负责。继续操作即表示您已充分理解并同意以上内容。
+                  </Text>
+                </div>
+                <Accordion collapsible>
+                  <AccordionItem value="steps">
+                    <AccordionHeader>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Info24Regular />
+                        <Text weight="semibold">线刷前准备步骤</Text>
+                      </div>
+                    </AccordionHeader>
+                    <AccordionPanel>
+                      <div className={styles.stepList}>
+                        <div className={styles.stepItem}>
+                          <Text>1.</Text>
+                          <Text size={300}>确保设备 Bootloader 已解锁</Text>
+                        </div>
+                        <div className={styles.stepItem}>
+                          <Text>2.</Text>
+                          <Text size={300}>设备电量保持在 50% 以上</Text>
+                        </div>
+                        <div className={styles.stepItem}>
+                          <Text>3.</Text>
+                          <Text size={300}>使用原装或高质量数据线</Text>
+                        </div>
+                        <div className={styles.stepItem}>
+                          <Text>4.</Text>
+                          <Text size={300}>关闭杀毒软件和防火墙</Text>
+                        </div>
+                        <div className={styles.stepItem}>
+                          <Text>5.</Text>
+                          <Text size={300}>备份重要数据（线刷会清除所有数据）</Text>
+                        </div>
+                      </div>
+                    </AccordionPanel>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+            </DialogBody>
+          </DialogContent>
+          <DialogActions>
+            <Button appearance="secondary" onClick={() => { setRiskAccepted(false); setShowDisclaimerDialog(false); }}>
+              不同意
+            </Button>
+            <Button
+              appearance="primary"
+              onClick={() => { setRiskAccepted(true); setShowDisclaimerDialog(false); }}
+            >
+              我已阅读并同意
+            </Button>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
+
+      {/* 实时执行弹窗：bat/cmd 输出 */}
+      <CommandRunnerDialog
+        open={runnerOpen}
+        title={runnerTitle}
+        program={runnerProgram}
+        args={runnerArgs}
+        cwd={runnerCwd}
+        onClose={() => setRunnerOpen(false)}
+      />
     </>
   );
 };

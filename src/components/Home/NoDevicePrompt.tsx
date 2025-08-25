@@ -34,13 +34,13 @@ const useStyles = makeStyles({
     overflow: "hidden",
   },
 
-  // 添加水平排列容器的样式
+  // 修改水平排列容器的样式
   horizontalContainer: {
     display: "flex",
     flexDirection: "row",
     gap: "24px",
     width: "100%",
-    maxWidth: "1200px",
+    maxWidth: "100%",
     marginBottom: "24px",
     "@media screen and (max-width: 768px)": {
       flexDirection: "column",
@@ -49,7 +49,7 @@ const useStyles = makeStyles({
   },
 
   modeCard: {
-    padding: "20px",
+    padding: "16px",
     backgroundColor: tokens.colorNeutralBackground1,
     borderRadius: "16px",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
@@ -61,14 +61,13 @@ const useStyles = makeStyles({
       transform: "translateY(-4px)",
       boxShadow: tokens.shadow28,
     },
-    maxWidth: "200px",
   },
 
   modeTitle: {
-    fontSize: "18px",
+    fontSize: "16px",
     fontWeight: "600",
     color: tokens.colorNeutralForeground1,
-    marginBottom: "16px",
+    marginBottom: "12px",
     display: "flex",
     alignItems: "center",
     gap: "8px",
@@ -79,13 +78,13 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "space-between",
     gap: "8px",
-    padding: "12px 16px",
-    borderRadius: "12px",
+    padding: "10px 12px",
+    borderRadius: "10px",
     backgroundColor: tokens.colorNeutralBackground2,
     textDecoration: "none",
     color: tokens.colorNeutralForeground1,
     transition: "all 0.2s ease",
-    marginBottom: "8px",
+    marginBottom: "6px",
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     "&:hover": {
       backgroundColor: tokens.colorBrandBackground2,
@@ -98,17 +97,17 @@ const useStyles = makeStyles({
   },
 
   linkText: {
-    fontSize: "15px",
+    fontSize: "14px",
     fontWeight: "500",
   },
 
   linkIcon: {
-    fontSize: "16px",
+    fontSize: "14px",
     color: tokens.colorNeutralForeground2,
   },
 
   troubleshooting: {
-    padding: "20px",
+    padding: "16px",
     backgroundColor: tokens.colorNeutralBackground1,
     borderRadius: "16px",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
@@ -120,35 +119,34 @@ const useStyles = makeStyles({
       transform: "translateY(-4px)",
       boxShadow: tokens.shadow28,
     },
-    minWidth: "200px",
   },
 
   troubleshootingTitle: {
     fontSize: "16px",
     fontWeight: "600",
     color: tokens.colorNeutralForeground1,
-    marginBottom: "16px",
+    marginBottom: "12px",
     display: "flex",
     alignItems: "center",
     gap: "8px",
   },
 
   troubleshootingItem: {
-    fontSize: "16px",
+    fontSize: "14px",
     color: tokens.colorNeutralForeground2,
-    lineHeight: "1.6",
-    padding: "10px 16px",
+    lineHeight: "1.5",
+    padding: "8px 12px",
     backgroundColor: tokens.colorNeutralBackground2,
-    borderRadius: "12px",
-    marginBottom: "8px",
+    borderRadius: "10px",
+    marginBottom: "6px",
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "8px",
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     "&::before": {
       content: "'•'",
       color: tokens.colorBrandForeground1,
-      fontSize: "20px",
+      fontSize: "18px",
     },
     "&:last-child": {
       marginBottom: "0",
