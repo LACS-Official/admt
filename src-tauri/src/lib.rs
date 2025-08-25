@@ -82,6 +82,7 @@ pub fn run() {
             install_device_driver,
             fix_usb3_connection,
             run_usb_fix_script,
+            execute_batch_file,
             open_device_manager,
             restart_application,
             get_detailed_device_fingerprint
