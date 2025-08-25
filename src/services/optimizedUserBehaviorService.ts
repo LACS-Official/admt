@@ -172,11 +172,10 @@ export class OptimizedUserBehaviorService {
     method: 'GET' | 'POST' | 'PUT' = 'POST',
     data?: any
   ): Promise<any> {
-    // 在开发环境使用代理，生产环境使用直接API地址
-    const isDevelopment = typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const baseUrl = isDevelopment ? '' : this.config.apiBaseUrl;
-    const url = `${baseUrl}${endpoint}`;
+    // 始终使用配置的后端 API，避免在开发环境将请求发到前端 dev server 导致 405
+    const baseUrl = this.config.apiBaseUrl?.replace(/\/$/, '') || '';
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${baseUrl}${path}`;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
