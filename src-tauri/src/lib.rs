@@ -83,6 +83,7 @@ pub fn run() {
             fix_usb3_connection,
             run_usb_fix_script,
             execute_batch_file,
+            execute_batch_file_stream,
             open_device_manager,
             restart_application,
             get_detailed_device_fingerprint

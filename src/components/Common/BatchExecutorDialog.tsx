@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Dialog,
   DialogSurface,
@@ -8,11 +8,24 @@ import {
   DialogActions,
   Button,
   Spinner,
+  Badge,
+  Text,
   Textarea,
+  makeStyles,
 } from "@fluentui/react-components";
+import {
+  Play24Regular,
+  Stop24Regular,
+  Copy24Regular,
+  Save24Regular,
+  CheckmarkCircle24Regular,
+  ErrorCircle24Regular,
+  Warning24Regular,
+  Dismiss24Regular,
+} from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api/core";
 import { writeTextFile, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
-import * as path from "@tauri-apps/api/path";
+import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
 
 interface BatchExecutorDialogProps {
@@ -30,6 +43,101 @@ interface CommandResult {
   exit_code?: number;
 }
 
+interface StreamOutput {
+  data: string;
+  timestamp: string;
+  type: 'stdout' | 'stderr' | 'info' | 'error';
+}
+
+const useStyles = makeStyles({
+  dialogSurface: {
+    minWidth: '1000px',
+    height: '700px',
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: '12px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+    overflow: 'hidden',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+  },
+  titleBar: {
+    padding: '16px 24px',
+    flexShrink: 0,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid var(--colorNeutralStroke1)',
+    background: 'linear-gradient(135deg, var(--colorBrandBackground) 0%, var(--colorBrandBackground2) 100%)',
+    borderRadius: '12px 12px 0 0',
+  },
+  statusBar: {
+    padding: '12px 24px',
+    flexShrink: 0,
+    borderBottom: '1px solid var(--colorNeutralStroke1)',
+    backgroundColor: 'var(--colorNeutralBackground2)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  outputContainer: {
+    flex: 1,
+    padding: '16px 24px',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  outputArea: {
+    fontFamily: 'JetBrains Mono, Consolas, "Courier New", monospace',
+    fontSize: '13px',
+    backgroundColor: '#1e1e1e',
+    color: '#d4d4d4',
+    border: '1px solid var(--colorNeutralStroke1)',
+    lineHeight: '1.6',
+    padding: '16px',
+    height: '100%',
+    width: '100%',
+    borderRadius: '8px',
+    resize: 'none',
+    outline: 'none',
+    whiteSpace: 'pre-wrap',
+    wordWrap: 'break-word',
+    scrollbarWidth: 'thin',
+    '&::-webkit-scrollbar': {
+      width: '8px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: '#2d2d2d',
+      borderRadius: '4px',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: '#555',
+      borderRadius: '4px',
+      '&:hover': {
+        background: '#777',
+      },
+    },
+  },
+  actionBar: {
+    padding: '16px 24px',
+    flexShrink: 0,
+    borderTop: '1px solid var(--colorNeutralStroke1)',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderRadius: '0 0 12px 12px',
+  },
+  buttonGroup: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  confirmDialog: {
+    borderRadius: '12px',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+  },
+});
+
 const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
   open,
   title,
@@ -37,21 +145,171 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
   workingDirectory,
   onClose,
 }) => {
-  const [output, setOutput] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const logFileName = useRef('');
+  const styles = useStyles();
   const { addNotification } = useAppStore();
+  const [output, setOutput] = useState<string>('');
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [exitCode, setExitCode] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
+  const outputRef = useRef<HTMLDivElement>(null);
+  const logFileName = useRef<string>('');
+  const unlistenRef = useRef<(() => void) | null>(null);
+
+  // ANSI 颜色代码映射表
+  const ansiColorMap: { [key: string]: string } = {
+    '30': '#000000', // 黑色
+    '31': '#ff6b6b', // 红色
+    '32': '#51cf66', // 绿色
+    '33': '#ffd43b', // 黄色
+    '34': '#74c0fc', // 蓝色
+    '35': '#da77f2', // 紫色
+    '36': '#4ecdc4', // 青色
+    '37': '#ffffff', // 白色
+    '90': '#868e96', // 暗灰色
+    '91': '#ff8787', // 亮红色
+    '92': '#8ce99a', // 亮绿色
+    '93': '#ffe066', // 亮黄色
+    '94': '#91a7ff', // 亮蓝色
+    '95': '#e599f7', // 亮紫色
+    '96': '#66d9ef', // 亮青色
+    '97': '#f8f9fa', // 亮白色
+  };
+
+  // 解析 ANSI 转义序列并生成富文本片段
+  const parseAnsiToHtml = (text: string): React.ReactNode[] => {
+    const ansiRegex = /\x1b\[(\d+)m/g;
+    const fragments: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let currentColor = '#d4d4d4'; // 默认颜色
+    let match;
+    let fragmentIndex = 0;
+
+    while ((match = ansiRegex.exec(text)) !== null) {
+      // 添加前面的文本片段
+      if (match.index > lastIndex) {
+        const textContent = text.slice(lastIndex, match.index);
+        if (textContent) {
+          fragments.push(
+            <span key={fragmentIndex++} style={{ color: currentColor }}>
+              {textContent}
+            </span>
+          );
+        }
+      }
+
+      // 解析颜色代码
+      const colorCode = match[1];
+      if (colorCode === '0') {
+        // 重置颜色
+        currentColor = '#d4d4d4';
+      } else if (ansiColorMap[colorCode]) {
+        currentColor = ansiColorMap[colorCode];
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // 添加剩余的文本
+    if (lastIndex < text.length) {
+      const textContent = text.slice(lastIndex);
+      if (textContent) {
+        fragments.push(
+          <span key={fragmentIndex++} style={{ color: currentColor }}>
+            {textContent}
+          </span>
+        );
+      }
+    }
+
+    // 如果没有 ANSI 代码，返回原始文本
+    if (fragments.length === 0) {
+      fragments.push(
+        <span key={0} style={{ color: '#d4d4d4' }}>
+          {text}
+        </span>
+      );
+    }
+
+    return fragments;
+  };
+
+  // 智能颜色输出函数
+  const getColoredOutput = (text: string, type: 'stdout' | 'stderr' | 'info' | 'error' = 'stdout'): string => {
+    // 检测关键词并应用颜色
+    let coloredText = text;
+    
+    // 根据内容智能着色
+    if (text.toLowerCase().includes('sending')) {
+      coloredText = `\x1b[94m${text}\x1b[0m`; // 亮蓝色
+    } else if (text.toLowerCase().includes('warning')) {
+      coloredText = `\x1b[93m${text}\x1b[0m`; // 亮黄色
+    } else if (text.toLowerCase().includes('error') || text.toLowerCase().includes('failed')) {
+      coloredText = `\x1b[91m${text}\x1b[0m`; // 亮红色
+    } else if (text.toLowerCase().includes('okay') || text.toLowerCase().includes('finished') || text.toLowerCase().includes('done')) {
+      coloredText = `\x1b[92m${text}\x1b[0m`; // 亮绿色
+    } else if (text.toLowerCase().includes('fastboot') || text.toLowerCase().includes('adb')) {
+      coloredText = `\x1b[96m${text}\x1b[0m`; // 亮青色
+    } else {
+      // 根据类型应用基础颜色
+      switch (type) {
+        case 'info':
+          coloredText = `\x1b[36m${text}\x1b[0m`; // 青色
+          break;
+        case 'error':
+          coloredText = `\x1b[31m${text}\x1b[0m`; // 红色
+          break;
+        case 'stderr':
+          coloredText = `\x1b[33m${text}\x1b[0m`; // 黄色
+          break;
+        default:
+          coloredText = `\x1b[37m${text}\x1b[0m`; // 白色
+      }
+    }
+    
+    return coloredText;
+  };
+
+  // 添加输出内容的函数
+  const appendOutput = useCallback((newOutput: string, type: 'stdout' | 'stderr' | 'info' | 'error' = 'stdout') => {
+    const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    const coloredOutput = getColoredOutput(newOutput, type);
+    const formattedOutput = `[${timestamp}] ${coloredOutput}`;
+    
+    setOutput(prev => prev + formattedOutput);
+    
+    // 写入日志文件
+    if (logFileName.current) {
+      writeTextFile(logFileName.current, formattedOutput, {
+        baseDir: BaseDirectory.AppData,
+        append: true,
+      }).catch(error => {
+        console.error('Failed to write to log file:', error);
+      });
+    }
+  }, []);
 
   // 自动执行批处理文件
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // 重置状态
+      setOutput('');
+      setIsRunning(false);
+      setIsCompleted(false);
+      setExitCode(null);
+      setStartTime(null);
+      setEndTime(null);
+      return;
+    }
 
     const executeBatchFile = async () => {
       try {
         // 生成日志文件名（以时间戳命名）
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         logFileName.current = `logs/${timestamp}.log`;
+        setStartTime(new Date());
 
         // 确保日志目录存在
         try {
@@ -62,7 +320,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
 
         // 显示将要执行的命令
         const commandString = `执行批处理文件: ${batchFileName}`;
-        const initialOutput = `${commandString}\n工作目录: ${workingDirectory}\n\n`;
+        const initialOutput = `${commandString}\n工作目录: ${workingDirectory}\n${'='.repeat(80)}\n\n`;
         setOutput(initialOutput);
         
         // 写入初始日志
@@ -75,13 +333,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         // 如果是刷机相关的批处理文件，添加提示信息
         if (batchFileName.toLowerCase().includes('flash')) {
           const flashWarning = '[提示] 检测到刷机操作，设备将在执行过程中断开连接，这是正常现象。刷机完成后请等待设备重启并重新连接。\n\n';
-          setOutput(prev => prev + flashWarning);
-          
-          try {
-            await writeTextFile(logFileName.current, flashWarning, { baseDir: BaseDirectory.AppData, append: true });
-          } catch (e) {
-            console.error('Failed to write flash warning log:', e);
-          }
+          appendOutput(flashWarning, 'info');
           
           addNotification({
             type: "warning",
@@ -93,126 +345,323 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
 
         setIsRunning(true);
         
-        // 调用后端命令执行批处理文件
-        const result = await invoke<CommandResult>('execute_batch_file', {
+        // 设置实时输出监听器
+        try {
+          const unlisten = await listen('batch-output', (event: any) => {
+            const payload = event.payload as StreamOutput;
+            appendOutput(payload.data, payload.type);
+          });
+          unlistenRef.current = unlisten;
+        } catch (e) {
+          console.warn('Failed to setup real-time output listener:', e);
+        }
+        
+        // 调用后端命令执行批处理文件（支持实时流输出）
+        const result = await invoke<CommandResult>('execute_batch_file_stream', {
           batchFileName,
           workingDirectory
+        }).catch(async (error) => {
+          // 如果流式命令不存在，回退到原始命令
+          console.warn('Stream command not available, falling back to regular execution');
+          return await invoke<CommandResult>('execute_batch_file', {
+            batchFileName,
+            workingDirectory
+          });
         });
+        
+        setEndTime(new Date());
+        setExitCode(result.exit_code || 0);
+        setIsCompleted(true);
         
         // 显示执行结果
         let resultOutput = '';
         if (result.success) {
-          resultOutput = result.output + '\n\n[执行完成] 批处理文件执行成功\n';
+          resultOutput = `\n${'='.repeat(80)}\n[执行完成] 批处理文件执行成功\n退出码: ${result.exit_code || 0}\n`;
+          appendOutput(resultOutput, 'info');
         } else {
-          resultOutput = (result.output || '') + '\n\n[执行失败] ' + (result.error || '未知错误') + '\n';
-          if (result.exit_code !== undefined) {
-            resultOutput += `退出码: ${result.exit_code}\n`;
-          }
+          resultOutput = `\n${'='.repeat(80)}\n[执行失败] ${result.error || '未知错误'}\n退出码: ${result.exit_code || 1}\n`;
+          appendOutput(resultOutput, 'error');
         }
         
-        setOutput(prev => prev + resultOutput);
-        
-        // 追加写入结果日志
-        try {
-          await writeTextFile(logFileName.current, resultOutput, { baseDir: BaseDirectory.AppData, append: true });
-        } catch (e) {
-          console.error('Failed to write result log:', e);
+        // 如果有额外输出，也添加进去
+        if (result.output && !result.output.includes('[执行完成]') && !result.output.includes('[执行失败]')) {
+          appendOutput(result.output + '\n');
         }
+        
       } catch (error: any) {
-        const errorOutput = `\n[错误] ${error.message || error}\n`;
-        setOutput(prev => prev + errorOutput);
+        setEndTime(new Date());
+        setExitCode(1);
+        setIsCompleted(true);
+        const errorOutput = `\n${'='.repeat(80)}\n[错误] ${error.message || error}\n`;
+        appendOutput(errorOutput, 'error');
         console.error('批处理文件执行失败:', error);
-        
-        // 追加写入错误日志
-        try {
-          await writeTextFile(logFileName.current, errorOutput, { baseDir: BaseDirectory.AppData, append: true });
-        } catch (e) {
-          console.error('Failed to write error log:', e);
-        }
       } finally {
         setIsRunning(false);
+        // 清理监听器
+        if (unlistenRef.current) {
+          unlistenRef.current();
+          unlistenRef.current = null;
+        }
       }
     };
 
     executeBatchFile();
-  }, [open, batchFileName, workingDirectory, addNotification]);
+  }, [open, batchFileName, workingDirectory, addNotification, appendOutput]);
 
   // 自动滚动到底部
   useEffect(() => {
-    if (textareaRef.current) {
+    if (outputRef.current) {
       // 使用requestAnimationFrame确保DOM已更新
       requestAnimationFrame(() => {
-        textareaRef.current!.scrollTop = textareaRef.current!.scrollHeight;
+        outputRef.current!.scrollTop = outputRef.current!.scrollHeight;
       });
     }
   }, [output]);
 
+  // 清理函数
+  useEffect(() => {
+    return () => {
+      // 组件卸载时清理监听器
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
+      }
+    };
+  }, []);
+
   const handleClose = () => {
-    if (!isRunning) {
+    if (isRunning) {
+      // 如果正在运行，显示确认对话框
+      setShowConfirmDialog(true);
+    } else {
+      // 如果没有运行，直接关闭
       setOutput('');
       onClose();
     }
   };
 
+  const handleConfirmClose = () => {
+    // 用户确认关闭，停止脚本运行
+    setIsRunning(false);
+    setShowConfirmDialog(false);
+    
+    // 清理监听器
+    if (unlistenRef.current) {
+      unlistenRef.current();
+      unlistenRef.current = null;
+    }
+    
+    // 添加停止通知
+    addNotification({
+      type: "warning",
+      title: "脚本已停止",
+      message: "批处理脚本执行已被用户中断",
+      duration: 3000
+    });
+    
+    setOutput('');
+    onClose();
+  };
+
+  const handleCancelClose = () => {
+    setShowConfirmDialog(false);
+  };
+
+  const handleCopyOutput = async () => {
+    try {
+      // 移除 ANSI 转义序列，只复制纯文本
+      const plainText = output.replace(/\x1b\[\d+m/g, '');
+      await navigator.clipboard.writeText(plainText);
+      addNotification({
+        type: "success",
+        title: "复制成功",
+        message: "输出内容已复制到剪贴板",
+        duration: 3000
+      });
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "复制失败",
+        message: "无法复制到剪贴板",
+        duration: 3000
+      });
+    }
+  };
+
+  const handleSaveLog = async () => {
+    if (!logFileName.current) return;
+    
+    addNotification({
+      type: "info",
+      title: "日志已保存",
+      message: `日志文件保存在: ${logFileName.current}`,
+      duration: 5000
+    });
+  };
+
+  const getStatusBadge = () => {
+    if (isRunning) {
+      return <Badge appearance="filled" color="brand" icon={<Spinner size="tiny" />}>执行中</Badge>;
+    } else if (isCompleted) {
+      if (exitCode === 0) {
+        return <Badge appearance="filled" color="success" icon={<CheckmarkCircle24Regular />}>执行成功</Badge>;
+      } else {
+        return <Badge appearance="filled" color="danger" icon={<ErrorCircle24Regular />}>执行失败</Badge>;
+      }
+    }
+    return <Badge appearance="outline" color="subtle">准备中</Badge>;
+  };
+
+  const getExecutionTime = () => {
+    if (startTime && endTime) {
+      const duration = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
+      return `${duration}秒`;
+    } else if (startTime && isRunning) {
+      const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+      return `${duration}秒`;
+    }
+    return '-';
+  };
+
   return (
-    <Dialog 
-      open={open} 
-      onOpenChange={(_, data) => !data.open && handleClose()}
-    >
-      {/* 总高度固定为600px */}
-      <DialogSurface style={{ minWidth: '900px', height: '650px', display: 'flex', flexDirection: 'column' }}>
-        {/* 标题栏包含标题和关闭按钮 */}
-        <DialogTitle style={{ 
-          padding: '16px 24px', 
-          flexShrink: 0,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          borderBottom: '1px solid var(--colorNeutralStroke1)'
-        }}>
-          <span>{title}</span>
-          <Button 
-            size="small" 
-            onClick={handleClose}
-            disabled={isRunning}
-            style={{ padding: '4px' }}
-          >
-            关闭
-          </Button>
-        </DialogTitle>
-        
-        {/* 内容区域占80%高度（加高输出区域） */}
-        <DialogContent style={{ flex: 1, padding: 0, overflow: 'hidden' }}>
-          <DialogBody style={{ 
-            height: '100%', 
-            margin: 0, 
-            padding: '24px',
-            display: 'flex', 
-            flexDirection: 'column' 
-          }}>
-            <Textarea
-              ref={textareaRef}
-              value={output}
-              readOnly
-              resize="none"
-              style={{
-                fontFamily: 'Consolas, "Courier New", monospace',
-                fontSize: '14px',
-                backgroundColor: 'var(--colorNeutralBackground1)',
-                color: 'var(--colorNeutralForeground1)',
-                border: '1px solid var(--colorNeutralStroke1)',
-                lineHeight: '1.5',
-                padding: '12px',
-                height: '100%',
-                width: '100%',
-                borderRadius: '4px',
+    <>
+      <Dialog 
+        open={open} 
+        onOpenChange={(_, data) => !data.open && handleClose()}
+      >
+        <DialogSurface className={styles.dialogSurface}>
+          {/* 标题栏 */}
+          <div className={styles.titleBar}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Play24Regular style={{ color: 'white' }} />
+              <Text weight="semibold" size={500} style={{ color: 'white' }}>{title}</Text>
+            </div>
+            <Button 
+              size="small" 
+              appearance="subtle"
+              onClick={handleClose}
+              icon={isRunning ? <Stop24Regular /> : <Dismiss24Regular />}
+              style={{ 
+                color: 'white',
+                borderRadius: '6px'
               }}
-              placeholder="等待执行输出..."
-            />
-          </DialogBody>
-        </DialogContent>
+            >
+              {isRunning ? '停止执行' : '关闭'}
+            </Button>
+          </div>
+
+        {/* 状态栏 */}
+        <div className={styles.statusBar}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {getStatusBadge()}
+            <Text size={300}>文件: {batchFileName}</Text>
+            <Text size={300}>执行时间: {getExecutionTime()}</Text>
+            {exitCode !== null && <Text size={300}>退出码: {exitCode}</Text>}
+          </div>
+        </div>
+        
+        {/* 输出区域 */}
+        <div className={styles.outputContainer}>
+          <div
+            ref={outputRef}
+            className={styles.outputArea}
+            style={{
+              scrollbarColor: '#555 #2d2d2d',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              userSelect: 'text',
+              cursor: 'text',
+            }}
+          >
+            {output ? (
+              parseAnsiToHtml(output)
+            ) : (
+              <span style={{ color: '#666', fontStyle: 'italic' }}>
+                等待执行输出...
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 操作栏 */}
+        <div className={styles.actionBar}>
+          <div className={styles.buttonGroup}>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<Copy24Regular />}
+              onClick={handleCopyOutput}
+              disabled={!output}
+            >
+              复制输出
+            </Button>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<Save24Regular />}
+              onClick={handleSaveLog}
+              disabled={!logFileName.current}
+            >
+              保存日志
+            </Button>
+          </div>
+          
+          <div className={styles.buttonGroup}>
+            <Button
+              appearance="primary"
+              onClick={handleClose}
+              style={{ borderRadius: '6px' }}
+            >
+              {isRunning ? '停止执行' : '完成'}
+            </Button>
+          </div>
+        </div>
       </DialogSurface>
     </Dialog>
+
+    {/* 二次确认关闭对话框 */}
+    <Dialog open={showConfirmDialog} onOpenChange={(_, data) => !data.open && handleCancelClose()}>
+      <DialogSurface className={styles.confirmDialog} style={{ maxWidth: '400px' }}>
+        <DialogTitle>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Warning24Regular style={{ color: 'var(--colorPaletteYellowForeground1)' }} />
+            <Text weight="semibold">确认停止执行</Text>
+          </div>
+        </DialogTitle>
+        <DialogContent>
+          <DialogBody>
+            <Text>
+              批处理脚本正在执行中，强制停止可能会导致设备处于不稳定状态。
+              <br /><br />
+              您确定要停止当前的执行过程吗？
+            </Text>
+          </DialogBody>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            appearance="secondary" 
+            onClick={handleCancelClose}
+            style={{ borderRadius: '6px' }}
+          >
+            取消
+          </Button>
+          <Button 
+            appearance="primary" 
+            onClick={handleConfirmClose}
+            style={{ 
+              backgroundColor: 'var(--colorPaletteRedBackground3)',
+              borderColor: 'var(--colorPaletteRedBorder2)',
+              borderRadius: '6px'
+            }}
+          >
+            确认停止
+          </Button>
+        </DialogActions>
+      </DialogSurface>
+    </Dialog>
+  </>
   );
 };
 

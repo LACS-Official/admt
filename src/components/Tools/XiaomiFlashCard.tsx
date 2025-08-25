@@ -272,7 +272,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
     return new Promise((resolve) => {
       setTimeout(() => {
         // 简单的兼容性检查逻辑
-        const deviceModel = device.properties?.model?.toLowerCase() || '';
+        const deviceModel = device?.properties?.model?.toLowerCase() || '';
         const packageCodename = packageInfo.codename.toLowerCase();
         
         resolve(deviceModel.includes(packageCodename) || packageCodename.includes("star"));
@@ -417,16 +417,6 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
 
           {riskAccepted && (
             <>
-              {/* 设备信息 */}
-              <div className={styles.section}>
-                <Text weight="semibold">当前设备信息</Text>
-                <div className={styles.deviceInfo}>
-                  <div>型号: {device.properties?.model}</div>
-                  <div>序列号: {device.serial}</div>
-                  <div>Android版本: {device.properties?.androidVersion}</div>
-                  <div>状态: {device.connected ? "已连接" : "未连接"}</div>
-                </div>
-              </div>
 
               {/* 线刷包选择 */}
               <div className={styles.section}>
@@ -598,19 +588,20 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
                   </AccordionItem>
                 </Accordion>
               </div>
+
+
             </DialogBody>
+            <DialogActions>              
+              <div style={{ height: "30px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>             
+              <Button appearance="secondary" onClick={() => { setRiskAccepted(false); setShowDisclaimerDialog(false); }}>
+                不同意
+              </Button>
+              <Button appearance="primary" onClick={() => { setRiskAccepted(true); setShowDisclaimerDialog(false); }}>
+                我已阅读并同意
+              </Button>
+              </div>
+            </DialogActions>
           </DialogContent>
-          <DialogActions>
-            <Button appearance="secondary" onClick={() => { setRiskAccepted(false); setShowDisclaimerDialog(false); }}>
-              不同意
-            </Button>
-            <Button
-              appearance="primary"
-              onClick={() => { setRiskAccepted(true); setShowDisclaimerDialog(false); }}
-            >
-              我已阅读并同意
-            </Button>
-          </DialogActions>
         </DialogSurface>
       </Dialog>
 
