@@ -123,66 +123,47 @@ const FlashZonePanel: React.FC = () => {
   ];
 
   const renderContent = () => {
-    if (!selectedDevice) return null;
+    // 即使没有选中设备也显示默认内容，以支持刷机过程中设备断开的情况
+    const deviceToUse = selectedDevice || connectedDevices[0] || null;
 
     switch (currentView) {
       case "unlock-tools":
-        return <XiaomiUnlockCard device={selectedDevice} />;
+        return deviceToUse ? <XiaomiUnlockCard device={deviceToUse} /> : <XiaomiUnlockCard device={null} />;
       case "image-flash":
-        return <ImageFlashCard device={selectedDevice} />;
+        return deviceToUse ? <ImageFlashCard device={deviceToUse} /> : <ImageFlashCard device={null} />;
       case "xiaomi-flash":
-        return <XiaomiFlashCard device={selectedDevice} />;
+        return deviceToUse ? <XiaomiFlashCard device={deviceToUse} /> : <XiaomiFlashCard device={null} />;
       case "system-backup":
-        return <SystemToolCard device={selectedDevice} />;
+        return deviceToUse ? <SystemToolCard device={deviceToUse} /> : <SystemToolCard device={null} />;
       default:
-        return <XiaomiUnlockCard device={selectedDevice} />;
+        return deviceToUse ? <XiaomiUnlockCard device={deviceToUse} /> : <XiaomiUnlockCard device={null} />;
     }
   };
 
   return (
     <div className={styles.container}>
+      <div className={styles.content}>
+        <div className={styles.tabContainer}>
+          <TabList
+            selectedValue={currentView}
+            onTabSelect={(_, data) => setCurrentView(data.value as FlashZoneView)}
+          >
+            {tabs.map((tab) => (
+              <Tab
+                key={tab.id}
+                value={tab.id}
+                icon={tab.icon}
+              >
+                {tab.label}
+              </Tab>
+            ))}
+          </TabList>
 
-      {connectedDevices.length === 0 ? (
-        <div className={styles.noDevice}>
-          <CloudArrowUp24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>未检测到设备</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备已连接并启用USB调试
-          </Text>
-        </div>
-      ) : !selectedDevice ? (
-        <div className={styles.noDevice}>
-          <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>请选择一个设备</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            从设备信息页面选择要操作的设备
-          </Text>
-        </div>
-      ) : (
-        <div className={styles.content}>
-
-          <div className={styles.tabContainer}>
-            <TabList
-              selectedValue={currentView}
-              onTabSelect={(_, data) => setCurrentView(data.value as FlashZoneView)}
-            >
-              {tabs.map((tab) => (
-                <Tab
-                  key={tab.id}
-                  value={tab.id}
-                  icon={tab.icon}
-                >
-                  {tab.label}
-                </Tab>
-              ))}
-            </TabList>
-
-            <div className={styles.tabContent}>
-              {renderContent()}
-            </div>
+          <div className={styles.tabContent}>
+            {renderContent()}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

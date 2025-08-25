@@ -30,23 +30,34 @@ import {
   MenuPopover,
   MenuList,
   MenuItem,
+  Accordion,
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  Overflow,
+  OverflowItem,
 } from "@fluentui/react-components";
 import {
-  DocumentAdd24Regular,
   Apps24Regular,
-  CloudArrowUp24Regular,
+  DocumentAdd24Regular,
+  Info24Regular,
+  History24Regular,
+  StoreMicrosoft24Regular,
   FolderOpen24Regular,
+  Shield24Regular,
+  Settings24Regular,
+  Document24Regular,
+  Search24Regular,
+  Delete24Regular,
+  MoreHorizontal24Regular,
+  ArrowClockwise24Regular,
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
-  Warning24Regular,
-  ArrowClockwise24Regular,
-  UsbStick24Regular,
+  CloudArrowUp24Regular,
   Wifi124Regular,
-  MoreHorizontal24Regular,
-  Delete24Regular,
-  Info24Regular,
-  Wrench24Regular,
-  Search24Regular,
+  UsbStick24Regular,
+  Warning24Regular,
+  Phone24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -55,7 +66,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { InstalledApp, BatchOperation, ApkInfo } from "../../types/device";
 import ErrorDialog from "../Common/ErrorDialog";
 import { ErrorInfo } from "../../utils/errorHandler";
-import BatchOperationDialog from "../Common/BatchOperationDialog";
+import BatchOperationDialog from "./BatchOperationDialog";
 
 const useStyles = makeStyles({
   container: {
@@ -346,18 +357,6 @@ const AppManagerPanel: React.FC = () => {
   const [adbAvailable, setAdbAvailable] = useState<boolean | null>(null);
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
   const [lastCheckTime, setLastCheckTime] = useState<Date | null>(null);
-
-  // USB 3.0修复相关状态
-  const [usbFixDialogOpen, setUsbFixDialogOpen] = useState(false);
-
-  // USB 3.0修复相关函数
-  const handleUsbFixClick = useCallback(() => {
-    setUsbFixDialogOpen(true);
-  }, []);
-
-  const handleUsbFixDialogClose = useCallback(() => {
-    setUsbFixDialogOpen(false);
-  }, []);
 
   // APK安装相关函数
   const handleBrowseApk = useCallback(async () => {
@@ -1111,7 +1110,6 @@ const AppManagerPanel: React.FC = () => {
             )}
           </div>
         </Card>
-
       </div>
     );
   };
@@ -1176,18 +1174,6 @@ const AppManagerPanel: React.FC = () => {
         onRetry={() => {
           // TODO: 实现重试失败项功能
           setBatchUninstallDialogOpen(false);
-        }}
-      />
-
-      {/* USB 3.0修复对话框 */}
-      <BatchOperationDialog
-        open={usbFixDialogOpen}
-        onClose={handleUsbFixDialogClose}
-        scriptConfig={{
-          scriptPath: "tools/lacs/Usb_fix.bat",
-          scriptName: "USB 3.0修复脚本",
-          autoStart: true,
-          confirmClose: true
         }}
       />
     </div>

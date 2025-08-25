@@ -32,7 +32,7 @@ import {
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
-import CommandRunnerDialog from "../Common/CommandRunnerDialog";
+import BatchExecutorDialog from "../Common/BatchExecutorDialog";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
 
@@ -167,11 +167,10 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   const [showDisclaimerDialog, setShowDisclaimerDialog] = useState<boolean>(false);
   const [selectedFolderPath, setSelectedFolderPath] = useState<string>("");
   const [missingFiles, setMissingFiles] = useState<string[]>([]);
-  const [runnerOpen, setRunnerOpen] = useState(false);
-  const [runnerTitle, setRunnerTitle] = useState<string>("");
-  const [runnerProgram, setRunnerProgram] = useState<string>("cmd");
-  const [runnerArgs, setRunnerArgs] = useState<string[]>([]);
-  const [runnerCwd, setRunnerCwd] = useState<string>("");
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [batchDialogTitle, setBatchDialogTitle] = useState<string>("");
+  const [batchFileName, setBatchFileName] = useState<string>("");
+  const [batchWorkingDirectory, setBatchWorkingDirectory] = useState<string>("");
 
   const handlePackageSelect = async () => {
     try {
@@ -499,29 +498,26 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
               {selectedFolderPath && missingFiles.length === 0 && (
                 <div className={styles.actions}>
                   <Button appearance="primary" icon={<Play24Regular />} onClick={() => {
-                    setRunnerTitle("线刷清数据 (flash_all.bat)");
-                    setRunnerProgram("cmd");
-                    setRunnerArgs(["/c", "flash_all.bat"]);
-                    setRunnerCwd(selectedFolderPath);
-                    setRunnerOpen(true);
+                    setBatchDialogTitle("线刷清数据 (flash_all.bat)");
+                    setBatchFileName("flash_all.bat");
+                    setBatchWorkingDirectory(selectedFolderPath);
+                    setBatchDialogOpen(true);
                   }}>
-                    线刷清数据
+                    数据
                   </Button>
                   <Button appearance="secondary" icon={<Play24Regular />} onClick={() => {
-                    setRunnerTitle("线刷不清数据 (flash_all_except_storage.bat)");
-                    setRunnerProgram("cmd");
-                    setRunnerArgs(["/c", "flash_all_except_storage.bat"]);
-                    setRunnerCwd(selectedFolderPath);
-                    setRunnerOpen(true);
+                    setBatchDialogTitle("线刷不清数据 (flash_all_except_storage.bat)");
+                    setBatchFileName("flash_all_except_storage.bat");
+                    setBatchWorkingDirectory(selectedFolderPath);
+                    setBatchDialogOpen(true);
                   }}>
                     线刷不清数据
                   </Button>
                   <Button appearance="outline" icon={<Play24Regular />} onClick={() => {
-                    setRunnerTitle("线刷回锁 (flash_all_lock.bat)");
-                    setRunnerProgram("cmd");
-                    setRunnerArgs(["/c", "flash_all_lock.bat"]);
-                    setRunnerCwd(selectedFolderPath);
-                    setRunnerOpen(true);
+                    setBatchDialogTitle("线刷回锁 (flash_all_lock.bat)");
+                    setBatchFileName("flash_all_lock.bat");
+                    setBatchWorkingDirectory(selectedFolderPath);
+                    setBatchDialogOpen(true);
                   }}>
                     线刷回锁
                   </Button>
@@ -541,41 +537,6 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
         onChange={handlePackageChange}
       />
 
-      {/* 确认线刷对话框 */}
-      <Dialog open={showConfirmDialog} onOpenChange={(_, data) => setShowConfirmDialog(data.open)}>
-        <DialogSurface>
-          <DialogTitle>确认线刷操作</DialogTitle>
-          <DialogContent>
-            <DialogBody>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-                  <Text weight="semibold">请仔细确认以下信息：</Text>
-                </div>
-                
-                <div style={{ padding: "12px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "4px" }}>
-                  <div>设备: {device.properties?.model} ({device.serial})</div>
-                  <div>线刷包: {packageInfo?.version}</div>
-                  <div>机型: {packageInfo?.model}</div>
-                  <div>兼容性: {deviceCompatible ? "✓ 兼容" : "⚠️ 未知"}</div>
-                </div>
-                
-                <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  线刷将完全清除设备数据并重新安装系统，此过程不可逆转。确定要继续吗？
-                </Text>
-              </div>
-            </DialogBody>
-          </DialogContent>
-          <DialogActions>
-            <Button appearance="secondary" onClick={() => setShowConfirmDialog(false)}>
-              取消
-            </Button>
-            <Button appearance="primary" onClick={handleFlashConfirm}>
-              确认线刷
-            </Button>
-          </DialogActions>
-        </DialogSurface>
-      </Dialog>
 
       {/* 风险免责声明对话框 */}
       <Dialog open={showDisclaimerDialog} onOpenChange={(_, data) => setShowDisclaimerDialog(data.open)}>
@@ -653,14 +614,13 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
         </DialogSurface>
       </Dialog>
 
-      {/* 实时执行弹窗：bat/cmd 输出 */}
-      <CommandRunnerDialog
-        open={runnerOpen}
-        title={runnerTitle}
-        program={runnerProgram}
-        args={runnerArgs}
-        cwd={runnerCwd}
-        onClose={() => setRunnerOpen(false)}
+      {/* 批处理文件执行弹窗 */}
+      <BatchExecutorDialog
+        open={batchDialogOpen}
+        title={batchDialogTitle}
+        batchFileName={batchFileName}
+        workingDirectory={batchWorkingDirectory}
+        onClose={() => setBatchDialogOpen(false)}
       />
     </>
   );

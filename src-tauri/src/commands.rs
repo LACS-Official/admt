@@ -2358,6 +2358,98 @@ pub async fn run_usb_fix_script() -> Result<CommandResult> {
     }
 }
 
+/// 执行批处理文件（用于线刷等操作）
+#[tauri::command]
+pub async fn execute_batch_file(batch_file_name: String, working_directory: String) -> Result<CommandResult> {
+    log::info!("Executing batch file: {} in directory: {}", batch_file_name, working_directory);
+
+    #[cfg(windows)]
+    {
+        use std::process::{Command, Stdio};
+        use std::path::Path;
+
+        // 验证工作目录存在
+        let work_dir = Path::new(&working_directory);
+        if !work_dir.exists() {
+            return Ok(CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some(format!("工作目录不存在: {}", working_directory)),
+                exit_code: Some(1),
+            });
+        }
+
+        // 构建批处理文件的完整路径
+        let batch_path = work_dir.join(&batch_file_name);
+        if !batch_path.exists() {
+            return Ok(CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some(format!("批处理文件不存在: {}", batch_path.display())),
+                exit_code: Some(1),
+            });
+        }
+
+        log::info!("Executing batch file at: {}", batch_path.display());
+
+        // 使用cmd执行批处理文件，确保继承完整的环境变量
+        let system_root = std::env::var("SYSTEMROOT").unwrap_or("C:\\Windows".to_string());
+        let current_path = std::env::var("PATH").unwrap_or_default();
+        let enhanced_path = format!("{};{}\\System32;{}\\System32\\Wbem", current_path, system_root, system_root);
+        
+        let mut cmd = Command::new("cmd");
+        cmd.args(&["/c", &batch_file_name])
+            .current_dir(&working_directory)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .env("PATH", enhanced_path)
+            .env("SYSTEMROOT", &system_root)
+            .env("WINDIR", &system_root)
+            .envs(std::env::vars().filter(|(key, _)| key != "PATH")); // 继承除PATH外的所有环境变量
+
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let combined_output = if stderr.is_empty() {
+                    stdout.to_string()
+                } else {
+                    format!("{}\n{}", stdout, stderr)
+                };
+
+                log::info!("Batch file execution completed with exit code: {:?}", output.status.code());
+
+                Ok(CommandResult {
+                    success: output.status.success(),
+                    output: combined_output,
+                    error: if output.status.success() { None } else { Some(stderr.to_string()) },
+                    exit_code: output.status.code(),
+                })
+            }
+            Err(e) => {
+                let error_msg = format!("执行批处理文件失败: {}", e);
+                log::error!("{}", error_msg);
+                Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(error_msg),
+                    exit_code: Some(1),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("批处理文件执行功能仅在Windows系统上可用".to_string()),
+            exit_code: Some(1),
+        })
+    }
+}
+
 /// 打开设备管理器
 #[tauri::command]
 pub async fn open_device_manager() -> Result<CommandResult> {

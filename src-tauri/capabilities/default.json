@@ -14,6 +14,11 @@
     "core:window:allow-is-maximized",
     "shell:allow-open",
     "shell:default",
-    "process:default"
+    "shell:allow-spawn",
+    "process:default",
+    "dialog:allow-open",
+    "fs:allow-read-dir",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-write-recursive"
   ]
 }

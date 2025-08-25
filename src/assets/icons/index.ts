@@ -1,10 +1,10 @@
 // 设备图标导入
 import anzIcon from "./devices/anz.png";
-import androidIcon from "./devices/android.svg";
-import fastbootIcon from "./devices/fastboot.png";
-import fastbootdIcon from "./devices/fastbootd.png";
-import sideloadIcon from "./devices/sideload.png";
-import twrpIcon from "./devices/twrp.png";
+import androidIcon from "./devices/anz.png";
+import fastbootIcon from "./devices/anz.png";
+import fastbootdIcon from "./devices/anz.png";
+import sideloadIcon from "./devices/anz.png";
+import twrpIcon from "./devices/anz.png";
 
 // 设备图标映射
 export const deviceIcons = {
