@@ -23,7 +23,7 @@ import { useAppStore } from "../../stores/appStore";
 import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import UserInfoModal from "../UserInfo/UserInfoModal";
+import UserInfoModal from "../Settings/UserInfoModal";
 import AppIcon from "../Common/AppIcon";
 
 const useStyles = makeStyles({

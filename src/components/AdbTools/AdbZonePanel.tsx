@@ -11,10 +11,14 @@ import {
   Code24Regular,
   Settings24Regular,
   Play24Regular,
+  Folder24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import AdbToolsPanel from "../AdbTools/AdbToolsPanel";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
+import FileManagerPanel from "../FileManager/FileManagerPanel";
+import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
+import AppManagerPanel from './AppManagerPanel';
 
 const useStyles = makeStyles({
   container: {
@@ -73,7 +77,7 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "adb-tools" | "device-control";
+type AdbZoneView = "adb-tools" | "device-control" | "file-manager" | "screen-mirror" | "app-manager" ;
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -93,6 +97,21 @@ const AdbZonePanel: React.FC = () => {
       label: "设备控制",
       icon: <Play24Regular />,
     },
+    {
+      id: "file-manager" as AdbZoneView,
+      label: "文件管理",
+      icon: <Folder24Regular />,
+    },
+    {
+      id: "screen-mirror" as AdbZoneView,
+      label: "屏幕共享",
+      icon: <Settings24Regular />,
+    },
+    {
+      id: "app-manager" as AdbZoneView,
+      label: "应用管理",
+      icon: <Settings24Regular />,
+    }
   ];
 
   const renderContent = () => {
@@ -116,6 +135,24 @@ const AdbZonePanel: React.FC = () => {
             padding: "16px"
           }}>
             <SystemControlCard device={selectedDevice} />
+          </div>
+        );
+      case "file-manager":
+        return (
+          <div style={{ height: "100%", overflow: "hidden" }}>
+            <FileManagerPanel />
+          </div>
+        );
+      case "screen-mirror":
+        return (
+          <div style={{ height: "100%", overflow: "hidden" }}>
+            <ScreenMirrorPanel />
+          </div>
+        );
+      case "app-manager":
+        return (
+          <div style={{ height: "100%", overflow: "hidden" }}>
+            <AppManagerPanel />
           </div>
         );
       default:

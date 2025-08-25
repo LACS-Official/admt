@@ -563,6 +563,8 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                 <Tab value="basic">基本信息</Tab>
                 <Tab value="hardware">硬件信息</Tab>
                 <Tab value="system">系统信息</Tab>
+                <Tab value="security">安全信息</Tab>
+                <Tab value="network">网络信息</Tab>
               </TabList>
 
 
@@ -662,6 +664,20 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
             )}
             {selectedTab === "system" && (
               <SystemInfoPanel 
+                device={device} 
+                onCopyValue={handleCopyValue} 
+                styles={styles} 
+              />
+            )}
+            {selectedTab === "security" && (
+              <SecurityInfoPanel 
+                device={device} 
+                onCopyValue={handleCopyValue} 
+                styles={styles} 
+              />
+            )}
+            {selectedTab === "network" && (
+              <NetworkInfoPanel 
                 device={device} 
                 onCopyValue={handleCopyValue} 
                 styles={styles} 
@@ -923,6 +939,36 @@ const HardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styl
         <Text>{device.properties?.lcdDensity || "未知"}</Text>
       </div>
     </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>硬件芯片</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.hardwareChipname || "未知", "硬件芯片")}
+      >
+        <Text>{device.properties?.hardwareChipname || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>主板平台</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.boardPlatform || "未知", "主板平台")}
+      >
+        <Text>{device.properties?.boardPlatform || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>产品主板</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.productBoard || "未知", "产品主板")}
+      >
+        <Text>{device.properties?.productBoard || "未知"}</Text>
+      </div>
+    </div>
   </div>
 );
 
@@ -1106,5 +1152,223 @@ const getMemoryUsage = (memoryStorageInfo: MemoryStorageInfo | null) => {
     totalGB: "获取中...",
   };
 };
+
+// 安全信息面板
+const SecurityInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => (
+  <div className={mergeClasses(styles.infoGrid, styles.noSelect)}>
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>Bootloader状态</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(
+          String(device.properties?.bootloaderLocked) === "false" ? "已解锁" :
+          String(device.properties?.bootloaderLocked) === "true" ? "已锁定" : "未知",
+          "Bootloader状态"
+        )}
+      >
+        <Text>
+          {String(device.properties?.bootloaderLocked) === "false" ? "已解锁" :
+           String(device.properties?.bootloaderLocked) === "true" ? "已锁定" : "未知"}
+        </Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>验证启动</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.verifiedBootState || "未知", "验证启动")}
+      >
+        <Text>{device.properties?.verifiedBootState || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>完整性验证</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.verityMode || "未知", "完整性验证")}
+      >
+        <Text>{device.properties?.verityMode || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>调试模式</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(
+          String(device.properties?.debuggable) === "true" ? "已启用" :
+          String(device.properties?.debuggable) === "false" ? "已禁用" : "未知",
+          "调试模式"
+        )}
+      >
+        <Text>
+          {String(device.properties?.debuggable) === "true" ? "已启用" :
+           String(device.properties?.debuggable) === "false" ? "已禁用" : "未知"}
+        </Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>安全模式</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(
+          String(device.properties?.secure) === "true" ? "已启用" :
+          String(device.properties?.secure) === "false" ? "已禁用" : "未知",
+          "安全模式"
+        )}
+      >
+        <Text>
+          {String(device.properties?.secure) === "true" ? "已启用" :
+           String(device.properties?.secure) === "false" ? "已禁用" : "未知"}
+        </Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>ADB安全</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(
+          String(device.properties?.adbSecure) === "true" ? "已启用" :
+          String(device.properties?.adbSecure) === "false" ? "已禁用" : "未知",
+          "ADB安全"
+        )}
+      >
+        <Text>
+          {String(device.properties?.adbSecure) === "true" ? "已启用" :
+           String(device.properties?.adbSecure) === "false" ? "已禁用" : "未知"}
+        </Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>安全补丁级别</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.securityPatchLevel || "未知", "安全补丁级别")}
+      >
+        <Text>{device.properties?.securityPatchLevel || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>构建用户</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.buildUser || "未知", "构建用户")}
+      >
+        <Text>{device.properties?.buildUser || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>构建主机</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.buildHost || "未知", "构建主机")}
+      >
+        <Text>{device.properties?.buildHost || "未知"}</Text>
+      </div>
+    </div>
+  </div>
+);
+
+// 网络信息面板
+const NetworkInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => (
+  <div className={mergeClasses(styles.infoGrid, styles.noSelect)}>
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>默认网络</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.defaultNetwork || "未知", "默认网络")}
+      >
+        <Text>{device.properties?.defaultNetwork || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>语言区域</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.locale || "未知", "语言区域")}
+      >
+        <Text>{device.properties?.locale || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>时区</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.timezone || "未知", "时区")}
+      >
+        <Text>{device.properties?.timezone || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>IMEI</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.imei || "未知", "IMEI")}
+      >
+        <Text>{device.properties?.imei || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>首次API级别</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.firstApiLevel || "未知", "首次API级别")}
+      >
+        <Text>{device.properties?.firstApiLevel || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>VNDK版本</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.vndkVersion || "未知", "VNDK版本")}
+      >
+        <Text>{device.properties?.vndkVersion || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>CPU架构列表</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.cpuAbiList || "未知", "CPU架构列表")}
+      >
+        <Text>{device.properties?.cpuAbiList || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>构建日期</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.buildDate || "未知", "构建日期")}
+      >
+        <Text>{device.properties?.buildDate || "未知"}</Text>
+      </div>
+    </div>
+
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>系统版本</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.systemVersion || "未知", "系统版本")}
+      >
+        <Text>{device.properties?.systemVersion || "未知"}</Text>
+      </div>
+    </div>
+  </div>
+);
 
 export default DeviceOverviewCard;
