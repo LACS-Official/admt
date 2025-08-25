@@ -1,3 +1,7 @@
+/*
+AdbToolsPanel.tsx
+这是 ADB 工具面板组件
+*/
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   makeStyles,

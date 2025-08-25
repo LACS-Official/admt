@@ -15,7 +15,7 @@ import {
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import FileManagerPanel from "../FileManager/FileManagerPanel";
-import AppManagerPanel from "../AppManager/AppManagerPanel";
+import AppManagerPanel from "../AdbTools/AppManagerPanel";
 import ScreenMirrorPanel from "../ScreenMirror/ScreenMirrorPanel";
 
 const useStyles = makeStyles({

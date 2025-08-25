@@ -245,7 +245,7 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ children }) => {
       updateUserSettings({ isFirstLaunch: true });
 
       // 重置启动流程状态，强制重新检查
-      setCurrentPhase('user-type-detection');
+      setCurrentPhase('first-launch-detection');
 
       console.log('✅ 本地激活数据已清除，正在重新检查激活状态...');
 

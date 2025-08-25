@@ -27,7 +27,6 @@ import { AppView } from "../../types/app";
 import HomePage from "../Home/HomePage";
 import AdbZonePanel from "../AdbTools/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
-import DeviceManagementPanel from "../DeviceManagement/DeviceManagementPanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
 import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
@@ -825,8 +824,6 @@ const MainContent: React.FC = () => {
         return <AdbZonePanel />;
       case "flash-zone":
         return <FlashZonePanel />;
-      case "device-management":
-        return <DeviceManagementPanel />;
       case "extended-features":
         return <ExtendedFeaturesPanel />;
 
