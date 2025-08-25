@@ -36,11 +36,14 @@ import { usageTrackingService } from "../../services/usageTrackingService";
 
 const useStyles = makeStyles({
   '@keyframes pulse': {
-    '0%, 100%': {
+    from: {
       opacity: 1,
     },
     '50%': {
       opacity: 0.8,
+    },
+    to: {
+      opacity: 1,
     },
   },
   container: {

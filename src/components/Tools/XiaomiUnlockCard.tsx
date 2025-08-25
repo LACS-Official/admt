@@ -140,8 +140,8 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
       description: "执行小米设备bypass解锁操作",
       icon: <Flash24Regular />,
       dangerous: true,
-      available: device.properties?.brand?.toLowerCase().includes("xiaomi") || 
-                device.properties?.manufacturer?.toLowerCase().includes("xiaomi"),
+      available: (device?.properties?.brand?.toLowerCase()?.includes("xiaomi") ?? false) || 
+                (device?.properties?.manufacturer?.toLowerCase()?.includes("xiaomi") ?? false),
     },
     {
       id: "detect_unlock_method",
@@ -149,8 +149,8 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
       description: "检测当前小米设备支持的解锁方式",
       icon: <Search24Regular />,
       dangerous: false,
-      available: device.properties?.brand?.toLowerCase().includes("xiaomi") || 
-                device.properties?.manufacturer?.toLowerCase().includes("xiaomi"),
+      available: (device?.properties?.brand?.toLowerCase()?.includes("xiaomi") ?? false) || 
+                (device?.properties?.manufacturer?.toLowerCase()?.includes("xiaomi") ?? false),
     },
     {
       id: "install_unlock_settings",
@@ -158,11 +158,19 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
       description: "安装解锁过程中需要的专用设置",
       icon: <Settings24Regular />,
       dangerous: false,
-      available: device.mode === "sys",
+      available: (device?.mode === "sys") || false,
     },
   ];
 
   const handleToolClick = (toolId: string) => {
+    if (!device) {
+      addNotification({
+        type: "warning",
+        title: "未连接设备",
+        message: "请先选择或连接设备后再执行该操作",
+      });
+      return;
+    }
     const tool = xiaomiTools.find(t => t.id === toolId);
     if (tool && tool.available) {
       if (tool.dangerous && toolId !== "bypass_unlock" && toolId !== "xiaomi_unlock_tool") {
@@ -182,6 +190,15 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
    * @param toolId 工具ID ("bypass_unlock" 或 "xiaomi_unlock_tool")
    */
   const executeUnlockTool = async (toolId: string) => {
+    // 设备为空时直接提示并返回，避免后续逻辑访问空引用
+    if (!device) {
+      addNotification({
+        type: "warning",
+        title: "未连接设备",
+        message: "请先选择或连接设备后再执行该操作",
+      });
+      return;
+    }
     setIsExecuting(true);
     setSelectedAction(toolId);
 
@@ -385,8 +402,8 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
         
         case "detect_unlock_method": {
           // 检测解锁方式（通过对话框展示结果，不记录到历史）
-          const isXiaomiDevice = device.properties?.brand?.toLowerCase().includes("xiaomi") ||
-                                  device.properties?.manufacturer?.toLowerCase().includes("xiaomi");
+          const isXiaomiDevice = (device?.properties?.brand?.toLowerCase()?.includes("xiaomi") ?? false) ||
+                                  (device?.properties?.manufacturer?.toLowerCase()?.includes("xiaomi") ?? false);
 
           // 读取 Android 版本
           const androidVersionRes = await deviceService.deviceService.executeAdbCommand(
@@ -583,8 +600,8 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
     }
   };
 
-  const isXiaomiDevice = device.properties?.brand?.toLowerCase().includes("xiaomi") || 
-                        device.properties?.manufacturer?.toLowerCase().includes("xiaomi");
+  const isXiaomiDevice = (device?.properties?.brand?.toLowerCase()?.includes("xiaomi") ?? false) || 
+                        (device?.properties?.manufacturer?.toLowerCase()?.includes("xiaomi") ?? false);
 
   return (
     <>
