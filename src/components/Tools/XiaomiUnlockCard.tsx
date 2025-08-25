@@ -600,8 +600,6 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
     }
   };
 
-  const isXiaomiDevice = (device?.properties?.brand?.toLowerCase()?.includes("xiaomi") ?? false) || 
-                        (device?.properties?.manufacturer?.toLowerCase()?.includes("xiaomi") ?? false);
 
   return (
     <>
@@ -619,24 +617,9 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
             <div style={{ flex: 1 }}>
               <Text size={300} weight="semibold">设备品牌</Text>
               <br />
-              <Badge 
-                appearance="filled"
-                color={isXiaomiDevice ? "success" : "warning"}
-              >
-                {isXiaomiDevice ? "✅ 小米设备" : "⚠️ 非小米设备"}
-              </Badge>
             </div>
           </div>
 
-          {/* 非小米设备警告 */}
-          {!isXiaomiDevice && (
-            <div className={styles.warningSection}>
-              <Warning24Regular className={styles.warningIcon} />
-              <Text size={200}>
-                当前设备不是小米设备，部分功能可能不可用
-              </Text>
-            </div>
-          )}
 
           {/* 工具列表 */}
           <div className={styles.toolsGrid}>

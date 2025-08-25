@@ -324,7 +324,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
                 </div>
                 
                 <div style={{ padding: "12px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "4px" }}>
-                  <div>设备: {device.properties?.model} ({device.serial})</div>
+                  <div>设备: {device?.properties?.model || '未知设备'} ({device?.serial || '未知序列号'})</div>
                   <div>文件: {selectedFile?.name}</div>
                   <div>分区: {partitions.find(p => p.value === selectedPartition)?.label}</div>
                 </div>

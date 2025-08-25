@@ -2450,6 +2450,179 @@ pub async fn execute_batch_file(batch_file_name: String, working_directory: Stri
     }
 }
 
+/// 执行批处理文件（支持实时流式输出）
+#[tauri::command]
+pub async fn execute_batch_file_stream(
+    app_handle: tauri::AppHandle,
+    batch_file_name: String, 
+    working_directory: String
+) -> Result<CommandResult> {
+    log::info!("Executing batch file with streaming: {} in directory: {}", batch_file_name, working_directory);
+
+    #[cfg(windows)]
+    {
+        use std::process::{Command, Stdio};
+        use std::path::Path;
+        use std::io::{BufRead, BufReader};
+        use tokio::task;
+
+        // 验证工作目录存在
+        let work_dir = Path::new(&working_directory);
+        if !work_dir.exists() {
+            return Ok(CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some(format!("工作目录不存在: {}", working_directory)),
+                exit_code: Some(1),
+            });
+        }
+
+        // 构建批处理文件的完整路径
+        let batch_path = work_dir.join(&batch_file_name);
+        if !batch_path.exists() {
+            return Ok(CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some(format!("批处理文件不存在: {}", batch_path.display())),
+                exit_code: Some(1),
+            });
+        }
+
+        log::info!("Executing batch file with streaming at: {}", batch_path.display());
+
+        // 使用cmd执行批处理文件，确保继承完整的环境变量
+        let system_root = std::env::var("SYSTEMROOT").unwrap_or("C:\\Windows".to_string());
+        let current_path = std::env::var("PATH").unwrap_or_default();
+        let enhanced_path = format!("{};{}\\System32;{}\\System32\\Wbem", current_path, system_root, system_root);
+        
+        let mut cmd = Command::new("cmd");
+        cmd.args(&["/c", &batch_file_name])
+            .current_dir(&working_directory)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .env("PATH", enhanced_path)
+            .env("SYSTEMROOT", &system_root)
+            .env("WINDIR", &system_root)
+            .envs(std::env::vars().filter(|(key, _)| key != "PATH")); // 继承除PATH外的所有环境变量
+
+        match cmd.spawn() {
+            Ok(mut child) => {
+                let stdout = child.stdout.take().unwrap();
+                let stderr = child.stderr.take().unwrap();
+                
+                let app_handle_stdout = app_handle.clone();
+                let app_handle_stderr = app_handle.clone();
+                
+                // 处理stdout流
+                let stdout_handle = task::spawn_blocking(move || {
+                    let reader = BufReader::new(stdout);
+                    let mut output_lines = Vec::new();
+                    
+                    for line in reader.lines() {
+                        match line {
+                            Ok(line_content) => {
+                                output_lines.push(line_content.clone());
+                                
+                                // 发送实时输出事件
+                                let _ = app_handle_stdout.emit("batch-output", serde_json::json!({
+                                    "type": "stdout",
+                                    "data": format!("{}\n", line_content)
+                                }));
+                            }
+                            Err(e) => {
+                                log::error!("Error reading stdout line: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                    output_lines.join("\n")
+                });
+
+                // 处理stderr流
+                let stderr_handle = task::spawn_blocking(move || {
+                    let reader = BufReader::new(stderr);
+                    let mut error_lines = Vec::new();
+                    
+                    for line in reader.lines() {
+                        match line {
+                            Ok(line_content) => {
+                                error_lines.push(line_content.clone());
+                                
+                                // 发送实时错误输出事件
+                                let _ = app_handle_stderr.emit("batch-output", serde_json::json!({
+                                    "type": "stderr",
+                                    "data": format!("{}\n", line_content)
+                                }));
+                            }
+                            Err(e) => {
+                                log::error!("Error reading stderr line: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                    error_lines.join("\n")
+                });
+
+                // 等待进程完成
+                let exit_status = child.wait();
+                
+                // 等待输出流处理完成
+                let stdout_result = stdout_handle.await.unwrap_or_default();
+                let stderr_result = stderr_handle.await.unwrap_or_default();
+
+                match exit_status {
+                    Ok(status) => {
+                        let combined_output = if stderr_result.is_empty() {
+                            stdout_result
+                        } else {
+                            format!("{}\n{}", stdout_result, stderr_result)
+                        };
+
+                        log::info!("Batch file streaming execution completed with exit code: {:?}", status.code());
+
+                        Ok(CommandResult {
+                            success: status.success(),
+                            output: combined_output,
+                            error: if status.success() { None } else { Some(stderr_result) },
+                            exit_code: status.code(),
+                        })
+                    }
+                    Err(e) => {
+                        let error_msg = format!("等待批处理文件完成失败: {}", e);
+                        log::error!("{}", error_msg);
+                        Ok(CommandResult {
+                            success: false,
+                            output: stdout_result,
+                            error: Some(error_msg),
+                            exit_code: Some(1),
+                        })
+                    }
+                }
+            }
+            Err(e) => {
+                let error_msg = format!("启动批处理文件失败: {}", e);
+                log::error!("{}", error_msg);
+                Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(error_msg),
+                    exit_code: Some(1),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("批处理文件执行功能仅在Windows系统上可用".to_string()),
+            exit_code: Some(1),
+        })
+    }
+}
+
 /// 打开设备管理器
 #[tauri::command]
 pub async fn open_device_manager() -> Result<CommandResult> {
