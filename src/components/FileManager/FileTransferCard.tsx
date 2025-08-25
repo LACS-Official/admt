@@ -34,6 +34,8 @@ import {
   Delete24Regular,
   Folder24Regular,
   ArrowLeft24Regular,
+  Home24Regular,
+  ArrowClockwise24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -97,6 +99,7 @@ const FileTransferCard: React.FC = () => {
   const [deviceFiles, setDeviceFiles] = useState<DeviceFile[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [browsePath, setBrowsePath] = useState("/sdcard/");
+  const [previousPaths, setPreviousPaths] = useState<string[]>([]);
 
   const columns: TableColumnDefinition<TransferItem>[] = [
     createTableColumn<TransferItem>({
@@ -168,9 +171,12 @@ const FileTransferCard: React.FC = () => {
       });
       return;
     }
-    setBrowsePath(currentPath);
+    
+    // Reset to default path if current path is empty
+    const initialPath = currentPath || "/sdcard/";
+    setBrowsePath(initialPath);
     setBrowseDialogOpen(true);
-    loadDeviceFiles(currentPath);
+    loadDeviceFiles(initialPath);
   };
 
   const loadDeviceFiles = async (path: string) => {
@@ -178,8 +184,31 @@ const FileTransferCard: React.FC = () => {
 
     setIsLoadingFiles(true);
     try {
-      const files = await deviceService.listDeviceFiles(selectedDevice.serial, path);
-      setDeviceFiles(files);
+      // Ensure path ends with a slash
+      const normalizedPath = path.endsWith('/') ? path : `${path}/`;
+      const files = await deviceService.listDeviceFiles(selectedDevice.serial, normalizedPath);
+      
+      // Sort directories first, then files, both alphabetically
+      const sortedFiles = [...files].sort((a, b) => {
+        if (a.isDirectory === b.isDirectory) {
+          return a.name.localeCompare(b.name);
+        }
+        return a.isDirectory ? -1 : 1;
+      });
+      
+      setDeviceFiles(sortedFiles);
+      
+      // Update the path in state to ensure consistency
+      setBrowsePath(normalizedPath);
+      
+      // Add to previous paths for navigation
+      setPreviousPaths(prev => {
+        // Don't add duplicate consecutive paths
+        if (prev.length === 0 || prev[prev.length - 1] !== normalizedPath) {
+          return [...prev, normalizedPath];
+        }
+        return prev;
+      });
     } catch (error) {
       addNotification({
         type: "error",
@@ -193,8 +222,16 @@ const FileTransferCard: React.FC = () => {
   };
 
   const handleNavigateToPath = (path: string) => {
-    setBrowsePath(path);
-    loadDeviceFiles(path);
+    if (!path) return;
+    
+    // Normalize the path to always end with a slash for directories
+    let normalizedPath = path;
+    if (!path.endsWith('/') && path !== '/') {
+      normalizedPath = `${path}/`;
+    }
+    
+    setBrowsePath(normalizedPath);
+    loadDeviceFiles(normalizedPath);
   };
 
   const handleSelectPath = () => {
@@ -203,8 +240,30 @@ const FileTransferCard: React.FC = () => {
   };
 
   const handleGoBack = () => {
-    const parentPath = browsePath.split('/').slice(0, -1).join('/') || '/';
+    if (browsePath === '/' || browsePath === '') {
+      return; // Already at root
+    }
+    
+    // Get parent directory
+    const pathParts = browsePath.split('/').filter(Boolean);
+    pathParts.pop(); // Remove last part to get parent
+    const parentPath = pathParts.length > 0 ? `/${pathParts.join('/')}/` : '/';
+    
     handleNavigateToPath(parentPath);
+  };
+
+  const handleFileDoubleClick = (file: DeviceFile) => {
+    if (file.isDirectory) {
+      handleNavigateToPath(file.path);
+    } else {
+      // Handle file selection for transfer
+      setCurrentPath(file.path);
+      addNotification({
+        type: "success",
+        title: "文件已选择",
+        message: `已选择文件: ${file.name}`,
+      });
+    }
   };
 
   const handleClearCompleted = () => {
@@ -221,6 +280,58 @@ const FileTransferCard: React.FC = () => {
       size: "2.5 MB",
     };
     setTransfers(prev => [...prev, newTransfer]);
+  };
+
+  const formatFileSize = (size: number) => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  };
+
+  const handleUploadFile = async () => {
+    if (!selectedDevice) {
+      addNotification({
+        type: "warning",
+        title: "设备未选择",
+        message: "请先选择一个设备",
+      });
+      return;
+    }
+
+    // TODO: Implement actual file upload functionality
+    addNotification({
+      type: "info",
+      title: "功能开发中",
+      message: "文件上传功能正在开发中",
+    });
+  };
+
+  const handleDownloadFile = async () => {
+    if (!selectedDevice) {
+      addNotification({
+        type: "warning",
+        title: "设备未选择",
+        message: "请先选择一个设备",
+      });
+      return;
+    }
+
+    if (!currentPath || currentPath.endsWith('/')) {
+      addNotification({
+        type: "warning",
+        title: "文件未选择",
+        message: "请先选择要下载的文件",
+      });
+      return;
+    }
+
+    // TODO: Implement actual file download functionality
+    addNotification({
+      type: "info",
+      title: "功能开发中",
+      message: "文件下载功能正在开发中",
+    });
   };
 
   return (
@@ -256,10 +367,27 @@ const FileTransferCard: React.FC = () => {
           </Badge>
           <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
             <Button
+              appearance="primary"
+              size="small"
+              icon={<ArrowUpload24Regular />}
+              onClick={handleUploadFile}
+            >
+              上传文件
+            </Button>
+            <Button
+              appearance="secondary"
+              size="small"
+              icon={<ArrowDownload24Regular />}
+              onClick={handleDownloadFile}
+            >
+              下载文件
+            </Button>
+            <Button
               appearance="subtle"
               size="small"
               icon={<ArrowUpload24Regular />}
               onClick={() => addMockTransfer("upload")}
+              title="添加模拟上传任务用于测试"
             >
               模拟上传
             </Button>
@@ -268,6 +396,7 @@ const FileTransferCard: React.FC = () => {
               size="small"
               icon={<ArrowDownload24Regular />}
               onClick={() => addMockTransfer("download")}
+              title="添加模拟下载任务用于测试"
             >
               模拟下载
             </Button>
@@ -332,9 +461,19 @@ const FileTransferCard: React.FC = () => {
                     appearance="subtle"
                     icon={<ArrowLeft24Regular />}
                     onClick={handleGoBack}
-                    disabled={browsePath === "/" || isLoadingFiles}
+                    disabled={browsePath === "/" || !browsePath || isLoadingFiles}
+                    title="返回上级目录"
                   >
-                    返回上级
+                    上级
+                  </Button>
+                  <Button
+                    appearance="subtle"
+                    icon={<Home24Regular />}
+                    onClick={() => handleNavigateToPath('/sdcard/')}
+                    disabled={browsePath === '/sdcard/' || isLoadingFiles}
+                    title="返回主目录"
+                  >
+                    主目录
                   </Button>
                   <Field label="当前路径:" style={{ flex: 1 }}>
                     <Input
@@ -342,11 +481,52 @@ const FileTransferCard: React.FC = () => {
                       onChange={(_, data) => setBrowsePath(data.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          loadDeviceFiles(browsePath);
+                          loadDeviceFiles(data.value);
                         }
                       }}
+                      placeholder="/sdcard/"
                     />
                   </Field>
+                  <Button 
+                    appearance="primary" 
+                    icon={<ArrowClockwise24Regular />}
+                    onClick={() => loadDeviceFiles(browsePath)}
+                    disabled={isLoadingFiles}
+                    title="刷新当前目录"
+                  >
+                    刷新
+                  </Button>
+                </div>
+                
+                {/* 面包屑导航 */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                  <Button 
+                    appearance="subtle" 
+                    size="small" 
+                    onClick={() => handleNavigateToPath('/')}
+                    disabled={browsePath === '/'}
+                  >
+                    根目录
+                  </Button>
+                  <Text>/</Text>
+                  {browsePath && browsePath !== '/' && browsePath.split('/')
+                    .filter(Boolean)
+                    .map((part, index, parts) => {
+                      const path = '/' + parts.slice(0, index + 1).join('/') + '/';
+                      return (
+                        <React.Fragment key={path}>
+                          <Button 
+                            appearance="subtle" 
+                            size="small" 
+                            onClick={() => handleNavigateToPath(path)}
+                            disabled={path === browsePath}
+                          >
+                            {part}
+                          </Button>
+                          {index < parts.length - 1 && <Text>/</Text>}
+                        </React.Fragment>
+                      );
+                    })}
                 </div>
 
                 {/* 文件列表 */}
@@ -367,32 +547,64 @@ const FileTransferCard: React.FC = () => {
                               display: "flex",
                               alignItems: "center",
                               gap: "8px",
-                              padding: "8px",
-                              borderRadius: "4px",
-                              cursor: file.isDirectory ? "pointer" : "default"
+                              padding: "12px",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              border: "1px solid transparent",
+                              transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--colorNeutralBackground1Hover)';
+                              e.currentTarget.style.borderColor = 'var(--colorNeutralStroke2)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.borderColor = 'transparent';
                             }}
                             onClick={() => {
                               if (file.isDirectory) {
                                 handleNavigateToPath(file.path);
+                              } else {
+                                // Single click selects file
+                                setCurrentPath(file.path);
+                                addNotification({
+                                  type: "info",
+                                  title: "文件已选择",
+                                  message: `已选择: ${file.name}`,
+                                });
                               }
                             }}
+                            onDoubleClick={() => handleFileDoubleClick(file)}
                           >
-                            {file.isDirectory ? <Folder24Regular /> : <Document24Regular />}
-                            <div style={{ flex: 1 }}>
-                              <Text weight={file.isDirectory ? "semibold" : "regular"}>
-                                {file.name}
-                              </Text>
-                              {!file.isDirectory && file.size && (
-                                <Text size={200} style={{ color: "var(--colorNeutralForeground2)", marginLeft: "8px" }}>
-                                  ({(file.size / 1024).toFixed(1)} KB)
-                                </Text>
-                              )}
-                            </div>
-                            {file.permissions && (
-                              <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                                {file.permissions}
-                              </Text>
+                            {file.isDirectory ? (
+                              <Folder24Regular style={{ color: "var(--colorPaletteBlueForeground1)", fontSize: "20px" }} />
+                            ) : (
+                              <Document24Regular style={{ color: "var(--colorNeutralForeground2)", fontSize: "20px" }} />
                             )}
+                            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <Text weight={file.isDirectory ? "semibold" : "regular"} size={300}>
+                                  {file.name}
+                                </Text>
+                                {file.isDirectory && (
+                                  <Badge appearance="outline" size="small" color="brand">
+                                    文件夹
+                                  </Badge>
+                                )}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                {!file.isDirectory && file.size && (
+                                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                                    {formatFileSize(file.size)}
+                                  </Text>
+                                )}
+                                {file.permissions && (
+                                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                                    {file.permissions}
+                                  </Text>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         ))
                       )}

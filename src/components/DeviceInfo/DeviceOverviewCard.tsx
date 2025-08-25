@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   makeStyles,
+  mergeClasses,
   Card,
   Text,
   Button,
@@ -218,29 +219,41 @@ const useStyles = makeStyles({
   },
   // 头部中的标签页样式
   headerTabList: {
-    flex: "1 1 auto", // 允许伸缩
+    flex: "1 1 auto",
     "& .fui-TabList": {
-      minHeight: "32px", // 减小标签页高度
-      backgroundColor: "transparent", // 透明背景
+      minHeight: "32px",
+      backgroundColor: "transparent",
     },
     "& .fui-Tab": {
-      fontSize: "12px", // 减小字体以适应头部
-      padding: "6px 12px", // 调整内边距
-      minHeight: "28px", // 减小最小高度
-      borderRadius: "6px", // 添加圆角
-      transition: "all 0.2s ease", // 添加过渡动画
+      fontSize: "12px",
+      padding: "6px 12px",
+      minHeight: "28px",
+      borderRadius: "6px",
+      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      border: "1px solid transparent",
+      fontWeight: 500,
+      color: "var(--colorNeutralForeground2)",
+      
+      "&:hover": {
+        backgroundColor: "var(--colorNeutralBackground2)",
+        color: "var(--colorNeutralForeground1)",
+        transform: "translateY(-1px)",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+      },
+      
+      "&[aria-selected='true']": {
+        backgroundColor: "var(--colorBrandBackground2)",
+        color: "var(--colorBrandForeground1)",
+        border: "1px solid var(--colorBrandStroke2)",
+        fontWeight: 600,
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+      },
     },
-    "& .fui-Tab:hover": {
-      backgroundColor: "var(--colorNeutralBackground2Hover)", // 悬停效果
-    },
-    "& .fui-Tab[aria-selected='true']": {
-      backgroundColor: "var(--colorBrandBackground)", // 选中状态背景
-      color: "var(--colorNeutralForegroundOnBrand)", // 选中状态文字颜色
-    },
+    
     "@media (max-width: 768px)": {
       "& .fui-Tab": {
-        fontSize: "11px", // 移动端进一步减小字体
-        padding: "4px 8px", // 移动端减少内边距
+        fontSize: "11px",
+        padding: "4px 8px",
       },
     },
   },
@@ -509,7 +522,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
       <Toaster />
       <Card className={styles.card}>
         {/* 卡片头部 */}
-        <div className={`${styles.header} ${styles.noSelect}`}>
+        <div className={mergeClasses(styles.header, styles.noSelect)}>
           {/* 左半部分：设备信息、标签页、刷新按钮 */}
           <div className={styles.headerLeft}>
             {/* 第一行：信息面板标题 */}
@@ -754,7 +767,7 @@ const BasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles 
   }, [device.serial, device.connected]);
 
   return (
-  <div className={`${styles.infoGrid} ${styles.noSelect}`}>
+  <div className={mergeClasses(styles.infoGrid, styles.noSelect)}>
     <div className={styles.infoItem}>
       <Text className={styles.infoLabel}>设备名称</Text>
       <div
@@ -850,7 +863,7 @@ const BasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles 
 
 // 硬件信息面板
 const HardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => (
-  <div className={`${styles.infoGrid} ${styles.noSelect}`}>
+  <div className={mergeClasses(styles.infoGrid, styles.noSelect)}>
     <div className={styles.infoItem}>
       <Text className={styles.infoLabel}>CPU架构</Text>
       <div
@@ -915,7 +928,7 @@ const HardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styl
 
 // 系统信息面板
 const SystemInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => (
-  <div className={`${styles.infoGrid} ${styles.noSelect}`}>
+  <div className={mergeClasses(styles.infoGrid, styles.noSelect)}>
     <div className={styles.infoItem}>
       <Text className={styles.infoLabel}>Bootloader锁</Text>
       <div

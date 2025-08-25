@@ -50,7 +50,9 @@
     "copyright": "© 2020-2025 领创工作室 All rights reserved.",
     "licenseFile": "../LICENSE",
     "externalBin": [],
-    "resources": [],
+    "resources": [
+      "../tools/scrcpy-win32-v3.3.1/*"
+    ],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",

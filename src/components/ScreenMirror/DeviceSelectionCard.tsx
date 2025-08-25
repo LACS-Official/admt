@@ -1,6 +1,7 @@
-import React  from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   makeStyles,
+  mergeClasses,
   Card,
   CardHeader,
   Text,
@@ -139,9 +140,10 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
           {devices.map((device) => (
             <div
               key={device.serial}
-              className={`${styles.deviceItem} ${
-                selectedDevice?.serial === device.serial ? styles.selectedDevice : ""
-              }`}
+              className={mergeClasses(
+                styles.deviceItem,
+                selectedDevice?.serial === device.serial && styles.selectedDevice
+              )}
               onClick={() => handleDeviceClick(device)}
               style={{
                 opacity: device.isSupported ? 1 : 0.6,

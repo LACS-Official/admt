@@ -1,10 +1,11 @@
-import React, { useState }  from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
+  makeStyles,
+  mergeClasses,
   Card,
   CardHeader,
   Text,
   Button,
-  makeStyles,
   tokens,
   Badge,
   Divider,
@@ -199,7 +200,7 @@ export const SecurityTest: React.FC = () => {
       </Card>
 
       {/* 测试说明 */}
-      <Card className={`${styles.card} ${styles.instructionsCard}`}>
+      <Card className={mergeClasses(styles.card, styles.instructionsCard)}>
         <CardHeader
           header={<Text weight="semibold" size={400}>测试说明</Text>}
         />

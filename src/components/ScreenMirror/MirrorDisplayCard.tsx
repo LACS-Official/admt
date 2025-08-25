@@ -348,18 +348,6 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session }) => {
     );
   }
 
-  return (
-    <Card className={styles.card}>
-      <CardHeader
-        className={styles.header}
-        header={<Text weight="semibold">投屏显示</Text>}
-        description={`设备: ${session.deviceName || session.deviceSerial}`}
-      />
-      <div className={styles.content}>
-        {displayContent}
-      </div>
-    </Card>
-  );
 };
 
 export default MirrorDisplayCard;

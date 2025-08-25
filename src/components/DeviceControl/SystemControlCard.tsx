@@ -18,15 +18,13 @@ import {
 } from "@fluentui/react-components";
 import {
   Settings24Regular,
-  BrightnessHigh24Regular,
-  Speaker224Regular,
   Power24Regular,
   Screenshot24Regular,
   LockClosed24Regular,
   Home24Regular,
   ArrowLeft24Regular,
   Apps24Regular,
-  Navigation24Regular,
+  WrenchScrewdriver24Regular,
   Phone24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
@@ -84,10 +82,6 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
   const { deviceService } = useDeviceService();
   const { addNotification } = useAppStore();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
-  const [brightnessValue, setBrightnessValue] = useState("128");
-  const [volumeValue, setVolumeValue] = useState("50");
-  const [showBrightnessDialog, setShowBrightnessDialog] = useState(false);
-  const [showVolumeDialog, setShowVolumeDialog] = useState(false);
 
   const executeCommand = async (commandId: string, command: string[], description: string) => {
     if (!device.connected) {
@@ -126,41 +120,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
     }
   };
 
-  const handleBrightnessChange = () => {
-    const brightness = parseInt(brightnessValue);
-    if (brightness >= 0 && brightness <= 255) {
-      executeCommand(
-        "brightness",
-        ["shell", "settings", "put", "system", "screen_brightness", brightnessValue],
-        `设置屏幕亮度为 ${brightness}`
-      );
-      setShowBrightnessDialog(false);
-    } else {
-      addNotification({
-        type: "error",
-        title: "参数错误",
-        message: "亮度值必须在0-255之间",
-      });
-    }
-  };
 
-  const handleVolumeChange = () => {
-    const volume = parseInt(volumeValue);
-    if (volume >= 0 && volume <= 100) {
-      executeCommand(
-        "volume",
-        ["shell", "media", "volume", "--set", volume.toString()],
-        `设置音量为 ${volume}%`
-      );
-      setShowVolumeDialog(false);
-    } else {
-      addNotification({
-        type: "error",
-        title: "参数错误",
-        message: "音量值必须在0-100之间",
-      });
-    }
-  };
 
   const systemCommands = [
     {
@@ -206,18 +166,11 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
       description: "唤醒设备屏幕",
     },
     {
-      id: "navigation",
-      label: "导航栏",
-      icon: <Navigation24Regular />,
-      command: ["shell", "wm", "overscan", "0,0,0,0"],
-      description: "重置导航栏边距",
-    },
-    {
-      id: "rotation",
-      label: "旋转屏幕",
-      icon: <Phone24Regular />,
-      command: ["shell", "settings", "put", "system", "accelerometer_rotation", "1"],
-      description: "启用自动旋转",
+      id: "developer_options",
+      label: "开发者选项",
+      icon: <WrenchScrewdriver24Regular />,
+      command: ["shell", "am", "start", "-a", "android.settings.APPLICATION_DEVELOPMENT_SETTINGS"],
+      description: "打开开发者选项",
     },
   ];
 
@@ -250,77 +203,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
             </Button>
           ))}
           
-          {/* 亮度控制按钮 */}
-          <Dialog open={showBrightnessDialog} onOpenChange={(_, data) => setShowBrightnessDialog(data.open)}>
-            <DialogTrigger disableButtonEnhancement>
-              <Button
-                appearance="outline"
-                className={styles.commandButton}
-                disabled={!isDeviceAvailable}
-              >
-                <BrightnessHigh24Regular className={styles.commandIcon} />
-                <Text className={styles.commandLabel}>屏幕亮度</Text>
-              </Button>
-            </DialogTrigger>
-            <DialogSurface>
-              <DialogTitle>设置屏幕亮度</DialogTitle>
-              <DialogContent>
-                <DialogBody>
-                  <Field label="亮度值 (0-255)" className={styles.inputField}>
-                    <Input
-                      value={brightnessValue}
-                      onChange={(_, data) => setBrightnessValue(data.value)}
-                      placeholder="输入亮度值"
-                    />
-                  </Field>
-                </DialogBody>
-                <DialogActions>
-                  <Button appearance="secondary" onClick={() => setShowBrightnessDialog(false)}>
-                    取消
-                  </Button>
-                  <Button appearance="primary" onClick={handleBrightnessChange}>
-                    设置
-                  </Button>
-                </DialogActions>
-              </DialogContent>
-            </DialogSurface>
-          </Dialog>
 
-          {/* 音量控制按钮 */}
-          <Dialog open={showVolumeDialog} onOpenChange={(_, data) => setShowVolumeDialog(data.open)}>
-            <DialogTrigger disableButtonEnhancement>
-              <Button
-                appearance="outline"
-                className={styles.commandButton}
-                disabled={!isDeviceAvailable}
-              >
-                <Speaker224Regular className={styles.commandIcon} />
-                <Text className={styles.commandLabel}>音量控制</Text>
-              </Button>
-            </DialogTrigger>
-            <DialogSurface>
-              <DialogTitle>设置音量</DialogTitle>
-              <DialogContent>
-                <DialogBody>
-                  <Field label="音量值 (0-100)" className={styles.inputField}>
-                    <Input
-                      value={volumeValue}
-                      onChange={(_, data) => setVolumeValue(data.value)}
-                      placeholder="输入音量值"
-                    />
-                  </Field>
-                </DialogBody>
-                <DialogActions>
-                  <Button appearance="secondary" onClick={() => setShowVolumeDialog(false)}>
-                    取消
-                  </Button>
-                  <Button appearance="primary" onClick={handleVolumeChange}>
-                    设置
-                  </Button>
-                </DialogActions>
-              </DialogContent>
-            </DialogSurface>
-          </Dialog>
         </div>
 
         {!isDeviceAvailable && (

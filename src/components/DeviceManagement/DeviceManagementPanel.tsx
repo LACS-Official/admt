@@ -18,8 +18,6 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import FileManagerPanel from "../FileManager/FileManagerPanel";
 import ScreenMirrorPanel from "../ScreenMirror/ScreenMirrorPanel";
 import AppManagerPanel from "../AppManager/AppManagerPanel";
-import DeveloperToolCard from "../Tools/DeveloperToolCard";
-
 const useStyles = makeStyles({
   container: {
     height: "100%",
@@ -69,7 +67,7 @@ const useStyles = makeStyles({
   },
 });
 
-type DeviceManagementView = "file-manager" | "screen-mirror" | "app-manager" | "developer-tools";
+type DeviceManagementView = "file-manager" | "screen-mirror" | "app-manager";
 
 const DeviceManagementPanel: React.FC = () => {
   const styles = useStyles();
@@ -94,11 +92,6 @@ const DeviceManagementPanel: React.FC = () => {
       label: "应用管理",
       icon: <Apps24Regular />,
     },
-    {
-      id: "developer-tools" as DeviceManagementView,
-      label: "开发工具",
-      icon: <Code24Regular />,
-    },
   ];
 
   const renderContent = () => {
@@ -111,8 +104,6 @@ const DeviceManagementPanel: React.FC = () => {
         return <ScreenMirrorPanel />;
       case "app-manager":
         return <AppManagerPanel />;
-      case "developer-tools":
-        return <DeveloperToolCard device={selectedDevice} />;
       default:
         return <FileManagerPanel />;
     }
@@ -120,23 +111,6 @@ const DeviceManagementPanel: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Phone24Regular />
-          <Text size={500} weight="semibold">设备管理</Text>
-          {selectedDevice && (
-            <Badge appearance="filled" color="success">
-              {selectedDevice.serial}
-            </Badge>
-          )}
-        </div>
-        
-        <div className={styles.headerRight}>
-          <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-            {connectedDevices.length} 台设备已连接
-          </Text>
-        </div>
-      </div>
 
       {connectedDevices.length === 0 ? (
         <div className={styles.noDevice}>

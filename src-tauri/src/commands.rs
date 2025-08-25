@@ -2250,6 +2250,113 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
     }
 }
 
+/// 运行USB修复脚本（用于对话框界面）
+#[tauri::command]
+pub async fn run_usb_fix_script() -> Result<CommandResult> {
+    log::info!("Starting USB fix script for dialog interface");
+
+    #[cfg(windows)]
+    {
+        use std::process::{Command, Stdio};
+
+        // 获取当前工作目录并构建bat文件路径
+        let current_dir = std::env::current_dir().map_err(|e| {
+            HoutError::IoError { 
+                message: format!("Failed to get current directory: {}", e) 
+            }
+        })?;
+        
+        let bat_path = current_dir.join("tools").join("lacs").join("Usb_fix.bat");
+        
+        if !bat_path.exists() {
+            return Ok(CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some(format!("USB修复脚本未找到: {}", bat_path.display())),
+                exit_code: Some(1),
+            });
+        }
+
+        log::info!("Running USB fix script at: {}", bat_path.display());
+
+        // 使用PowerShell以管理员权限运行bat文件
+        let mut cmd = Command::new("powershell");
+        cmd.args(&[
+            "-Command",
+            &format!(
+                "Start-Process -FilePath 'cmd' -ArgumentList '/c', '\"{}\"', '1' -Verb RunAs -Wait -WindowStyle Hidden",
+                bat_path.display()
+            )
+        ]);
+        
+        cmd.stdout(Stdio::piped())
+           .stderr(Stdio::piped());
+
+        match cmd.spawn() {
+            Ok(mut child) => {
+                let mut output = String::new();
+                
+                // 等待进程完成
+                match child.wait() {
+                    Ok(status) => {
+                        if status.success() {
+                            output.push_str("USB 3.0修复脚本执行完成\n");
+                            output.push_str("已修改注册表项以解决USB 3.0连接问题\n");
+                            output.push_str("请重新连接您的Android设备\n");
+                            
+                            log::info!("USB fix script completed successfully");
+                            Ok(CommandResult {
+                                success: true,
+                                output,
+                                error: None,
+                                exit_code: Some(0),
+                            })
+                        } else {
+                            let error_msg = "USB修复脚本执行失败，可能需要管理员权限".to_string();
+                            log::error!("USB fix script failed with status: {}", status);
+                            Ok(CommandResult {
+                                success: false,
+                                output: output,
+                                error: Some(error_msg),
+                                exit_code: status.code(),
+                            })
+                        }
+                    }
+                    Err(e) => {
+                        let error_msg = format!("等待USB修复脚本完成时出错: {}", e);
+                        log::error!("{}", error_msg);
+                        Ok(CommandResult {
+                            success: false,
+                            output: output,
+                            error: Some(error_msg),
+                            exit_code: Some(1),
+                        })
+                    }
+                }
+            }
+            Err(e) => {
+                let error_msg = format!("启动USB修复脚本失败: {}", e);
+                log::error!("{}", error_msg);
+                Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(error_msg),
+                    exit_code: Some(1),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("USB 3.0修复功能仅在Windows系统上可用".to_string()),
+            exit_code: Some(1),
+        })
+    }
+}
 
 /// 打开设备管理器
 #[tauri::command]
@@ -2533,6 +2640,10 @@ fn find_project_scrcpy() -> Result<String> {
                 // 在 tools 目录
                 current_dir.join("tools").join("scrcpy.exe"),
                 current_dir.join("tools").join("scrcpy").join("scrcpy.exe"),
+                // 在 tools/scrcpy-win32-v3.3.1 目录 (用户指定路径)
+                current_dir.join("tools").join("scrcpy-win32-v3.3.1").join("scrcpy.exe"),
+                // 在 tools/scrcpy-win64-v3.3.1 目录
+                current_dir.join("tools").join("scrcpy-win64-v3.3.1").join("scrcpy.exe"),
             ];
 
             for scrcpy_path in &scrcpy_locations {

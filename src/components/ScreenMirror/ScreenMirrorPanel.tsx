@@ -19,7 +19,6 @@ import { ScreenMirrorDevice } from "../../types/screenMirror";
 import ScreenMirrorService from "../../services/screenMirrorService";
 import DeviceSelectionCard from "./DeviceSelectionCard";
 import MirrorDisplayCard from "./MirrorDisplayCard";
-import ControlPanelCard from "./ControlPanelCard";
 import SettingsCard from "./SettingsCard";
 
 const useStyles = makeStyles({
@@ -47,7 +46,6 @@ const useStyles = makeStyles({
   content: {
     display: "grid",
     gridTemplateColumns: "300px 1fr",
-    gridTemplateRows: "auto 1fr",
     gap: "16px",
     height: "calc(100% - 80px)",
   },
@@ -146,14 +144,14 @@ const ScreenMirrorPanel: React.FC = () => {
     checkDeviceSupport();
   }, [connectedDevices.length]); // 只依赖设备数量
 
-  const handleStartMirror = async () => {
-    if (!mirrorDevice || !canStartMirroring()) return;
+  const handleStartMirror = async (device: ScreenMirrorDevice) => {
+    if (!device || !canStartMirroring()) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const session = await ScreenMirrorService.startMirror(mirrorDevice.serial, config);
+      const session = await ScreenMirrorService.startMirror(device.serial, config);
       setCurrentSession(session);
       console.log("Screen mirror started:", session);
     } catch (error) {
@@ -161,6 +159,16 @@ const ScreenMirrorPanel: React.FC = () => {
       setError(`启动投屏失败: ${error}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 处理设备选择，自动开始投屏
+  const handleDeviceSelect = async (device: ScreenMirrorDevice | null) => {
+    selectDevice(device);
+    
+    // 如果选择了设备且当前没有投屏会话，自动开始投屏
+    if (device && !currentSession) {
+      await handleStartMirror(device);
     }
   };
 
@@ -227,15 +235,7 @@ const ScreenMirrorPanel: React.FC = () => {
         </div>
         
         <div className={styles.headerRight}>
-          <Button
-            appearance="subtle"
-            icon={<Settings24Regular />}
-            onClick={toggleSettings}
-          >
-            设置
-          </Button>
-          
-          {isStreaming() ? (
+          {isStreaming() && (
             <Button
               appearance="primary"
               icon={isLoading ? <Spinner size="tiny" /> : <Stop24Regular />}
@@ -243,15 +243,6 @@ const ScreenMirrorPanel: React.FC = () => {
               disabled={isLoading}
             >
               停止投屏
-            </Button>
-          ) : (
-            <Button
-              appearance="primary"
-              icon={isLoading ? <Spinner size="tiny" /> : <Play24Regular />}
-              onClick={handleStartMirror}
-              disabled={!canStartMirroring() || isLoading}
-            >
-              开始投屏
             </Button>
           )}
         </div>
@@ -279,31 +270,21 @@ const ScreenMirrorPanel: React.FC = () => {
             <DeviceSelectionCard 
               devices={supportedDevices}
               selectedDevice={mirrorDevice}
-              onSelectDevice={selectDevice}
+              onSelectDevice={handleDeviceSelect}
               isLoading={isLoading}
             />
-            
-            {showSettings && (
-              <SettingsCard />
-            )}
           </div>
           
           <div className={styles.rightPanel}>
-            {isStreaming() ? (
-              <MirrorDisplayCard session={currentSession!} />
-            ) : (
-              <div className={styles.noDevice}>
-                <Desktop24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-                <Text size={400}>选择设备开始投屏</Text>
-                <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  从左侧选择一个支持投屏的设备
-                </Text>
-              </div>
+            <SettingsCard />
+            
+            {isStreaming() && (
+              <>
+                <MirrorDisplayCard session={currentSession!} />
+              </>
             )}
             
-            {currentSession && (
-              <ControlPanelCard session={currentSession} />
-            )}
+
           </div>
         </div>
       )}

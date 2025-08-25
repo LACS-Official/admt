@@ -1,4 +1,4 @@
-import React, { useState }  from 'react';
+import React, { useState } from 'react';
 import {
   makeStyles,
   Text,
@@ -25,7 +25,7 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import FileTransferCard from "./FileTransferCard";
-import ApkInstallCard from "./ApkInstallCard";
+import FileBrowserCard from "./FileBrowserCard";
 import { open, save } from "@tauri-apps/plugin-dialog";
 
 const useStyles = makeStyles({
@@ -97,6 +97,7 @@ const FileManagerPanel: React.FC = () => {
   const [localPath, setLocalPath] = useState("");
   const [remotePath, setRemotePath] = useState("/sdcard/");
   const [isTransferring, setIsTransferring] = useState(false);
+  const [currentPath, setCurrentPath] = useState("/sdcard/");
 
   const handleUpload = () => {
     if (!selectedDevice) {
@@ -231,137 +232,16 @@ const FileManagerPanel: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Folder24Regular />
-          <Text size={500} weight="semibold">文件管理</Text>
-        </div>
-        
-        <div className={styles.headerRight}>
-          {selectedDevice && (
-            <Badge appearance="filled" color="success">
-              {selectedDevice.serial}
-            </Badge>
-          )}
-
-          <Button
-            appearance="primary"
-            icon={isTransferring ? <Spinner size="small" /> : <ArrowUpload24Regular />}
-            onClick={handleUpload}
-            disabled={!selectedDevice || isTransferring}
-          >
-            上传文件
-          </Button>
-
-          <Button
-            appearance="secondary"
-            icon={isTransferring ? <Spinner size="small" /> : <ArrowDownload24Regular />}
-            onClick={handleDownload}
-            disabled={!selectedDevice || isTransferring}
-          >
-            下载文件
-          </Button>
-        </div>
-      </div>
-
       <div className={styles.content}>
+        <FileBrowserCard 
+          currentPath={currentPath}
+          onPathChange={(path) => {
+            setCurrentPath(path);
+            setRemotePath(path);
+          }}
+        />
         <FileTransferCard />
-        <ApkInstallCard />
       </div>
-
-      {/* 文件上传对话框 */}
-      <Dialog open={uploadDialogOpen} onOpenChange={(_, data) => setUploadDialogOpen(data.open)}>
-        <DialogSurface>
-          <DialogTitle>上传文件到设备</DialogTitle>
-          <DialogContent>
-            <DialogBody>
-              <Field label="本地文件路径:">
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <Input
-                    value={localPath}
-                    onChange={(_, data) => setLocalPath(data.value)}
-                    placeholder="例如: C:\Users\用户名\Desktop\file.txt"
-                    style={{ flex: 1 }}
-                  />
-                  <Button
-                    appearance="secondary"
-                    icon={<FolderOpen24Regular />}
-                    onClick={handleBrowseUploadFile}
-                  >
-                    浏览
-                  </Button>
-                </div>
-              </Field>
-              <Field label="设备目标路径:">
-                <Input
-                  value={remotePath}
-                  onChange={(_, data) => setRemotePath(data.value)}
-                  placeholder="例如: /sdcard/Download/"
-                />
-              </Field>
-            </DialogBody>
-          </DialogContent>
-          <DialogActions>
-            <DialogTrigger disableButtonEnhancement>
-              <Button appearance="secondary">取消</Button>
-            </DialogTrigger>
-            <Button
-              appearance="primary"
-              onClick={confirmUpload}
-              disabled={!localPath || !remotePath}
-            >
-              开始上传
-            </Button>
-          </DialogActions>
-        </DialogSurface>
-      </Dialog>
-
-      {/* 文件下载对话框 */}
-      <Dialog open={downloadDialogOpen} onOpenChange={(_, data) => setDownloadDialogOpen(data.open)}>
-        <DialogSurface>
-          <DialogTitle>从设备下载文件</DialogTitle>
-          <DialogContent>
-            <DialogBody>
-              <Field label="设备文件路径:">
-                <Input
-                  value={remotePath}
-                  onChange={(_, data) => setRemotePath(data.value)}
-                  placeholder="例如: /sdcard/Download/file.txt"
-                />
-              </Field>
-              <Field label="本地保存路径:">
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <Input
-                    value={localPath}
-                    onChange={(_, data) => setLocalPath(data.value)}
-                    placeholder="例如: C:\Users\用户名\Desktop\file.txt"
-                    style={{ flex: 1 }}
-                  />
-                  <Button
-                    appearance="secondary"
-                    icon={<FolderOpen24Regular />}
-                    onClick={handleBrowseDownloadPath}
-                  >
-                    浏览
-                  </Button>
-                </div>
-              </Field>
-            </DialogBody>
-          </DialogContent>
-          <DialogActions>
-            <DialogTrigger disableButtonEnhancement>
-              <Button appearance="secondary">取消</Button>
-            </DialogTrigger>
-            <Button
-              appearance="primary"
-              onClick={confirmDownload}
-              disabled={!localPath || !remotePath}
-            >
-              开始下载
-            </Button>
-          </DialogActions>
-        </DialogSurface>
-      </Dialog>
     </div>
   );
 };

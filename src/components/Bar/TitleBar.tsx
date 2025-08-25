@@ -1,8 +1,9 @@
 import React from "react";
 import {
   makeStyles,
-  Button,
+  mergeClasses,
   Text,
+  Button,
   Tooltip,
 } from "@fluentui/react-components";
 import {
@@ -180,7 +181,7 @@ const TitleBar: React.FC = () => {
   };
 
   return (
-    <div className={`${styles.titleBar} drag-region`}>
+    <div className={mergeClasses(styles.titleBar, "drag-region")}>
       <div className={styles.leftSection}>
         <div className={styles.logo}>
           <AppIcon size="medium"/>
@@ -188,7 +189,7 @@ const TitleBar: React.FC = () => {
         <Text className={styles.title}>玩机管家-Android Device Management Tool</Text>
       </div>
       
-      <div className={`${styles.rightSection} no-drag`}>
+      <div className={mergeClasses(styles.rightSection, "no-drag")}>
         {/* 用户信息按钮 - 始终显示 */}
         <UserInfoModal>
           <Tooltip content="我的信息" relationship="label">
@@ -261,7 +262,7 @@ const TitleBar: React.FC = () => {
           <Button
             appearance="subtle"
             icon={<Dismiss24Regular />}
-            className={`${styles.titleBarButton} ${styles.closeButton}`}
+            className={mergeClasses(styles.titleBarButton, styles.closeButton)}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
