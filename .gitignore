@@ -7,6 +7,7 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
+node_modules/
 
 # Environment variables
 .env
