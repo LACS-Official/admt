@@ -3150,10 +3150,10 @@ pub async fn get_detailed_device_fingerprint() -> Result<DetailedDeviceFingerpri
 
 /// 打开开发者工具（仅在调试模式下可用）
 #[tauri::command]
-pub async fn open_devtools(app: tauri::AppHandle) -> Result<()> {
+pub async fn open_devtools(_app: tauri::AppHandle) -> Result<()> {
     #[cfg(debug_assertions)]
     {
-        if let Some(window) = app.get_webview_window("main") {
+        if let Some(window) = _app.get_webview_window("main") {
             window.open_devtools();
             log::info!("开发者工具已打开");
             Ok(())

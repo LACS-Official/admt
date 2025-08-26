@@ -11,7 +11,7 @@ export const isDevelopment = (): boolean => {
     (typeof process !== 'undefined' && process.env?.TAURI_ENV === 'dev') ||
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1' ||
-    window.location.protocol === 'tauri:' && window.__TAURI_INTERNALS__?.metadata?.debug === true
+    window.location.protocol === 'tauri:' && (window as any).__TAURI_INTERNALS__?.metadata?.debug === true
   );
 };
 

@@ -35,6 +35,7 @@ class UserBehaviorService {
   private deviceFingerprint: string | null = null
   private retryTimer: number | null = null
   private secureTransmission: SecureDataTransmissionService
+  private isInitialized = false
 
   constructor(config?: Partial<UserBehaviorConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config }

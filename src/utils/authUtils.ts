@@ -26,6 +26,18 @@ export interface RequestSignature {
 }
 
 /**
+ * 兼容实例风格调用的接口
+ */
+export interface AuthUtilsInstance {
+  /** 初始化（获取JWT令牌） */
+  initialize(userDeviceFingerprint?: string): Promise<void>
+  /** 获取可用令牌（没有则尝试请求并返回） */
+  getValidToken(): Promise<string | undefined>
+  /** 刷新令牌 */
+  refreshToken(): Promise<void>
+}
+
+/**
  * 认证工具类
  */
 export class AuthUtils {
@@ -208,6 +220,30 @@ export class AuthUtils {
    */
   static clearAuth(): void {
     this.config.jwtToken = undefined
+  }
+
+  /**
+   * 提供实例式API以兼容现有调用方（如 `AuthUtils.getInstance().initialize()`）
+   */
+  static getInstance(): AuthUtilsInstance {
+    return {
+      initialize: async (userDeviceFingerprint?: string) => {
+        await AuthUtils.initializeAuth(userDeviceFingerprint)
+      },
+      getValidToken: async () => {
+        const existing = AuthUtils.getJwtToken()
+        if (existing) return existing
+        try {
+          const token = await AuthUtils.requestJwtToken()
+          return token
+        } catch {
+          return undefined
+        }
+      },
+      refreshToken: async () => {
+        await AuthUtils.requestJwtToken()
+      }
+    }
   }
 }
 

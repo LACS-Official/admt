@@ -129,7 +129,6 @@ class DeviceIdentificationManager {
       screen.colorDepth.toString(),
       new Date().getTimezoneOffset().toString(),
       navigator.hardwareConcurrency?.toString() || '0',
-      navigator.deviceMemory?.toString() || '0'
     ]
 
     // 添加一些随机性以确保唯一性
