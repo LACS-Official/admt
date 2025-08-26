@@ -105,3 +105,4 @@ activation-data/
 user-data/
 cache/
 build.log
+src-tauri/target
