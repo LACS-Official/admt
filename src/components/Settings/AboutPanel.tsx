@@ -281,7 +281,8 @@ const AboutPanel: React.FC = () => {
     officialWebsite: "https://www.lacs.cc",
     officialADMTWeb: "https://admt.lacs.cc",
     officialGroup: "https://your-organization.com/group",
-    contact: "https://your-organization.com/contact"
+    contact: "https://your-organization.com/contact",
+    donate: "https://www.lacs.cc/donate",
   };
 
   const handleCheckUpdate = () => {
@@ -296,10 +297,12 @@ const AboutPanel: React.FC = () => {
     openUrl(links.feedback);
   };
 
-
-
   const handleOpenSourceInfo = () => {
     setIsOpenSourceDialogOpen(true);
+  };
+
+  const handleDonate = () => {
+    openUrl(links.donate);
   };
 
   const handleThanksInfo = () => {
@@ -314,7 +317,7 @@ const AboutPanel: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.content}>
         {/* 关于 - 应用信息 */}
-        <Card className={mergeClasses(styles.card, styles.aboutSection)}>
+        <Card className={mergeClasses(styles.card)}>
           <CardHeader
             image={<Info24Regular />}
             header={<Text weight="semibold">关于</Text>}
@@ -368,7 +371,7 @@ const AboutPanel: React.FC = () => {
         
 
         {/* 开发团队信息 */}
-        <Card className={mergeClasses(styles.card, styles.aboutSection)}>
+        <Card className={mergeClasses(styles.card)}>
           <CardHeader
             image={<Building24Regular />}
             header={<Text weight="semibold">开发团队信息</Text>}
@@ -539,7 +542,7 @@ const AboutPanel: React.FC = () => {
                 appearance="primary" 
                 size="medium"
                 icon={<Code24Regular />}
-                onClick={handleOpenSourceInfo}
+                onClick={handleDonate}
               >
                 捐赠我们
               </Button>
@@ -547,7 +550,7 @@ const AboutPanel: React.FC = () => {
                 appearance="primary" 
                 size="medium"
                 icon={<Code24Regular />}
-                onClick={handleOpenSourceInfo}
+                onClick={handleDonate}
               >
                 支持列表
               </Button>
