@@ -10,7 +10,6 @@ import {
   Spinner,
   Badge,
   Text,
-  Textarea,
   makeStyles,
 } from "@fluentui/react-components";
 import {
@@ -28,12 +27,26 @@ import { writeTextFile, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
 
+// 简化的批处理执行参数接口
+interface BatchExecuteParams {
+  title: string;
+  batchFileName: string;
+  workingDirectory: string;
+}
+
+// 原有的组件 Props 接口（保持向后兼容）
 interface BatchExecutorDialogProps {
   open: boolean;
   title: string;
   batchFileName: string;
   workingDirectory: string;
   onClose: () => void;
+}
+
+// 自定义 Hook 返回值接口
+interface UseBatchExecutorReturn {
+  executeBatch: (params: BatchExecuteParams) => void;
+  BatchExecutorDialog: React.FC;
 }
 
 interface CommandResult {
@@ -272,10 +285,65 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
     return coloredText;
   };
 
+  // 中文编码处理函数
+  const decodeChineseText = (text: string): string => {
+    try {
+      // 检测是否包含可能的乱码字符
+      if (text.includes('�') || /[\x80-\xFF]/.test(text)) {
+        // 尝试修复常见的 GBK 到 UTF-8 的乱码问题
+        // 这里使用一些启发式方法来修复常见的中文乱码
+        let fixedText = text;
+        
+        // 修复一些常见的乱码模式
+        const gbkToUtf8Map: { [key: string]: string } = {
+          'ÐÞ¸´': '修复',
+          'ÍêÉÏ': '完成',
+          'Ê§°Ü': '失败',
+          'ÕýÔÚ': '正在',
+          'Ö´ÐÐ': '执行',
+          'ÇëÒÔ': '请以',
+          'ÄÚ´æ': '内存',
+          'ÎÄ¼þ': '文件',
+          'ÏµÍ³': '系统',
+          'ÉèÖÃ': '设置',
+          'Ó¦ÓÃ': '应用',
+          'ÈÏÖ¤': '认证',
+          'Á¬½Ó': '连接',
+          'ÉÏ´«': '上传',
+          'ÏÂÔØ': '下载',
+          'ÆôÓÃ': '启用',
+          'ÍêÕû': '完整',
+          'Ö´ÐÐÍêÉÏ': '执行完成',
+          'Ö´ÐÐÊ§°Ü': '执行失败',
+          'ÕýÔÚÖ´ÐÐ': '正在执行',
+          'ÇëÖØÆô': '请重启',
+          'µçÄÔ': '电脑',
+          'ÉúÐ§': '生效'
+        };
+        
+        // 应用乱码修复映射
+        for (const [garbled, correct] of Object.entries(gbkToUtf8Map)) {
+          fixedText = fixedText.replace(new RegExp(garbled, 'g'), correct);
+        }
+        
+        return fixedText;
+      }
+      
+      // 如果没有检测到乱码，直接返回原文本
+      return text;
+    } catch (error) {
+      console.warn('Failed to decode Chinese text:', error);
+      return text;
+    }
+  };
+
   // 添加输出内容的函数
   const appendOutput = useCallback((newOutput: string, type: 'stdout' | 'stderr' | 'info' | 'error' = 'stdout') => {
+    // 处理中文编码
+    const decodedOutput = decodeChineseText(newOutput);
+    
     const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
-    const coloredOutput = getColoredOutput(newOutput, type);
+    const coloredOutput = getColoredOutput(decodedOutput, type);
     const formattedOutput = `[${timestamp}] ${coloredOutput}`;
     
     setOutput(prev => prev + formattedOutput);
@@ -663,6 +731,44 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
     </Dialog>
   </>
   );
+};
+
+// 简化的自定义 Hook，提供一键调用 API
+export const useBatchExecutor = (): UseBatchExecutorReturn => {
+  const [dialogState, setDialogState] = useState({
+    open: false,
+    title: "",
+    batchFileName: "",
+    workingDirectory: ""
+  });
+
+  const executeBatch = useCallback((params: BatchExecuteParams) => {
+    setDialogState({
+      open: true,
+      title: params.title,
+      batchFileName: params.batchFileName,
+      workingDirectory: params.workingDirectory
+    });
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setDialogState(prev => ({ ...prev, open: false }));
+  }, []);
+
+  const BatchExecutorDialogComponent = useCallback(() => (
+    <BatchExecutorDialog
+      open={dialogState.open}
+      title={dialogState.title}
+      batchFileName={dialogState.batchFileName}
+      workingDirectory={dialogState.workingDirectory}
+      onClose={handleClose}
+    />
+  ), [dialogState, handleClose]);
+
+  return {
+    executeBatch,
+    BatchExecutorDialog: BatchExecutorDialogComponent
+  };
 };
 
 export default BatchExecutorDialog;

@@ -72,6 +72,12 @@ interface AppManagementCardProps {
   device: DeviceInfo;
 }
 
+/**
+ * A component to manage the apps on the device, including installing, uninstalling, 
+ * starting, stopping and clearing the data of an app.
+ * 
+ * @param {DeviceInfo} device - The device to manage apps on.
+ */
 const AppManagementCard: React.FC<AppManagementCardProps> = ({ device }) => {
   const styles = useStyles();
   const { deviceService } = useDeviceService();

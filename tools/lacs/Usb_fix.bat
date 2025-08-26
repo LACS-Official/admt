@@ -1,63 +1,70 @@
-@ECHO OFF
-
+﻿@ECHO OFF
+chcp 65001 >nul
 
 mode con cols=70 lines=40
 setlocal EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
-title USB3�޸�_v1 by�촴������
-::Copyright ? 2025 �촴������. All Rights Reserved.
+::Copyright (C) 2025 领创工作室. All Rights Reserved.
 
-:menu
 cls
-echo=============================================================
+echo =============================================================
+echo. USB3.0fix _By LACS                   
 echo.
-echo. USB3�޸�_v1 by�촴������
-echo. 
-echo. 0.�˳� 1.�޸� 2.ȡ��
+echo =============================================================
 echo.
-echo=============================================================
-set /p choice="��ѡ��: "
-if "%choice%"=="1" call :modifyRegistry "add"
-if "%choice%"=="2" call :modifyRegistry "delete"
-if "%choice%"=="0" exit
-goto invalid_choice
+
+call :modifyRegistry "add"
+call :showRebootNotice
+exit /b
 
 :modifyRegistry
 set "action=%~1"
 set "key=HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\18D1D00D0100"
 set "regOptions=/f"
 
+echo.
 if /i "%action%"=="add" (
-    reg add "%key%" /v "osvc" /t REG_BINARY /d "0000" %regOptions% || echo �޸�ʧ��
-    reg add "%key%" /v "SkipContainerIdQuery" /t REG_BINARY /d "01000000" %regOptions% || echo �޸�ʧ��
-    reg add "%key%" /v "SkipBOSDescriptorQuery" /t REG_BINARY /d "01000000" %regOptions% || echo �޸�ʧ��
-    echo �޸��ɹ�
+    echo 正在应用USB3修复...
+    reg add "%key%" /v "osvc" /t REG_BINARY /d "0000" %regOptions% >nul 2>&1
+    if !errorlevel! equ 0 (
+        reg add "%key%" /v "SkipContainerIdQuery" /t REG_BINARY /d "01000000" %regOptions% >nul 2>&1
+    )
+    if !errorlevel! equ 0 (
+        reg add "%key%" /v "SkipBOSDescriptorQuery" /t REG_BINARY /d "01000000" %regOptions% >nul 2>&1
+    )
+    if !errorlevel! equ 0 (
+        echo USB3修复已成功应用!
+    ) else (
+        echo USB3修复应用失败，请以管理员权限运行此程序!
+    )
 ) else if /i "%action%"=="delete" (
-    reg delete "%key%" /v "osvc" %regOptions% || echo �޸�ʧ��
-    reg delete "%key%" /v "SkipContainerIdQuery" %regOptions% || echo �޸�ʧ��
-    reg delete "%key%" /v "SkipBOSDescriptorQuery" %regOptions% || echo �޸�ʧ��
-    echo �޸��ɹ�
+    echo 正在撤销USB3修复...
+    reg delete "%key%" /v "osvc" %regOptions% >nul 2>&1
+    if !errorlevel! equ 0 (
+        reg delete "%key%" /v "SkipContainerIdQuery" %regOptions% >nul 2>&1
+    )
+    if !errorlevel! equ 0 (
+        reg delete "%key%" /v "SkipBOSDescriptorQuery" %regOptions% >nul 2>&1
+    )
+    if !errorlevel! equ 0 (
+        echo USB3修复已成功撤销!
+    ) else (
+        echo USB3修复撤销失败，请以管理员权限运行此程序!
+    )
 ) else (
-    echo ��Чѡ��
+    echo 无效操作
     exit /b 1
 )
+exit /b
 
-:invalid_choice
-echo. ��Чѡ��
-timeout /t 1 /nobreak >nul
-goto menu
-
-:reboot
-cls
-echo=============================================================
+:showRebootNotice
 echo.
-echo �޸��ɹ�
-echo ��ѡ������
-echo 1.����
-echo 0.����
+echo =============================================================
 echo.
-echo=============================================================
-set /p choice="��ѡ��: "
-if "%choice%"=="1" shutdown /r /t 0 /c "�޸�USB3�޸�_v1 by�촴������"
-if "%choice%"=="0" exit
-goto invalid_choice
+echo USB3修复已完成
+echo.
+echo 请重启电脑使更改生效
+echo.
+echo =============================================================
+echo.
+exit /b

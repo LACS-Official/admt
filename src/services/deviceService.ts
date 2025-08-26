@@ -8,7 +8,7 @@ import { deviceConnectionTrackingService } from "./deviceConnectionTrackingServi
 import { generateDeviceUniqueIdFromProperties } from "../utils/deviceIdentification";
 
 export class DeviceService {
-  private scanInterval: number | null = null;
+  private scanInterval: ReturnType<typeof setInterval> | null = null;
   private isScanning = false;
   private connectedDevices = new Map<string, { connectedAt: Date; properties?: DeviceProperties }>();
 
@@ -217,6 +217,20 @@ export class DeviceService {
       return result;
     } catch (error) {
       console.error("Failed to check Fastboot availability:", error);
+      throw error;
+    }
+  }
+
+  async fastbootFlashImage(serial: string, imagePath: string, partition: string): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("fastboot_flash_image", {
+        serial,
+        imagePath,
+        partition,
+      });
+      return result;
+    } catch (error) {
+      console.error("Failed to flash image via fastboot:", error);
       throw error;
     }
   }
@@ -460,7 +474,7 @@ export class DeviceService {
         deviceSerial: device.serial,
         deviceBrand: properties?.brand,
         deviceModel: properties?.model,
-        osVersion: properties?.android_version,
+        osVersion: properties?.androidVersion,
       };
 
       await deviceConnectionTrackingService.recordDeviceConnection(connectionData);
@@ -529,14 +543,12 @@ export const useDeviceService = () => {
     scanningRef.current = true;
     deviceService.startScanning(config.scanInterval);
 
-    // 只在第一次启动时显示通知
-    if (!deviceService.isScanning) {
-      addNotification({
-        type: "info",
-        title: "设备扫描",
-        message: `开始扫描连接的设备（间隔：${config.scanInterval}ms）`,
-      });
-    }
+    // 显示启动扫描通知
+    addNotification({
+      type: "info",
+      title: "设备扫描",
+      message: `开始扫描连接的设备（间隔：${config.scanInterval}ms）`,
+    });
   }, [addNotification, config.scanInterval]);
 
   const stopScanning = useCallback(() => {
