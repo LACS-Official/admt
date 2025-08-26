@@ -11,14 +11,16 @@ import {
   Code24Regular,
   Settings24Regular,
   Play24Regular,
+  Apps24Regular,
   Folder24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import AdbToolsPanel from "../AdbTools/AdbToolsPanel";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
-import FileManagerPanel from "../FileManager/FileManagerPanel";
 import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
 import AppManagerPanel from './AppManagerPanel';
+import AppInstallPanel from './AppInstallPanel';
+import FileManagerPanel from './FileManagerPanel';
 
 const useStyles = makeStyles({
   container: {
@@ -77,7 +79,7 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "adb-tools" | "device-control" | "file-manager" | "screen-mirror" | "app-manager" ;
+type AdbZoneView = "adb-tools" | "device-control" | "app_install" | "file-manager" | "screen-mirror" | "app-manager" ;
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -98,20 +100,26 @@ const AdbZonePanel: React.FC = () => {
       icon: <Play24Regular />,
     },
     {
-      id: "file-manager" as AdbZoneView,
-      label: "文件管理",
-      icon: <Folder24Regular />,
-    },
-    {
       id: "screen-mirror" as AdbZoneView,
       label: "屏幕共享",
       icon: <Settings24Regular />,
     },
     {
+      id: "app_install" as AdbZoneView,
+      label: "应用安装",
+      icon: <Apps24Regular />,
+    },
+    {
       id: "app-manager" as AdbZoneView,
       label: "应用管理",
       icon: <Settings24Regular />,
-    }
+    },
+    {
+      id: "file-manager" as AdbZoneView,
+      label: "文件管理",
+      icon: <Folder24Regular />,
+    },
+
   ];
 
   const renderContent = () => {
@@ -137,12 +145,6 @@ const AdbZonePanel: React.FC = () => {
             <SystemControlCard device={selectedDevice} />
           </div>
         );
-      case "file-manager":
-        return (
-          <div style={{ height: "100%", overflow: "hidden" }}>
-            <FileManagerPanel />
-          </div>
-        );
       case "screen-mirror":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
@@ -153,6 +155,19 @@ const AdbZonePanel: React.FC = () => {
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
             <AppManagerPanel />
+          </div>
+        );
+
+      case "app_install":
+        return (
+          <div style={{ height: "100%", overflow: "hidden" }}>
+            <AppInstallPanel />
+          </div>
+        );
+      case "file-manager":
+        return (
+          <div style={{ height: "100%", overflow: "hidden" }}>
+            <FileManagerPanel />
           </div>
         );
       default:

@@ -487,13 +487,14 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
               {/* 操作按钮（仅当三个脚本都存在时显示） */}
               {selectedFolderPath && missingFiles.length === 0 && (
                 <div className={styles.actions}>
+                  <Text>2. 开始线刷</Text>
                   <Button appearance="primary" icon={<Play24Regular />} onClick={() => {
                     setBatchDialogTitle("线刷清数据 (flash_all.bat)");
                     setBatchFileName("flash_all.bat");
                     setBatchWorkingDirectory(selectedFolderPath);
                     setBatchDialogOpen(true);
                   }}>
-                    数据
+                    线刷清数据
                   </Button>
                   <Button appearance="secondary" icon={<Play24Regular />} onClick={() => {
                     setBatchDialogTitle("线刷不清数据 (flash_all_except_storage.bat)");
@@ -509,7 +510,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
                     setBatchWorkingDirectory(selectedFolderPath);
                     setBatchDialogOpen(true);
                   }}>
-                    线刷回锁
+                    线刷清数据并回锁
                   </Button>
                 </div>
               )}

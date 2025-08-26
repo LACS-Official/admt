@@ -26,6 +26,7 @@ import {
 
 import { useAppStore } from "../../stores/appStore";
 import { invoke } from "@tauri-apps/api/core";
+import { useBatchExecutor } from "../Common/BatchExecutorDialog";
 
 const useStyles = makeStyles({
   card: {
@@ -172,6 +173,7 @@ interface MiscFunction {
 const MiscellaneousCard: React.FC = () => {
   const styles = useStyles();
   const { setStatusBarMessage } = useAppStore();
+  const { executeBatch, BatchExecutorDialog } = useBatchExecutor();
 
   const [executingFunction, setExecutingFunction] = useState<string | null>(null);
 
@@ -256,25 +258,29 @@ const MiscellaneousCard: React.FC = () => {
 
   // USB修复对话框处理函数
   const handleUsbFixStart = async () => {
-    setUsbFixStatus('running');
-    setUsbFixOutput('正在启动USB 3.0修复工具...\n');
+    // 关闭当前对话框
+    setShowUsbFixDialog(false);
     
-    try {
-      // 调用Tauri后端执行bat脚本
-      const result = await invoke('run_usb_fix_script') as { success: boolean; output?: string; error?: string };
-      
-      if (result.success) {
-        setUsbFixStatus('success');
-        setUsbFixOutput(prev => prev + '\n修复完成！\n' + (result.output || ''));
-      } else {
-        setUsbFixStatus('error');
-        setUsbFixOutput(prev => prev + '\n修复失败：' + (result.error || '未知错误'));
-      }
-    } catch (error) {
-      setUsbFixStatus('error');
-      setUsbFixOutput(prev => prev + '\n修复失败：' + String(error));
-    }
+    // 使用 BatchExecutorDialog 执行 USB 修复脚本
+    executeBatch({
+      title: "USB 3.0 修复工具",
+      batchFileName: "Usb_fix.bat",
+      workingDirectory: "tools/lacs"
+    });
   };
+
+  const handleUsbUnFixStart = async () => {
+    // 关闭当前对话框
+    setShowUsbFixDialog(false);
+    
+    // 使用 BatchExecutorDialog 执行 USB 修复脚本
+    executeBatch({
+      title: "USB 3.0 修复工具",
+      batchFileName: "Usb_Unfix.bat",
+      workingDirectory: "tools/lacs"
+    });
+  };
+
 
   const handleUsbFixClose = () => {
     setShowUsbFixDialog(false);
@@ -453,6 +459,13 @@ const MiscellaneousCard: React.FC = () => {
                 >
                   开始修复
                 </Button>
+                <Button 
+                  appearance="primary" 
+                  onClick={handleUsbUnFixStart}
+                  icon={<Wrench24Regular />}
+                >
+                  撤销修复
+                </Button>
               </>
             )}
             
@@ -478,6 +491,8 @@ const MiscellaneousCard: React.FC = () => {
         </DialogSurface>
       </Dialog>
 
+      {/* BatchExecutorDialog 组件 */}
+      <BatchExecutorDialog />
     </>
   );
 };

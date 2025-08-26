@@ -481,8 +481,19 @@ pub async fn list_device_files(serial: String, path: String) -> Result<Vec<Devic
         });
     }
 
+    // 使用 ls -la：通用且可从权限位判断是否目录
     let args = vec!["-s", &serial, "shell", "ls", "-la", &path];
     let result = utils_execute_adb_command(&args, Some(30)).await?;
+
+    // 调试输出：打印原始命令和结果
+    println!("=== ADB 命令调试 ===");
+    println!("执行命令: adb -s {} shell ls -la {}", serial, path);
+    println!("命令成功: {}", result.success);
+    println!("原始输出:\n{}", result.output);
+    if let Some(ref error) = result.error {
+        println!("错误信息: {}", error);
+    }
+    println!("=== 调试结束 ===");
 
     if !result.success {
         return Err(HoutError::CommandFailed {
@@ -492,41 +503,72 @@ pub async fn list_device_files(serial: String, path: String) -> Result<Vec<Devic
     }
 
     let mut files = Vec::new();
+    let mut line_count = 0;
+    println!("=== 开始解析文件列表 ===");
+    
     for line in result.output.lines() {
+        line_count += 1;
+        println!("处理第{}行: '{}'", line_count, line);
+        
         if line.trim().is_empty() || line.starts_with("total") {
+            println!("跳过空行或total行");
             continue;
         }
 
-        // 解析ls -la输出格式
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() >= 9 {
-            let permissions = parts[0].to_string();
-            let is_directory = permissions.starts_with('d');
-            let size = if is_directory { None } else { parts[4].parse().ok() };
-            let name = parts[8..].join(" ");
-
-            // 跳过 . 和 .. 目录
-            if name == "." || name == ".." {
-                continue;
-            }
-
-            let file_path = if path.ends_with('/') {
-                format!("{}{}", path, name)
-            } else {
-                format!("{}/{}", path, name)
-            };
-
-            files.push(DeviceFile {
-                name,
-                path: file_path,
-                is_directory,
-                size,
-                permissions: Some(permissions),
-                modified_time: None, // 可以后续解析时间信息
-            });
+        // 解析 ls -la 输出：从权限位判断目录，并提取名称
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("total") {
+            println!("跳过空行/total行");
+            continue;
         }
+
+        // 例：drwxr-xr-x  2 u0_a123 u0_a123    4096 Aug  1 12:34 Download
+        let is_directory = trimmed.chars().next() == Some('d');
+        let parts: Vec<&str> = trimmed.split_whitespace().collect();
+        println!("分割字段数: {}, 内容: {:?}", parts.len(), parts);
+
+        let name = if parts.len() >= 9 {
+            // 名称可能包含空格，使用 splitn 获取第9个字段之后的所有内容
+            let name_part_vec: Vec<&str> = trimmed.splitn(9, ' ').collect();
+            let mut nm = if name_part_vec.len() >= 9 { name_part_vec[8].to_string() } else { parts.last().unwrap_or(&"").to_string() };
+            // 处理符号链接："name -> target" 取左侧 name
+            if let Some(idx) = nm.find(" -> ") {
+                nm = nm[..idx].to_string();
+            }
+            nm
+        } else {
+            // 回退：取最后一个字段
+            parts.last().unwrap_or(&"").to_string()
+        };
+        
+        println!("处理后文件名: '{}', 是目录: {}", name, is_directory);
+        
+        // 跳过 . 和 .. 目录
+        if name == "." || name == ".." {
+            println!("跳过特殊目录: {}", name);
+            continue;
+        }
+
+        let file_path = if path.ends_with('/') {
+            format!("{}{}", path, name)
+        } else {
+            format!("{}/{}", path, name)
+        };
+
+        let file = DeviceFile {
+            name: name.clone(),
+            path: file_path,
+            is_directory,
+            size: None, // ls -F 没有大小信息
+            permissions: None, // ls -F 没有权限信息
+            modified_time: None,
+        };
+        
+        println!("添加文件到列表: {:?}", file);
+        files.push(file);
     }
 
+    println!("=== 解析完成，共找到 {} 个文件 ===", files.len());
     Ok(files)
 }
 
@@ -976,6 +1018,20 @@ pub async fn scan_fastboot_devices() -> Result<CommandResult> {
 
     log::info!("Fastboot devices result: success={}, output='{}', error={:?}",
         result.success, result.output, result.error);
+
+    Ok(result)
+}
+
+/// 使用 Fastboot 刷入镜像到指定分区
+#[tauri::command]
+pub async fn fastboot_flash_image(serial: String, image_path: String, partition: String) -> Result<CommandResult> {
+    log::info!(
+        "Fastboot flashing image. serial={}, partition={}, image_path={}",
+        serial, partition, image_path
+    );
+
+    let args = vec!["-s", &serial, "flash", &partition, &image_path];
+    let result = execute_fastboot_command(&args, Some(300)).await?;
 
     Ok(result)
 }

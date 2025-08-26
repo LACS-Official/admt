@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { makeStyles, Spinner, Text } from "@fluentui/react-components";
+import { makeStyles, Spinner, Text, MessageBar } from "@fluentui/react-components";
 import TitleBar from "./components/Bar/TitleBar";
 import MainContent from "./components/MainContent/MainContent";
 import StatusBar from "./components/Bar/StatusBar";
@@ -50,15 +50,116 @@ const useStyles = makeStyles({
   spinner: {
     width: "40px",
     height: "40px",
+  },
+  errorNotification: {
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    background: "linear-gradient(135deg, var(--colorNeutralBackground1) 0%, var(--colorNeutralBackground2) 100%)",
+  },
+  errorHeader: {
+    flex: "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 32px 24px",
+  },
+  errorHeaderContent: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "16px",
+  },
+  errorTitle: {
+    fontSize: "28px",
+    fontWeight: "600",
+    color: "var(--colorPaletteRedForeground1)",
+    textAlign: "center",
+  },
+  errorSubtitle: {
+    fontSize: "16px",
+    color: "var(--colorNeutralForeground2)",
+    textAlign: "center",
+  },
+  errorBody: {
+    flex: "1 1 auto",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0 32px",
+  },
+  errorContent: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "24px",
+    padding: "48px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    borderRadius: "20px",
+    boxShadow: "0 16px 64px rgba(0, 0, 0, 0.15)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    maxWidth: "800px",
+    width: "100%",
+    minHeight: "300px",
+  },
+  errorMessage: {
+    width: "100%",
+    fontSize: "16px",
+  },
+  errorDetails: {
+    backgroundColor: "var(--colorNeutralBackground2)",
+    padding: "20px",
+    borderRadius: "12px",
+    width: "100%",
+    border: "1px solid var(--colorNeutralStroke2)",
+  },
+  errorDetailsText: {
+    fontSize: "14px",
+    color: "var(--colorNeutralForeground2)",
+    lineHeight: "1.5",
+    textAlign: "center",
+  },
+  errorFooter: {
+    flex: "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px 32px 48px",
+  },
+  countdownContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "12px",
+    padding: "24px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "16px",
+    border: "1px solid var(--colorNeutralStroke2)",
+  },
+  countdownText: {
+    color: "var(--colorNeutralForeground1)",
+    fontSize: "16px",
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  countdownNumber: {
+    fontSize: "32px",
+    fontWeight: "700",
+    color: "var(--colorPaletteRedForeground1)",
+    textAlign: "center",
+    minWidth: "50px",
   }
 });
 
 function App() {
   const styles = useStyles();
   const [isLoading, setIsLoading] = useState(true);
-  const [, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [showStartupFlow, setShowStartupFlow] = useState(true); // 启用启动流程
   const [isMainContentLoading, setIsMainContentLoading] = useState(false); // 主内容加载状态
+  const [showErrorNotification, setShowErrorNotification] = useState(false); // 错误通知显示状态
+  const [countdown, setCountdown] = useState(5); // 倒计时状态
 
 
   const { initialize, config } = useAppStore();
@@ -111,11 +212,37 @@ function App() {
     }, 300);
   };
 
-  const handleStartupFlowError = (error: string) => {
+  const handleStartupFlowError = async (error: string) => {
     logService.error('启动流程失败', 'App', error);
     setError(error);
-    // 即使启动流程失败，也允许用户继续使用应用
+    
+    // 显示错误通知并开始倒计时
     setShowStartupFlow(false);
+    setIsMainContentLoading(false);
+    setShowErrorNotification(true);
+    setCountdown(5);
+    
+    // 倒计时逻辑
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          // 倒计时结束，退出应用
+          setTimeout(async () => {
+            try {
+              const { exit } = await import('@tauri-apps/plugin-process');
+              await exit(1);
+            } catch (exitError) {
+              console.error('退出应用失败:', exitError);
+              // 如果 Tauri API 不可用，尝试关闭窗口
+              window.close();
+            }
+          }, 100);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   // 加载中状态 - 现在直接进入启动流程，不显示单独的加载页面
@@ -131,6 +258,52 @@ function App() {
         <div className={styles.loadingContent}>
           <Spinner className={styles.spinner} />
           <Text className={styles.loadingText}>正在加载主界面...</Text>
+        </div>
+      </div>
+    );
+  }
+
+  // 显示错误通知
+  if (showErrorNotification && error) {
+    return (
+      <div className={styles.errorNotification}>
+        {/* 顶部标题区域 */}
+        <div className={styles.errorHeader}>
+          <div className={styles.errorHeaderContent}>
+            <Text className={styles.errorTitle}>⚠️ 启动失败</Text>
+            <Text className={styles.errorSubtitle}>应用程序在启动过程中遇到了问题</Text>
+          </div>
+        </div>
+
+        {/* 中间内容区域 */}
+        <div className={styles.errorBody}>
+          <div className={styles.errorContent}>
+            <MessageBar intent="error" className={styles.errorMessage}>
+              <Text weight="semibold">错误详情</Text>
+            </MessageBar>
+            
+            <div className={styles.errorDetails}>
+              <Text className={styles.errorDetailsText}>
+                {error}
+              </Text>
+            </div>
+
+            <div className={styles.errorDetails}>
+              <Text className={styles.errorDetailsText}>
+                这通常是由于网络连接问题、系统权限不足或必要组件缺失导致的。
+                请检查网络连接后重新启动应用程序。
+              </Text>
+            </div>
+          </div>
+        </div>
+
+        {/* 底部倒计时区域 */}
+        <div className={styles.errorFooter}>
+          <div className={styles.countdownContainer}>
+            <Text className={styles.countdownText}>应用将自动退出</Text>
+            <Text className={styles.countdownNumber}>{countdown}</Text>
+            <Text className={styles.countdownText}>秒</Text>
+          </div>
         </div>
       </div>
     );
