@@ -178,8 +178,8 @@ export class VersionService {
         };
       }
 
-      // 使用新的API响应格式
-      const softwareInfo = apiResponse.data;
+      // 使用新的API响应格式（data 中包含 software 与 versions）
+      const softwareInfo = apiResponse.data.software;
       const latestVersionNumber = softwareInfo.currentVersion || currentVersion;
       
       console.log(`最新版本: ${latestVersionNumber}`);
@@ -208,7 +208,8 @@ export class VersionService {
         releaseNotes: softwareInfo.description || '发现新版本，请立即更新',
         releaseDate: softwareInfo.updatedAt || new Date().toISOString(),
         downloadLinks: {
-          official: softwareInfo.latestDownloadUrl || softwareInfo.officialWebsite
+          // SoftwareInfo 不包含 latestDownloadUrl，使用官网地址作为下载链接
+          official: softwareInfo.officialWebsite
         },
         isStable: true,
         versionType: "release" as const

@@ -23,6 +23,7 @@ export enum WelcomeStep {
 // 用户配置接口
 export interface UserConfiguration {
   username: string;
+  email?: string;
   language: string;
   theme: 'light' | 'dark' | 'auto';
   autoStart: boolean;

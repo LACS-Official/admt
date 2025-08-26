@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "玩机管家",
   "version": "1.0.0",
-  "identifier": "com.hout.toolkit",
+  "identifier": "com.lacs.admt",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -36,7 +36,7 @@
 
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": "nsis",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -45,18 +45,21 @@
       "icons/icon.ico"
     ],
     "category": "Utility",
-    "shortDescription": "Android设备管理工具",
-    "longDescription": "玩机管家是一个现代化的Android设备管理工具，提供设备信息查看、文件管理、ADB工具、应用管理等功能。",
+    "shortDescription": "Android设备跨平台全能管家",
+    "longDescription": "玩机管家是一个现代化的Android设备跨平台全能管家，提供设备信息查看、文件管理、ADB工具、应用管理等功能。",
     "copyright": "© 2020-2025 领创工作室 All rights reserved.",
     "licenseFile": "../LICENSE",
     "externalBin": [],
     "resources": [
-      "../tools/scrcpy-win32-v3.3.1/*"
+      "../tools"
     ],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
       "timestampUrl": "",
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
       "wix": {
         "language": "zh-CN",
         "template": null,

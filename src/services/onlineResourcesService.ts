@@ -275,6 +275,7 @@ class OnlineResourcesService {
    * 开始下载软件（新版本：支持自动解压和配置文件生成）
    */
   async downloadSoftware(software: OnlineSoftware): Promise<string> {
+    let taskId: string = '';
     try {
       // 检查下载限制
       const downloadCheck = this.canStartDownload();
@@ -286,8 +287,8 @@ class OnlineResourcesService {
         throw new Error('没有可用的下载链接');
       }
 
-      const taskId = `download_${software.id}_${Date.now()}`;
-
+      taskId = `download_${software.id}_${Date.now()}`;
+      
       // 获取默认下载目录
       const { invoke } = await import('@tauri-apps/api/core');
       const downloadDir = await invoke('get_default_download_directory') as string;
@@ -348,7 +349,7 @@ class OnlineResourcesService {
       console.error('❌ 下载软件失败:', error);
 
       // 更新任务状态为失败
-      const task = this.downloadTasks.get(taskId);
+      const task = taskId ? this.downloadTasks.get(taskId) : undefined;
       if (task) {
         task.status = 'failed';
         task.endTime = new Date();

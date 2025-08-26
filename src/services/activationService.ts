@@ -303,8 +303,9 @@ export class ActivationService {
         activationLogger.warn('STATISTICS', '激活统计记录失败');
       }
     } catch (error) {
-      activationLogger.error('STATISTICS', '记录激活统计时出错', { error: error.message });
-      throw error;
+      const err = error instanceof Error ? error : new Error(String(error));
+      activationLogger.error('STATISTICS', '记录激活统计时出错', err, { errorMessage: err.message });
+      throw err;
     }
   }
 

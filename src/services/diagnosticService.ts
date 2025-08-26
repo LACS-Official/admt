@@ -157,8 +157,8 @@ ${this.generateRecommendations(adbFastbootDiag)}
       recommendations.push('   请确保 src-tauri/resources/ 目录存在');
     } else {
       // 检查具体哪个资源目录有工具文件
-      const hasAdbInAnyDir = diagnostic.resource_directories.some(dir => dir.adb_exists);
-      const hasFastbootInAnyDir = diagnostic.resource_directories.some(dir => dir.fastboot_exists);
+      const hasAdbInAnyDir = diagnostic.resource_directories.some(dir => dir.type === 'adb');
+      const hasFastbootInAnyDir = diagnostic.resource_directories.some(dir => dir.type === 'fastboot');
 
       if (!hasAdbInAnyDir && !hasFastbootInAnyDir) {
         recommendations.push('❌ 所有资源目录中都没有找到 ADB 和 Fastboot 工具');

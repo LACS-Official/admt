@@ -197,9 +197,9 @@ export class SecurityProtection {
     let consecutiveDetections = 0;
     const requiredDetections = 3; // 需要连续检测到3次才认为是真的打开了开发者工具
 
-    const checkInterval = setInterval(() => {
+    const checkInterval = window.setInterval(() => {
       if (!this.protectionEnabled) {
-        clearInterval(checkInterval);
+        window.clearInterval(checkInterval);
         return;
       }
 

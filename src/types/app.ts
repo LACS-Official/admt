@@ -170,7 +170,7 @@ export interface AnnouncementResponse {
 
 // 在线资源相关类型
 export interface OnlineSoftware {
-  fileSize(fileSize: any): import("react").ReactNode;
+  fileSize?: number;
   id: number;
   name: string;
   nameEn?: string;
@@ -182,6 +182,7 @@ export interface OnlineSoftware {
   category?: string;
   tags?: string[];
   officialWebsite?: string;
+  iconUrl?: string;
   openname?: string;
   filetype?: string;
   systemRequirements?: {
@@ -217,7 +218,7 @@ export interface DownloadTask {
   fileName: string;
   downloadUrl: string;
   progress: number;
-  status: "pending" | "downloading" | "downloaded" | "extracting" | "completed" | "failed" | "cancelled";
+  status: "pending" | "downloading" | "paused" | "downloaded" | "extracting" | "completed" | "failed" | "cancelled";
   error?: string;
   startTime: Date;
   endTime?: Date;
