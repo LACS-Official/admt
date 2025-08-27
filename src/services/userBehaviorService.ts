@@ -16,11 +16,14 @@ import {
 } from '../types/userBehavior'
 import { AuthUtils } from '../utils/authUtils'
 import { SecureDataTransmissionService } from './secureDataTransmissionService'
+import { DeviceConnectionTrackingService } from './deviceConnectionTrackingService'
+import { UsageTrackingService } from './usageTrackingService'
+import { SecurityConfigManager } from '../config/securityConfig'
 import { usePrivacyConsentStore } from '../stores/privacyConsentStore'
 
 // 默认配置
 const DEFAULT_CONFIG: UserBehaviorConfig = {
-  apiBaseUrl: 'http://localhost:3000', // 开发环境，生产环境需要修改
+  apiBaseUrl: '', // 将在运行时从 SecurityConfig 获取
   softwareId: 1001, // 玩机管家软件ID
   softwareName: '玩机管家',
   enableOfflineCache: true,
@@ -67,6 +70,18 @@ class UserBehaviorService {
     try {
       // 初始化安全数据传输服务
       await this.secureTransmission.initialize()
+
+      // 从安全配置获取API地址
+      const configManager = SecurityConfigManager.getInstance()
+      try {
+        const securityConfig = configManager.getConfig()
+        if (securityConfig && securityConfig.api_base_url) {
+          this.config.apiBaseUrl = securityConfig.api_base_url
+          console.log('✅ 用户行为服务API地址已更新:', this.config.apiBaseUrl)
+        }
+      } catch (error) {
+        console.warn('获取安全配置失败，使用默认API地址:', error)
+      }
 
       // 初始化设备指纹
       await this.initializeDeviceFingerprint()
