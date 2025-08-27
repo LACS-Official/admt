@@ -4,7 +4,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import { DeviceStatsRequest, DeviceStatsResponse } from '../../database/schema/optimized-device-stats';
+import { DeviceStatsRequest, DeviceStatsResponse } from '../types/optimizedDeviceStats';
 import { usePrivacyConsentStore } from '../stores/privacyConsentStore';
 
 export interface OptimizedUserBehaviorConfig {
