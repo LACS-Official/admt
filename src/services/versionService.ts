@@ -126,35 +126,50 @@ export class VersionService {
    * 调用软件信息API获取最新版本信息
    */
   private async fetchLatestVersionFromAPI(): Promise<VersionCheckResponse> {
-    try {
-      console.log(`正在检查软件版本，软件ID: ${API_CONFIG.SOFTWARE_ID}`);
+    let lastError: Error | null = null;
+    
+    // 重试机制
+    for (let attempt = 1; attempt <= API_CONFIG.RETRY_COUNT; attempt++) {
+      try {
+        console.log(`正在检查软件版本，软件ID: ${API_CONFIG.SOFTWARE_ID} (尝试 ${attempt}/${API_CONFIG.RETRY_COUNT})`);
 
-      const baseUrl = getApiBaseUrl();
-      // 使用软件基本信息API而不是版本历史API
-      const url = `${baseUrl}/app/software/id/${API_CONFIG.SOFTWARE_ID}`;
+        const baseUrl = getApiBaseUrl();
+        // 使用软件基本信息API而不是版本历史API
+        const url = `${baseUrl}/app/software/id/${API_CONFIG.SOFTWARE_ID}`;
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: getDefaultHeaders(),
-        signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
-      });
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: getDefaultHeaders(),
+          signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
+        });
 
-      if (!response.ok) {
-        throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(`API返回错误: ${data.error || '未知错误'}`);
+        }
+
+        console.log('成功获取软件信息:', data);
+        return data;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`版本检查尝试 ${attempt} 失败:`, lastError.message);
+        
+        // 如果不是最后一次尝试，等待后重试
+        if (attempt < API_CONFIG.RETRY_COUNT) {
+          console.log(`等待 ${API_CONFIG.RETRY_DELAY}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
+        }
       }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(`API返回错误: ${data.error || '未知错误'}`);
-      }
-
-      console.log('成功获取软件信息:', data);
-      return data;
-    } catch (error) {
-      console.error('获取软件信息失败:', error);
-      throw error;
     }
+    
+    // 所有重试都失败了，抛出最后一个错误
+    console.error('所有版本检查尝试都失败了');
+    throw lastError || new Error('网络连接失败，请检查网络连接');
   }
 
   /**
