@@ -185,7 +185,8 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({ onComplete, onError }) 
     const config = configManager.getConfig();
     
     // 在开发环境使用代理，生产环境使用直接API地址
-    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    // Tauri 应用中，开发环境域名为 localhost，生产环境为 tauri://localhost
+    const isDevelopment = window.location.hostname === 'localhost' && window.location.protocol === 'http:';
     const baseUrl = isDevelopment ? '' : config.api_base_url;
 
     // 使用软件名称获取版本信息，如果失败则尝试ID方式
