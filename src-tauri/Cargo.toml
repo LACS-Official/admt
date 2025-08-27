@@ -1,8 +1,8 @@
 [package]
-name = "wanjiguanjia-tauri"
+name = "admt-lacs"
 version = "1.0.0"
-description = "玩机管家 (Tauri版本)"
-authors = ["玩机管家团队"]
+description = "Android设备跨平台全能管家"
+authors = ["领创工作室"]
 license = "MIT"
 repository = ""
 edition = "2021"
