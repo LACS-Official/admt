@@ -251,7 +251,7 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({ onComplete, onError }) 
         releaseNotesEn: softwareInfo.description_en || '',
         releaseDate: new Date().toISOString(),
         downloadLinks: { 
-          official: softwareInfo.officialWebsite || '',
+          official: softwareInfo.latestDownloadUrl || softwareInfo.officialWebsite,
         },
         isForced: true, // 根据需求设置是否强制更新
         // 添加新的必需字段

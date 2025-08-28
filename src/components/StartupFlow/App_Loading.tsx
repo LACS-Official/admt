@@ -226,6 +226,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     if (!needsUpdate) {
       // 不需要更新，隐藏版本检查弹窗
       setShowVersionChecker(false);
+    } else {
+      // 需要更新，显示版本检查弹窗
+      setShowVersionChecker(true);
     }
     // 如果需要更新，保持弹窗显示，用户必须更新
   };
@@ -310,6 +313,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         setShowEnterButton(false);
         setStatusMessage('发现新版本，请立即更新');
         
+        // 显示版本检查弹窗
+        setShowVersionChecker(true);
+        
         // 添加通知
         addNotification({
           type: "warning",
@@ -322,6 +328,30 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     } catch (error) {
       console.error('❌ 检查失败:', error);
       const errorMessage = error instanceof Error ? error.message : '检查失败';
+      
+      // 检查是否是网络频率限制错误
+      const isRateLimitError = errorMessage.includes('429') || errorMessage.includes('Too Many Requests');
+      
+      if (isRateLimitError) {
+        console.log('⚠️ 遇到API频率限制，显示版本检查弹窗让用户选择');
+        
+        // 对于频率限制错误，显示版本检查弹窗让用户选择
+        setShowVersionChecker(true);
+        setError(null); // 清除错误状态
+        setIsChecking(false);
+        
+        // 添加警告通知
+        addNotification({
+          type: "warning",
+          title: "网络请求受限",
+          message: "检测到网络请求频率限制，请稍后重试",
+          duration: 5000,
+        });
+        
+        return; // 不退出应用，让用户选择
+      }
+      
+      // 对于其他严重错误，保持原有的退出逻辑
       setError(errorMessage);
       setIsChecking(false);
 
@@ -333,7 +363,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         duration: 5000,
       });
 
-      // 根据要求，检查失败或没联网就立刻提示用户并退出，不能重试
+      // 严重错误时退出应用
       console.log('🚫 检查失败，应用将退出');
 
       // 显示错误信息一段时间后退出应用
