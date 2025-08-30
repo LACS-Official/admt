@@ -113,12 +113,21 @@ export interface SoftwareInfo {
 }
 
 export interface VersionCheckResult {
+  hasUpdate: boolean;
   needsUpdate: boolean;
   currentVersion: string;
-  latestVersion: string;
+  latestVersion?: string;
   isForceUpdate: boolean;
   updateInfo?: VersionInfo;
   message: string;
+  error?: string;
+  versionInfo?: {
+    version: string;
+    downloadUrl: string;
+    releaseNotes: string;
+    forceUpdate: boolean;
+    publishedAt: string;
+  };
 }
 
 export interface VersionCheckResponse {

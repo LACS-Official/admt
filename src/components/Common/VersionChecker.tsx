@@ -1,49 +1,33 @@
-/**
- * 版本检查组件
- * 在应用启动时检查版本更新，显示更新提示
- */
-
 import React, { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogBody,
-  DialogActions,
-  Button,
-  Text,
+import { 
+  Dialog, 
+  DialogTrigger, 
+  DialogSurface, 
+  DialogTitle, 
+  DialogBody, 
+  DialogActions, 
+  Button, 
+  Text, 
+  MessageBar, 
   Spinner,
-  MessageBar,
-  MessageBarBody,
-  makeStyles,
-  tokens
+  makeStyles
 } from '@fluentui/react-components';
-import {
-  Open24Regular,
-  Info24Regular,
-  Warning24Regular,
-  Checkmark24Regular,
-  ArrowDownload24Regular
-} from '@fluentui/react-icons';
-import { versionService } from '../../services/versionService';
-import { VersionCheckResult } from '../../types/app';
+import { versionService, VersionCheckResult } from '../../services/versionService';
 
 const useStyles = makeStyles({
-  dialog: {
-    maxWidth: '500px',
-  },
-  content: {
+  dialogContent: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
+    gap: '16px',
+    minWidth: '400px',
   },
   versionInfo: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalS,
-    padding: tokens.spacingVerticalM,
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderRadius: tokens.borderRadiusMedium,
+    gap: '8px',
+    padding: '16px',
+    backgroundColor: 'var(--colorNeutralBackground2)',
+    borderRadius: '8px',
   },
   versionRow: {
     display: 'flex',
@@ -53,34 +37,31 @@ const useStyles = makeStyles({
   releaseNotes: {
     maxHeight: '200px',
     overflowY: 'auto',
-    padding: tokens.spacingVerticalS,
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: tokens.borderRadiusSmall,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    padding: '12px',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    borderRadius: '6px',
+    border: '1px solid var(--colorNeutralStroke2)',
   },
   loadingContainer: {
     display: 'flex',
     alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-    padding: tokens.spacingVerticalM,
+    gap: '12px',
+    padding: '20px',
+    justifyContent: 'center',
   },
-  actions: {
-    display: 'flex',
-    gap: tokens.spacingHorizontalS,
-    justifyContent: 'flex-end',
-  },
+  errorContainer: {
+    padding: '16px',
+  }
 });
 
 interface VersionCheckerProps {
-  onUpdateRequired?: () => void;
-  onUpdateAvailable?: (updateInfo: VersionCheckResult) => void;
+  onUpdateAvailable?: (versionInfo: VersionCheckResult) => void;
   onCheckComplete?: (result: VersionCheckResult) => void;
   autoCheck?: boolean;
   showDialog?: boolean;
 }
 
-const VersionChecker: React.FC<VersionCheckerProps> = ({
-  onUpdateRequired,
+export const VersionChecker: React.FC<VersionCheckerProps> = ({
   onUpdateAvailable,
   onCheckComplete,
   autoCheck = true,
@@ -89,227 +70,147 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
   const styles = useStyles();
   const [isChecking, setIsChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
-  /**
-   * 执行版本检查
-   */
-  const performVersionCheck = async () => {
+  const checkForUpdates = async () => {
     setIsChecking(true);
-    setError(null);
-    
     try {
-      console.log('开始检查版本更新...');
+      console.log('🔍 开始检查版本更新...');
       const result = await versionService.checkForUpdates();
       
-      console.log('版本检查结果:', result);
+      console.log('📋 版本检查结果:', result);
       setCheckResult(result);
       
-      // 调用回调函数
+      // 调用回调
       onCheckComplete?.(result);
       
-      if (result.needsUpdate) {
-        if (result.isForceUpdate) {
-          onUpdateRequired?.();
-        } else {
-          onUpdateAvailable?.(result);
-        }
+      if (result.needsUpdate && !result.error) {
+        console.log('🆕 发现新版本:', result.latestVersion);
+        onUpdateAvailable?.(result);
         
-        // 显示更新对话框
         if (showDialog) {
-          setIsDialogOpen(true);
+          setShowUpdateDialog(true);
         }
-      } else if (showDialog) {
-        // 即使没有更新也显示对话框（用于手动检查时）
-        setIsDialogOpen(true);
+      } else if (result.error) {
+        console.error('❌ 版本检查失败:', result.error);
+      } else {
+        console.log('✅ 当前已是最新版本');
       }
-      
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '版本检查失败';
-      console.error('版本检查失败:', error);
-      setError(errorMessage);
-      
-      if (showDialog) {
-        setIsDialogOpen(true);
-      }
+      console.error('版本检查异常:', error);
+      const errorResult: VersionCheckResult = {
+        hasUpdate: false,
+        needsUpdate: false,
+        isForceUpdate: false,
+        currentVersion: '未知',
+        error: error instanceof Error ? error.message : '检查失败',
+        message: '版本检查异常'
+      };
+      setCheckResult(errorResult);
+      onCheckComplete?.(errorResult);
     } finally {
       setIsChecking(false);
     }
   };
 
-  /**
-   * 处理立即更新 - 跳转到浏览器打开下载页面
-   */
-  const handleUpdateNow = () => {
-    let downloadUrl = '';
-
-    // 优先使用官方下载链接
-    if (checkResult?.updateInfo?.downloadLinks?.official) {
-      downloadUrl = checkResult.updateInfo.downloadLinks.official;
-    } else {
-      // 默认使用 app.lacs.cc
-      downloadUrl = 'https://app.lacs.cc';
-    }
-
-    if (downloadUrl) {
-      // 使用 Tauri 的 shell API 打开浏览器
-      import('@tauri-apps/plugin-shell').then(({ open }) => {
-        open(downloadUrl).catch((error) => {
-          console.error('无法打开浏览器:', error);
-          // 降级到 window.open
-          window.open(downloadUrl, '_blank');
-        });
-      }).catch(() => {
-        // 如果 Tauri shell 插件不可用，使用 window.open
-        window.open(downloadUrl, '_blank');
-      });
-    } else {
-      // 如果没有下载链接，跳转到官网或显示提示
-      console.warn('没有可用的下载链接');
-      // 可以跳转到官网或项目页面
-      const fallbackUrl = 'https://app.lacs.cc/'; // 替换为实际的项目地址
-      window.open(fallbackUrl, '_blank');
-    }
-    setIsDialogOpen(false);
-  };
-
-  /**
-   * 处理关闭对话框
-   */
-  const handleCloseDialog = () => {
-    if (checkResult?.isForceUpdate) {
-      // 强制更新时不允许关闭对话框
-      return;
-    }
-    setIsDialogOpen(false);
-  };
-
-  /**
-   * 获取消息栏的意图类型
-   */
-  const getMessageIntent = () => {
-    if (error) return 'error';
-    if (!checkResult) return 'info';
-    if (checkResult.isForceUpdate) return 'error';
-    if (checkResult.needsUpdate) return 'warning';
-    return 'success';
-  };
-
-  /**
-   * 获取消息栏的图标
-   */
-  const getMessageIcon = () => {
-    if (error) return <Warning24Regular />;
-    if (!checkResult) return <Info24Regular />;
-    if (checkResult.needsUpdate) return <ArrowDownload24Regular />;
-    return <Checkmark24Regular />;
-  };
-
-  // 自动检查版本
   useEffect(() => {
     if (autoCheck) {
-      performVersionCheck();
+      // 延迟一点时间再检查，避免阻塞启动
+      const timer = setTimeout(checkForUpdates, 1000);
+      return () => clearTimeout(timer);
     }
   }, [autoCheck]);
 
-  return (
-    <Dialog open={isDialogOpen} onOpenChange={(_, data) => {
-      if (!checkResult?.isForceUpdate) {
-        setIsDialogOpen(data.open);
-      }
-    }}>
-      <DialogSurface className={styles.dialog}>
-        <DialogTitle>版本检查</DialogTitle>
-        <DialogBody>
-          <div className={styles.content}>
-            {isChecking ? (
-              <div className={styles.loadingContainer}>
-                <Spinner size="small" />
-                <Text>正在检查版本更新...</Text>
+  const handleDownload = () => {
+    if (checkResult?.versionInfo?.downloadUrl) {
+      window.open(checkResult.versionInfo.downloadUrl, '_blank');
+    }
+    setShowUpdateDialog(false);
+  };
+
+  const handleSkip = () => {
+    setShowUpdateDialog(false);
+  };
+
+  const renderCheckingState = () => (
+    <div className={styles.loadingContainer}>
+      <Spinner size="small" />
+      <Text>正在检查版本更新...</Text>
+    </div>
+  );
+
+  const renderErrorState = () => (
+    <div className={styles.errorContainer}>
+      <MessageBar intent="warning">
+        版本检查失败: {checkResult?.error}
+      </MessageBar>
+    </div>
+  );
+
+  const renderUpdateDialog = () => {
+    if (!checkResult?.versionInfo) return null;
+
+    return (
+      <Dialog open={showUpdateDialog} onOpenChange={(_, data) => setShowUpdateDialog(data.open)}>
+        <DialogSurface>
+          <DialogTitle>发现新版本</DialogTitle>
+          <DialogBody>
+            <div className={styles.dialogContent}>
+              <div className={styles.versionInfo}>
+                <div className={styles.versionRow}>
+                  <Text weight="semibold">当前版本:</Text>
+                  <Text>{checkResult.currentVersion}</Text>
+                </div>
+                <div className={styles.versionRow}>
+                  <Text weight="semibold">最新版本:</Text>
+                  <Text color="brand">{checkResult.latestVersion}</Text>
+                </div>
+                <div className={styles.versionRow}>
+                  <Text weight="semibold">发布时间:</Text>
+                  <Text>{new Date(checkResult.versionInfo.publishedAt).toLocaleDateString('zh-CN')}</Text>
+                </div>
               </div>
-            ) : (
-              <>
-                {error ? (
-                  <MessageBar intent="error">
-                    <MessageBarBody>
-                      {getMessageIcon()}
-                      {error}
-                    </MessageBarBody>
-                  </MessageBar>
-                ) : checkResult ? (
-                  <>
-                    <MessageBar intent={getMessageIntent()}>
-                      <MessageBarBody>
-                        {getMessageIcon()}
-                        {checkResult.message}
-                      </MessageBarBody>
-                    </MessageBar>
-                    
-                    <div className={styles.versionInfo}>
-                      <div className={styles.versionRow}>
-                        <Text weight="semibold">当前版本:</Text>
-                        <Text>{checkResult.currentVersion}</Text>
-                      </div>
-                      <div className={styles.versionRow}>
-                        <Text weight="semibold">最新版本:</Text>
-                        <Text>{checkResult.latestVersion}</Text>
-                      </div>
-                    </div>
-                    
-                    {checkResult.updateInfo && (
-                      <div className={styles.releaseNotes}>
-                        <Text weight="semibold" block style={{ marginBottom: '8px' }}>
-                          更新说明:
-                        </Text>
-                        <Text size={300}>
-                          {checkResult.updateInfo.releaseNotes || '暂无更新说明'}
-                        </Text>
-                        {checkResult.updateInfo.fileSize && (
-                          <Text size={200} style={{ marginTop: '8px', color: tokens.colorNeutralForeground3 }}>
-                            文件大小: {checkResult.updateInfo.fileSize}
-                          </Text>
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : null}
-              </>
-            )}
-          </div>
-        </DialogBody>
-        <DialogActions className={styles.actions}>
-          {checkResult?.needsUpdate ? (
-            <>
-              <Button
-                appearance="primary"
-                onClick={handleUpdateNow}
-                icon={<Open24Regular />}
-              >
-                前往下载
-              </Button>
-              {/* 强制更新时不显示"稍后更新"按钮 */}
-            </>
-          ) : (
-            <Button
-              appearance="primary"
-              onClick={handleCloseDialog}
-            >
-              确定
+
+              {checkResult.versionInfo.releaseNotes && (
+                <div>
+                  <Text weight="semibold">更新说明:</Text>
+                  <div className={styles.releaseNotes}>
+                    <Text size={300}>{checkResult.versionInfo.releaseNotes}</Text>
+                  </div>
+                </div>
+              )}
+
+              {checkResult.isForceUpdate && (
+                <MessageBar intent="warning">
+                  这是一个强制更新，建议立即下载安装。
+                </MessageBar>
+              )}
+            </div>
+          </DialogBody>
+          <DialogActions>
+            <Button appearance="secondary" onClick={handleSkip}>
+              稍后更新
             </Button>
-          )}
-          {!checkResult?.isForceUpdate && (
-            <Button
-              appearance="secondary"
-              onClick={() => performVersionCheck()}
-              disabled={isChecking}
-            >
-              重新检查
+            <Button appearance="primary" onClick={handleDownload}>
+              立即下载
             </Button>
-          )}
-        </DialogActions>
-      </DialogSurface>
-    </Dialog>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
+    );
+  };
+
+  // 如果不显示对话框，只返回检查逻辑
+  if (!showDialog) {
+    return null;
+  }
+
+  return (
+    <>
+      {isChecking && renderCheckingState()}
+      {checkResult?.error && renderErrorState()}
+      {renderUpdateDialog()}
+    </>
   );
 };
 

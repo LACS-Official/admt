@@ -193,16 +193,29 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       }
 
       console.log('版本检查结果:', result);
-      setCheckResult(result);
+      
+      // 确保结果符合VersionCheckResult接口
+      const normalizedResult: VersionCheckResult = {
+        hasUpdate: result.hasUpdate || result.needsUpdate,
+        needsUpdate: result.needsUpdate,
+        currentVersion: result.currentVersion,
+        latestVersion: result.latestVersion || result.currentVersion,
+        isForceUpdate: result.isForceUpdate,
+        message: result.message || '',
+        error: result.error,
+        versionInfo: result.versionInfo
+      };
+      
+      setCheckResult(normalizedResult);
 
-      if (result.needsUpdate) {
+      if (normalizedResult.needsUpdate) {
         // 有更新时统一按强制更新处理
         setShowDialog(true);
-        onCheckComplete(true, result);
+        onCheckComplete(true, normalizedResult);
       } else {
         // 不需要更新，显示成功提示
         showSuccessToast();
-        onCheckComplete(false, result);
+        onCheckComplete(false, normalizedResult);
       }
 
     } catch (error) {
