@@ -1,79 +1,55 @@
 import { invoke } from '@tauri-apps/api/core';
-import { API_CONFIG, getApiBaseUrl } from '../config/api';
+import { compare } from 'semver';
 
-export interface VersionInfo {
+interface VersionInfo {
   version: string;
   downloadUrl: string;
   releaseNotes: string;
   forceUpdate: boolean;
-  publishedAt: string;
 }
 
-export interface VersionCheckResult {
-  hasUpdate: boolean;
-  needsUpdate: boolean; // 兼容现有接口
-  isForceUpdate: boolean; // 兼容现有接口
-  currentVersion: string;
-  latestVersion?: string;
-  versionInfo?: VersionInfo;
-  error?: string;
-  message?: string; // 兼容现有接口
-}
-
-export interface ApiVersionResponse {
+interface ApiResponse {
   success: boolean;
-  data: {
-    version: string;
-    downloadUrl: string;
-    releaseNotes: string;
-    forceUpdate: boolean;
-    publishedAt: string;
-  };
+  data: VersionInfo;
   message?: string;
 }
 
-class VersionService {
-  private static instance: VersionService;
+class VersionChecker {
+  private static instance: VersionChecker;
   private cache: Map<string, { data: VersionInfo; timestamp: number }> = new Map();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
 
-  static getInstance(): VersionService {
-    if (!VersionService.instance) {
-      VersionService.instance = new VersionService();
+  static getInstance(): VersionChecker {
+    if (!VersionChecker.instance) {
+      VersionChecker.instance = new VersionChecker();
     }
-    return VersionService.instance;
+    return VersionChecker.instance;
   }
 
   private getApiConfig() {
     const isDev = import.meta.env.DEV;
-    const baseUrl = getApiBaseUrl();
-    
-    console.log(`🔧 版本检查API配置:`, {
-      isDev,
-      baseUrl,
-      mode: import.meta.env.MODE,
-      softwareId: API_CONFIG.SOFTWARE_ID
-    });
+    const baseUrl = isDev 
+      ? 'http://localhost:3001/api' 
+      : 'https://api.admt.app/v1';
     
     return {
       baseUrl,
       endpoints: {
-        version: `${baseUrl}/app/software/id/${API_CONFIG.SOFTWARE_ID}/versions/latest`,
-        announcement: `${baseUrl}/app/software/id/${API_CONFIG.SOFTWARE_ID}/announcements`
+        version: `${baseUrl}/version/check`,
+        announcement: `${baseUrl}/announcement/latest`
       }
     };
   }
 
   private async getCurrentVersion(): Promise<string> {
     try {
-      // 优先从Tauri获取版本
+      // 从Tauri获取当前应用版本
       const version = await invoke<string>('get_app_version');
-      console.log(`📱 从Tauri获取当前版本: ${version}`);
       return version;
     } catch (error) {
-      console.warn('从Tauri获取版本失败，使用配置版本:', error);
-      // 降级到配置版本
-      return API_CONFIG.APP_VERSION;
+      console.error('获取当前版本失败:', error);
+      // 降级到package.json版本
+      return '1.0.0';
     }
   }
 
@@ -87,20 +63,7 @@ class VersionService {
       if (!this.isValidVersion(current) || !this.isValidVersion(latest)) {
         throw new Error(`无效的版本格式: current=${current}, latest=${latest}`);
       }
-
-      // 简单的版本比较实现
-      const currentParts = current.split('.').map(Number);
-      const latestParts = latest.split('.').map(Number);
-
-      for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
-        const currentPart = currentParts[i] || 0;
-        const latestPart = latestParts[i] || 0;
-
-        if (currentPart < latestPart) return -1;
-        if (currentPart > latestPart) return 1;
-      }
-
-      return 0;
+      return compare(current, latest);
     } catch (error) {
       console.error('版本比较失败:', error);
       return 0; // 相等，避免误报更新
@@ -123,8 +86,6 @@ class VersionService {
   private async fetchWithRetry(url: string, retries = 3): Promise<Response> {
     for (let i = 0; i < retries; i++) {
       try {
-        const currentVersion = await this.getCurrentVersion();
-        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
@@ -132,8 +93,7 @@ class VersionService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': `ADMT/${currentVersion}`,
-            'Accept': 'application/json'
+            'User-Agent': `ADMT/${await this.getCurrentVersion()}`
           },
           signal: controller.signal
         });
@@ -156,13 +116,16 @@ class VersionService {
     throw new Error('所有重试均失败');
   }
 
-  async checkForUpdates(): Promise<VersionCheckResult> {
+  async checkForUpdates(): Promise<{
+    hasUpdate: boolean;
+    currentVersion: string;
+    latestVersion?: string;
+    versionInfo?: VersionInfo;
+    error?: string;
+  }> {
     try {
       const config = this.getApiConfig();
       const cacheKey = this.getCacheKey('version');
-      
-      console.log(`🔍 开始版本检查...`);
-      console.log(`📡 API端点: ${config.endpoints.version}`);
       
       // 检查缓存
       if (this.isValidCache(cacheKey)) {
@@ -170,30 +133,21 @@ class VersionService {
         const currentVersion = await this.getCurrentVersion();
         const comparison = this.compareVersions(currentVersion, cached.data.version);
         
-        console.log(`💾 使用缓存数据: ${currentVersion} vs ${cached.data.version} = ${comparison}`);
-        
-        const hasUpdate = comparison < 0;
         return {
-          hasUpdate,
-          needsUpdate: hasUpdate,
-          isForceUpdate: cached.data.forceUpdate || false,
+          hasUpdate: comparison < 0,
           currentVersion,
           latestVersion: cached.data.version,
-          versionInfo: cached.data,
-          message: hasUpdate ? `发现新版本 ${cached.data.version}` : '当前已是最新版本'
+          versionInfo: cached.data
         };
       }
 
       // 获取当前版本
       const currentVersion = await this.getCurrentVersion();
-      console.log(`📱 当前版本: ${currentVersion}`);
+      console.log(`当前版本: ${currentVersion}`);
 
       // 调用版本检查API
-      console.log(`🌐 调用版本检查API...`);
       const response = await this.fetchWithRetry(config.endpoints.version);
-      const apiResponse: ApiVersionResponse = await response.json();
-
-      console.log(`📥 API响应:`, apiResponse);
+      const apiResponse: ApiResponse = await response.json();
 
       if (!apiResponse.success || !apiResponse.data) {
         throw new Error(apiResponse.message || 'API响应格式错误');
@@ -216,57 +170,62 @@ class VersionService {
       const comparison = this.compareVersions(currentVersion, versionInfo.version);
       const hasUpdate = comparison < 0;
 
-      console.log(`🔄 版本比较结果: ${currentVersion} vs ${versionInfo.version} = ${comparison} (hasUpdate: ${hasUpdate})`);
+      console.log(`版本比较结果: ${currentVersion} vs ${versionInfo.version} = ${comparison} (hasUpdate: ${hasUpdate})`);
 
       return {
         hasUpdate,
-        needsUpdate: hasUpdate,
-        isForceUpdate: versionInfo.forceUpdate || false,
         currentVersion,
         latestVersion: versionInfo.version,
-        versionInfo,
-        message: hasUpdate ? `发现新版本 ${versionInfo.version}` : '当前已是最新版本'
+        versionInfo
       };
 
     } catch (error) {
       const currentVersion = await this.getCurrentVersion();
       const errorMessage = error instanceof Error ? error.message : '未知错误';
       
-      console.error('❌ 版本检查失败:', errorMessage);
+      console.error('版本检查失败:', errorMessage);
       
       return {
         hasUpdate: false,
-        needsUpdate: false,
-        isForceUpdate: false,
         currentVersion,
-        error: errorMessage,
-        message: `版本检查失败: ${errorMessage}`
+        error: errorMessage
       };
+    }
+  }
+
+  async getAnnouncements(): Promise<any[]> {
+    try {
+      const config = this.getApiConfig();
+      const cacheKey = this.getCacheKey('announcement');
+
+      // 检查缓存
+      if (this.isValidCache(cacheKey)) {
+        return this.cache.get(cacheKey)!.data as any;
+      }
+
+      const response = await this.fetchWithRetry(config.endpoints.announcement);
+      const apiResponse = await response.json();
+
+      if (!apiResponse.success) {
+        throw new Error(apiResponse.message || '获取公告失败');
+      }
+
+      // 更新缓存
+      this.cache.set(cacheKey, {
+        data: apiResponse.data,
+        timestamp: Date.now()
+      });
+
+      return apiResponse.data;
+    } catch (error) {
+      console.error('获取公告失败:', error);
+      return [];
     }
   }
 
   clearCache(): void {
     this.cache.clear();
-    console.log('🗑️ 版本检查缓存已清空');
-  }
-
-  // 获取版本检查状态信息
-  getStatus() {
-    return {
-      cacheSize: this.cache.size,
-      apiConfig: this.getApiConfig(),
-      environment: {
-        isDev: import.meta.env.DEV,
-        mode: import.meta.env.MODE,
-        baseUrl: getApiBaseUrl()
-      }
-    };
   }
 }
 
-export const versionService = VersionService.getInstance();
-
-// 开发环境下暴露到全局
-if (import.meta.env.DEV) {
-  (window as any).versionService = versionService;
-}
+export default VersionChecker.getInstance();

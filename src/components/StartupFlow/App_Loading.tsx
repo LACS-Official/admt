@@ -381,6 +381,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       
       // 设置默认的版本检查结果
       const defaultResult: VersionCheckResult = {
+        hasUpdate: false,
         needsUpdate: false,
         currentVersion: '1.0.0',
         latestVersion: '1.0.0',
@@ -454,6 +455,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       }
 
       return {
+        hasUpdate: !isLatest,
         needsUpdate: !isLatest,
         currentVersion,
         latestVersion: latestVersionNumber,

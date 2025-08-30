@@ -6,6 +6,7 @@ mod utils;
 mod activation;
 mod download_manager;
 mod cache;
+mod version;
 
 
 use commands::*;
@@ -21,6 +22,8 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![
+            version::get_app_version,
+            version::get_app_info,
             scan_devices,
             get_device_info,
             execute_adb_command,
