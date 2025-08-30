@@ -7,6 +7,7 @@ import { VersionCheckResult, VersionCheckResponse, SoftwareInfo } from '../types
 import { API_CONFIG, API_ENDPOINTS, getApiBaseUrl, getDefaultHeaders } from '../config/api';
 import { getVersion } from '@tauri-apps/api/app';
 import { SecurityConfigManager } from '../config/securityConfig';
+import { tauriHttpService } from './tauriHttpService';
 
 // 扩展Window接口以支持Tauri
 declare global {
@@ -83,8 +84,15 @@ class VersionComparator {
  */
 export class VersionService {
   private static instance: VersionService;
+  private configManager: SecurityConfigManager;
+  private pendingRequest: Promise<any> | null = null;
+  private lastRequestTime: number = 0;
+  private cachedResponse: any = null;
+  private readonly CACHE_DURATION = 60000; // 60秒缓存，避免频繁请求
 
-  private constructor() {}
+  private constructor() {
+    this.configManager = SecurityConfigManager.getInstance();
+  }
 
   public static getInstance(): VersionService {
     if (!VersionService.instance) {
@@ -126,50 +134,94 @@ export class VersionService {
    * 调用软件信息API获取最新版本信息
    */
   private async fetchLatestVersionFromAPI(): Promise<VersionCheckResponse> {
+    const now = Date.now();
+    
+    // 检查缓存是否有效
+    if (this.cachedResponse && (now - this.lastRequestTime) < this.CACHE_DURATION) {
+      console.log('✅ 使用缓存的版本信息，避免频繁请求');
+      return this.cachedResponse;
+    }
+    
+    // 检查是否有正在进行的请求，避免重复请求
+    if (this.pendingRequest) {
+      console.log('⏳ 等待正在进行的版本检查请求...');
+      return await this.pendingRequest;
+    }
+    
+    console.log('🔄 创建新的版本检查请求');
+    // 创建新的请求
+    this.pendingRequest = this.performVersionRequest();
+    
+    try {
+      const result = await this.pendingRequest;
+      this.cachedResponse = result;
+      this.lastRequestTime = now;
+      console.log('✅ 版本检查请求完成，已缓存结果');
+      return result;
+    } finally {
+      this.pendingRequest = null;
+    }
+  }
+
+  /**
+   * 执行实际的版本检查请求
+   */
+  private async performVersionRequest(): Promise<VersionCheckResponse> {
     let lastError: Error | null = null;
     
     // 重试机制
     for (let attempt = 1; attempt <= API_CONFIG.RETRY_COUNT; attempt++) {
       try {
-        console.log(`正在检查软件版本，软件ID: ${API_CONFIG.SOFTWARE_ID} (尝试 ${attempt}/${API_CONFIG.RETRY_COUNT})`);
-
-        const baseUrl = getApiBaseUrl();
-        // 使用软件基本信息API而不是版本历史API
-        const url = `${baseUrl}/app/software/id/${API_CONFIG.SOFTWARE_ID}`;
-
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: getDefaultHeaders(),
-          signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
+        console.log(`版本检查尝试 ${attempt}/${API_CONFIG.RETRY_COUNT}`);
+        
+        // 使用 tauriHttpService 替代原生 fetch
+        const endpoint = API_ENDPOINTS.SOFTWARE.BY_ID(API_CONFIG.SOFTWARE_ID);
+        const response = await tauriHttpService.get(endpoint, {
+          timeout: API_CONFIG.TIMEOUT
         });
 
-        if (!response.ok) {
-          throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+        if (!response.success) {
+          throw new Error(`API返回错误: ${response.error || '未知错误'}`);
         }
 
-        const data = await response.json();
-
-        if (!data.success) {
-          throw new Error(`API返回错误: ${data.error || '未知错误'}`);
-        }
-
-        console.log('成功获取软件信息:', data);
-        return data;
+        console.log('版本检查成功:', response);
+        return response;
+        
       } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
+        lastError = error as Error;
         console.warn(`版本检查尝试 ${attempt} 失败:`, lastError.message);
         
-        // 如果不是最后一次尝试，等待后重试
+        // 如果是 429 错误（频率限制），增加等待时间
+        const isRateLimited = lastError.message.includes('429') || 
+                             lastError.message.includes('rate limit') ||
+                             lastError.message.includes('temporarily banned');
+        
         if (attempt < API_CONFIG.RETRY_COUNT) {
-          console.log(`等待 ${API_CONFIG.RETRY_DELAY}ms 后重试...`);
-          await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
+          const delay = isRateLimited ? API_CONFIG.RETRY_DELAY * 2 : API_CONFIG.RETRY_DELAY;
+          console.log(`等待 ${delay}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
     
-    // 所有重试都失败了，抛出最后一个错误
-    console.error('所有版本检查尝试都失败了');
-    throw lastError || new Error('网络连接失败，请检查网络连接');
+    // 所有重试都失败了，返回一个默认的成功响应，避免应用退出
+    console.error('所有版本检查尝试都失败了，使用默认响应');
+    const currentVersion = await this.getCurrentVersion();
+    return {
+      success: true,
+      data: {
+        software: {
+          id: API_CONFIG.SOFTWARE_ID,
+          name: "玩机管家",
+          currentVersion: currentVersion,
+          description: "默认软件信息",
+          officialWebsite: "https://app.lacs.cc",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        versions: []
+      }
+    };
   }
 
   /**
@@ -183,6 +235,7 @@ export class VersionService {
       // 调用API获取最新版本信息
       const apiResponse = await this.fetchLatestVersionFromAPI();
       
+      // 检查响应数据格式
       if (!apiResponse.data) {
         return {
           needsUpdate: false,
@@ -193,9 +246,39 @@ export class VersionService {
         };
       }
 
-      // 使用新的API响应格式（data 中包含 software 与 versions）
-      const softwareInfo = apiResponse.data.software;
-      const latestVersionNumber = softwareInfo.currentVersion || currentVersion;
+      console.log('🔍 调试信息 - apiResponse:', apiResponse);
+    
+      // API 响应结构：{ success: true, data: { currentVersion: "1.0.1", ... } }
+      // 根据实际调试确认，版本信息直接在 apiResponse.data 中
+      const responseData: any = apiResponse.data;
+      
+      console.log('🔍 调试信息 - responseData:', responseData);
+      
+      // 直接从 data 中提取版本信息，优先使用 currentVersion
+      const latestVersionFromAPI = responseData?.currentVersion || 
+                                   responseData?.version || 
+                                   responseData?.latestVersion;
+      
+      console.log('🔍 调试信息 - 本地版本:', currentVersion);
+      console.log('🔍 调试信息 - 云端最新版本:', latestVersionFromAPI);
+      console.log('🔍 调试信息 - 版本字段存在?', !!latestVersionFromAPI);
+      console.log('🔍 调试信息 - 版本字段类型:', typeof latestVersionFromAPI);
+      console.log('🔍 调试信息 - 完整响应数据:', JSON.stringify(responseData, null, 2));
+      
+      // 检查是否能获取到云端版本信息
+      if (!latestVersionFromAPI || typeof latestVersionFromAPI !== 'string' || latestVersionFromAPI.trim() === '') {
+        console.warn('⚠️ 无法获取云端版本信息，使用本地版本作为回退');
+        console.warn('🔍 可用字段:', Object.keys(responseData || {}));
+        return {
+          needsUpdate: false,
+          currentVersion,
+          latestVersion: currentVersion,
+          isForceUpdate: false,
+          message: '无法获取云端版本信息，请检查网络连接或联系技术支持'
+        };
+      }
+      
+      const latestVersionNumber: string = latestVersionFromAPI;
       
       console.log(`最新版本: ${latestVersionNumber}`);
 
@@ -218,13 +301,13 @@ export class VersionService {
 
       // 构造更新信息
       const updateInfo = needsUpdate ? {
-        id: softwareInfo.id,
+        id: responseData.id || 0,
         version: latestVersionNumber,
-        releaseNotes: softwareInfo.description || '发现新版本，请立即更新',
-        releaseDate: softwareInfo.updatedAt || new Date().toISOString(),
+        releaseNotes: responseData.description || '发现新版本，请立即更新',
+        releaseDate: responseData.updatedAt || new Date().toISOString(),
         downloadLinks: {
-          // SoftwareInfo 不包含 latestDownloadUrl，使用官网地址作为下载链接
-          official: softwareInfo.officialWebsite
+          // 使用官网地址作为下载链接
+          official: responseData.officialWebsite || ''
         },
         isStable: true,
         versionType: "release" as const
@@ -258,27 +341,17 @@ export class VersionService {
    */
   public async getSoftwareInfo(): Promise<SoftwareInfo | null> {
     try {
-      const baseUrl = getApiBaseUrl();
-      const endpoint = API_ENDPOINTS.SOFTWARE.BY_ID(API_CONFIG.SOFTWARE_ID);
-      const url = `${baseUrl}${endpoint}`;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: getDefaultHeaders(),
-        signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
-      });
-
-      if (!response.ok) {
-        throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+      // 复用版本检查的缓存机制，避免重复请求
+      const versionResponse = await this.fetchLatestVersionFromAPI();
+      
+      if (!versionResponse.success || !versionResponse.data) {
+        throw new Error(`API返回错误: ${versionResponse.error || '未找到软件信息'}`);
       }
 
-      const data = await response.json();
-
-      if (!data.success || !data.data?.software) {
-        throw new Error(`API返回错误: ${data.error || '未找到软件信息'}`);
-      }
-
-      return data.data.software;
+      // API 响应结构：{ success: true, data: { software: SoftwareInfo, versions: VersionInfo[] } }
+      // 返回 data.software 字段，它包含了 SoftwareInfo 的所有属性
+      const responseData = versionResponse.data as { software: SoftwareInfo; versions: any[] };
+      return responseData.software;
     } catch (error) {
       console.error('获取软件信息失败:', error);
       return null;

@@ -3,22 +3,46 @@
  * 管理所有API相关的配置信息
  */
 
-// API基础配置
+// 环境变量获取函数
+const getEnvVar = (key: string, defaultValue: string = ''): string => {
+  return import.meta.env[key] || defaultValue;
+};
+
+const getEnvNumber = (key: string, defaultValue: number): number => {
+  const value = import.meta.env[key];
+  return value ? parseInt(value, 10) : defaultValue;
+};
+
+const getEnvBoolean = (key: string, defaultValue: boolean): boolean => {
+  const value = import.meta.env[key];
+  return value ? value.toLowerCase() === 'true' : defaultValue;
+};
+
+// API基础配置 - 支持环境变量
 export const API_CONFIG = {
-  // 基础URL
-  BASE_URL: 'https://api-g.lacs.cc',
+  // 基础URL - 从环境变量获取
+  BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://api-g.lacs.cc'),
 
-  // 开发环境URL（与生产环境相同）
-  DEV_BASE_URL: 'https://api-g.lacs.cc',
+  // 开发环境URL
+  DEV_BASE_URL: getEnvVar('VITE_API_BASE_URL', 'https://api-g.lacs.cc'),
 
-  // API密钥（实际使用时应该从环境变量或安全存储中获取）
-  API_KEY: 'your-api-key',
+  // 软件ID - 从环境变量获取
+  SOFTWARE_ID: getEnvNumber('VITE_SOFTWARE_ID', 1),
 
-  // 软件ID（当前软件在API系统中的唯一标识）
-  SOFTWARE_ID: 1,
+  // 应用版本 - 从环境变量获取
+  APP_VERSION: getEnvVar('VITE_APP_VERSION', '1.0.0'),
+
+  // 安全配置
+  ENABLE_SIGNATURE: getEnvBoolean('VITE_ENABLE_SIGNATURE', true),
+  ENABLE_STRICT_USER_AGENT: getEnvBoolean('VITE_ENABLE_STRICT_USER_AGENT', true),
+  SIGNATURE_SECRET: getEnvVar('VITE_SIGNATURE_SECRET', ''),
+
+  // 调试配置
+  ENABLE_DEBUG: getEnvBoolean('VITE_ENABLE_DEBUG', false),
+  ENABLE_CONSOLE_LOGS: getEnvBoolean('VITE_ENABLE_CONSOLE_LOGS', false),
 
   // 请求超时时间（毫秒）
-  TIMEOUT: 10000,
+  TIMEOUT: 15000,
 
   // 重试次数
   RETRY_COUNT: 3,
@@ -73,19 +97,36 @@ export const API_ENDPOINTS = {
 
 // 请求头配置
 export const getDefaultHeaders = () => ({
-  'X-API-Key': API_CONFIG.API_KEY,
   'Content-Type': 'application/json',
   'Accept': 'application/json',
 });
 
-// 环境检测
+// 环境检测 - 支持Vite环境变量
 export const isProduction = () => {
-  return typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
+  return import.meta.env.MODE === 'production' || getEnvVar('VITE_APP_ENV') === 'production';
+};
+
+export const isDevelopment = () => {
+  return import.meta.env.MODE === 'development' || getEnvVar('VITE_APP_ENV') === 'development';
 };
 
 // 获取当前环境的API基础URL
 export const getApiBaseUrl = () => {
-  return isProduction() ? API_CONFIG.BASE_URL : API_CONFIG.DEV_BASE_URL;
+  // 在生产环境中直接使用BASE_URL，不区分开发和生产
+  return API_CONFIG.BASE_URL;
+};
+
+// 获取当前环境信息
+export const getEnvironmentInfo = () => {
+  return {
+    mode: import.meta.env.MODE,
+    env: getEnvVar('VITE_APP_ENV', 'development'),
+    isProduction: isProduction(),
+    isDevelopment: isDevelopment(),
+    baseUrl: getApiBaseUrl(),
+    enableDebug: API_CONFIG.ENABLE_DEBUG,
+    enableLogs: API_CONFIG.ENABLE_CONSOLE_LOGS
+  };
 };
 
 // API响应类型

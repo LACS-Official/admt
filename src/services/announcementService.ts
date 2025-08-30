@@ -5,6 +5,7 @@
 
 import { SecurityConfigManager } from '../config/securityConfig';
 import { Announcement, AnnouncementResponse } from '../types/app';
+import { tauriHttpService } from './tauriHttpService';
 
 export interface AnnouncementQueryParams {
   page?: number;
@@ -53,32 +54,22 @@ export class AnnouncementService {
         sortOrder: params.sortOrder || 'desc',
       });
 
-      // 在开发环境使用代理，生产环境使用直接API地址
-      // Tauri 应用中，开发环境域名为 localhost，生产环境为 tauri://localhost
-      const isDevelopment = window.location.hostname === 'localhost' && window.location.protocol === 'http:';
-      const baseUrl = isDevelopment ? '' : config.api_base_url;
-
       // 使用软件ID获取公告
-      const softwareId = 1; // 默认使用ID 1
-      const apiUrl = `${baseUrl}/app/software/id/${softwareId}/announcements?${queryParams.toString()}`;
+      const softwareId = this.configManager.getSoftwareId();
+      const endpoint = `/app/software/id/${softwareId}/announcements?${queryParams.toString()}`;
 
-      console.log('📢 请求公告API:', apiUrl);
+      console.log('📢 请求公告API:', endpoint);
 
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': config.api_key,
-          'Accept': 'application/json',
-        },
-        signal: AbortSignal.timeout(10000), // 10秒超时
+      // 使用 tauriHttpService 替代原生 fetch
+      const response = await tauriHttpService.get<AnnouncementResponse>(endpoint, {
+        timeout: 10000, // 10秒超时
       });
 
-      if (!response.ok) {
-        throw new Error(`公告API请求失败: ${response.status} ${response.statusText}`);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || '获取公告失败');
       }
 
-      const data: AnnouncementResponse = await response.json();
+      const data = response.data;
 
       if (!data.success) {
         throw new Error(`公告API返回错误: ${data.error || '未知错误'}`);
@@ -96,12 +87,18 @@ export class AnnouncementService {
       
       // 返回空的公告响应，不阻止应用启动
       return {
-        success: false,
+        success: true, // 改为true，避免因为网络问题导致应用退出
         data: {
-          software: { id: 1, name: '玩机管家' },
+          software: { id: this.configManager.getSoftwareId(), name: '玩机管家' },
           announcements: [],
+          pagination: {
+            page: params.page || 1,
+            limit: params.limit || 10,
+            total: 0,
+            totalPages: 0
+          }
         },
-        error: error instanceof Error ? error.message : '获取公告失败',
+        error: error instanceof Error ? error.message : '获取公告失败'
       };
     }
   }

@@ -17,41 +17,6 @@ export default defineConfig(async () => ({
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
-    // 代理配置，解决开发环境CORS问题
-    proxy: {
-      '/api': {
-        target: 'https://api-g.lacs.cc',
-        changeOrigin: true,
-        secure: true,
-        configure: (proxy: any, _options: any) => {
-          proxy.on('error', (err: any, _req: any, _res: any) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq: any, req: any, _res: any) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes: any, req: any, _res: any) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-          });
-        },
-      },
-      '/app': {
-        target: 'https://api-g.lacs.cc',
-        changeOrigin: true,
-        secure: true,
-        configure: (proxy: any, _options: any) => {
-          proxy.on('error', (err: any, _req: any, _res: any) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq: any, req: any, _res: any) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes: any, req: any, _res: any) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-          });
-        },
-      },
-    },
   },
   
   // 添加路径别名解析

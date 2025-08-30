@@ -224,13 +224,24 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const handleVersionCheckComplete = (needsUpdate: boolean, result?: any) => {
     console.log('📋 版本检查完成:', { needsUpdate, result });
     if (!needsUpdate) {
-      // 不需要更新，隐藏版本检查弹窗
+      // 不需要更新，隐藏版本检查弹窗，允许进入应用
       setShowVersionChecker(false);
+      setShowEnterButton(true);
+      setStatusMessage('当前已是最新版本');
+      
+      addNotification({
+        type: "success",
+        title: "版本检查",
+        message: "当前已是最新版本",
+        duration: 3000,
+      });
     } else {
-      // 需要更新，显示版本检查弹窗
-      setShowVersionChecker(true);
+      // 需要更新，保持弹窗显示，不允许进入应用
+      console.log('⚠️ 需要更新，保持弹窗显示，禁止进入应用');
+      setShowEnterButton(false);
+      setStatusMessage('发现新版本，必须更新后才能继续使用');
+      // 注意：不要再次设置 setShowVersionChecker(true)，因为弹窗已经在显示了
     }
-    // 如果需要更新，保持弹窗显示，用户必须更新
   };
 
   // 处理离线使用（版本检查失败时的降级选项）
@@ -293,7 +304,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       }
 
       // 根据版本检查结果决定是否显示进入应用按钮
-      if (versionResult.isLatest) {
+      if (!versionResult.needsUpdate) {
         console.log('✅ 当前是最新版本，显示进入应用按钮');
         setShowEnterButton(true);
         setStatusMessage(announcementResult.length > 0 ? '检查完成，请查看最新公告' : '当前已是最新版本');
@@ -351,7 +362,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         return; // 不退出应用，让用户选择
       }
       
-      // 对于其他严重错误，保持原有的退出逻辑
+      // 对于其他网络错误，采用降级处理，允许用户继续使用
       setError(errorMessage);
       setIsChecking(false);
 
@@ -363,23 +374,24 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         duration: 5000,
       });
 
-      // 严重错误时退出应用
-      console.log('🚫 检查失败，应用将退出');
-
-      // 显示错误信息一段时间后退出应用
-      setTimeout(async () => {
-        try {
-          const { exit } = await import('@tauri-apps/plugin-process');
-          await exit(1);
-        } catch (exitError) {
-          console.error('退出应用失败:', exitError);
-          // 如果 Tauri API 不可用，尝试关闭窗口
-          window.close();
-        }
-      }, 3000);
-
-      // 立即调用错误回调
-      onError(`${errorMessage}\n\n应用将在3秒后退出`);
+      // 采用降级处理，允许用户继续使用应用
+      console.log('⚠️ 检查失败，采用降级处理，允许用户继续使用');
+      setShowEnterButton(true);
+      setStatusMessage('检查完成（网络连接异常）');
+      
+      // 设置默认的版本检查结果
+      const defaultResult: VersionCheckResult = {
+        needsUpdate: false,
+        currentVersion: '1.0.0',
+        latestVersion: '1.0.0',
+        isForceUpdate: false,
+        message: '网络连接异常，无法检查更新'
+      };
+      
+      setCheckResult(defaultResult);
+      setVersionCheckResult(defaultResult);
+      setVersionCheckCompleted(true);
+      resetRetryCount();
     }
   };
 
@@ -442,16 +454,21 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       }
 
       return {
-        isLatest,
+        needsUpdate: !isLatest,
         currentVersion,
         latestVersion: latestVersionNumber,
+        isForceUpdate: !isLatest,
+        message: !isLatest ? `发现新版本 ${latestVersionNumber}，需要强制更新后才能继续使用软件` : '目前已是最新版本',
         updateInfo: !isLatest ? {
+          id: 0,
           version: latestVersionNumber,
           releaseDate: new Date().toISOString(),
-          description: softwareInfo.description || '发现新版本，需要更新后才能继续使用',
-          downloadUrl: softwareInfo.latestDownloadUrl || softwareInfo.officialWebsite || '',
-          isForced: true, // 强制更新
-          title: `新版本 ${latestVersionNumber} 可用`,
+          releaseNotes: softwareInfo.description || '发现新版本，需要更新后才能继续使用',
+          downloadLinks: {
+            official: softwareInfo.latestDownloadUrl || softwareInfo.officialWebsite || ''
+          },
+          isStable: true,
+          versionType: "release" as const
         } : undefined,
       };
     } catch (error) {
@@ -530,31 +547,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   };
 
   const handleDownload = () => {
-    if (!checkResult?.updateInfo) {
-      console.error('没有更新信息');
-      return;
-    }
-
-    const updateInfo = checkResult.updateInfo;
-    let downloadUrl = '';
-
-    // 优先选择下载链接
-    if (updateInfo.downloadLinks) {
-      const links = updateInfo.downloadLinks as any;
-      downloadUrl = links.official ||
-                   links.github ||
-                   links.quark ||
-                   links.baidu ||
-                   updateInfo.downloadUrl || '';
-    } else {
-      downloadUrl = updateInfo.downloadUrl || '';
-    }
-
-    if (!downloadUrl) {
-      console.error('没有可用的下载链接');
-      return;
-    }
-
+    // 固定跳转到指定的下载页面
+    const downloadUrl = 'https://admt.lacs.cc/download';
+    
     console.log('🔗 打开下载链接:', downloadUrl);
 
     // 使用 Tauri 的 shell API 打开浏览器
@@ -729,14 +724,14 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         <>
           <div className={styles.header}>
             <div className={styles.icon}>
-              {checkResult.isLatest ? (
+              {!checkResult.needsUpdate ? (
                 <CheckmarkCircle24Filled style={{ color: '#107c10' }} />
               ) : (
                 <Warning24Filled style={{ color: '#d83b01' }} />
               )}
             </div>
             <Title3>
-              {checkResult.isLatest ? '当前已是最新版本' : '需要更新到最新版本'}
+              {!checkResult.needsUpdate ? '当前已是最新版本' : '需要更新到最新版本'}
             </Title3>
           </div>
 
@@ -745,7 +740,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
               <Body1>
                 当前版本: {checkResult.currentVersion}
               </Body1>
-              {!checkResult.isLatest && checkResult.latestVersion && (
+              {checkResult.needsUpdate && checkResult.latestVersion && (
                 <Body1 style={{ marginTop: '8px' }}>
                   最新版本: {checkResult.latestVersion}
                 </Body1>
@@ -755,9 +750,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
 
           {checkResult.updateInfo && (
             <div className={styles.updateInfo}>
-              <Text weight="semibold">{checkResult.updateInfo.title}</Text>
+              <Text weight="semibold">版本 {checkResult.updateInfo.version}</Text>
               <Body1 style={{ marginTop: '8px' }}>
-                {checkResult.updateInfo.description || checkResult.updateInfo.releaseNotes}
+                {checkResult.updateInfo.releaseNotes}
               </Body1>
 
               {/* 显示文件大小信息 */}
@@ -767,7 +762,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
                 </Body1>
               )}
 
-              {checkResult.updateInfo.isForced && (
+              {checkResult.isForceUpdate && (
                 <MessageBar intent="warning" style={{ marginTop: '12px' }}>
                   此更新为强制更新，必须更新到最新版本才能继续使用应用
                 </MessageBar>
@@ -775,7 +770,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
 
               {/* 下载按钮区域 */}
               <div className={styles.actionSection} style={{ marginTop: '16px' }}>
-                {checkResult.updateInfo.downloadUrl ? (
+                {checkResult.updateInfo.downloadLinks?.official ? (
                   <Button
                     appearance="primary"
                     size="large"
@@ -834,8 +829,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       </Card>
 
       {/* 版本检查弹窗 */}
-      {showVersionChecker && (
+      {showVersionChecker && checkResult && (
         <StartupVersionChecker
+          checkResult={checkResult}
           onCheckComplete={handleVersionCheckComplete}
           onAllowOfflineUse={handleAllowOfflineUse}
         />

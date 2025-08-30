@@ -1,5 +1,5 @@
 import { OnlineSoftware, OnlineSoftwareResponse, DownloadTask } from '../types/app';
-import { SecureDataTransmissionService } from './secureDataTransmissionService';
+import { tauriHttpService } from './tauriHttpService';
 
 export interface OnlineResourcesConfig {
   apiBaseUrl: string;
@@ -20,7 +20,6 @@ export interface SearchParams {
 
 class OnlineResourcesService {
   private config: OnlineResourcesConfig;
-  private transmissionService: SecureDataTransmissionService;
   private downloadTasks: Map<string, DownloadTask> = new Map();
   private isInitialized: boolean = false;
   private readonly STORAGE_KEY = 'download_tasks';
@@ -33,51 +32,18 @@ class OnlineResourcesService {
       timeout: 30000,
       retryCount: 3,
     };
-    this.transmissionService = SecureDataTransmissionService.getInstance();
-    // 延迟初始化，等待安全配置准备就绪
-    this.deferredInitialize();
+    // 直接标记为已初始化，因为不再依赖 SecureDataTransmissionService
+    this.isInitialized = true;
     this.loadPersistedTasks();
-  }
-
-  /**
-   * 延迟初始化服务
-   */
-  private async deferredInitialize(): Promise<void> {
-    // 等待一小段时间，让安全配置有机会初始化
-    setTimeout(async () => {
-      try {
-        await this.initialize();
-      } catch (error) {
-        console.warn('在线资源服务延迟初始化失败，将在后续重试:', error);
-        // 如果初始化失败，可以在后续的操作中重试
-      }
-    }, 1000); // 延迟1秒
-  }
-
-  /**
-   * 初始化服务
-   */
-  private async initialize(): Promise<void> {
-    try {
-      // 初始化安全数据传输服务
-      await this.transmissionService.initialize();
-      this.isInitialized = true;
-      console.log('✅ 在线资源服务初始化成功');
-    } catch (error) {
-      console.error('❌ 在线资源服务初始化失败:', error);
-      this.isInitialized = false;
-    }
   }
 
   /**
    * 确保服务已初始化
    */
   private async ensureInitialized(): Promise<void> {
+    // 使用 tauriHttpService，无需额外初始化
     if (!this.isInitialized) {
-      await this.initialize();
-    }
-    if (!this.isInitialized) {
-      throw new Error('在线资源服务初始化失败，请检查网络连接和配置');
+      this.isInitialized = true;
     }
   }
 
@@ -115,7 +81,7 @@ class OnlineResourcesService {
       const endpoint = `/app/software?${queryParams.toString()}`;
       console.log('🔍 获取在线软件列表:', endpoint);
 
-      const response = await this.transmissionService.sendSecureRequest(endpoint);
+      const response = await tauriHttpService.get(endpoint);
 
       if (!response.success || !response.data) {
         throw new Error(response.error || '获取软件列表失败');
@@ -126,10 +92,15 @@ class OnlineResourcesService {
         ? response.data
         : response.data.software || [];
 
+      // 提取分页信息（如果存在）
+      const pagination = (response.data && typeof response.data === 'object' && !Array.isArray(response.data))
+        ? (response.data as any).pagination
+        : undefined;
+
       const result: OnlineSoftwareResponse = {
         success: true,
         data: softwareList,
-        pagination: response.pagination,
+        pagination: pagination,
       };
 
       console.log('✅ 获取软件列表成功:', result.data.length, '个软件');
@@ -210,7 +181,7 @@ class OnlineResourcesService {
       const endpoint = `/app/software/id/${id}`;
       console.log('🔍 获取软件详情:', endpoint);
 
-      const response = await this.transmissionService.sendSecureRequest(endpoint);
+      const response = await tauriHttpService.get(endpoint);
 
       if (!response.success || !response.data) {
         throw new Error(response.error || '获取软件详情失败');
