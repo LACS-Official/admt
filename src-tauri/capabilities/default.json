@@ -19,6 +19,12 @@
     "dialog:allow-open",
     "fs:allow-read-dir",
     "fs:allow-appdata-write",
-    "fs:allow-appdata-write-recursive"
+    "fs:allow-appdata-write-recursive",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api-g.lacs.cc/**" }
+      ]
+    }
   ]
 }

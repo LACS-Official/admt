@@ -1,12 +1,12 @@
 /**
- * 启动流程管理器组件
- * 协调整个应用启动流程的核心组件
- *
+ * 启动流程管理器
+ * 管理整个应用的启动流程，包括版本检查、激活验证等
+ * 
  * 启动流程序列：
- * 1. 版本检测和公告显示
- * 2. 首次使用检测
- * 3. 隐私政策和用户协议（仅首次使用）
- * 4. 激活码验证（仅首次使用且同意条款后）
+ * 1. 隐私政策和用户协议
+ * 2. 版本检测和公告显示
+ * 3. 首次使用检测
+ * 4. 激活码验证
  * 5. 进入主页面
  * 6. 数据收集
  */
@@ -143,8 +143,8 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
       await checkLocalActivationStatus();
       console.log('✅ 激活状态检查完成');
 
-      // 开始启动流程：阶段1 - 版本检查和公告显示
-      setCurrentPhase('version-check');
+      // 开始启动流程：阶段1 - 隐私政策和用户协议
+      setCurrentPhase('privacy-consent');
       setIsInitialized(true);
 
     } catch (error) {
@@ -213,15 +213,15 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     console.log(`🔄 进入启动阶段: ${currentPhase}`);
 
     switch (currentPhase) {
+      case 'privacy-consent':
+        handlePrivacyConsentPhase();
+        break;
       case 'version-check':
         // 版本检查阶段由VersionChecker组件处理
         // 版本检查完成后会自动显示公告
         break;
       case 'first-launch-detection':
         handleFirstLaunchDetection();
-        break;
-      case 'privacy-consent':
-        handlePrivacyConsentPhase();
         break;
       case 'activation-verification':
         handleActivationVerificationPhase();
@@ -288,9 +288,10 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
       console.log('📋 显示隐私政策同意界面');
       setShowPrivacyConsent(true);
     } else {
-      console.log('✅ 隐私政策已同意，进入激活验证阶段');
+      console.log('✅ 隐私政策已同意，进入版本检查阶段');
+      console.log('📋 下一阶段: version-check');
       setPrivacyConsentCompleted(true);
-      setCurrentPhase('activation-verification');
+      setCurrentPhase('version-check');
     }
   };
 
@@ -384,10 +385,14 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     // 确保公告已标记为显示
     setAnnouncementDisplayed(true);
     
+    // 等待下一次渲染周期确保组件更新完成
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
     // 在公告显示完成后，安全地进入下一阶段
+    // 添加额外延迟确保动画完成（如果有必要）
     setTimeout(() => {
       proceedToNextPhase();
-    }, 0);
+    }, 300); // 300ms 延迟确保动画完成
   };
 
   const handleVersionCheckError = async (error: string) => {
@@ -425,8 +430,8 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     setShowPrivacyConsent(false);
     setPrivacyConsentCompleted(true);
 
-    // 首次使用且同意条款后，进入激活验证阶段
-    setCurrentPhase('activation-verification');
+    // 隐私政策同意后，进入版本检查阶段
+    setCurrentPhase('version-check');
   };
 
   const handlePrivacyConsentReject = async () => {

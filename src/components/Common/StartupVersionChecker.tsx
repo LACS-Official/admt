@@ -129,21 +129,23 @@ const useStyles = makeStyles({
 });
 
 interface StartupVersionCheckerProps {
+  checkResult?: VersionCheckResult;  // 可选：如果传入则直接使用，不传入则自己执行检查
   onCheckComplete: (needsUpdate: boolean, result?: VersionCheckResult) => void;
   onAllowOfflineUse?: () => void;
 }
 
 const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
+  checkResult: propCheckResult,
   onCheckComplete,
   onAllowOfflineUse
 }) => {
   const styles = useStyles();
   const { dispatchToast } = useToastController();
   
-  const [isChecking, setIsChecking] = useState(true);
-  const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(null);
+  const [isChecking, setIsChecking] = useState(!propCheckResult);
+  const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(propCheckResult || null);
   const [error, setError] = useState<string | null>(null);
-  const [showDialog, setShowDialog] = useState(false);
+  const [showDialog, setShowDialog] = useState(!!propCheckResult?.needsUpdate);
   const [retryCount, setRetryCount] = useState(0);
   const [timeoutReached, setTimeoutReached] = useState(false);
 
@@ -225,58 +227,34 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
    * 处理立即更新 - 跳转到浏览器打开下载页面
    */
   const handleUpdateNow = useCallback(() => {
-    let downloadUrl = '';
+    // 固定使用指定的下载页面
+    const downloadUrl = 'https://admt.lacs.cc/download';
 
-    // 优先使用官方下载链接
-    if (checkResult?.updateInfo?.downloadLinks?.official) {
-      downloadUrl = checkResult.updateInfo.downloadLinks.official;
-    } else if (checkResult?.updateInfo?.downloadLinks?.github) {
-      downloadUrl = checkResult.updateInfo.downloadLinks.github;
-    } else if (checkResult?.updateInfo && 'downloadUrl' in checkResult.updateInfo) {
-      // 兼容旧版本的 downloadUrl 字段
-      downloadUrl = (checkResult.updateInfo as any).downloadUrl;
-    }
-
-    if (downloadUrl) {
-      // 使用 Tauri 的 shell API 打开浏览器
-      import('@tauri-apps/plugin-shell').then(({ open }) => {
-        open(downloadUrl).catch((error) => {
-          console.error('无法打开浏览器:', error);
-          // 降级到 window.open
-          window.open(downloadUrl, '_blank');
-        });
-      }).catch(() => {
-        // 如果 Tauri shell 插件不可用，使用 window.open
+    // 使用 Tauri 的 shell API 打开浏览器
+    import('@tauri-apps/plugin-shell').then(({ open }) => {
+      open(downloadUrl).catch((error) => {
+        console.error('无法打开浏览器:', error);
+        // 降级到 window.open
         window.open(downloadUrl, '_blank');
       });
+    }).catch(() => {
+      // 如果 Tauri shell 插件不可用，使用 window.open
+      window.open(downloadUrl, '_blank');
+    });
 
-      // 显示成功提示
-      dispatchToast(
-        <Toast>
-          <ToastTitle media={<Open24Regular />}>
-            正在打开下载页面
-          </ToastTitle>
-          <ToastBody>
-            请在浏览器中完成下载和安装
-          </ToastBody>
-        </Toast>,
-        { intent: 'success' as ToastIntent }
-      );
-    } else {
-      // 如果没有下载链接，显示提示
-      dispatchToast(
-        <Toast>
-          <ToastTitle media={<Warning24Regular />}>
-            暂无下载链接
-          </ToastTitle>
-          <ToastBody>
-            请联系开发者获取最新版本
-          </ToastBody>
-        </Toast>,
-        { intent: 'warning' as ToastIntent }
-      );
-    }
-  }, [checkResult, dispatchToast]);
+    // 显示成功提示
+    dispatchToast(
+      <Toast>
+        <ToastTitle media={<Open24Regular />}>
+          正在打开下载页面
+        </ToastTitle>
+        <ToastBody>
+          请在浏览器中完成下载和安装
+        </ToastBody>
+      </Toast>,
+      { intent: 'success' as ToastIntent }
+    );
+  }, [dispatchToast]);
 
   /**
    * 处理重试
@@ -298,10 +276,16 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
 
 
 
-  // 组件挂载时开始版本检查
+  // 组件挂载时开始版本检查（仅在没有传入checkResult时）
   useEffect(() => {
-    performVersionCheck();
-  }, [performVersionCheck]);
+    if (!propCheckResult) {
+      performVersionCheck();
+    } else {
+      // 如果传入了checkResult，直接调用回调
+      console.log('📋 使用传入的版本检查结果:', propCheckResult);
+      onCheckComplete(propCheckResult.needsUpdate, propCheckResult);
+    }
+  }, [propCheckResult, performVersionCheck, onCheckComplete]);
 
   // 如果正在检查且没有显示对话框，显示加载状态
   if (isChecking && !showDialog) {

@@ -4,7 +4,8 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { devtools, persist, createJSONStorage } from 'zustand/middleware';
+import type { VersionCheckResult, VersionInfo } from '../types/app';
 
 // 启动流程阶段
 export type StartupPhase =
@@ -20,34 +21,8 @@ export type StartupPhase =
 export type UserType = 'new' | 'existing' | 'expired' | 'unknown';
 
 // 版本检查结果
-export interface VersionCheckResult {
-  isLatest: boolean;
-  currentVersion: string;
-  latestVersion?: string;
-  updateInfo?: {
-    id?: number;
-    version: string;
-    releaseNotes?: string;
-    releaseNotesEn?: string;
-    releaseDate: string;
-    downloadLinks?: {
-      official?: string;
-    };
-    fileSize?: string;
-    isStable?: boolean;
-    versionType?: "release" | "beta" | "alpha";
-    metadata?: {
-      buildNumber?: string;
-      commitHash?: string;
-      changelog?: string[];
-    };
-    // 兼容旧格式
-    title?: string;
-    description?: string;
-    downloadUrl?: string;
-    isForced?: boolean;
-  };
-}
+// 使用统一的 VersionCheckResult 类型定义
+export type { VersionCheckResult, VersionInfo } from '../types/app';
 
 // 激活状态（符合API响应格式）
 export interface ActivationStatus {

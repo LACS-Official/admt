@@ -27,8 +27,8 @@ import {
   Dismiss24Regular,
   CheckmarkCircle24Regular,
   DocumentBulletList24Regular,
-  ArrowLeft24Regular
-} from '@fluentui/react-icons';
+  ArrowLeft24Regular,
+  ChevronRight24Regular} from '@fluentui/react-icons';
 import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
 
 const useStyles = makeStyles({
@@ -37,47 +37,57 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: '100vh',
     width: '100%',
-    backgroundColor: tokens.colorNeutralBackground2,
-    padding: tokens.spacingHorizontalXXXL,
+    backgroundColor: tokens.colorNeutralBackground1,
+    padding: tokens.spacingHorizontalM,
   },
   card: {
     width: '100%',
     maxWidth: '800px',
     padding: `${tokens.spacingVerticalXXL} ${tokens.spacingHorizontalXXL}`,
-    borderRadius: tokens.borderRadiusXLarge,
-    boxShadow: tokens.shadow28,
+    borderRadius: '8px',
+    boxShadow: tokens.shadow16,
     position: 'relative',
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    '&:hover': {
+      boxShadow: tokens.shadow28,
+    },
   },
   header: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    maxHeight: '20%',
     padding: `${tokens.spacingVerticalXXL} ${tokens.spacingHorizontalMNudge}`,
     textAlign: 'center',
     width: '100%',
-    // 30px文字
     marginBottom: tokens.spacingVerticalXXL,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusLarge,
+    backgroundColor: tokens.colorBrandBackground,
+    border: `1px solid ${tokens.colorBrandStroke1}`,
+    borderRadius: '8px',
   },
   iconContainer: {
     marginBottom: tokens.spacingVerticalM,
+    backgroundColor: tokens.colorBrandBackground,
+    borderRadius: '50%',
+    padding: tokens.spacingVerticalS,
+    color: tokens.colorNeutralForegroundInverted,
   },
   title: {
     fontSize: tokens.fontSizeHero900,
     fontWeight: tokens.fontWeightSemibold,
     marginBottom: tokens.spacingVerticalS,
     marginTop: tokens.spacingVerticalS,
-    color: tokens.colorNeutralForeground1,
+    color: tokens.colorBrandForeground2,
   },
   subtitle: {
     fontSize: tokens.fontSizeBase300,
     color: tokens.colorNeutralForeground2,
     marginTop: tokens.spacingVerticalS,
     fontWeight: tokens.fontWeightRegular,
+    maxWidth: '600px',
   },
   content: {
     display: 'flex',
@@ -95,51 +105,62 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
+    color: tokens.colorNeutralForeground1,
   },
   buttonGroup: {
     display: 'flex',
+    flexWrap: 'wrap',
     gap: tokens.spacingHorizontalM,
   },
   policyButton: {
     flex: 1,
-    minHeight: '80px',
+    minWidth: '200px',
+    minHeight: '120px',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: tokens.spacingVerticalXS,
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
-    borderRadius: tokens.borderRadiusMedium,
-    textAlign: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: tokens.spacingVerticalS,
+    padding: tokens.spacingVerticalM,
+    borderRadius: '8px',
+    textAlign: 'left',
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
     '&:hover': {
-      backgroundColor: tokens.colorNeutralBackground2,
+      backgroundColor: tokens.colorBrandBackground,
+      border: `1px solid ${tokens.colorBrandStroke1}`,
+      transform: 'translateY(-2px)',
     },
+    transition: 'all 0.2s ease',
   },
   policyButtonIcon: {
     fontSize: '24px',
+    color: tokens.colorBrandForeground1,
   },
   policyButtonText: {
     fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
   },
   policyButtonDesc: {
     fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground2,
   },
+  policyButtonArrow: {
+    alignSelf: 'flex-end',
+    color: tokens.colorBrandForeground1,
+  },
   checkboxSection: {
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalM,
+    padding: tokens.spacingVerticalL,
     backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: tokens.borderRadiusMedium,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: '8px',
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
   },
   requiredCheckbox: {
     '& .fui-Checkbox__indicator': {
-      borderTopColor: tokens.colorPaletteRedBorder1,
-      borderRightColor: tokens.colorPaletteRedBorder1,
-      borderBottomColor: tokens.colorPaletteRedBorder1,
-      borderLeftColor: tokens.colorPaletteRedBorder1,
+      border: `1px solid ${tokens.colorPaletteRedBorder1}`,
     },
   },
   warningMessage: {
@@ -151,21 +172,24 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
     marginTop: tokens.spacingVerticalXXL,
+    flexWrap: 'wrap',
   },
   exitButton: {
-    backgroundColor: tokens.colorPaletteRedBackground1,
-    color: tokens.colorPaletteRedForeground1,
+    backgroundColor: tokens.colorNeutralBackground1,
+    color: tokens.colorNeutralForeground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    borderRadius: '8px',
     '&:hover': {
-      backgroundColor: tokens.colorPaletteRedBackground2,
-      color: tokens.colorPaletteRedForeground2,
+      backgroundColor: tokens.colorNeutralBackground3,
     },
     '&:active': {
-      backgroundColor: tokens.colorPaletteRedBackground3,
+      backgroundColor: tokens.colorNeutralBackground4,
     },
   },
   acceptButton: {
     backgroundColor: tokens.colorBrandBackground,
     color: tokens.colorNeutralForegroundInverted,
+    borderRadius: '8px',
     '&:hover': {
       backgroundColor: tokens.colorBrandBackgroundHover,
     },
@@ -175,22 +199,16 @@ const useStyles = makeStyles({
     '&:disabled': {
       backgroundColor: tokens.colorNeutralBackgroundDisabled,
       color: tokens.colorNeutralForegroundDisabled,
+      cursor: 'not-allowed',
     }
   },
   dialogContent: {
     maxHeight: '60vh',
     overflowY: 'auto',
-    padding: tokens.spacingHorizontalM,
+    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalL}`,
     fontSize: tokens.fontSizeBase300,
     color: tokens.colorNeutralForeground1,
     textAlign: 'left',
-    '& div': {
-      whiteSpace: 'pre-wrap',
-      lineHeight: '1.8',
-      wordWrap: 'break-word',
-      wordBreak: 'break-word',
-      fontFamily: tokens.fontFamilyBase,
-    },
     '& p': {
       marginBottom: tokens.spacingVerticalM,
       marginTop: 0,
@@ -207,6 +225,7 @@ const useStyles = makeStyles({
       marginTop: tokens.spacingVerticalL,
       marginBottom: tokens.spacingVerticalM,
       fontWeight: tokens.fontWeightSemibold,
+      color: tokens.colorBrandForeground1,
     },
   },
   dialogHeader: {
@@ -214,32 +233,17 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
     padding: `${tokens.spacingVerticalS} 0`,
+    color: tokens.colorBrandForeground1,
   },
-  policyItem: {
+  infoBanner: {
+    backgroundColor: tokens.colorBrandBackground,
+    borderLeft: `3px solid ${tokens.colorBrandForeground1}`,
+    padding: tokens.spacingVerticalM,
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    '&:hover': {
-      backgroundColor: tokens.colorNeutralBackground2,
-    },
-  },
-  policyItemText: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-  },
-  policyItemTitle: {
-    fontWeight: tokens.fontWeightSemibold,
-  },
-  policyItemDesc: {
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground2,
-  },
-  policyItemIcon: {
-    color: tokens.colorNeutralForeground2,
+    gap: tokens.spacingHorizontalS,
+    marginBottom: tokens.spacingVerticalL,
   },
 });
 
@@ -436,78 +440,100 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     <>
       {open && (
         <div className={styles.container}>
-          <Card className={styles.card}>
-            <div className={styles.header}>
-              <div className={styles.title}>隐私和协议</div>
-              <div className={styles.subtitle}>请仔细阅读并同意以下所有条款以继续使用应用</div>
-            </div>
+          {/* 添加淡入和上移动画效果 */}
+          <div style={{
+            animation: 'fadeInUp 0.3s ease-out forwards',
+            opacity: 0,
+            transform: 'translateY(20px)'
+          }}>
+            <Card className={styles.card}>
+              <div className={styles.header}>
+                <div className={styles.title}>玩机管家隐私和协议</div>
+                <div className={styles.subtitle}>请仔细阅读并同意以下所有条款以继续使用应用</div>
+              </div>
 
-            <div className={styles.content}>
-              <div className={styles.section}>
-                <div className={styles.sectionTitle}>
-                  <Document24Regular />
-                  相关政策和协议
+              <div className={styles.content}>
+                <div className={styles.section}>
+                  <div className={styles.sectionTitle}>
+                    <Document24Regular />
+                    相关政策和协议
+                  </div>
+                  
+                  <div className={styles.buttonGroup}>
+                    {policies.map((policy) => (
+                      <div 
+                        key={policy.id}
+                        style={{ transition: 'transform 0.2s ease' }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+                        }}
+                      >
+                        <Button 
+                          className={styles.policyButton}
+                          appearance="subtle" 
+                          onClick={() => setActivePolicy(policy.id as any)}
+                          style={{ width: '100%' }}
+                        >
+                          <div className={styles.policyButtonIcon}>{policy.icon}</div>
+                          <div>
+                            <div className={styles.policyButtonText}>{policy.title}</div>
+                            <div className={styles.policyButtonDesc}>{policy.description}</div>
+                          </div>
+                          <ChevronRight24Regular className={styles.policyButtonArrow} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                
-                <div className={styles.buttonGroup}>
-                  {policies.map((policy) => (
-                    <Button 
-                      key={policy.id}
-                      className={styles.policyButton}
-                      appearance="subtle" 
-                      onClick={() => setActivePolicy(policy.id as any)}
-                    >
-                      <div className={styles.policyButtonIcon}>{policy.icon}</div>
-                      <div className={styles.policyButtonText}>{policy.title}</div>
-                      <div className={styles.policyButtonDesc}>{policy.description}</div>
-                    </Button>
-                  ))}
+
+                <Divider />
+
+                <div className={styles.section}>
+                  <div className={styles.checkboxSection}>
+                    <Checkbox
+                      checked={acceptedAll}
+                      onChange={(_, data) => setAcceptedAll(data.checked === true)}
+                      label="我已阅读并同意以上所有协议和政策"
+                      className={!acceptedAll ? styles.requiredCheckbox : undefined}
+                      size="large"
+                    />
+                  </div>
+
+                  {!acceptedAll && (
+                    <MessageBar intent="warning" className={styles.warningMessage}>
+                      <Warning24Regular />
+                      请注意：必须同意所有协议和政策才能继续使用本软件。
+                    </MessageBar>
+                  )}
                 </div>
               </div>
 
-              <Divider />
-
-              <div className={styles.section}>
-                <div className={styles.checkboxSection}>
-                  <Checkbox
-                    checked={acceptedAll}
-                    onChange={(_, data) => setAcceptedAll(data.checked === true)}
-                    label="我已阅读并同意以上所有协议和政策"
-                    className={!acceptedAll ? styles.requiredCheckbox : undefined}
-                  />
-                </div>
-
-                {!acceptedAll && (
-                  <MessageBar intent="warning" className={styles.warningMessage}>
-                    <Warning24Regular />
-                    请注意：必须同意所有协议和政策才能继续使用本软件。
-                  </MessageBar>
-                )}
+              <div className={styles.actions}>
+                <Button
+                  appearance="secondary"
+                  icon={<Dismiss24Regular />}
+                  onClick={() => setShowExitConfirm(true)}
+                  className={styles.exitButton}
+                  size="large"
+                >
+                  不同意，退出应用
+                </Button>
+                <Button
+                  appearance="primary"
+                  onClick={handleAccept}
+                  disabled={!acceptedAll}
+                  className={styles.acceptButton}
+                  size="large"
+                  icon={<CheckmarkCircle24Regular />}
+                >
+                  同意并继续
+                </Button>
               </div>
-            </div>
-
-            <div className={styles.actions}>
-              <Button
-                appearance="secondary"
-                icon={<Dismiss24Regular />}
-                onClick={() => setShowExitConfirm(true)}
-                className={styles.exitButton}
-                size="large"
-              >
-                不同意，退出应用
-              </Button>
-              <Button
-                appearance="primary"
-                onClick={handleAccept}
-                disabled={!acceptedAll}
-                className={styles.acceptButton}
-                size="large"
-                icon={<CheckmarkCircle24Regular />}
-              >
-                同意并继续
-              </Button>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       )}
 
@@ -517,7 +543,9 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
         onOpenChange={(_, data) => !data.open && setActivePolicy(null)}
         modalType="modal"
       >
-        <DialogSurface>
+        <DialogSurface style={{
+          animation: 'fadeIn 0.2s ease-out forwards'
+        }}>
           <DialogBody>
             <DialogTitle>
               <div className={styles.dialogHeader}>
@@ -554,7 +582,9 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
 
       {/* 退出确认对话框 */}
       <Dialog open={showExitConfirm} modalType="modal">
-        <DialogSurface>
+        <DialogSurface style={{
+          animation: 'fadeIn 0.2s ease-out forwards'
+        }}>
           <DialogBody>
             <DialogTitle>
               <div className={styles.dialogHeader}>
@@ -593,5 +623,30 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     </>
   );
 };
+
+// 添加全局动画样式
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+`;
+document.head.appendChild(style);
 
 export default PrivacyConsentDialog;
