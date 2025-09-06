@@ -5,8 +5,15 @@ import fastbootIcon from "./devices/anz.webp";
 import fastbootdIcon from "./devices/anz.webp";
 import sideloadIcon from "./devices/anz.webp";
 import twrpIcon from "./devices/anz.webp";
-import UnlinkIcon from "./devices/unlink.gif";
-
+import UnlinkIcon from "./devices/Unlink.gif";
+//关于页面导入
+import admtbgIcon from "./admt/admt-bg.webp";
+import lacsbgIcon from "./admt/lacs-maxbg-all-icons.webp";
+//Logo 
+import admtLogo64 from "./admt/64x64.png";
+import admtLogo128 from "./admt/128x128.png";
+import admtLogo256 from "./admt/256x256.png";
+import admtLogo512 from "./admt/512x512.png";
 // 设备图标映射
 export const deviceIcons = {
   sys: anzIcon,        // 系统模式
@@ -29,6 +36,12 @@ export {
   fastbootdIcon,
   sideloadIcon,
   twrpIcon,
+  admtbgIcon,
+  lacsbgIcon,
+  admtLogo64,
+  admtLogo128,
+  admtLogo256,
+  admtLogo512
 };
 
 // 根据设备模式获取图标

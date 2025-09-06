@@ -23,10 +23,15 @@ import { useAppStore } from "../../stores/appStore";
 import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { admtbgIcon, admtLogo128, admtLogo64 } from "../../assets/icons";
 import UserInfoModal from "../Settings/UserInfoModal";
-import AppIcon from "../Common/AppIcon";
 
 const useStyles = makeStyles({
+  IconImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: "4px",
+  },
   titleBar: {
     height: "48px",
     display: "flex",
@@ -184,7 +189,11 @@ const TitleBar: React.FC = () => {
     <div className={mergeClasses(styles.titleBar, "drag-region")}>
       <div className={styles.leftSection}>
         <div className={styles.logo}>
-          <AppIcon size="medium"/>
+              <img
+                src={admtLogo64}
+                alt="UnlinkIcon"
+                className={styles.IconImage}
+              />
         </div>
         <Text className={styles.title}>玩机管家-Android Device Management Tool</Text>
       </div>

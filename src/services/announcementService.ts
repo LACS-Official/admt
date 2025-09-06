@@ -6,6 +6,7 @@
 import { SecurityConfigManager } from '../config/securityConfig';
 import { Announcement, AnnouncementResponse } from '../types/app';
 import { tauriHttpService } from './tauriHttpService';
+import { getSoftwareId } from '../config/api';
 
 export interface AnnouncementQueryParams {
   page?: number;
@@ -55,10 +56,17 @@ export class AnnouncementService {
       });
 
       // 使用软件ID获取公告
-      const softwareId = this.configManager.getSoftwareId();
+      let softwareId;
+      try {
+        softwareId = getSoftwareId();
+      } catch (error) {
+        console.warn('⚠️ 无法获取软件ID，尝试使用安全配置管理器');
+        softwareId = this.configManager.getSoftwareId();
+      }
+      
       const endpoint = `/app/software/id/${softwareId}/announcements?${queryParams.toString()}`;
 
-      console.log('📢 请求公告API:', endpoint);
+      console.log('📢 请求公告API:', endpoint, '软件ID:', softwareId);
 
       // 使用 tauriHttpService 替代原生 fetch
       const response = await tauriHttpService.get<AnnouncementResponse>(endpoint, {

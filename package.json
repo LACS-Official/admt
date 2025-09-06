@@ -6,15 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:dev": "vite build --mode development",
+    "build:prod": "vite build --mode production",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
+    "tauri:build:prod": "npm run validate-env && tauri build --mode production",
     "build:all": "npm run build && npm run tauri:build",
     "clean": "rimraf dist src-tauri/target",
-    "prebuild": "npm run clean"
+    "prebuild": "npm run clean",
+    "validate-env": "node scripts/validate-env.cjs",
+    "test-version": "node scripts/test-version-detection.cjs",
+    "postinstall": "node scripts/validate-env.cjs || echo 'Environment validation skipped during install'"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.54.19",

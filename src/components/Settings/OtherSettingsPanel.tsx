@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   makeStyles,
   Text,
@@ -11,8 +11,12 @@ import {
 import {
   Globe24Regular,
   Accessibility24Regular,
+  ArrowMinimize24Regular,
+  Play24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
+import { systemTrayService } from "../../services/systemTrayService";
+import { autoStartService } from "../../services/autoStartService";
 
 const useStyles = makeStyles({
   container: {
@@ -79,9 +83,101 @@ const OtherSettingsPanel: React.FC = () => {
   // 界面设置状态
   const [minimizeToTray, setMinimizeToTray] = useState(false);
   const [startWithSystem, setStartWithSystem] = useState(false);
+  const [traySupported, setTraySupported] = useState(false);
+  const [autoStartSupported, setAutoStartSupported] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // 初始化系统功能状态
+  useEffect(() => {
+    const initializeSystemFeatures = async () => {
+      try {
+        setLoading(true);
+
+        // 检查系统托盘支持
+        const traySupport = await systemTrayService.isSystemTraySupported();
+        setTraySupported(traySupport);
+
+        // 检查开机自启动支持
+        await autoStartService.initialize('玩机管家');
+        const autoStartSupport = await autoStartService.isAutoStartSupported();
+        setAutoStartSupported(autoStartSupport);
+
+        // 获取当前自启动状态
+        if (autoStartSupport) {
+          const autoStartStatus = await autoStartService.getAutoStartStatus();
+          setStartWithSystem(autoStartStatus.isEnabled);
+        }
+
+        console.log('✅ 系统功能状态初始化完成');
+      } catch (error) {
+        console.error('❌ 系统功能状态初始化失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeSystemFeatures();
+  }, []);
 
   const handleLanguageChange = (value: string) => {
     updateConfig({ language: value as "zh-CN" | "en-US" });
+  };
+
+  // 处理系统托盘切换
+  const handleMinimizeToTrayChange = async (checked: boolean) => {
+    try {
+      setLoading(true);
+      setMinimizeToTray(checked);
+
+      if (checked) {
+        // 启用系统托盘
+        await systemTrayService.initialize({
+          tooltip: '玩机管家',
+          menuItems: [
+            { id: 'show', label: '显示窗口' },
+            { id: 'separator1', label: '-' },
+            { id: 'exit', label: '退出应用' }
+          ]
+        });
+
+        // 设置窗口关闭时最小化到托盘
+        await systemTrayService.setupWindowCloseHandler(true);
+        
+        console.log('✅ 系统托盘已启用');
+      } else {
+        // 禁用系统托盘
+        await systemTrayService.cleanup();
+        console.log('✅ 系统托盘已禁用');
+      }
+    } catch (error) {
+      console.error('❌ 系统托盘设置失败:', error);
+      // 回滚状态
+      setMinimizeToTray(!checked);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理开机自启动切换
+  const handleStartWithSystemChange = async (checked: boolean) => {
+    try {
+      setLoading(true);
+      
+      const success = checked 
+        ? await autoStartService.enableAutoStart()
+        : await autoStartService.disableAutoStart();
+
+      if (success) {
+        setStartWithSystem(checked);
+        console.log(`✅ 开机自启动已${checked ? '启用' : '禁用'}`);
+      } else {
+        console.error('❌ 开机自启动设置失败');
+      }
+    } catch (error) {
+      console.error('❌ 开机自启动设置失败:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -168,29 +264,43 @@ const OtherSettingsPanel: React.FC = () => {
 
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
-                <Text weight="semibold">最小化到系统托盘</Text>
+                <Text weight="semibold">
+                  <ArrowMinimize24Regular style={{ marginRight: '8px' }} />
+                  最小化到系统托盘
+                </Text>
                 <br />
                 <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  关闭窗口时最小化到托盘
+                  {traySupported 
+                    ? "关闭窗口时最小化到托盘" 
+                    : "当前系统不支持系统托盘功能"
+                  }
                 </Text>
               </div>
               <Switch
                 checked={minimizeToTray}
-                onChange={(_, data) => setMinimizeToTray(data.checked === true)}
+                disabled={!traySupported || loading}
+                onChange={(_, data) => handleMinimizeToTrayChange(data.checked === true)}
               />
             </div>
 
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
-                <Text weight="semibold">开机自启动</Text>
+                <Text weight="semibold">
+                  <Play24Regular style={{ marginRight: '8px' }} />
+                  开机自启动
+                </Text>
                 <br />
                 <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  系统启动时自动运行应用
+                  {autoStartSupported 
+                    ? "系统启动时自动运行应用" 
+                    : "当前系统不支持开机自启动功能"
+                  }
                 </Text>
               </div>
               <Switch
                 checked={startWithSystem}
-                onChange={(_, data) => setStartWithSystem(data.checked === true)}
+                disabled={!autoStartSupported || loading}
+                onChange={(_, data) => handleStartWithSystemChange(data.checked === true)}
               />
             </div>
           </div>

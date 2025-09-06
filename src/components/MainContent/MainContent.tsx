@@ -10,7 +10,6 @@ import {
 
 } from "@fluentui/react-components";
 import {
-  Phone24Regular,
   Code24Regular,
   Settings24Regular,
   Wrench24Regular,

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { admtbgIcon } from "../../assets/icons";
+import { lacsbgIcon } from "../../assets/icons";
 import {
   makeStyles,
   mergeClasses,
@@ -324,7 +326,7 @@ const AboutPanel: React.FC = () => {
           />
 
           <div className={styles.aboutContent}>
-            <img src="src-tauri/icons/admt/admt-bg.webp" alt="appIcon" className={styles.appIconImage}/>
+            <img src={admtbgIcon} alt="appIcon" className={styles.appIconImage}/>
             
             <Text size={600} weight="bold">玩机管家V1.0.0</Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
@@ -378,11 +380,11 @@ const AboutPanel: React.FC = () => {
           />
 
           <div className={styles.aboutContent}>
-            <img src="src-tauri/icons/admt/lacs-maxbg-all-icons.webp" alt="appIcon" className={styles.appIconImage}/>
+            <img src={lacsbgIcon} alt="appIcon" className={styles.appIconImage}/>
             
             <Text size={600} weight="bold">领创工作室 LACS</Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
-              致力于为用户提供高质量的工具和技术解决方案，目前全网粉丝1w+
+              致力于为用户提供高质量的工具和技术解决方案
             </Text>
 
             <div className={styles.buttonGroup}>
