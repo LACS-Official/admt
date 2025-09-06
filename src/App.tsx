@@ -9,6 +9,7 @@ import StartupFlowManager from "./components/StartupFlow/StartupFlowManager";
 import { useAppStore } from "./stores/appStore";
 import { useStartupFlowStore } from "./stores/startupFlowStore";
 import { logService } from "./services/logService";
+import { ReactErrorFixer } from "./utils/reactErrorFix";
 
 const useStyles = makeStyles({
   app: {
@@ -178,13 +179,28 @@ function App() {
       try {
         logService.info('开始初始化ADMT应用...', 'App');
 
-        // 初始化应用状态
+        // 1. 执行React错误检查和修复
+        logService.info('执行React错误检查和修复...', 'App');
+        try {
+          const checkResults = await ReactErrorFixer.performAllChecks();
+          if (!checkResults.success) {
+            logService.warning('发现React错误问题，尝试自动修复', 'App', { issues: checkResults.issues });
+            await ReactErrorFixer.autoFix();
+            logService.info('React错误自动修复完成', 'App');
+          } else {
+            logService.info('React错误检查通过', 'App');
+          }
+        } catch (fixError) {
+          logService.warning('React错误修复失败，继续启动', 'App', fixError);
+        }
+
+        // 2. 初始化应用状态
         initialize();
 
-        // 记录设备检测配置状态
+        // 3. 记录设备检测配置状态
         logService.info(`设备检测配置 - 自动检测: ${config.autoDetectDevices}, 扫描间隔: ${config.scanInterval}ms`, 'App');
 
-        // 初始化过程
+        // 4. 初始化过程
         await new Promise(resolve => setTimeout(resolve, 800));
 
         logService.info('ADMT 应用初始化完成', 'App');

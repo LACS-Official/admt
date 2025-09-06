@@ -87,15 +87,24 @@ class OnlineResourcesService {
         throw new Error(response.error || '获取软件列表失败');
       }
 
-      // 转换数据格式
-      const softwareList: OnlineSoftware[] = Array.isArray(response.data)
-        ? response.data
-        : response.data.software || [];
 
-      // 提取分页信息（如果存在）
-      const pagination = (response.data && typeof response.data === 'object' && !Array.isArray(response.data))
-        ? (response.data as any).pagination
-        : undefined;
+
+      // 转换数据格式 - 处理嵌套的 data 结构
+      let softwareList: OnlineSoftware[] = [];
+      let pagination: any = undefined;
+
+      if (Array.isArray(response.data)) {
+        // 如果 response.data 直接是数组
+        softwareList = response.data;
+      } else if (response.data && response.data.data) {
+        // 如果是嵌套结构 response.data.data.software
+        softwareList = response.data.data.software || [];
+        pagination = response.data.data.pagination;
+      } else if (response.data && response.data.software) {
+        // 如果是 response.data.software
+        softwareList = response.data.software;
+        pagination = response.data.pagination;
+      }
 
       const result: OnlineSoftwareResponse = {
         success: true,
@@ -187,8 +196,18 @@ class OnlineResourcesService {
         throw new Error(response.error || '获取软件详情失败');
       }
 
-      console.log('✅ 获取软件详情成功:', response.data.name);
-      return response.data as OnlineSoftware;
+      // 处理可能的嵌套数据结构
+      let softwareData: any = null;
+      if (response.data && response.data.data) {
+        // 如果是嵌套结构 response.data.data
+        softwareData = response.data.data;
+      } else {
+        // 如果是直接结构 response.data
+        softwareData = response.data;
+      }
+
+      console.log('✅ 获取软件详情成功:', softwareData?.name);
+      return softwareData as OnlineSoftware;
 
     } catch (error) {
       console.error('❌ 获取软件详情失败:', error);

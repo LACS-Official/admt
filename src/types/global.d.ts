@@ -1,6 +1,7 @@
 /// <reference types="react" />
 
 interface ImportMetaEnv {
+  VITE_BUILD_ID: string;
   DEV: boolean
   PROD: boolean
   MODE: string
