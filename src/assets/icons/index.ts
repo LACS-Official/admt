@@ -1,10 +1,11 @@
 // 设备图标导入
-import anzIcon from "./devices/anz.png";
-import androidIcon from "./devices/anz.png";
-import fastbootIcon from "./devices/anz.png";
-import fastbootdIcon from "./devices/anz.png";
-import sideloadIcon from "./devices/anz.png";
-import twrpIcon from "./devices/anz.png";
+import anzIcon from "./devices/anz.webp";
+import androidIcon from "./devices/anz.webp";
+import fastbootIcon from "./devices/anz.webp";
+import fastbootdIcon from "./devices/anz.webp";
+import sideloadIcon from "./devices/anz.webp";
+import twrpIcon from "./devices/anz.webp";
+import UnlinkIcon from "./devices/unlink.gif";
 
 // 设备图标映射
 export const deviceIcons = {
@@ -16,7 +17,8 @@ export const deviceIcons = {
   edl: androidIcon,         // EDL模式 (使用通用图标)
   unauthorized: androidIcon, // 未授权 (使用通用图标)
   offline: androidIcon,     // 离线 (使用通用图标)
-  unknown: androidIcon,     // 未知 (使用通用图标)
+  unknown: androidIcon,     // 未知 
+  unlink: UnlinkIcon,       // 解除链接 
 } as const;
 
 // 导出单个图标

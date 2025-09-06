@@ -20,6 +20,7 @@ import {
   Home24Regular,
 } from "@fluentui/react-icons";
 import { getDeviceIcon } from "../../assets/icons";
+import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
 import { useAppStore } from "../../stores/appStore";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -36,13 +37,13 @@ import { usageTrackingService } from "../../services/usageTrackingService";
 
 const useStyles = makeStyles({
   '@keyframes pulse': {
-    from: {
+    '&from': {
       opacity: 1,
     },
-    '50%': {
+    '&50%': {
       opacity: 0.8,
     },
-    to: {
+    '&to': {
       opacity: 1,
     },
   },
@@ -163,7 +164,7 @@ const useStyles = makeStyles({
     marginBottom: "6px",
   },
   deviceName: {
-    fontSize: "14px", // 进一步减小字体
+    fontSize: "16px", // 进一步减小字体
     fontWeight: "600",
     color: "#00a0e9",
     lineHeight: "1.2",
@@ -177,7 +178,7 @@ const useStyles = makeStyles({
     marginBottom: "0", // 移除底部间距
   },
   deviceCodename: {
-    fontSize: "9px", // 进一步减小字体
+    fontSize: "10px", // 进一步减小字体
     color: "var(--colorNeutralForeground3)",
     lineHeight: "1.1",
     maxWidth: "100%",
@@ -672,14 +673,14 @@ const MainContent: React.FC = () => {
           <div className={styles.deviceInfoContainer}>
             {/* 上半部分：左侧背景图片 + 右侧无设备提示 */}
             <div className={styles.deviceInfoTop}>
-              {/* 左侧：背景图片 */}
-              <div className={styles.deviceIconSection}>
-                <img
-                  src="/src/assets/icons/devices/bg-lacs-group.webp"
-                  alt="No Device Background"
-                  className={styles.noDeviceBackgroundImage}
-                />
-              </div>
+            {/* 左侧：设备状态图片 */}
+            <div className={styles.deviceIconSection}>
+              <img
+                src={UnlinkIcon}
+                alt="UnlinkIcon"
+                className={styles.deviceIconImage}
+              />
+            </div>
 
               {/* 右侧：无设备提示信息 */}
               <div className={styles.deviceTextInfo}>

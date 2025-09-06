@@ -64,8 +64,8 @@ const useStyles = makeStyles({
     textAlign: 'center',
     width: '100%',
     marginBottom: tokens.spacingVerticalXXL,
-    backgroundColor: tokens.colorBrandBackground,
-    border: `1px solid ${tokens.colorBrandStroke1}`,
+    backgroundColor: '#ffffff',
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
     borderRadius: '8px',
   },
   iconContainer: {

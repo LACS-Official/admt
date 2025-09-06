@@ -34,18 +34,26 @@ const DEFAULT_CONFIG: UserBehaviorConfig = {
 }
 
 class UserBehaviorService {
+  private static instance: UserBehaviorService | null = null;
   private config: UserBehaviorConfig
   private deviceFingerprint: string | null = null
   private retryTimer: number | null = null
   private secureTransmission: SecureDataTransmissionService
-  private isInitialized = false
+  private _isInitialized = false
 
-  constructor(config?: Partial<UserBehaviorConfig>) {
+  private constructor(config?: Partial<UserBehaviorConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config }
     this.secureTransmission = SecureDataTransmissionService.getInstance()
     // 延迟初始化，等待安全配置准备就绪
     this.deferredInitialize()
     this.startRetryTimer()
+  }
+
+  static getInstance(config?: Partial<UserBehaviorConfig>): UserBehaviorService {
+    if (!UserBehaviorService.instance) {
+      UserBehaviorService.instance = new UserBehaviorService(config);
+    }
+    return UserBehaviorService.instance;
   }
 
   /**
@@ -86,7 +94,7 @@ class UserBehaviorService {
       // 初始化设备指纹
       await this.initializeDeviceFingerprint()
 
-      this.isInitialized = true
+      this._isInitialized = true
       console.log('✅ 用户行为服务初始化成功')
     } catch (error) {
       console.error('❌ 用户行为服务初始化失败:', error)
@@ -98,7 +106,7 @@ class UserBehaviorService {
    * 确保服务已初始化（懒加载）
    */
   private async ensureInitialized(): Promise<void> {
-    if (!this.isInitialized) {
+    if (!this._isInitialized) {
       await this.initializeServices()
     }
   }
@@ -480,10 +488,17 @@ class UserBehaviorService {
   updateConfig(newConfig: Partial<UserBehaviorConfig>): void {
     this.config = { ...this.config, ...newConfig }
   }
+
+  /**
+   * 检查服务是否已初始化
+   */
+  isInitialized(): boolean {
+    return this._isInitialized
+  }
 }
 
 // 创建单例实例
-export const userBehaviorService = new UserBehaviorService()
+export const userBehaviorService = UserBehaviorService.getInstance()
 
 // 导出类型和服务
 export default UserBehaviorService

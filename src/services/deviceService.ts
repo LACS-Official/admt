@@ -4,6 +4,7 @@ import { useDeviceStore } from "../stores/deviceStore";
 import { useAppStore } from "../stores/appStore";
 import { DeviceInfo, DeviceProperties, CommandResult, InstalledApp, ApkInfo, BatchOperation, DeviceFile } from "../types/device";
 import { logService } from "./logService";
+import { enhancedLogService } from "./enhancedLogService";
 import { deviceConnectionTrackingService } from "./deviceConnectionTrackingService";
 import { generateDeviceUniqueIdFromProperties } from "../utils/deviceIdentification";
 
@@ -464,10 +465,30 @@ export class DeviceService {
         properties = await this.getDeviceProperties(device.serial);
       } catch (error) {
         console.warn('获取设备属性失败:', error);
+        enhancedLogService.logWarning(
+          `获取设备属性失败: ${device.serial}`,
+          "DeviceService",
+          { deviceSerial: device.serial, error: error?.toString() }
+        );
       }
 
-      // 记录连接信息（简化版本，不记录连接时间）
+      // 记录连接信息
       this.connectedDevices.set(device.serial, { connectedAt: new Date(), properties });
+
+      // 使用增强日志系统记录设备连接事件
+      enhancedLogService.logDeviceEvent({
+        type: 'connected',
+        deviceId: device.serial,
+        deviceModel: properties?.marketName || properties?.model || 'Unknown',
+        currentMode: device.mode,
+        timestamp: new Date().toISOString(),
+        details: {
+          brand: properties?.brand,
+          androidVersion: properties?.androidVersion,
+          buildNumber: properties?.buildUser,
+          connectionType: device.mode === 'fastboot' ? 'Fastboot' : 'ADB'
+        }
+      });
 
       // 发送统计数据（只收集基本设备信息）
       const connectionData = {
@@ -481,6 +502,13 @@ export class DeviceService {
       console.log('设备连接统计已记录:', device.serial);
     } catch (error) {
       console.error('记录设备连接失败:', error);
+      enhancedLogService.logError(
+        `记录设备连接失败: ${device.serial}`,
+        "DeviceService",
+        { deviceSerial: device.serial },
+        'DEVICE_CONNECTION_RECORD_FAILED',
+        error as Error
+      );
     }
   }
 
@@ -493,9 +521,33 @@ export class DeviceService {
   ): Promise<void> {
     try {
       console.log('设备断开:', serial);
-      // 不再记录断开统计，只记录连接即可
+      
+      // 计算连接持续时间
+      const connectionDuration = Date.now() - connectionInfo.connectedAt.getTime();
+      
+      // 使用增强日志系统记录设备断开事件
+      enhancedLogService.logDeviceEvent({
+        type: 'disconnected',
+        deviceId: serial,
+        deviceModel: connectionInfo.properties?.marketName || connectionInfo.properties?.model || 'Unknown',
+        timestamp: new Date().toISOString(),
+        details: {
+          connectionDuration: Math.round(connectionDuration / 1000), // 秒
+          connectedAt: connectionInfo.connectedAt.toISOString(),
+          brand: connectionInfo.properties?.brand,
+          androidVersion: connectionInfo.properties?.androidVersion
+        }
+      });
+      
     } catch (error) {
       console.error('处理设备断开失败:', error);
+      enhancedLogService.logError(
+        `记录设备断开失败: ${serial}`,
+        "DeviceService",
+        { deviceSerial: serial },
+        'DEVICE_DISCONNECTION_RECORD_FAILED',
+        error as Error
+      );
     }
   }
 

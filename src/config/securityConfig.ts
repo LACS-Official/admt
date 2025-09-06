@@ -61,8 +61,53 @@ export class SecurityConfigManager {
       console.log('✅ 安全配置初始化成功')
     } catch (error) {
       console.error('❌ 安全配置初始化失败:', error)
-      throw new Error('Failed to initialize security configuration')
+      
+      // 尝试使用默认配置进行降级初始化
+      try {
+        console.log('🔄 尝试使用默认配置进行降级初始化...')
+        await this.initializeWithDefaults()
+        console.log('✅ 降级初始化成功')
+      } catch (fallbackError) {
+        console.error('❌ 降级初始化也失败:', fallbackError)
+        throw new Error('Failed to initialize security configuration')
+      }
     }
+  }
+
+  /**
+   * 使用默认配置初始化
+   */
+  private async initializeWithDefaults(): Promise<void> {
+    const defaultConfig: SecurityConfig = {
+      api_base_url: 'https://api-g.lacs.cc/',
+      api_key: this.generateSecureKey(32),
+      app_id: 'admt-app',
+      app_secret: this.generateSecureKey(16),
+      signature_secret: this.generateSecureKey(32),
+      enable_signature: false,
+      enable_strict_user_agent: false,
+      app_version: '1.0.0',
+      software_id: 1
+    }
+
+    // 不进行严格验证，因为这是降级配置
+    this.config = defaultConfig
+    this.isInitialized = true
+    
+    // 标记为降级模式
+    (window as any).__ADMT_FALLBACK_CONFIG__ = true
+  }
+
+  /**
+   * 生成安全密钥
+   */
+  private generateSecureKey(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let result = ''
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
   }
 
   /**
