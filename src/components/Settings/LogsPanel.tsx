@@ -427,7 +427,7 @@ const LogsPanel: React.FC = () => {
         <Card className={mergeClasses(styles.card, styles.logViewer)}>
           <CardHeader
             image={<Document24Regular />}
-            header={<Text weight="semibold">增强日志系统</Text>}
+            header={<Text weight="semibold">日志系统</Text>}
             description={<Text size={200}>实时查看结构化应用日志，支持设备状态和固件刷写追踪</Text>}
             action={
               <div className={styles.actionButtons}>
@@ -702,23 +702,6 @@ const LogsPanel: React.FC = () => {
 
             <Divider />
 
-            <Text weight="semibold" style={{ marginBottom: "8px" }}>保留策略</Text>
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text>基础日志保留:</Text>
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  30天 (设备连接、用户操作等)
-                </Text>
-              </div>
-            </div>
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text>错误日志保留:</Text>
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  180天 (错误、警告、致命错误)
-                </Text>
-              </div>
-            </div>
 
             <Divider />
 

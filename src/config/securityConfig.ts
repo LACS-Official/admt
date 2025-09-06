@@ -91,11 +91,11 @@ export class SecurityConfigManager {
     }
 
     // 不进行严格验证，因为这是降级配置
-    this.config = defaultConfig
-    this.isInitialized = true
+    this.config = defaultConfig;
+    this.isInitialized = true;
     
     // 标记为降级模式
-    (window as any).__ADMT_FALLBACK_CONFIG__ = true
+    (window as any).__ADMT_FALLBACK_CONFIG__ = true;
   }
 
   /**

@@ -7,6 +7,7 @@ mod activation;
 mod download_manager;
 mod cache;
 mod version;
+mod system_features;
 
 
 use commands::*;
@@ -91,7 +92,22 @@ pub fn run() {
             execute_batch_file_stream,
             open_device_manager,
             restart_application,
-            get_detailed_device_fingerprint
+            get_detailed_device_fingerprint,
+            // 系统功能
+            system_features::create_system_tray,
+            system_features::setup_tray_event_listener,
+            system_features::update_tray_menu,
+            system_features::update_tray_icon,
+            system_features::update_tray_tooltip,
+            system_features::is_system_tray_supported,
+            system_features::destroy_system_tray,
+            system_features::get_current_app_path,
+            system_features::get_auto_start_status,
+            system_features::enable_auto_start,
+            system_features::disable_auto_start,
+            system_features::is_auto_start_supported,
+            system_features::get_auto_start_config,
+            system_features::validate_auto_start
         ])
         .setup(|app| {
             // 只在调试模式下初始化日志插件

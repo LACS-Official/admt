@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { API_CONFIG, getApiBaseUrl } from '../config/api';
+import { API_CONFIG, getApiBaseUrl, getSoftwareId } from '../config/api';
 
 export interface VersionInfo {
   version: string;
@@ -47,32 +47,56 @@ class VersionService {
   private getApiConfig() {
     const isDev = import.meta.env.DEV;
     const baseUrl = getApiBaseUrl();
+    const softwareId = getSoftwareId();
+    
+    // 验证配置完整性
+    if (!baseUrl || baseUrl.includes('example.com')) {
+      throw new Error('Invalid API base URL configuration');
+    }
+    
+    if (softwareId <= 0) {
+      throw new Error('Invalid software ID configuration');
+    }
     
     console.log(`🔧 版本检查API配置:`, {
       isDev,
       baseUrl,
       mode: import.meta.env.MODE,
-      softwareId: API_CONFIG.SOFTWARE_ID
+      softwareId,
+      envVars: {
+        VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'undefined',
+        VITE_SOFTWARE_ID: import.meta.env.VITE_SOFTWARE_ID || 'undefined'
+      }
     });
     
     return {
       baseUrl,
+      softwareId,
       endpoints: {
-        version: `${baseUrl}/app/software/id/${API_CONFIG.SOFTWARE_ID}/versions/latest`,
-        announcement: `${baseUrl}/app/software/id/${API_CONFIG.SOFTWARE_ID}/announcements`
+        version: `${baseUrl}/app/software/id/${softwareId}/versions/latest`,
+        announcement: `${baseUrl}/app/software/id/${softwareId}/announcements`
       }
     };
   }
 
   private async getCurrentVersion(): Promise<string> {
     try {
-      // 优先从Tauri获取版本
+      // 统一版本获取逻辑：开发版和发行版都优先从Tauri获取
       const version = await invoke<string>('get_app_version');
       console.log(`📱 从Tauri获取当前版本: ${version}`);
       return version;
     } catch (error) {
-      console.warn('从Tauri获取版本失败，使用配置版本:', error);
-      // 降级到配置版本
+      console.warn('从Tauri获取版本失败，尝试环境变量:', error);
+      
+      // 第二优先级：从环境变量获取
+      const envVersion = import.meta.env.VITE_APP_VERSION;
+      if (envVersion && envVersion !== 'undefined') {
+        console.log(`📱 从环境变量获取版本: ${envVersion}`);
+        return envVersion;
+      }
+      
+      // 最后降级到配置版本
+      console.warn('使用默认配置版本:', API_CONFIG.APP_VERSION);
       return API_CONFIG.APP_VERSION;
     }
   }
@@ -158,11 +182,28 @@ class VersionService {
 
   async checkForUpdates(): Promise<VersionCheckResult> {
     try {
-      const config = this.getApiConfig();
+      // 首先验证配置
+      let config;
+      try {
+        config = this.getApiConfig();
+      } catch (configError) {
+        console.error('❌ 版本检查配置验证失败:', configError);
+        const currentVersion = await this.getCurrentVersion();
+        return {
+          hasUpdate: false,
+          needsUpdate: false,
+          isForceUpdate: false,
+          currentVersion,
+          error: `配置错误: ${configError instanceof Error ? configError.message : '未知配置错误'}`,
+          message: '版本检查配置无效，请检查环境变量设置'
+        };
+      }
+      
       const cacheKey = this.getCacheKey('version');
       
       console.log(`🔍 开始版本检查...`);
       console.log(`📡 API端点: ${config.endpoints.version}`);
+      console.log(`🆔 软件ID: ${config.softwareId}`);
       
       // 检查缓存
       if (this.isValidCache(cacheKey)) {

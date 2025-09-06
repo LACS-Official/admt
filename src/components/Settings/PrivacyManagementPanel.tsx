@@ -213,7 +213,7 @@ const PrivacyManagementPanel: React.FC = () => {
               <div>
                 <Text className={styles.statusLabel}>隐私政策</Text>
                 <Text className={styles.timestampText}>
-                  版本: {privacyPolicyVersion} | 同意时间: {formatTimestamp(privacyPolicyAcceptedAt)}
+                  -同意时间: {formatTimestamp(privacyPolicyAcceptedAt)}
                 </Text>
               </div>
               <Text className={styles.statusValue}>
@@ -225,7 +225,7 @@ const PrivacyManagementPanel: React.FC = () => {
               <div>
                 <Text className={styles.statusLabel}>用户协议</Text>
                 <Text className={styles.timestampText}>
-                  版本: {userAgreementVersion} | 同意时间: {formatTimestamp(userAgreementAcceptedAt)}
+                  -同意时间: {formatTimestamp(userAgreementAcceptedAt)}
                 </Text>
               </div>
               <Text className={styles.statusValue}>
@@ -237,7 +237,7 @@ const PrivacyManagementPanel: React.FC = () => {
               <div>
                 <Text className={styles.statusLabel}>数据收集</Text>
                 <Text className={styles.timestampText}>
-                  同意时间: {formatTimestamp(dataCollectionAcceptedAt)}
+                  -同意时间: {formatTimestamp(dataCollectionAcceptedAt)}
                 </Text>
               </div>
               <Text className={styles.statusValue}>
@@ -282,7 +282,6 @@ const PrivacyManagementPanel: React.FC = () => {
             }}>
               <Button
                 size="medium"
-                className={styles.dangerButton}
                 icon={<ArrowReset24Regular />}
                 onClick={handleResetApp}
               >
@@ -326,7 +325,6 @@ const PrivacyManagementPanel: React.FC = () => {
               <Button
                 appearance="primary"
                 onClick={handleFirstConfirm}
-                className={styles.dangerButton}
               >
                 确认重置
               </Button>
