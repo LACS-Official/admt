@@ -195,7 +195,7 @@ const TitleBar: React.FC = () => {
                 className={styles.IconImage}
               />
         </div>
-        <Text className={styles.title}>玩机管家-Android Device Management Tool</Text>
+        <Text className={styles.title}>玩机管家</Text>
       </div>
       
       <div className={mergeClasses(styles.rightSection, "no-drag")}>
