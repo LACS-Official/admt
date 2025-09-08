@@ -501,7 +501,10 @@ const AdbToolsPanel: React.FC = () => {
                           styles.quickCommandItem, 
                           selectedQuickCommand === cmd.label && styles.selectedCommand
                         )}
-                        onClick={() => setSelectedQuickCommand(cmd.label)}
+                        onClick={() => {
+                          setSelectedQuickCommand(cmd.label);
+                          executeQuickCommand(cmd.command);
+                        }}
                       >
                         <Text size={200}>{cmd.label}</Text>
                       </div>

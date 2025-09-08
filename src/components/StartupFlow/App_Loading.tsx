@@ -28,6 +28,7 @@ import {
 } from '@fluentui/react-icons';
 import { useStartupFlowStore, VersionCheckResult } from '../../stores/startupFlowStore';
 import { SecurityConfigManager } from '../../config/securityConfig';
+import { versionService } from '../../services/versionService';
 import { SecureDataTransmissionService } from '../../services/secureDataTransmissionService';
 import { announcementService } from '../../services/announcementService';
 import { Announcement } from '../../types/app';
@@ -267,7 +268,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       setStatusMessage('检查最新版本和公告...');
       
       const [versionResult, announcementResult] = await Promise.all([
-        checkLatestVersion(currentVersion),
+        checkLatestVersionUnified(),
         loadAnnouncements()
       ]);
 
@@ -396,29 +397,51 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     }
   };
 
-  // 获取当前版本号
+  // 获取当前版本号 - 统一使用versionService的逻辑
   const getCurrentVersion = async (): Promise<string> => {
     try {
-      // 优先从配置文件获取版本号
-      const configManager = SecurityConfigManager.getInstance();
-      if (configManager.isConfigInitialized()) {
-        const configVersion = configManager.getAppVersion();
-        console.log('📋 从配置文件获取版本号:', configVersion);
-        return configVersion;
-      }
-
-      // 降级到Tauri API获取版本号
-      const { getVersion } = await import('@tauri-apps/api/app');
-      const tauriVersion = await getVersion();
-      console.log('📋 从Tauri API获取版本号:', tauriVersion);
-      return tauriVersion;
+      // 使用versionService统一的版本获取逻辑
+      const version = await versionService.getCurrentAppVersion();
+      console.log('📋 统一获取当前版本号:', version);
+      return version;
     } catch (error) {
-      console.warn('无法获取版本号，使用默认版本号');
+      console.warn('无法获取版本号，使用默认版本号:', error);
       return '1.0.0';
     }
   };
 
-  // 检查最新版本
+  // 统一的版本检查方法 - 使用versionService
+  const checkLatestVersionUnified = async (): Promise<VersionCheckResult> => {
+    try {
+      console.log('🔍 开始统一版本检查...');
+      const result = await versionService.checkForUpdates();
+      
+      console.log('📋 统一版本检查结果:', result);
+      
+      // 如果需要更新，显示版本检查弹窗
+      if (result.hasUpdate) {
+        console.log('⚠️ 发现新版本，显示版本检查弹窗');
+        setShowVersionChecker(true);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ 统一版本检查失败:', error);
+      
+      // 返回默认结果
+      const currentVersion = await getCurrentVersion();
+      return {
+        hasUpdate: false,
+        needsUpdate: false,
+        currentVersion,
+        latestVersion: currentVersion,
+        isForceUpdate: false,
+        message: '版本检查失败，请检查网络连接'
+      };
+    }
+  };
+
+  // 检查最新版本 - 保留原有逻辑作为备用
   const checkLatestVersion = async (currentVersion: string): Promise<VersionCheckResult> => {
     try {
       // 初始化安全数据传输服务

@@ -17,7 +17,7 @@ export interface VersionCheckResult {
   latestVersion?: string;
   versionInfo?: VersionInfo;
   error?: string;
-  message?: string; // 兼容现有接口
+  message: string; // 必需字段，与types/app.ts保持一致
 }
 
 export interface ApiVersionResponse {
@@ -77,6 +77,14 @@ class VersionService {
         announcement: `${baseUrl}/app/software/id/${softwareId}/announcements`
       }
     };
+  }
+
+  /**
+   * 获取当前应用版本号 - 公共方法
+   * 统一的版本获取逻辑，供所有组件使用
+   */
+  async getCurrentAppVersion(): Promise<string> {
+    return this.getCurrentVersion();
   }
 
   private async getCurrentVersion(): Promise<string> {

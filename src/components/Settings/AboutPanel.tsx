@@ -279,10 +279,11 @@ const AboutPanel: React.FC = () => {
   const links = {
     checkUpdate: "https://admt.lacs.cc/download",
     userManual: "https://admt.lacs.cc/docs",
-    feedback: "https://admt.lacs.cc/about-contact",
+    feedback: "https://www.lacs.cc/contact",
+    otherapps:"https://app.lacs.cc/lacs",
     officialWebsite: "https://www.lacs.cc",
     officialADMTWeb: "https://admt.lacs.cc",
-    officialGroup: "https://your-organization.com/group",
+    officialGroup: "https://www.lacs.cc/contact#qun-group",
     contact: "https://your-organization.com/contact",
     donate: "https://www.lacs.cc/donate",
   };
@@ -384,7 +385,7 @@ const AboutPanel: React.FC = () => {
             
             <Text size={600} weight="bold">领创工作室 LACS</Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
-              致力于为用户提供高质量的工具和技术解决方案
+              致力于为用户提供高质量的工具和技术解决方案，全网粉丝1w+
             </Text>
 
             <div className={styles.buttonGroup}>
@@ -408,9 +409,9 @@ const AboutPanel: React.FC = () => {
                 appearance="secondary" 
                 size="medium"
                 icon={<Heart24Regular />}
-                onClick={() => openUrl(links.feedback)}
+                onClick={() => openUrl(links.otherapps)}
               >
-                问题反馈
+                旗下其它工具
               </Button>
               <Button 
                 appearance="secondary" 
