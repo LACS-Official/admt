@@ -1,4 +1,4 @@
-/**
+ /**
  * 诊断服务
  * 提供系统诊断和问题排查功能
  */
@@ -124,13 +124,13 @@ ${this.generateRecommendations(adbFastbootDiag)}
     // 检查 ADB 文件
     if (!diagnostic.adb_exists) {
       recommendations.push('❌ ADB 文件不存在');
-      recommendations.push('   请将 adb.exe 文件放置在 src-tauri/resources/ 目录中');
+      recommendations.push('   请将 adb.exe 文件放置在 src-tauri/tools/adb/ 目录中');
     }
 
     // 检查 Fastboot 文件
     if (!diagnostic.fastboot_exists) {
       recommendations.push('❌ Fastboot 文件不存在');
-      recommendations.push('   请将 fastboot.exe 文件放置在 src-tauri/resources/ 目录中');
+      recommendations.push('   请将 fastboot.exe 文件放置在 src-tauri/tools/adb/ 目录中');
     }
 
     // 检查命令执行
@@ -162,7 +162,7 @@ ${this.generateRecommendations(adbFastbootDiag)}
 
       if (!hasAdbInAnyDir && !hasFastbootInAnyDir) {
         recommendations.push('❌ 所有资源目录中都没有找到 ADB 和 Fastboot 工具');
-        recommendations.push('   请下载 Android Platform Tools 并将 adb.exe 和 fastboot.exe 复制到 src-tauri/resources/ 目录');
+        recommendations.push('   请下载 Android Platform Tools 并将 adb.exe 和 fastboot.exe 复制到 src-tauri/tools/adb/ 目录');
       } else if (!hasAdbInAnyDir) {
         recommendations.push('❌ 所有资源目录中都没有找到 adb.exe');
       } else if (!hasFastbootInAnyDir) {
@@ -178,7 +178,7 @@ ${this.generateRecommendations(adbFastbootDiag)}
       recommendations.push('');
       recommendations.push('📥 下载 Android Platform Tools:');
       recommendations.push('   https://developer.android.com/studio/releases/platform-tools');
-      recommendations.push('   解压后将 adb.exe 和 fastboot.exe 复制到 src-tauri/resources/ 目录');
+      recommendations.push('   解压后将 adb.exe 和 fastboot.exe 复制到 src-tauri/tools/adb/ 目录');
     }
 
     return recommendations.join('\n');

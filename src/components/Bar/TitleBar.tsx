@@ -25,6 +25,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { admtbgIcon, admtLogo128, admtLogo64 } from "../../assets/icons";
 import UserInfoModal from "../Settings/UserInfoModal";
+import AnnouncementBar from "../Announcement/AnnouncementBar";
 
 const useStyles = makeStyles({
   IconImage: {
@@ -48,13 +49,21 @@ const useStyles = makeStyles({
     gap: "12px",
   },
   logo: {
-    width: "24px",
-    height: "24px",
+    width: "32px",
+    height: "32px",
   },
   title: {
     fontWeight: "600",
-    fontSize: "14px",
+    fontSize: "18px",
     color: "var(--colorNeutralForeground1)",
+  },
+  centerSection: {
+    display: "flex",
+    alignItems: "center",
+    flex: "1",
+    justifyContent: "flex-start",
+    paddingLeft: "16px",
+    paddingRight: "16px",
   },
   rightSection: {
     display: "flex",
@@ -92,13 +101,8 @@ const TitleBar: React.FC = () => {
         setIsMaximized(maximized);
 
         // 检查置顶状态
-        try {
-          const alwaysOnTop = await invoke<boolean>("get_window_always_on_top");
-          setIsAlwaysOnTop(alwaysOnTop);
-          console.log("窗口置顶状态:", alwaysOnTop);
-        } catch (alwaysOnTopError) {
-          console.log("无法获取置顶状态，使用手动管理:", alwaysOnTopError);
-        }
+        const alwaysOnTop = await window.isAlwaysOnTop();
+        setIsAlwaysOnTop(alwaysOnTop);
       } catch (error) {
         console.error("检查窗口状态失败:", error);
       }
@@ -107,180 +111,178 @@ const TitleBar: React.FC = () => {
     checkWindowState();
 
     // 监听窗口状态变化
-    let unlistenPromise: Promise<() => void> | null = null;
-
-    const setupListener = async () => {
-      try {
-        const window = getCurrentWindow();
-        unlistenPromise = window.onResized(() => {
-          checkWindowState();
-        });
-      } catch (error) {
-        console.error("设置窗口监听器失败:", error);
-      }
-    };
-
-    setupListener();
+    const unlisten = getCurrentWindow().onResized(() => {
+      checkWindowState();
+    });
 
     return () => {
-      if (unlistenPromise) {
-        unlistenPromise.then(fn => fn()).catch(console.error);
-      }
+      unlisten.then((fn) => fn());
     };
   }, []);
 
   const handleMinimize = async () => {
     try {
-      console.log("🔧 执行窗口最小化...");
-      const window = getCurrentWindow();
-      await window.minimize();
-      console.log("✅ 窗口最小化成功");
+      await getCurrentWindow().minimize();
     } catch (error) {
-      console.error("❌ 最小化失败:", error);
+      console.error("最小化窗口失败:", error);
     }
   };
 
   const handleMaximize = async () => {
     try {
-      const window = getCurrentWindow();
       if (isMaximized) {
-        console.log("🔧 执行窗口还原...");
-        await window.unmaximize();
-        console.log("✅ 窗口还原成功");
+        await getCurrentWindow().unmaximize();
       } else {
-        console.log("🔧 执行窗口最大化...");
-        await window.maximize();
-        console.log("✅ 窗口最大化成功");
+        await getCurrentWindow().maximize();
       }
       setIsMaximized(!isMaximized);
     } catch (error) {
-      console.error("❌ 最大化/还原失败:", error);
+      console.error("最大化/还原窗口失败:", error);
     }
   };
 
   const handleClose = async () => {
     try {
-      console.log("🔧 执行窗口关闭...");
-      const window = getCurrentWindow();
-      await window.close();
-      console.log("✅ 窗口关闭成功");
+      await getCurrentWindow().close();
     } catch (error) {
-      console.error("❌ 关闭失败:", error);
+      console.error("关闭窗口失败:", error);
     }
-  };
-
-  const handleSettings = () => {
-    setCurrentView("settings");
   };
 
   const handleToggleAlwaysOnTop = async () => {
     try {
-      console.log("🔧 切换窗口置顶状态...");
       const newState = !isAlwaysOnTop;
-      await invoke("set_window_always_on_top", { alwaysOnTop: newState });
+      await getCurrentWindow().setAlwaysOnTop(newState);
       setIsAlwaysOnTop(newState);
-      console.log(`✅ 窗口置顶状态已${newState ? '开启' : '关闭'}`);
     } catch (error) {
-      console.error("❌ 切换置顶状态失败:", error);
+      console.error("切换置顶状态失败:", error);
     }
   };
 
+
+
+  const handleSettingsClick = () => {
+    setCurrentView("settings");
+  };
+
   return (
-    <div className={mergeClasses(styles.titleBar, "drag-region")}>
-      <div className={styles.leftSection}>
-        <div className={styles.logo}>
-              <img
-                src={admtLogo64}
-                alt="UnlinkIcon"
-                className={styles.IconImage}
-              />
+    <>
+      <div className={mergeClasses(styles.titleBar)} data-tauri-drag-region>
+        {/* 左侧区域 - Logo和应用名称 */}
+        <div className={styles.leftSection}>
+          <img src={admtLogo64} alt="Logo" className={styles.logo} />
+          <Text className={styles.title}>玩机管家</Text>
         </div>
-        <Text className={styles.title}>玩机管家</Text>
-      </div>
-      
-      <div className={mergeClasses(styles.rightSection, "no-drag")}>
-        {/* 用户信息按钮 - 始终显示 */}
-        <UserInfoModal>
-          <Tooltip content="我的信息" relationship="label">
+
+        {/* 中间区域 - 公告展示条 */}
+        <div className={styles.centerSection}>
+          <AnnouncementBar />
+        </div>
+
+        {/* 右侧区域 - 控制按钮 */}
+        <div className={styles.rightSection}>
+          <Tooltip content="用户信息" relationship="label">
+            <UserInfoModal>
+              <Button
+                appearance="subtle"
+                icon={<Person24Regular />}
+                className={styles.titleBarButton}
+              />
+            </UserInfoModal>
+          </Tooltip>
+
+          <Tooltip content="设置" relationship="label">
             <Button
               appearance="subtle"
-              icon={<Person24Regular />}
+              icon={<Settings24Regular />}
               className={styles.titleBarButton}
+              onClick={handleSettingsClick}
             />
           </Tooltip>
-        </UserInfoModal>
 
-        <Tooltip content="切换主题" relationship="label">
-          <Button
-            appearance="subtle"
-            icon={isDarkMode ? <WeatherSunny24Regular /> : <WeatherMoon24Regular />}
-            className={styles.titleBarButton}
-            onClick={toggleTheme}
-          />
-        </Tooltip>
+          <Tooltip
+            content={isDarkMode ? "切换到浅色模式" : "切换到深色模式"}
+            relationship="label"
+          >
+            <Button
+              appearance="subtle"
+              icon={
+                isDarkMode ? (
+                  <WeatherSunny24Regular />
+                ) : (
+                  <WeatherMoon24Regular />
+                )
+              }
+              className={styles.titleBarButton}
+              onClick={toggleTheme}
+            />
+          </Tooltip>
 
-        <Tooltip content="设置" relationship="label">
-          <Button
-            appearance="subtle"
-            icon={<Settings24Regular />}
-            className={styles.titleBarButton}
-            onClick={handleSettings}
-          />
-        </Tooltip>
+          <Tooltip
+            content={isAlwaysOnTop ? "取消置顶" : "窗口置顶"}
+            relationship="label"
+          >
+            <Button
+              appearance="subtle"
+              icon={
+                isAlwaysOnTop ? <PinOff24Regular /> : <Pin24Regular />
+              }
+              className={styles.titleBarButton}
+              onClick={handleToggleAlwaysOnTop}
+            />
+          </Tooltip>
 
-        <Tooltip content={isAlwaysOnTop ? "取消置顶" : "窗口置顶"} relationship="label">
-          <Button
-            appearance="subtle"
-            icon={isAlwaysOnTop ? <PinOff24Regular /> : <Pin24Regular />}
-            className={styles.titleBarButton}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleToggleAlwaysOnTop();
-            }}
-          />
-        </Tooltip>
+          <Tooltip content="最小化" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Subtract24Regular />}
+              className={styles.titleBarButton}
+              onClick={(e) => {
+                e.preventDefault();
+                handleMinimize();
+              }}
+            />
+          </Tooltip>
 
-        <Tooltip content="最小化" relationship="label">
-          <Button
-            appearance="subtle"
-            icon={<Subtract24Regular />}
-            className={styles.titleBarButton}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleMinimize();
-            }}
-          />
-        </Tooltip>
+          <Tooltip
+            content={isMaximized ? "还原" : "最大化"}
+            relationship="label"
+          >
+            <Button
+              appearance="subtle"
+              icon={
+                isMaximized ? (
+                  <SquareMultiple24Regular />
+                ) : (
+                  <Maximize24Regular />
+                )
+              }
+              className={styles.titleBarButton}
+              onClick={(e) => {
+                e.preventDefault();
+                handleMaximize();
+              }}
+            />
+          </Tooltip>
 
-        <Tooltip content={isMaximized ? "还原" : "最大化"} relationship="label">
-          <Button
-            appearance="subtle"
-            icon={isMaximized ? <SquareMultiple24Regular /> : <Maximize24Regular />}
-            className={styles.titleBarButton}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleMaximize();
-            }}
-          />
-        </Tooltip>
-
-        <Tooltip content="关闭" relationship="label">
-          <Button
-            appearance="subtle"
-            icon={<Dismiss24Regular />}
-            className={mergeClasses(styles.titleBarButton, styles.closeButton)}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleClose();
-            }}
-          />
-        </Tooltip>
+          <Tooltip content="关闭" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Dismiss24Regular />}
+              className={mergeClasses(
+                styles.titleBarButton,
+                styles.closeButton
+              )}
+              onClick={(e) => {
+                e.preventDefault();
+                handleClose();
+              }}
+            />
+          </Tooltip>
+        </div>
       </div>
-    </div>
+
+    </>
   );
 };
 

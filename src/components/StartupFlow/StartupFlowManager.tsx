@@ -4,7 +4,7 @@
  * 
  * 启动流程序列：
  * 1. 隐私政策和用户协议
- * 2. 版本检测和公告显示
+ * 2. 版本检测
  * 3. 首次使用检测
  * 4. 激活码验证
  * 5. 进入主页面
@@ -64,7 +64,6 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     updateUserSettings,
     setActivationVerified,
     setVersionCheckCompleted,
-    setAnnouncementDisplayed,
     setFirstLaunchDetected,
     setPrivacyConsentCompleted,
     setMainAppEntered,
@@ -218,7 +217,6 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
         break;
       case 'version-check':
         // 版本检查阶段由VersionChecker组件处理
-        // 版本检查完成后会自动显示公告
         break;
       case 'first-launch-detection':
         handleFirstLaunchDetection();
@@ -382,17 +380,8 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     console.log('✅ 版本检查完成，结果:', result);
     setVersionCheckCompleted(true);
     
-    // 确保公告已标记为显示
-    setAnnouncementDisplayed(true);
-    
-    // 等待下一次渲染周期确保组件更新完成
-    await new Promise(resolve => setTimeout(resolve, 0));
-    
-    // 在公告显示完成后，安全地进入下一阶段
-    // 添加额外延迟确保动画完成（如果有必要）
-    setTimeout(() => {
-      proceedToNextPhase();
-    }, 300); // 300ms 延迟确保动画完成
+    // 版本检查完成后，直接进入下一阶段
+    proceedToNextPhase();
   };
 
   const handleVersionCheckError = async (error: string) => {
@@ -421,7 +410,7 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
 
 
   const proceedToNextPhase = () => {
-    // 版本检查和公告显示完成后，进入首次使用检测
+    // 版本检查完成后，进入首次使用检测
     setCurrentPhase('first-launch-detection');
   };
 
