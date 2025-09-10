@@ -3,7 +3,7 @@
  * 用户输入激活码并进行验证
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
   Text,
@@ -324,8 +324,76 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     details?: string;
   } | null>(null);
 
+  // 清除自动保存的输入内容
+  useEffect(() => {
+    // 页面加载时清空所有激活码输入框
+    const clearInputs = () => {
+      for (let i = 0; i < 8; i++) {
+        const input = document.getElementById(`activation-code-${i}`) as HTMLInputElement;
+        if (input) {
+          input.value = '';
+          input.defaultValue = '';
+        }
+      }
+    };
+
+    // 立即清空
+    clearInputs();
+
+    // 清除可能的本地存储数据
+    try {
+      // 清除localStorage中可能的激活码相关数据
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('activation') || key.includes('code'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+
+      // 清除sessionStorage中可能的激活码相关数据
+      const sessionKeysToRemove = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (key.includes('activation') || key.includes('code'))) {
+          sessionKeysToRemove.push(key);
+        }
+      }
+      sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+    } catch (e) {
+      console.log('清除存储数据时出错:', e);
+    }
+
+    // 页面卸载时清理
+    const handleBeforeUnload = () => {
+      clearInputs();
+      // 清空状态管理中的激活码
+      setActivationCode('');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // 组件卸载时清空激活码
+      setActivationCode('');
+    };
+  }, [setActivationCode]);
+
   // 处理激活码输入
   const handleActivationCodeChange = (value: string, index?: number) => {
+    // 清除输入框的自动保存属性
+    if (index !== undefined) {
+      const input = document.getElementById(`activation-code-${index}`) as HTMLInputElement;
+      if (input) {
+        // 重新设置随机name属性防止浏览器记忆
+        input.name = `temp-activation-${index}-${Math.random().toString(36).substr(2, 9)}`;
+        // 确保不会被自动保存
+        input.setAttribute('autocomplete', 'new-password');
+      }
+    }
+
     // 如果是通过单个输入框输入
     if (index !== undefined) {
       const newCode = activationCode.split('');
@@ -369,6 +437,18 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     if (error) {
       setError(null);
     }
+
+    // 防止浏览器保存输入历史
+    setTimeout(() => {
+      // 清除所有输入框的可能缓存
+      for (let i = 0; i < 8; i++) {
+        const input = document.getElementById(`activation-code-${i}`) as HTMLInputElement;
+        if (input) {
+          input.setAttribute('autocomplete', 'new-password');
+          input.name = `temp-activation-${i}-${Math.random().toString(36).substr(2, 9)}`;
+        }
+      }
+    }, 100);
   };
 
   // 处理粘贴事件
@@ -582,7 +662,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
       {/* 上半部分 - 页面标题区域 */}
       <div className={styles.header}>
         <Title1 className={styles.title}>
-          激活玩机管家 -目前您还未激活/已过期，请按照步骤进行激活
+          目前您还未激活/已过期，请按照步骤进行激活
         </Title1>
 
       </div>
@@ -660,6 +740,16 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
                                index === 5 ? "D" : 
                                index === 6 ? "3" : 
                                "4"}
+                    // 防止浏览器自动保存和自动填充
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    data-form-type="other"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-bwignore="true"
+                    name={`temp-activation-${index}-${Math.random().toString(36).substr(2, 9)}`}
                   />
                 ))}
               </div>

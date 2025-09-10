@@ -9,7 +9,7 @@ import type { VersionCheckResult, VersionInfo } from '../types/app';
 
 // 启动流程阶段
 export type StartupPhase =
-  | 'version-check'           // 阶段1：版本检查和公告显示
+  | 'version-check'           // 阶段1：版本检查
   | 'first-launch-detection'  // 阶段2：首次使用检测
   | 'privacy-consent'         // 阶段3：隐私政策和用户协议（仅首次使用）
   | 'activation-verification' // 阶段4：激活码验证（仅首次使用且同意条款后）
@@ -101,7 +101,6 @@ export interface StartupFlowState {
 
   // 各阶段状态
   versionCheckCompleted: boolean;
-  announcementDisplayed: boolean;
   firstLaunchDetected: boolean;
   privacyConsentCompleted: boolean;
   activationVerified: boolean;
@@ -136,10 +135,9 @@ export interface StartupFlowActions {
   setCurrentPhase: (phase: StartupPhase) => void;
   nextPhase: () => void;
   
-  // 版本检查和公告
+  // 版本检查
   setVersionCheckResult: (result: VersionCheckResult) => void;
   setVersionCheckCompleted: (completed: boolean) => void;
-  setAnnouncementDisplayed: (displayed: boolean) => void;
 
   // 首次启动检测
   setFirstLaunchDetected: (detected: boolean) => void;
@@ -191,7 +189,6 @@ const defaultUserSettings: UserSettings = {
 const initialState: StartupFlowState = {
   currentPhase: 'version-check',
   versionCheckCompleted: false,
-  announcementDisplayed: false,
   firstLaunchDetected: false,
   privacyConsentCompleted: false,
   activationVerified: false,
@@ -236,15 +233,12 @@ export const useStartupFlowStore = create<StartupFlowState & StartupFlowActions>
         }
       },
 
-      // 版本检查和公告
+      // 版本检查
       setVersionCheckResult: (result: VersionCheckResult) =>
         set({ versionCheckResult: result }),
 
       setVersionCheckCompleted: (completed: boolean) =>
         set({ versionCheckCompleted: completed }),
-
-      setAnnouncementDisplayed: (displayed: boolean) =>
-        set({ announcementDisplayed: displayed }),
 
       // 首次启动检测
       setFirstLaunchDetected: (detected: boolean) =>
@@ -317,7 +311,7 @@ export const useStartupFlowStore = create<StartupFlowState & StartupFlowActions>
 export const canProceedToNextPhase = (phase: StartupPhase, state: StartupFlowState): boolean => {
   switch (phase) {
     case 'version-check':
-      return state.versionCheckCompleted && state.announcementDisplayed;
+      return state.versionCheckCompleted;
     case 'first-launch-detection':
       return state.firstLaunchDetected;
     case 'privacy-consent':
@@ -339,7 +333,7 @@ export const canProceedToNextPhase = (phase: StartupPhase, state: StartupFlowSta
 export const getPhaseDisplayName = (phase: StartupPhase): string => {
   switch (phase) {
     case 'version-check':
-      return '版本检查和公告显示';
+      return '版本检查';
     case 'first-launch-detection':
       return '首次使用检测';
     case 'privacy-consent':

@@ -269,14 +269,14 @@ const AdbDiagnosticPanel: React.FC = () => {
               {!diagnosticData.adb_exists && (
                 <div className={styles.errorContainer}>
                   <Text weight="semibold">❌ ADB 文件不存在</Text>
-                  <Text>请将 adb.exe 文件放置在 src-tauri/resources/ 目录中。</Text>
+                  <Text>请将 adb.exe 文件放置在 src-tauri/tools/adb/ 目录中。</Text>
                 </div>
               )}
 
               {!diagnosticData.fastboot_exists && (
                 <div className={styles.errorContainer}>
                   <Text weight="semibold">❌ Fastboot 文件不存在</Text>
-                  <Text>请将 fastboot.exe 文件放置在 src-tauri/resources/ 目录中。</Text>
+                  <Text>请将 fastboot.exe 文件放置在 src-tauri/tools/adb/ 目录中。</Text>
                 </div>
               )}
 
@@ -301,7 +301,7 @@ const AdbDiagnosticPanel: React.FC = () => {
                   <Text>
                     访问 <a href="https://developer.android.com/studio/releases/platform-tools" target="_blank" rel="noopener noreferrer">
                       Android 开发者网站
-                    </a> 下载 Platform Tools，解压后将 adb.exe 和 fastboot.exe 复制到 src-tauri/resources/ 目录。
+                    </a> 下载 Platform Tools，解压后将 adb.exe 和 fastboot.exe 复制到 src-tauri/tools/adb/ 目录。
                   </Text>
                 </div>
               )}

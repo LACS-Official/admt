@@ -12,52 +12,34 @@ use crate::cache::{get_cached_adb_path, get_cached_fastboot_path, record_path_ca
 #[deprecated(note = "Use get_cached_adb_path() for better performance")]
 #[allow(dead_code)]
 pub fn get_adb_path() -> PathBuf {
-    // 1. 优先尝试从应用资源目录获取（生产模式）
+    // 1. 优先尝试从应用工具目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
-            let adb_path = parent.join("resources").join("adb.exe");
+            let adb_path = parent.join("tools").join("adb").join("adb.exe");
             if adb_path.exists() {
-                log::info!("Found ADB at app resources: {}", adb_path.display());
+                log::info!("Found ADB at app tools: {}", adb_path.display());
                 return adb_path;
             }
         }
     }
 
-    // 2. 尝试从当前工作目录的resources获取（开发模式）
-    let current_dir_resources = std::env::current_dir()
+    // 2. 尝试从当前工作目录的tools/adb获取（开发模式）
+    let current_dir_tools = std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("src-tauri")
-        .join("resources")
+        .join("tools")
+        .join("adb")
         .join("adb.exe");
-    if current_dir_resources.exists() {
-        log::info!("Found ADB at current dir resources: {}", current_dir_resources.display());
-        return current_dir_resources;
+    if current_dir_tools.exists() {
+        log::info!("Found ADB at current dir tools: {}", current_dir_tools.display());
+        return current_dir_tools;
     }
 
     // 3. 尝试从相对路径获取（开发模式备选）
-    let relative_path = PathBuf::from("src-tauri/resources/adb.exe");
+    let relative_path = PathBuf::from("src-tauri/tools/adb/adb.exe");
     if relative_path.exists() {
         log::info!("Found ADB at relative path: {}", relative_path.display());
         return relative_path;
-    }
-
-    // 4. 尝试从上级目录获取（特殊项目结构）
-    let parent_resources = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .parent()
-        .map(|p| p.join("Res").join("adb.exe"));
-    if let Some(path) = parent_resources {
-        if path.exists() {
-            log::info!("Found ADB at parent Res directory: {}", path.display());
-            return path;
-        }
-    }
-
-    // 5. 尝试绝对路径（基于项目结构）
-    let absolute_path = PathBuf::from(r"D:\kaifa\HOUT\Res\adb.exe");
-    if absolute_path.exists() {
-        log::info!("Found ADB at absolute path: {}", absolute_path.display());
-        return absolute_path;
     }
 
     // 如果所有路径都找不到，记录错误并返回默认名称
@@ -65,7 +47,7 @@ pub fn get_adb_path() -> PathBuf {
         log::error!("Current working directory: {}", cwd.display());
     }
     log::error!("ADB executable not found in any expected location, this may cause device detection to fail");
-    log::error!("Please ensure adb.exe is present in src-tauri/resources/ directory");
+    log::error!("Please ensure adb.exe is present in src-tauri/tools/adb/ directory");
     PathBuf::from("adb.exe")
 }
 
@@ -73,52 +55,34 @@ pub fn get_adb_path() -> PathBuf {
 #[deprecated(note = "Use get_cached_fastboot_path() for better performance")]
 #[allow(dead_code)]
 pub fn get_fastboot_path() -> PathBuf {
-    // 1. 优先尝试从应用资源目录获取（生产模式）
+    // 1. 优先尝试从应用工具目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
-            let fastboot_path = parent.join("resources").join("fastboot.exe");
+            let fastboot_path = parent.join("tools").join("adb").join("fastboot.exe");
             if fastboot_path.exists() {
-                log::info!("Found Fastboot at app resources: {}", fastboot_path.display());
+                log::info!("Found Fastboot at app tools: {}", fastboot_path.display());
                 return fastboot_path;
             }
         }
     }
 
-    // 2. 尝试从当前工作目录的resources获取（开发模式）
-    let current_dir_resources = std::env::current_dir()
+    // 2. 尝试从当前工作目录的tools/adb获取（开发模式）
+    let current_dir_tools = std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("src-tauri")
-        .join("resources")
+        .join("tools")
+        .join("adb")
         .join("fastboot.exe");
-    if current_dir_resources.exists() {
-        log::info!("Found Fastboot at current dir resources: {}", current_dir_resources.display());
-        return current_dir_resources;
+    if current_dir_tools.exists() {
+        log::info!("Found Fastboot at current dir tools: {}", current_dir_tools.display());
+        return current_dir_tools;
     }
 
     // 3. 尝试从相对路径获取（开发模式备选）
-    let relative_path = PathBuf::from("src-tauri/resources/fastboot.exe");
+    let relative_path = PathBuf::from("src-tauri/tools/adb/fastboot.exe");
     if relative_path.exists() {
         log::info!("Found Fastboot at relative path: {}", relative_path.display());
         return relative_path;
-    }
-
-    // 4. 尝试从上级目录获取（特殊项目结构）
-    let parent_resources = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .parent()
-        .map(|p| p.join("Res").join("fastboot.exe"));
-    if let Some(path) = parent_resources {
-        if path.exists() {
-            log::info!("Found Fastboot at parent Res directory: {}", path.display());
-            return path;
-        }
-    }
-
-    // 5. 尝试绝对路径（基于项目结构）
-    let absolute_path = PathBuf::from(r"D:\kaifa\HOUT\Res\fastboot.exe");
-    if absolute_path.exists() {
-        log::info!("Found Fastboot at absolute path: {}", absolute_path.display());
-        return absolute_path;
     }
 
     // 如果所有路径都找不到，记录错误并返回默认名称
@@ -126,7 +90,7 @@ pub fn get_fastboot_path() -> PathBuf {
         log::error!("Current working directory: {}", cwd.display());
     }
     log::error!("Fastboot executable not found in any expected location, this may cause device detection to fail");
-    log::error!("Please ensure fastboot.exe is present in src-tauri/resources/ directory");
+    log::error!("Please ensure fastboot.exe is present in src-tauri/tools/adb/ directory");
     PathBuf::from("fastboot.exe")
 }
 
@@ -162,7 +126,7 @@ pub async fn execute_command(
         let tool_name = if program_str.contains("ADB") { "ADB" } else { "Fastboot" };
         return Err(HoutError::IoError {
             message: format!(
-                "{} executable not found in resources directory. Please ensure {}.exe is placed in src-tauri/resources/",
+                "{} executable not found in tools directory. Please ensure {}.exe is placed in src-tauri/tools/adb/",
                 tool_name,
                 tool_name.to_lowercase()
             ),
@@ -173,7 +137,7 @@ pub async fn execute_command(
     if !program.exists() {
         return Err(HoutError::IoError {
             message: format!(
-                "Program not found: {}. Please ensure the executable is placed in src-tauri/resources/",
+                "Program not found: {}. Please ensure the executable is placed in src-tauri/tools/adb/",
                 program.display()
             ),
         });
@@ -209,7 +173,7 @@ pub async fn execute_command(
             // 提供更详细的错误信息
             let error_msg = if e.kind() == std::io::ErrorKind::NotFound {
                 format!(
-                    "Program not found: {}. Please ensure the executable is available in src-tauri/resources/",
+                    "Program not found: {}. Please ensure the executable is available in src-tauri/tools/adb/",
                     program.display()
                 )
             } else {

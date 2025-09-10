@@ -1,6 +1,6 @@
 /**
- * 统一的加载和版本检查和公告显示组件
- * 在同一个页面中显示应用加载状态和版本和公告检查结果
+ * 统一的加载和版本检查组件
+ * 在同一个页面中显示应用加载状态和版本检查结果
  */
 
 import React, { useEffect, useState } from 'react';
@@ -21,17 +21,13 @@ import {
   Warning24Filled,
   ArrowDownload24Regular,
   ArrowClockwise24Regular,
-  Megaphone24Regular,
-  Info24Regular,
-  Shield24Regular,
-  Wrench24Regular,
+
 } from '@fluentui/react-icons';
 import { useStartupFlowStore, VersionCheckResult } from '../../stores/startupFlowStore';
 import { SecurityConfigManager } from '../../config/securityConfig';
 import { versionService } from '../../services/versionService';
 import { SecureDataTransmissionService } from '../../services/secureDataTransmissionService';
-import { announcementService } from '../../services/announcementService';
-import { Announcement } from '../../types/app';
+
 import StartupVersionChecker from '../Common/StartupVersionChecker';
 import { useAppStore } from '../../stores/appStore';
 
@@ -107,43 +103,7 @@ const useStyles = makeStyles({
     borderRadius: '8px',
     border: '1px solid #0078d4',
   },
-  announcementSection: {
-    marginTop: '24px',
-    padding: '16px',
-    backgroundColor: '#f0f9ff',
-    borderRadius: '8px',
-    maxHeight: '200px',
-    overflowY: 'auto',
-    border: '1px solid #edebe9',
-  },
-  announcementItem: {
-    marginBottom: '12px',
-    padding: '12px',
-    backgroundColor: '#ffffff',
-    borderRadius: '4px',
-    border: '1px solid #edebe9',
-  },
-  announcementHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '8px',
-  },
-  announcementTitle: {
-    fontWeight: '600',
-    fontSize: '14px',
-  },
-  announcementContent: {
-    fontSize: '13px',
-    color: '#605e5c',
-    marginBottom: '8px',
-    lineHeight: '1.4',
-  },
-  announcementMeta: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
+
 });
 
 interface UnifiedLoadingVersionCheckerProps {
@@ -162,9 +122,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('正在加载应用...');
   const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(null);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [announcementError, setAnnouncementError] = useState<string | null>(null);
-  const [showAnnouncements, setShowAnnouncements] = useState(false);
+
   const [showEnterButton, setShowEnterButton] = useState(false);
   const [showVersionChecker, setShowVersionChecker] = useState(false);
   const [] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -225,17 +183,25 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const handleVersionCheckComplete = (needsUpdate: boolean, result?: any) => {
     console.log('📋 版本检查完成:', { needsUpdate, result });
     if (!needsUpdate) {
-      // 不需要更新，隐藏版本检查弹窗，允许进入应用
+      // 不需要更新，隐藏版本检查弹窗，自动进入应用
       setShowVersionChecker(false);
       setShowEnterButton(true);
-      setStatusMessage('当前已是最新版本');
+      setStatusMessage('当前已是最新版本，正在进入应用...');
       
       addNotification({
         type: "success",
         title: "版本检查",
-        message: "当前已是最新版本",
-        duration: 3000,
+        message: "当前已是最新版本，正在进入应用",
+        duration: 2000,
       });
+
+      // 延迟0.5秒后自动进入应用
+      setTimeout(() => {
+        console.log('🚀 版本检查弹窗确认后自动进入应用');
+        if (checkResult) {
+          onComplete(checkResult);
+        }
+      }, 500);
     } else {
       // 需要更新，保持弹窗显示，不允许进入应用
       console.log('⚠️ 需要更新，保持弹窗显示，禁止进入应用');
@@ -247,9 +213,17 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
 
   // 处理离线使用（版本检查失败时的降级选项）
   const handleAllowOfflineUse = () => {
-    console.log('📋 用户选择离线使用');
+    console.log('📋 用户选择离线使用，自动进入应用');
     setShowVersionChecker(false);
-    // 继续正常流程
+    setStatusMessage('离线模式，正在进入应用...');
+    
+    // 延迟0.5秒后自动进入应用
+    setTimeout(() => {
+      console.log('🚀 离线模式自动进入应用');
+      if (checkResult) {
+        onComplete(checkResult);
+      }
+    }, 500);
   };
 
   const performChecks = async () => {
@@ -263,62 +237,40 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       setStatusMessage('获取当前版本信息...');
       const currentVersion = await getCurrentVersion();
 
-      // 并行执行版本检查和公告检查
+      // 执行版本检查
       setProgress(95);
-      setStatusMessage('检查最新版本和公告...');
+      setStatusMessage('检查最新版本...');
       
-      const [versionResult, announcementResult] = await Promise.all([
-        checkLatestVersionUnified(),
-        loadAnnouncements()
-      ]);
+      const versionResult = await checkLatestVersionUnified();
 
       setProgress(100);
       setStatusMessage('检查完成');
       setCheckResult(versionResult);
-      setAnnouncements(announcementResult);
       setVersionCheckResult(versionResult);
       setVersionCheckCompleted(true);
       resetRetryCount();
 
-      console.log('📢 公告检查结果:', {
-        announcementCount: announcementResult.length,
-        announcements: announcementResult,
-        versionResult
-      });
-
-      // 如果有公告，显示公告
-      if (announcementResult.length > 0) {
-        console.log('📢 有公告，显示公告内容');
-        setShowAnnouncements(true);
-        setStatusMessage('检查完成，请查看最新公告');
-        
-        // 添加通知
-        addNotification({
-          type: "info",
-          title: "系统公告",
-          message: `您有 ${announcementResult.length} 条新公告，请查看`,
-          duration: 5000,
-        });
-      } else {
-        console.log('📢 没有公告');
-        setStatusMessage('检查完成');
-      }
+      console.log('📋 版本检查结果:', versionResult);
 
       // 根据版本检查结果决定是否显示进入应用按钮
       if (!versionResult.needsUpdate) {
-        console.log('✅ 当前是最新版本，显示进入应用按钮');
+        console.log('✅ 当前是最新版本，自动进入应用');
         setShowEnterButton(true);
-        setStatusMessage(announcementResult.length > 0 ? '检查完成，请查看最新公告' : '当前已是最新版本');
+        setStatusMessage('当前已是最新版本，正在进入应用...');
         
         // 添加通知
-        if (announcementResult.length === 0) {
-          addNotification({
-            type: "success",
-            title: "版本检查",
-            message: "当前已是最新版本",
-            duration: 3000,
-          });
-        }
+        addNotification({
+          type: "success",
+          title: "版本检查",
+          message: "当前已是最新版本，正在进入应用",
+          duration: 2000,
+        });
+
+        // 延迟1秒后自动进入应用，给用户看到成功状态的时间
+        setTimeout(() => {
+          console.log('🚀 自动进入应用');
+          onComplete(versionResult);
+        }, 1000);
       } else {
         console.log('⚠️ 发现新版本，需要强制更新，不显示进入应用按钮');
         console.log('📋 更新信息:', versionResult.updateInfo);
@@ -376,9 +328,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       });
 
       // 采用降级处理，允许用户继续使用应用
-      console.log('⚠️ 检查失败，采用降级处理，允许用户继续使用');
+      console.log('⚠️ 检查失败，采用降级处理，自动进入应用');
       setShowEnterButton(true);
-      setStatusMessage('检查完成（网络连接异常）');
+      setStatusMessage('检查完成（网络连接异常），正在进入应用...');
       
       // 设置默认的版本检查结果
       const defaultResult: VersionCheckResult = {
@@ -394,6 +346,12 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       setVersionCheckResult(defaultResult);
       setVersionCheckCompleted(true);
       resetRetryCount();
+
+      // 延迟1.5秒后自动进入应用，给用户看到错误信息的时间
+      setTimeout(() => {
+        console.log('🚀 网络异常情况下自动进入应用');
+        onComplete(defaultResult);
+      }, 1500);
     }
   };
 
@@ -508,38 +466,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     }
   };
 
-  // 获取公告
-  const loadAnnouncements = async () => {
-    try {
-      console.log('📢 开始获取公告...');
-      setAnnouncementError(null);
 
-      // 获取软件ID为1的公告
-      const response = await announcementService.getAnnouncements({
-        limit: 5,
-        isPublished: true,
-        sortBy: 'publishedAt',
-        sortOrder: 'desc'
-      });
-
-      console.log('📢 公告API响应:', response);
-
-      if (response.success) {
-        console.log('📢 公告获取成功:', {
-          count: response.data.announcements.length,
-          announcements: response.data.announcements
-        });
-        return response.data.announcements;
-      } else {
-        console.error('📢 公告API返回错误:', response.error);
-        throw new Error(response.error || '获取公告失败');
-      }
-    } catch (error) {
-      console.error('❌ 加载公告失败:', error);
-      setAnnouncementError(error instanceof Error ? error.message : '加载公告失败');
-      return [];
-    }
-  };
 
   // 版本比较函数
   const compareVersions = (version1: string, version2: string): number => {
@@ -562,9 +489,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const handleRetry = () => {
     resetRetryCount();
     setCheckResult(null);
-    setAnnouncements([]);
     setShowEnterButton(false);
-    setShowAnnouncements(false);
     setIsLoading(true);
     setIsChecking(false);
     setProgress(0);
@@ -591,114 +516,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     });
   };
 
-  const getAnnouncementIcon = (type: string, priority: string) => {
-    if (priority === 'urgent') {
-      return <Warning24Filled style={{ color: '#d83b01' }} />;
-    }
-    
-    switch (type) {
-      case 'update':
-        return <Info24Regular style={{ color: '#0078d4' }} />;
-      case 'security':
-        return <Shield24Regular style={{ color: '#d83b01' }} />;
-      case 'maintenance':
-        return <Wrench24Regular style={{ color: '#ca5010' }} />;
-      default:
-        return <Megaphone24Regular style={{ color: '#107c10' }} />;
-    }
-  };
 
-  const getPriorityBadgeColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'danger';
-      case 'high':
-        return 'severe';
-      case 'normal':
-        return 'informative';
-      case 'low':
-        return 'subtle';
-      default:
-        return 'informative';
-    }
-  };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
-  const renderAnnouncements = () => {
-    console.log('📢 renderAnnouncements 被调用:', {
-      announcementError,
-      announcementsLength: announcements.length,
-      announcements,
-      showAnnouncements
-    });
-
-    if (announcementError) {
-      console.log('📢 显示公告错误信息:', announcementError);
-      return (
-        <MessageBar intent="warning">
-          公告加载失败: {announcementError}
-        </MessageBar>
-      );
-    }
-
-    if (announcements.length === 0) {
-      console.log('📢 没有公告数据，返回null');
-      return null;
-    }
-
-    console.log('📢 开始渲染公告内容');
-
-    return (
-      <div className={styles.announcementSection}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-          <Megaphone24Regular style={{ color: '#0078d4' }} />
-          <Text weight="semibold">系统公告</Text>
-        </div>
-        {announcements.map((announcement) => {
-          const formattedAnnouncement = announcementService.formatAnnouncement(announcement);
-          
-          return (
-            <div key={announcement.id} className={styles.announcementItem}>
-              <div className={styles.announcementHeader}>
-                {getAnnouncementIcon(announcement.type, announcement.priority)}
-                <Text className={styles.announcementTitle}>
-                  {formattedAnnouncement.title}
-                </Text>
-              </div>
-              <Text className={styles.announcementContent}>
-                {formattedAnnouncement.content.length > 100
-                  ? `${formattedAnnouncement.content.substring(0, 100)}...`
-                  : formattedAnnouncement.content
-                }
-              </Text>
-              <div className={styles.announcementMeta}>
-                <Badge
-                  appearance="filled"
-                  color={getPriorityBadgeColor(announcement.priority)}
-                  size="small"
-                >
-                  {announcementService.getPriorityText(announcement.priority)}
-                </Badge>
-                <Text size={200}>
-                  {announcementService.getTypeText(announcement.type)}
-                </Text>
-                <Text size={200}>
-                  {formatDate(announcement.publishedAt)}
-                </Text>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
 
   const renderContent = () => {
     console.log('🎨 renderContent 调用:', {
@@ -706,7 +526,6 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       isChecking,
       checkResult: !!checkResult,
       showEnterButton,
-      showAnnouncements,
       hasUpdateInfo: !!checkResult?.updateInfo
     });
 
@@ -723,23 +542,8 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
             <ProgressBar value={progress / 100} />
           </div>
 
-          {/* 公告内容 */}
-          <div className={styles.progressSection}>
-            {renderAnnouncements()}
-          </div>
 
-          {/* 在检查完成后显示进入应用按钮 */}
-          {showEnterButton && (
-            <div className={styles.actionSection} style={{ marginTop: '24px' }}>
-              <Button
-                appearance="primary"
-                size="large"
-                onClick={handleEnterApp}
-              >
-                进入应用
-              </Button>
-            </div>
-          )}
+
         </>
       );
     }
@@ -813,21 +617,8 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
             </div>
           )}
 
-          {/* 显示公告 - 在版本检查完成后显示 */}
-          {showAnnouncements && renderAnnouncements()}
 
-          {/* 进入应用按钮 */}
-          {showEnterButton && (
-            <div className={styles.actionSection} style={{ marginTop: '24px' }}>
-              <Button
-                appearance="primary"
-                size="large"
-                onClick={handleEnterApp}
-              >
-                进入应用
-              </Button>
-            </div>
-          )}
+
         </>
       );
     }

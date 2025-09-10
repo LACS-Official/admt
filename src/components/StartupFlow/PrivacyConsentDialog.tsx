@@ -65,7 +65,6 @@ const useStyles = makeStyles({
     width: '100%',
     marginBottom: tokens.spacingVerticalXXL,
     backgroundColor: '#ffffff',
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
     borderRadius: '8px',
   },
   iconContainer: {
@@ -83,7 +82,7 @@ const useStyles = makeStyles({
     color: tokens.colorBrandForeground2,
   },
   subtitle: {
-    fontSize: tokens.fontSizeBase300,
+    fontSize: tokens.fontSizeBase400,
     color: tokens.colorNeutralForeground2,
     marginTop: tokens.spacingVerticalS,
     fontWeight: tokens.fontWeightRegular,
@@ -127,7 +126,6 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     '&:hover': {
-      backgroundColor: tokens.colorBrandBackground,
       border: `1px solid ${tokens.colorBrandStroke1}`,
       transform: 'translateY(-2px)',
     },
@@ -448,7 +446,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
           }}>
             <Card className={styles.card}>
               <div className={styles.header}>
-                <div className={styles.title}>玩机管家隐私和协议</div>
+                <div className={styles.title}>玩机管家(ADMT)政策与协议</div>
                 <div className={styles.subtitle}>请仔细阅读并同意以下所有条款以继续使用应用</div>
               </div>
 
@@ -502,12 +500,6 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                     />
                   </div>
 
-                  {!acceptedAll && (
-                    <MessageBar intent="warning" className={styles.warningMessage}>
-                      <Warning24Regular />
-                      请注意：必须同意所有协议和政策才能继续使用本软件。
-                    </MessageBar>
-                  )}
                 </div>
               </div>
 

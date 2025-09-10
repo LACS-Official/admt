@@ -917,38 +917,39 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
     // 1. 生产环境资源目录
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
-            let resources_dir = parent.join("resources");
+            let tools_dir = parent.join("tools").join("adb");
             resource_paths.push(serde_json::json!({
-                "path": resources_dir.display().to_string(),
-                "exists": resources_dir.exists(),
-                "type": "production_resources",
-                "adb_exists": resources_dir.join("adb.exe").exists(),
-                "fastboot_exists": resources_dir.join("fastboot.exe").exists()
+                "path": tools_dir.display().to_string(),
+                "exists": tools_dir.exists(),
+                "type": "production_tools",
+                "adb_exists": tools_dir.join("adb.exe").exists(),
+                "fastboot_exists": tools_dir.join("fastboot.exe").exists()
             }));
         }
     }
 
-    // 2. 开发环境资源目录
-    let dev_resources = std::env::current_dir()
+    // 2. 开发环境工具目录
+    let dev_tools = std::env::current_dir()
         .unwrap_or_else(|_| std::path::PathBuf::from("."))
         .join("src-tauri")
-        .join("resources");
+        .join("tools")
+        .join("adb");
     resource_paths.push(serde_json::json!({
-        "path": dev_resources.display().to_string(),
-        "exists": dev_resources.exists(),
-        "type": "development_resources",
-        "adb_exists": dev_resources.join("adb.exe").exists(),
-        "fastboot_exists": dev_resources.join("fastboot.exe").exists()
+        "path": dev_tools.display().to_string(),
+        "exists": dev_tools.exists(),
+        "type": "development_tools",
+        "adb_exists": dev_tools.join("adb.exe").exists(),
+        "fastboot_exists": dev_tools.join("fastboot.exe").exists()
     }));
 
-    // 3. 相对路径资源目录
-    let relative_resources = std::path::PathBuf::from("src-tauri/resources");
+    // 3. 相对路径工具目录
+    let relative_tools = std::path::PathBuf::from("src-tauri/tools/adb");
     resource_paths.push(serde_json::json!({
-        "path": relative_resources.display().to_string(),
-        "exists": relative_resources.exists(),
-        "type": "relative_resources",
-        "adb_exists": relative_resources.join("adb.exe").exists(),
-        "fastboot_exists": relative_resources.join("fastboot.exe").exists()
+        "path": relative_tools.display().to_string(),
+        "exists": relative_tools.exists(),
+        "type": "relative_tools",
+        "adb_exists": relative_tools.join("adb.exe").exists(),
+        "fastboot_exists": relative_tools.join("fastboot.exe").exists()
     }));
 
     diagnosis.insert("resource_directories".to_string(), serde_json::Value::Array(resource_paths));
