@@ -1,7 +1,7 @@
 {
   "name": "wanjiguanjia-tauri",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,6 +20,14 @@
     "prebuild": "npm run clean",
     "validate-env": "node scripts/validate-env.cjs",
     "test-version": "node scripts/test-version-detection.cjs",
+    "sync-version": "node scripts/version-manager.cjs sync",
+    "validate-version": "node scripts/version-manager.cjs validate",
+    "update-version": "node scripts/version-manager.cjs update",
+    "version-help": "node scripts/version-manager.cjs",
+    "test-version-system": "node scripts/test-version-system.cjs",
+    "fix-version-detection": "node scripts/fix-version-detection.js",
+    "fix-version-detection:auto": "node scripts/fix-version-detection.js --auto-fix",
+    "diagnose-version": "node scripts/fix-version-detection.js",
     "postinstall": "node scripts/validate-env.cjs || echo 'Environment validation skipped during install'"
   },
   "dependencies": {

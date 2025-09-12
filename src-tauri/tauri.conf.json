@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "玩机管家",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "identifier": "com.lacs.admt",
   "build": {
     "frontendDist": "../dist",
@@ -39,7 +39,6 @@
       "open": true
     }
   },
-
   "bundle": {
     "active": true,
     "targets": "nsis",
@@ -78,7 +77,9 @@
       },
       "nsis": {
         "displayLanguageSelector": false,
-        "languages": ["SimpChinese"],
+        "languages": [
+          "SimpChinese"
+        ],
         "template": null,
         "headerImage": null,
         "sidebarImage": null,

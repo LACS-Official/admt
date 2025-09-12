@@ -37,6 +37,11 @@ import { StructuredLogEntry, LogLevel, LogCategory, LogFilter, LogStats } from "
 import { LogUtils } from "../../services/logUtils";
 
 const useStyles = makeStyles({
+  "@keyframes pulse": {
+    "0%": { opacity: "1" },
+    "50%": { opacity: "0.5" },
+    "100%": { opacity: "1" },
+  },
   container: {
     padding: "20px",
     height: "100%",

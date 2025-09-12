@@ -23,9 +23,10 @@ import {
   ArrowClockwise24Regular,
 
 } from '@fluentui/react-icons';
-import { useStartupFlowStore, VersionCheckResult } from '../../stores/startupFlowStore';
+import { useStartupFlowStore } from '../../stores/startupFlowStore';
 import { SecurityConfigManager } from '../../config/securityConfig';
-import { versionService } from '../../services/versionService';
+import { checkForUpdates, versionService, VersionCheckResult } from '../../services/versionServiceAdapter';
+import { unifiedVersionService } from '../../services/unifiedVersionService';
 import { SecureDataTransmissionService } from '../../services/secureDataTransmissionService';
 
 import StartupVersionChecker from '../Common/StartupVersionChecker';
@@ -266,6 +267,11 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
           duration: 2000,
         });
 
+        // 在开发环境下显示版本检测详情
+        if (import.meta.env.DEV) {
+          console.log('🔧 版本检测服务状态:', unifiedVersionService.getStatus());
+        }
+
         // 延迟1秒后自动进入应用，给用户看到成功状态的时间
         setTimeout(() => {
           console.log('🚀 自动进入应用');
@@ -337,6 +343,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         hasUpdate: false,
         needsUpdate: false,
         currentVersion: '1.0.0',
+        localVersion: '1.0.0',
         latestVersion: '1.0.0',
         isForceUpdate: false,
         message: '网络连接异常，无法检查更新'
@@ -368,11 +375,28 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
     }
   };
 
-  // 统一的版本检查方法 - 使用versionService
+  // 统一的版本检查方法 - 使用统一版本检测服务
   const checkLatestVersionUnified = async (): Promise<VersionCheckResult> => {
     try {
       console.log('🔍 开始统一版本检查...');
-      const result = await versionService.checkForUpdates();
+      
+      // 首先检查版本同步状态
+      const syncStatus = await unifiedVersionService.checkVersionSync();
+      if (!syncStatus.isSync) {
+        console.warn('⚠️ 版本同步问题:', syncStatus.issues);
+        console.log('📋 版本源状态:', syncStatus.sources);
+        
+        // 添加版本同步问题通知
+        addNotification({
+          type: "warning",
+          title: "版本同步警告",
+          message: `检测到版本不一致问题: ${syncStatus.issues.slice(0, 2).join(', ')}`,
+          duration: 8000,
+        });
+      }
+      
+      // 执行版本检查
+      const result = await unifiedVersionService.checkForUpdates();
       
       console.log('📋 统一版本检查结果:', result);
       
@@ -394,6 +418,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         currentVersion,
         latestVersion: currentVersion,
         isForceUpdate: false,
+        localVersion: currentVersion,
         message: '版本检查失败，请检查网络连接'
       };
     }
@@ -423,6 +448,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
 
       console.log('📋 版本比较结果:', {
         currentVersion,
+        localVersion: currentVersion,
         latestVersion: latestVersionNumber,
         isLatest,
         compareResult: compareVersions(currentVersion, latestVersionNumber),
@@ -439,19 +465,21 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         hasUpdate: !isLatest,
         needsUpdate: !isLatest,
         currentVersion,
+        localVersion: currentVersion,
         latestVersion: latestVersionNumber,
         isForceUpdate: !isLatest,
         message: !isLatest ? `发现新版本 ${latestVersionNumber}，需要强制更新后才能继续使用软件` : '目前已是最新版本',
         updateInfo: !isLatest ? {
-          id: 0,
+          id: 1,
+          downloadUrl: softwareInfo.latestDownloadUrl || 'https://admt.lacs.cc/download',
           version: latestVersionNumber,
-          releaseDate: new Date().toISOString(),
+          // releaseDate 字段已移除，使用其他字段,
           releaseNotes: softwareInfo.description || '发现新版本，需要更新后才能继续使用',
           downloadLinks: {
             official: softwareInfo.latestDownloadUrl || softwareInfo.officialWebsite || ''
           },
-          isStable: true,
-          versionType: "release" as const
+          // isStable 字段已移除,
+          // versionType 字段已移除
         } : undefined,
       };
     } catch (error) {
@@ -591,11 +619,6 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
                 </Body1>
               )}
 
-              {checkResult.isForceUpdate && (
-                <MessageBar intent="warning" style={{ marginTop: '12px' }}>
-                  此更新为强制更新，必须更新到最新版本才能继续使用应用
-                </MessageBar>
-              )}
 
               {/* 下载按钮区域 */}
               <div className={styles.actionSection} style={{ marginTop: '16px' }}>
@@ -606,7 +629,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
                     icon={<ArrowDownload24Regular />}
                     onClick={handleDownload}
                   >
-                    立即下载更新
+                    打开下载页面
                   </Button>
                 ) : (
                   <MessageBar intent="info">

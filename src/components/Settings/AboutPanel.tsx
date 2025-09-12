@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { versionManager, useVersionInfo } from '../../utils/versionManager';
 import { admtbgIcon } from "../../assets/icons";
 import { lacsbgIcon } from "../../assets/icons";
 import {
@@ -274,6 +275,23 @@ const AboutPanel: React.FC = () => {
   const styles = useStyles();
   const [isOpenSourceDialogOpen, setIsOpenSourceDialogOpen] = useState(false);
   const [isThanksDialogOpen, setIsThanksDialogOpen] = useState(false);
+  const { versionInfo, loading: versionLoading } = useVersionInfo();
+  const [fullVersionString, setFullVersionString] = useState('玩机管家 v1.0.0');
+
+  // 获取完整版本字符串
+  useEffect(() => {
+    const loadVersionString = async () => {
+      try {
+        const fullVersion = await versionManager.getFullVersionString();
+        setFullVersionString(`玩机管家 ${fullVersion}`);
+      } catch (error) {
+        console.error('获取版本字符串失败:', error);
+        setFullVersionString('玩机管家 v1.0.0');
+      }
+    };
+
+    loadVersionString();
+  }, [versionInfo]);
 
   // 链接数据
   const links = {
@@ -329,7 +347,9 @@ const AboutPanel: React.FC = () => {
           <div className={styles.aboutContent}>
             <img src={admtbgIcon} alt="appIcon" className={styles.appIconImage}/>
             
-            <Text size={600} weight="bold">玩机管家V1.0.0</Text>
+            <Text size={600} weight="bold">
+              {versionLoading ? '玩机管家 v1.0.0' : fullVersionString}
+            </Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
               基于Tauri框架开发的现代化Android设备免费玩机工具，体积小，功能强大
             </Text>

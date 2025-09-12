@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "buildNumber": 1,
+  "versionName": "1.0.0",
+  "releaseDate": "2025-01-11",
+  "description": "统一版本管理配置文件",
+  "changelog": [
+    "实现统一版本管理系统",
+    "支持环境变量集中配置",
+    "前后端版本号自动同步",
+    "版本号校验机制"
+  ],
+  "environments": {
+    "development": {
+      "version": "1.0.0-dev",
+      "enableDebug": true
+    },
+    "production": {
+      "version": "1.0.0",
+      "enableDebug": false
+    }
+  },
+  "validation": {
+    "semverPattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.-]+)?(\\+[a-zA-Z0-9.-]+)?$",
+    "requiredFields": ["version", "buildNumber", "versionName", "releaseDate"]
+  }
+}

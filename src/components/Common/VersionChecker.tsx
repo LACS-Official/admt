@@ -12,14 +12,14 @@ import {
   Spinner,
   makeStyles
 } from '@fluentui/react-components';
-import { versionService, VersionCheckResult } from '../../services/versionService';
+import { checkForUpdates, versionService, VersionCheckResult } from '../../services/versionServiceAdapter';
 
 const useStyles = makeStyles({
   dialogContent: {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
-    minWidth: '400px',
+    width: '100%',
   },
   versionInfo: {
     display: 'flex',
@@ -103,6 +103,7 @@ export const VersionChecker: React.FC<VersionCheckerProps> = ({
         needsUpdate: false,
         isForceUpdate: false,
         currentVersion: '未知',
+        localVersion: '未知',
         error: error instanceof Error ? error.message : '检查失败',
         message: '版本检查异常'
       };
@@ -188,9 +189,6 @@ export const VersionChecker: React.FC<VersionCheckerProps> = ({
             </div>
           </DialogBody>
           <DialogActions>
-            <Button appearance="secondary" onClick={handleSkip}>
-              稍后更新
-            </Button>
             <Button appearance="primary" onClick={handleDownload}>
               立即下载
             </Button>
