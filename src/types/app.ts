@@ -24,7 +24,8 @@ export type AppView =
   | "device-management"
   | "extended-features"
   | "online-resources"
-  | "settings";
+  | "settings"
+  | "demo";
 
 export type SettingsView =
   | "about"
@@ -114,19 +115,11 @@ export interface SoftwareInfo {
 
 export interface VersionCheckResult {
   hasUpdate: boolean;
-  needsUpdate: boolean;
   currentVersion: string;
-  latestVersion?: string;
-  isForceUpdate: boolean;
-  updateInfo?: VersionInfo;
-  message: string;
-  error?: string;
-  versionInfo?: {
-    version: string;
+  localVersion: string;
+  updateInfo?: {
+    updateLog?: string;
     downloadUrl: string;
-    releaseNotes: string;
-    forceUpdate: boolean;
-    publishedAt: string;
   };
 }
 

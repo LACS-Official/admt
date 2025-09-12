@@ -1,164 +1,365 @@
 /**
- * 启动时版本检查组件
+ * 启动时版本检查组件 - 极简风格
  * 在应用启动时执行版本检查，根据结果显示相应的UI
  */
 import React, { useCallback, useEffect, useState, useMemo }  from 'react';
 import {
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogBody,
-  DialogActions,
   Button,
   Text,
   Spinner,
-  MessageBar,
-  MessageBarBody,
   makeStyles,
   tokens,
   Toast,
   ToastTitle,
   ToastBody,
-  Toaster,
   useToastController,
   ToastIntent,
-  Card,
-  CardHeader,
-  CardPreview,
-  CardFooter,
-  Divider
+  Dialog,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogActions,
 } from '@fluentui/react-components';
 import {
   Open24Regular,
-  Warning24Regular,
   Checkmark24Regular,
-  ArrowClockwise24Regular,
   CheckmarkCircle24Filled,
-  ArrowDownload24Regular
+  Warning24Filled,
+  ArrowDownload24Regular,
 } from '@fluentui/react-icons';
-import { versionService } from '../../services/versionService';
-import { VersionCheckResult } from '../../types/app';
+
+import { checkForUpdates, versionService, VersionCheckResult } from '../../services/versionServiceAdapter';
+import { openDownloadLink } from '../../services/versionService';
 
 const useStyles = makeStyles({
-  dialog: {
-    maxWidth: '500px',
-  },
-  content: {
+  // 主容器 - 极简设计
+  container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    padding: '32px',
+    backgroundColor: tokens.colorNeutralBackground1,
   },
+  
+  // 内容卡片 - 简洁边框
+  card: {
+    maxWidth: '480px',
+    width: '100%',
+    padding: '48px 32px',
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: '8px',
+    textAlign: 'center',
+  },
+
+  // 强制更新对话框样式
+  forceUpdateDialog: {
+    maxWidth: '800px',
+    width: '90vw',
+  },
+
+  forceUpdateSurface: {
+    padding: '32px',
+    borderRadius: '12px',
+    border: `3px solid ${tokens.colorPaletteRedBorder2}`,
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+
+  forceUpdateTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '24px',
+    color: tokens.colorPaletteRedForeground1,
+    fontSize: '20px',
+    fontWeight: '700',
+  },
+
+  forceUpdateIcon: {
+    fontSize: '28px',
+    color: tokens.colorPaletteRedForeground1,
+  },
+
+  forceUpdateContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+    textAlign: 'center',
+  },
+
+  forceUpdateMessage: {
+    fontSize: '16px',
+    lineHeight: '1.6',
+    color: tokens.colorNeutralForeground1,
+    marginBottom: '16px',
+  },
+
+  forceUpdateVersionInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    padding: '20px',
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: '8px',
+    border: `2px solid ${tokens.colorPaletteRedBorder1}`,
+  },
+
+  forceUpdateVersionRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  forceUpdateVersionLabel: {
+    fontWeight: '600',
+    color: tokens.colorNeutralForeground2,
+  },
+
+  forceUpdateVersionValue: {
+    fontFamily: 'monospace',
+    fontSize: '14px',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    fontWeight: '600',
+  },
+
+  forceUpdateCurrentVersion: {
+    backgroundColor: tokens.colorNeutralBackground3,
+    color: tokens.colorNeutralForeground1,
+  },
+
+  forceUpdateLatestVersion: {
+    backgroundColor: tokens.colorPaletteRedBackground2,
+    color: tokens.colorPaletteRedForeground1,
+  },
+
+  forceUpdateReleaseNotes: {
+    marginTop: '20px',
+    padding: '16px',
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: '8px',
+    textAlign: 'left',
+    maxHeight: '180px',
+    overflowY: 'auto',
+    lineHeight: '1.6',
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+
+  forceUpdateReleaseNotesTitle: {
+    fontWeight: '600',
+    marginBottom: '12px',
+    color: tokens.colorNeutralForeground1,
+  },
+
+  forceUpdateReleaseNotesContent: {
+    color: tokens.colorNeutralForeground2,
+    whiteSpace: 'pre-wrap',
+  },
+
+  forceUpdateActions: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: '24px',
+  },
+
+  forceUpdateButton: {
+    minWidth: '200px',
+    height: '48px',
+    fontSize: '16px',
+    fontWeight: '700',
+    borderRadius: '8px',
+    backgroundColor: tokens.colorPaletteRedBackground3,
+    color: tokens.colorNeutralForegroundOnBrand,
+    border: 'none',
+    boxShadow: '0 4px 16px rgba(220, 53, 69, 0.4)',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    ':hover': {
+      backgroundColor: tokens.colorPaletteRedBackground2,
+      transform: 'translateY(-2px)',
+      boxShadow: '0 6px 20px rgba(220, 53, 69, 0.5)',
+    },
+    ':active': {
+      transform: 'translateY(0)',
+      boxShadow: '0 4px 16px rgba(220, 53, 69, 0.4)',
+    },
+  },
+
+  // 警告提示文字
+  forceUpdateWarning: {
+    padding: '16px',
+    backgroundColor: tokens.colorPaletteYellowBackground1,
+    border: `2px solid ${tokens.colorPaletteYellowBorder2}`,
+    borderRadius: '8px',
+    color: tokens.colorPaletteYellowForeground2,
+    fontSize: '14px',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: '16px',
+  },
+  
+  // 标题区域
+  title: {
+    marginBottom: '32px',
+    color: tokens.colorNeutralForeground1,
+  },
+  
+  // 加载状态
+  loadingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  
+  // 版本信息区域 - 简化设计
   versionInfo: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalS,
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
+    gap: '16px',
+    marginBottom: '32px',
+    padding: '24px',
     backgroundColor: tokens.colorNeutralBackground2,
-    borderRadius: tokens.borderRadiusMedium,
+    borderRadius: '4px',
   },
+  
   versionRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  
+  versionLabel: {
+    color: tokens.colorNeutralForeground2,
+  },
+  
+  versionValue: {
+    fontFamily: 'monospace',
+    fontSize: '14px',
+    padding: '4px 8px',
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderRadius: '4px',
+  },
+  
+  currentVersion: {
+    color: tokens.colorNeutralForeground1,
+  },
+  
+  latestVersion: {
+    color: tokens.colorPaletteBlueForeground2,
+    backgroundColor: tokens.colorPaletteBlueBackground2,
+  },
+  
+  // 更新说明 - 简化样式
   releaseNotes: {
+    marginTop: '24px',
+    padding: '16px',
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: '4px',
+    textAlign: 'left',
     maxHeight: '200px',
     overflowY: 'auto',
-    padding: tokens.spacingVerticalS,
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: tokens.borderRadiusSmall,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    lineHeight: '1.6',
   },
-  loadingContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-    padding: tokens.spacingVerticalM,
+  
+  releaseNotesTitle: {
+    marginBottom: '12px',
+    color: tokens.colorNeutralForeground1,
   },
+  
+  releaseNotesContent: {
+    color: tokens.colorNeutralForeground2,
+    whiteSpace: 'pre-wrap',
+  },
+  
+  // 按钮区域 - 极简设计
   actions: {
     display: 'flex',
-    gap: tokens.spacingHorizontalS,
-    justifyContent: 'flex-end',
+    gap: '16px',
+    justifyContent: 'center',
+    marginTop: '32px',
   },
-  errorActions: {
-    display: 'flex',
-    gap: tokens.spacingHorizontalS,
-    justifyContent: 'space-between',
-    width: '100%',
+  
+  primaryButton: {
+    minWidth: '120px',
+    height: '40px',
+    borderRadius: '4px',
   },
-  forceUpdateContainer: {
-    textAlign: 'center',
-    padding: tokens.spacingVerticalXL,
+  
+  secondaryButton: {
+    minWidth: '120px',
+    height: '40px',
+    borderRadius: '4px',
   },
-  warningIcon: {
-    fontSize: '48px',
-    color: tokens.colorPaletteRedForeground1,
-    marginBottom: tokens.spacingVerticalM,
-  },
-  successCard: {
-    maxWidth: '400px',
-    margin: '0 auto',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-  },
-  successHeader: {
-    textAlign: 'center',
-  },
-  successIcon: {
-    color: tokens.colorPaletteGreenForeground1,
-    fontSize: '32px',
-  },
-  updateCard: {
-    margin: `${tokens.spacingVerticalM} 0`,
-  },
-  updateHeader: {
-    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`,
-  },
-  updateBody: {
-    padding: `0 ${tokens.spacingHorizontalM}`,
-  },
-  updateFooter: {
-    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM} ${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
-  },
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: tokens.spacingVerticalXL,
-  },
-  card: {
-    maxWidth: '400px',
-    width: '100%',
-    margin: '0 auto',
-  },
-  header: {
-    textAlign: 'center',
-    padding: tokens.spacingVerticalM,
-  },
-  errorContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalXL,
-  },
-  errorText: {
-    color: tokens.colorPaletteRedForeground1,
-    textAlign: 'center',
-  },
+  
+  // 成功状态
   successContainer: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalXL,
+    gap: '16px',
   },
-  downloadLink: {
+  
+  successIcon: {
+    fontSize: '48px',
+    color: tokens.colorPaletteGreenForeground1,
+    marginBottom: '8px',
+  },
+  
+  // 错误状态
+  errorContainer: {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: tokens.spacingHorizontalXS,
-    marginTop: tokens.spacingVerticalXS,
-  }
+    gap: '24px',
+  },
+  
+  errorText: {
+    color: tokens.colorPaletteRedForeground1,
+    textAlign: 'center',
+    lineHeight: '1.5',
+  },
+  
+  // 响应式设计 - 优化移动端体验
+  '@media (max-width: 768px)': {
+    card: {
+      padding: '32px 24px',
+    },
+    versionInfo: {
+      padding: '16px',
+    },
+    actions: {
+      flexDirection: 'column',
+      gap: '12px',
+    },
+    primaryButton: {
+      width: '100%',
+      height: '44px',
+    },
+    secondaryButton: {
+      width: '100%',
+      height: '44px',
+    },
+  },
+  
+  '@media (max-width: 480px)': {
+    card: {
+      padding: '24px 16px',
+    },
+    title: {
+      marginBottom: '24px',
+    },
+    versionRow: {
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: '8px',
+    },
+    versionValue: {
+      alignSelf: 'flex-end',
+    },
+  },
 });
 
 interface StartupVersionCheckerProps {
@@ -178,7 +379,8 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
   const [isChecking, setIsChecking] = useState(!propCheckResult);
   const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(propCheckResult || null);
   const [error, setError] = useState<string | null>(null);
-  const [showDialog, setShowDialog] = useState(!!propCheckResult?.needsUpdate);
+  const [showDialog, setShowDialog] = useState(!propCheckResult || !propCheckResult.hasUpdate); // 如果传入需要更新的结果，隐藏普通对话框
+  const [showForceUpdateDialog, setShowForceUpdateDialog] = useState(propCheckResult?.hasUpdate || false); // 如果传入需要更新的结果，直接显示强制更新对话框
   const [retryCount, setRetryCount] = useState(0);
 
   // 判断是否为关键错误（需要强制退出）
@@ -234,7 +436,7 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
 
     try {
       console.log('🚀 开始启动时版本检查...');
-      const result = await versionService.forceCheckForUpdates();
+      const result = await checkForUpdates();
 
       // 清除超时定时器
       clearTimeout(timeoutId);
@@ -261,9 +463,10 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       
       // 确保结果符合VersionCheckResult接口
       const normalizedResult: VersionCheckResult = {
-        hasUpdate: result.hasUpdate || result.needsUpdate,
-        needsUpdate: result.needsUpdate,
+        hasUpdate: result.hasUpdate,
+        needsUpdate: result.hasUpdate,
         currentVersion: result.currentVersion,
+        localVersion: result.localVersion,
         latestVersion: result.latestVersion || result.currentVersion,
         isForceUpdate: result.isForceUpdate,
         message: result.message || '',
@@ -273,15 +476,17 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       
       setCheckResult(normalizedResult);
 
-      if (normalizedResult.needsUpdate) {
-        // 有更新时统一按强制更新处理
-        console.log('🆕 发现新版本，需要更新:', normalizedResult.latestVersion);
-        setShowDialog(true);
+      if (normalizedResult.hasUpdate) {
+        // 有更新时显示强制更新对话框
+        console.log('🆕 发现新版本，需要强制更新:', normalizedResult.latestVersion);
+        setShowForceUpdateDialog(true);
+        setShowDialog(false); // 隐藏普通对话框
         onCheckComplete(true, normalizedResult);
       } else {
         // 不需要更新，显示成功提示
         console.log('✅ 当前已是最新版本:', normalizedResult.currentVersion);
         showSuccessToast();
+        setShowDialog(false); // 隐藏对话框
         onCheckComplete(false, normalizedResult);
       }
 
@@ -308,12 +513,41 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     }
   }, [onCheckComplete, showSuccessToast, timeoutReached]);
 
+  // 如果没有传入 checkResult，则自动执行版本检查
+  useEffect(() => {
+    if (!propCheckResult) {
+      performVersionCheck();
+    }
+  }, [propCheckResult, performVersionCheck]);
+
+  // 监听外部传入的checkResult变化
+  useEffect(() => {
+    if (propCheckResult) {
+      console.log('📋 接收到外部传入的版本检查结果:', propCheckResult);
+      setCheckResult(propCheckResult);
+      
+      if (propCheckResult.hasUpdate) {
+        console.log('🆕 外部传入结果显示需要更新，显示强制更新对话框');
+        setShowForceUpdateDialog(true);
+        setShowDialog(false);
+      } else {
+        console.log('✅ 外部传入结果显示已是最新版本');
+        setShowForceUpdateDialog(false);
+        setShowDialog(true);
+      }
+    }
+  }, [propCheckResult]);
+
+
+
   /**
-   * 处理立即更新 - 跳转到浏览器打开下载页面
+   * 处理立即更新 - 跳转到浏览器打开下载页面（强制更新模式）
    */
   const handleUpdateNow = useCallback(() => {
-    // 固定使用指定的下载页面
+    // 固定使用默认下载页面，不解析API返回的downloadUrl
     const downloadUrl = 'https://admt.lacs.cc/download';
+    
+    console.log('🔗 准备打开下载链接:', downloadUrl);
 
     // 使用 Tauri 的 shell API 打开浏览器
     import('@tauri-apps/plugin-shell').then(({ open }) => {
@@ -334,12 +568,15 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
           正在打开下载页面
         </ToastTitle>
         <ToastBody>
-          请在浏览器中完成下载和安装
+          新版本 {checkResult?.latestVersion} 下载页面已在浏览器中打开，请完成更新后重启应用
         </ToastBody>
       </Toast>,
-      { intent: 'success' as ToastIntent }
+      { intent: 'success' as ToastIntent, timeout: 8000 }
     );
-  }, [dispatchToast]);
+
+    // 注意：强制更新模式下不关闭对话框，用户必须完成更新
+    // setShowForceUpdateDialog(false); // 保持对话框打开
+  }, [dispatchToast, checkResult]);
 
   /**
    * 处理重试
@@ -418,67 +655,136 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     }
   };
 
-  // 组件渲染
+  // 组件渲染 - 包含强制更新对话框
   return (
-    <div className={styles.container}>
-      <Card className={styles.card}>
-        <CardHeader className={styles.header}>
-          <Text size={600} weight="semibold">版本检查</Text>
-        </CardHeader>
-        
-        <div className={styles.content}>
-          {isChecking ? (
-            <div className={styles.loadingContainer}>
-              <Spinner size="medium" />
-              <Text>正在检查版本更新...</Text>
-            </div>
-          ) : error ? (
-            <div className={styles.errorContainer}>
-              <Text className={styles.errorText}>{error}</Text>
-              <div className="error-actions">
-                {isCriticalError ? (
-                  // 关键错误：只显示强制退出按钮
-                  <Button
-                    appearance="primary"
-                    onClick={handleForceExit}
-                    className="exit-button"
-                  >
-                    强制退出应用
-                  </Button>
-                ) : (
-                  // 非关键错误：显示重试和离线使用选项
-                  <>
+    <>
+      {/* 普通版本检查界面 */}
+      {showDialog && (
+        <div className={styles.container}>
+          <div className={styles.card}>
+            <Text size={500} weight="semibold" className={styles.title}>
+              版本检查
+            </Text>
+            
+            {isChecking ? (
+              // 加载状态 - 简洁设计
+              <div className={styles.loadingContainer}>
+                <Spinner size="medium" />
+                <Text>正在检查版本更新...</Text>
+              </div>
+            ) : error ? (
+              // 错误状态 - 清晰展示
+              <div className={styles.errorContainer}>
+                <Text className={styles.errorText}>{error}</Text>
+                <div className={styles.actions}>
+                  {isCriticalError ? (
                     <Button
                       appearance="primary"
-                      onClick={performVersionCheck}
-                      disabled={isChecking}
+                      onClick={handleForceExit}
+                      className={styles.primaryButton}
                     >
-                      重试检查
+                      退出应用
                     </Button>
-                    <Button
-                      appearance="secondary"
-                      onClick={handleOfflineUse}
-                    >
-                      离线使用
-                    </Button>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <Button
+                        appearance="primary"
+                        onClick={performVersionCheck}
+                        disabled={isChecking}
+                        className={styles.primaryButton}
+                      >
+                        重试
+                      </Button>
+                      <Button
+                        appearance="secondary"
+                        onClick={handleOfflineUse}
+                        className={styles.secondaryButton}
+                      >
+                        离线使用
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : checkResult ? (
-            <div className={styles.successContainer}>
-              <Text>版本检查完成</Text>
-              {checkResult.needsUpdate ? (
-                <Text>发现新版本: {checkResult.latestVersion}</Text>
-              ) : (
-                <Text>当前已是最新版本</Text>
+            ) : checkResult && !checkResult.hasUpdate ? (
+              // 当前已是最新版本 - 简洁确认
+              <div className={styles.successContainer}>
+                <CheckmarkCircle24Filled className={styles.successIcon} />
+                <Text size={400} weight="semibold">
+                  已是最新版本
+                </Text>
+                <Text className={`${styles.versionValue} ${styles.currentVersion}`}>
+                  {checkResult.currentVersion}
+                </Text>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* 强制更新对话框 */}
+      <Dialog 
+        open={showForceUpdateDialog}
+        modalType="modal"
+      >
+        <DialogSurface className={`${styles.forceUpdateDialog} ${styles.forceUpdateSurface}`}>
+          <DialogTitle className={styles.forceUpdateTitle}>
+            <Warning24Filled className={styles.forceUpdateIcon} />
+            必须更新应用
+          </DialogTitle>
+          <div className={styles.forceUpdateContent}>
+              <Text className={styles.forceUpdateMessage}>
+                检测到新版本可用，为了确保应用的安全性和稳定性，您必须更新到最新版本才能继续使用。
+              </Text>
+
+              {checkResult && (
+                <div className={styles.forceUpdateVersionInfo}>
+                  <div className={styles.forceUpdateVersionRow}>
+                    <Text className={styles.forceUpdateVersionLabel}>当前版本</Text>
+                    <Text className={`${styles.forceUpdateVersionValue} ${styles.forceUpdateCurrentVersion}`}>
+                      {checkResult.currentVersion}
+                    </Text>
+                  </div>
+                  <div className={styles.forceUpdateVersionRow}>
+                    <Text className={styles.forceUpdateVersionLabel}>最新版本</Text>
+                    <Text className={`${styles.forceUpdateVersionValue} ${styles.forceUpdateLatestVersion}`}>
+                      {checkResult.latestVersion}
+                    </Text>
+                  </div>
+                </div>
+              )}
+
+              {checkResult?.versionInfo?.releaseNotes && (
+                <div className={styles.forceUpdateReleaseNotes}>
+                  <Text weight="semibold" className={styles.forceUpdateReleaseNotesTitle}>
+                    🔄 更新内容
+                  </Text>
+                  <Text className={styles.forceUpdateReleaseNotesContent}>
+                    请前往下载页面查看更新日志。
+                  </Text>
+                </div>
               )}
             </div>
-          ) : null}
-        </div>
-      </Card>
-    </div>
+
+          <DialogActions className={styles.forceUpdateActions}>
+            <Button
+              appearance="primary"
+              size="large"
+              icon={<ArrowDownload24Regular />}
+              onClick={handleUpdateNow}
+              className={styles.forceUpdateButton}
+            >
+              打开下载页面
+            </Button>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
+    </>
   );
 };
 
 export default StartupVersionChecker;
+
+function showSuccessToast() {
+  throw new Error('Function not implemented.');
+}

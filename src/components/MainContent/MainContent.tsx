@@ -17,6 +17,7 @@ import {
   CloudArrowDown24Regular,
   Circle12Filled,
   Home24Regular,
+  Beaker24Regular,
 } from "@fluentui/react-icons";
 import { getDeviceIcon } from "../../assets/icons";
 import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
@@ -31,19 +32,20 @@ import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
 import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
+
 import { usageTrackingService } from "../../services/usageTrackingService";
 
 
 const useStyles = makeStyles({
   '@keyframes pulse': {
-    '&from': {
-      opacity: 1,
+    'from': {
+      opacity: "1",
     },
-    '&50%': {
-      opacity: 0.8,
+    '50%': {
+      opacity: "0.8",
     },
-    '&to': {
-      opacity: 1,
+    'to': {
+      opacity: "1",
     },
   },
   container: {
@@ -510,6 +512,7 @@ const tabs = [
     label: "设置",
     icon: <Settings24Regular />,
   },
+
 ];
 
 const MainContent: React.FC = () => {
@@ -829,11 +832,11 @@ const MainContent: React.FC = () => {
         return <FlashZonePanel />;
       case "extended-features":
         return <ExtendedFeaturesPanel />;
-
       case "online-resources":
         return <OnlineResourcesPanel />;
       case "settings":
         return <SettingsPanel />;
+
       default:
         return <HomePage />;
     }

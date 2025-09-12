@@ -26,7 +26,7 @@ import {
 } from '@fluentui/react-icons';
 import { makeStyles } from '@fluentui/react-components';
 import { debugVersionService, DebugVersionResult } from '../../services/debugVersionService';
-import { versionService } from '../../services/versionService';
+import { checkForUpdates, versionService, VersionCheckResult } from '../../services/versionServiceAdapter';
 
 const useStyles = makeStyles({
   container: {

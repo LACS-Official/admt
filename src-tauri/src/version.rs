@@ -1,6 +1,8 @@
 use tauri::command;
 use serde::{Deserialize, Serialize};
 use reqwest;
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppVersion {
@@ -9,23 +11,87 @@ pub struct AppVersion {
     pub commit_hash: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VersionConfig {
+    pub version: String,
+    #[serde(rename = "buildNumber")]
+    pub build_number: u32,
+    #[serde(rename = "versionName")]
+    pub version_name: String,
+    #[serde(rename = "releaseDate")]
+    pub release_date: String,
+    pub description: Option<String>,
+    pub changelog: Option<Vec<String>>,
+}
+
+/// 从版本配置文件读取版本信息
+fn read_version_config() -> Result<VersionConfig, String> {
+    // 尝试读取版本配置文件
+    let config_paths = [
+        "version.config.json",
+        "../version.config.json",
+        "../../version.config.json",
+    ];
+    
+    for config_path in &config_paths {
+        if Path::new(config_path).exists() {
+            match fs::read_to_string(config_path) {
+                Ok(content) => {
+                    match serde_json::from_str::<VersionConfig>(&content) {
+                        Ok(config) => {
+                            println!("✅ 成功读取版本配置文件: {}", config_path);
+                            return Ok(config);
+                        }
+                        Err(e) => {
+                            eprintln!("❌ 版本配置文件格式错误 {}: {}", config_path, e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("❌ 读取版本配置文件失败 {}: {}", config_path, e);
+                }
+            }
+        }
+    }
+    
+    // 如果无法读取配置文件，返回默认配置
+    eprintln!("⚠️  无法读取版本配置文件，使用默认版本信息");
+    Ok(VersionConfig {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        build_number: 1,
+        version_name: env!("CARGO_PKG_VERSION").to_string(),
+        release_date: "2025-01-11".to_string(),
+        description: Some("默认版本配置".to_string()),
+        changelog: None,
+    })
+}
+
+/// 获取统一的版本号（优先使用配置文件）
+fn get_unified_version() -> String {
+    match read_version_config() {
+        Ok(config) => config.version,
+        Err(_) => env!("CARGO_PKG_VERSION").to_string(),
+    }
+}
+
 #[command]
 pub fn get_app_version() -> Result<String, String> {
-    // 从Cargo.toml获取版本信息
-    let version = env!("CARGO_PKG_VERSION");
-    Ok(version.to_string())
+    // 优先使用统一版本配置
+    let version = get_unified_version();
+    Ok(version)
 }
 
 #[command]
 pub fn get_app_info() -> Result<AppVersion, String> {
-    let version = env!("CARGO_PKG_VERSION");
+    // 优先使用统一版本配置
+    let version = get_unified_version();
     let build_date = env!("BUILD_DATE");
     
     // 在编译时获取Git提交哈希（如果可用）
     let commit_hash = option_env!("GIT_HASH").map(|s| s.to_string());
     
     Ok(AppVersion {
-        version: version.to_string(),
+        version,
         build_date: build_date.to_string(),
         commit_hash,
     })
@@ -43,7 +109,7 @@ pub struct UpdateCheckResult {
 
 #[command]
 pub async fn check_for_updates() -> Result<UpdateCheckResult, String> {
-    let current_version = env!("CARGO_PKG_VERSION");
+    let current_version = get_unified_version();
     
     // API端点配置
     let api_url = if cfg!(debug_assertions) {
@@ -52,7 +118,7 @@ pub async fn check_for_updates() -> Result<UpdateCheckResult, String> {
         "https://api-g.lacs.cc/api/version/check"
     };
     
-    match check_version_from_api(api_url, current_version).await {
+    match check_version_from_api(&api_url, &current_version).await {
         Ok(result) => Ok(result),
         Err(e) => {
             // 网络错误时返回默认结果

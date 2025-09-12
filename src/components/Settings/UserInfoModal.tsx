@@ -132,7 +132,7 @@ interface ActivationInfo {
   remainingDays: number;
 }
 
-const UserInfoModal: React.FC<UserInfoModalProps> = ({ children }) => {
+const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ children }, ref) => {
   const styles = useStyles();
   const [isOpen, setIsOpen] = useState(false);
   const [activationInfo, setActivationInfo] = useState<ActivationInfo | null>(null);
@@ -485,6 +485,8 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ children }) => {
       </DialogSurface>
     </Dialog>
   );
-};
+});
+
+UserInfoModal.displayName = 'UserInfoModal';
 
 export default UserInfoModal;

@@ -7,12 +7,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadAllEnvVars } = require('./load-env.cjs');
-
-// 首先加载环境变量
-console.log('🔄 加载环境变量...');
-loadAllEnvVars();
-console.log('');
 
 // 必需的环境变量
 const requiredEnvVars = [
@@ -101,43 +95,6 @@ for (const envFile of envFiles) {
   } else {
     console.log(`ℹ️  环境文件不存在: ${envFile}`);
   }
-}
-
-// 检查版本配置文件
-console.log('\n📋 检查版本配置文件:');
-const versionConfigFile = process.env.VITE_VERSION_CONFIG_FILE || 'version.config.json';
-const versionConfigPath = path.join(process.cwd(), versionConfigFile);
-if (fs.existsSync(versionConfigPath)) {
-  console.log(`✅ 找到版本配置文件: ${versionConfigFile}`);
-  
-  try {
-    const versionConfig = JSON.parse(fs.readFileSync(versionConfigPath, 'utf8'));
-    
-    // 验证版本配置格式
-    if (!versionConfig.version) {
-      console.error('❌ 版本配置文件缺少version字段');
-      hasErrors = true;
-    } else if (!/^\d+\.\d+\.\d+/.test(versionConfig.version)) {
-      console.error(`❌ 版本配置文件中的版本格式无效: ${versionConfig.version}`);
-      hasErrors = true;
-    } else {
-      console.log(`✅ 版本配置文件版本: ${versionConfig.version}`);
-      
-      // 检查版本一致性
-      const envVersion = process.env.VITE_APP_VERSION;
-      if (envVersion && envVersion !== versionConfig.version) {
-        console.warn(`⚠️  环境变量版本与配置文件版本不一致: ${envVersion} != ${versionConfig.version}`);
-        console.log('💡 运行 "npm run sync-version" 来同步版本号');
-        hasWarnings = true;
-      }
-    }
-  } catch (error) {
-    console.error(`❌ 版本配置文件格式错误: ${error.message}`);
-    hasErrors = true;
-  }
-} else {
-  console.warn(`⚠️  版本配置文件不存在: ${versionConfigFile}`);
-  hasWarnings = true;
 }
 
 // 检查构建模式
