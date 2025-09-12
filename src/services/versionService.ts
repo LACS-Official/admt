@@ -73,7 +73,7 @@ class VersionService {
       baseUrl,
       softwareId,
       endpoints: {
-        version: `${baseUrl}/app/software/id/${softwareId}/versions/latest`,
+        version: `${baseUrl}/app/software/id/${softwareId}/versions`,
         announcement: `${baseUrl}/app/software/id/${softwareId}/announcements`
       }
     };

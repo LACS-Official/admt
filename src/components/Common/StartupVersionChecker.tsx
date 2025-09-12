@@ -2,7 +2,7 @@
  * 启动时版本检查组件
  * 在应用启动时执行版本检查，根据结果显示相应的UI
  */
-import React, { useCallback, useEffect, useState }  from 'react';
+import React, { useCallback, useEffect, useState, useMemo }  from 'react';
 import {
   Dialog,
   DialogSurface,
@@ -120,6 +120,39 @@ const useStyles = makeStyles({
   updateFooter: {
     padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM} ${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
   },
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: tokens.spacingVerticalXL,
+  },
+  card: {
+    maxWidth: '400px',
+    width: '100%',
+    margin: '0 auto',
+  },
+  header: {
+    textAlign: 'center',
+    padding: tokens.spacingVerticalM,
+  },
+  errorContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: tokens.spacingVerticalM,
+    padding: tokens.spacingVerticalXL,
+  },
+  errorText: {
+    color: tokens.colorPaletteRedForeground1,
+    textAlign: 'center',
+  },
+  successContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: tokens.spacingVerticalM,
+    padding: tokens.spacingVerticalXL,
+  },
   downloadLink: {
     display: 'flex',
     alignItems: 'center',
@@ -147,6 +180,24 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(!!propCheckResult?.needsUpdate);
   const [retryCount, setRetryCount] = useState(0);
+
+  // 判断是否为关键错误（需要强制退出）
+  const isCriticalError = useMemo(() => {
+    if (!error) return false;
+    
+    const criticalErrorPatterns = [
+      '无法获取版本信息',
+      '签名验证失败',
+      '权限不足',
+      '服务器内部错误',
+      '网络连接失败',
+      '系统将自动退出'
+    ];
+    
+    return criticalErrorPatterns.some(pattern => 
+      error.toLowerCase().includes(pattern.toLowerCase())
+    );
+  }, [error]);
   const [timeoutReached, setTimeoutReached] = useState(false);
 
   /**
@@ -174,16 +225,16 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     setError(null);
     setTimeoutReached(false);
 
-    // 设置10秒超时
+    // 设置15秒超时（增加超时时间以适应网络延迟）
     const timeoutId = setTimeout(() => {
       setTimeoutReached(true);
       setIsChecking(false);
-      setError('版本检查超时，请检查网络连接');
-    }, 10000);
+      setError('版本检查超时，无法获取版本信息');
+    }, 15000);
 
     try {
-      console.log('开始启动时版本检查...');
-      const result = await versionService.checkForUpdates();
+      console.log('🚀 开始启动时版本检查...');
+      const result = await versionService.forceCheckForUpdates();
 
       // 清除超时定时器
       clearTimeout(timeoutId);
@@ -192,7 +243,21 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
         return; // 如果已经超时，忽略结果
       }
 
-      console.log('版本检查结果:', result);
+      console.log('📋 版本检查结果:', result);
+      
+      // 🚨 检查是否有关键错误（API访问失败等）
+      if (result.error && (
+        result.error.includes('配置错误') || 
+        result.error.includes('无法获取版本信息') ||
+        result.error.includes('API响应格式错误') ||
+        result.error.includes('网络请求失败')
+      )) {
+        console.error('🚨 检测到关键错误，版本检查失败:', result.error);
+        setError(result.error);
+        setShowDialog(true);
+        // 不调用 onCheckComplete，让用户看到错误信息
+        return;
+      }
       
       // 确保结果符合VersionCheckResult接口
       const normalizedResult: VersionCheckResult = {
@@ -210,10 +275,12 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
 
       if (normalizedResult.needsUpdate) {
         // 有更新时统一按强制更新处理
+        console.log('🆕 发现新版本，需要更新:', normalizedResult.latestVersion);
         setShowDialog(true);
         onCheckComplete(true, normalizedResult);
       } else {
         // 不需要更新，显示成功提示
+        console.log('✅ 当前已是最新版本:', normalizedResult.currentVersion);
         showSuccessToast();
         onCheckComplete(false, normalizedResult);
       }
@@ -226,9 +293,14 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       }
 
       const errorMessage = error instanceof Error ? error.message : '版本检查失败';
-      console.error('版本检查失败:', error);
-      setError(errorMessage);
+      console.error('❌ 版本检查异常:', error);
+      
+      // 🚨 所有异常都视为关键错误
+      const criticalError = `无法获取版本信息: ${errorMessage}`;
+      setError(criticalError);
       setShowDialog(true);
+      
+      // 不调用 onCheckComplete，让用户看到错误信息
     } finally {
       if (!timeoutReached) {
         setIsChecking(false);
@@ -279,242 +351,133 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
   }, [performVersionCheck]);
 
   /**
-   * 处理离线使用
+   * 处理离线使用 - 在关键错误时不允许离线使用
    */
   const handleOfflineUse = useCallback(() => {
+    // 检查是否是关键错误
+    if (error && (
+      error.includes('无法获取版本信息') ||
+      error.includes('配置错误') ||
+      error.includes('API响应格式错误')
+    )) {
+      // 关键错误时强制退出，不允许离线使用
+      handleForceExit();
+      return;
+    }
+    
     setShowDialog(false);
     onAllowOfflineUse?.();
     onCheckComplete(false);
-  }, [onAllowOfflineUse, onCheckComplete]);
+  }, [error, onAllowOfflineUse, onCheckComplete]);
 
-
-
-  // 组件挂载时开始版本检查（仅在没有传入checkResult时）
-  useEffect(() => {
-    if (!propCheckResult) {
-      performVersionCheck();
-    } else {
-      // 如果传入了checkResult，直接调用回调
-      console.log('📋 使用传入的版本检查结果:', propCheckResult);
-      onCheckComplete(propCheckResult.needsUpdate, propCheckResult);
-    }
-  }, [propCheckResult, performVersionCheck, onCheckComplete]);
-
-  // 如果正在检查且没有显示对话框，显示加载状态
-  if (isChecking && !showDialog) {
-    return (
-      <div className={styles.loadingContainer}>
-        <Spinner size="small" />
-        <Text>正在检查版本更新...</Text>
-      </div>
-    );
-  }
-
-  // 如果不需要显示对话框且没有错误，显示成功卡片
-  if (!showDialog && !error && checkResult && !checkResult.needsUpdate) {
-    return (
-      <>
-        <Toaster />
-        <Card className={styles.successCard}>
-          <CardHeader
-            header={
-              <Text weight="semibold" className={styles.successHeader}>
-                版本检查完成
-              </Text>
-            }
-            description="您的应用程序已是最新版本"
-            image={<CheckmarkCircle24Filled className={styles.successIcon} />}
-          />
-          <CardPreview>
-            <div style={{ padding: tokens.spacingVerticalS }}>
-              <Text size={300} align="center">
-                当前版本: {checkResult.currentVersion}
-              </Text>
-            </div>
-          </CardPreview>
-          <CardFooter>
-            <Button appearance="primary" onClick={() => onCheckComplete(false, checkResult)}>
-              继续使用
-            </Button>
-          </CardFooter>
-        </Card>
-      </>
-    );
-  }
-
-  // 如果不需要显示对话框，返回空
-  if (!showDialog) {
-    return <Toaster />;
-  }
-
-  return (
-    <>
-      <Toaster />
-      <Dialog
-        open={showDialog}
-        onOpenChange={(_event, data) => {
-          // 有更新时不允许关闭对话框，只有错误状态时才允许关闭
-          if (error && !checkResult?.needsUpdate) {
-            setShowDialog(data.open);
+  /**
+   * 强制退出应用程序
+   */
+  const handleForceExit = async () => {
+    try {
+      console.log('🚨 用户选择强制退出应用');
+      
+      // 记录退出原因
+      const exitReason = {
+        reason: '版本检测失败',
+        error: error,
+        timestamp: new Date().toISOString(),
+        environment: import.meta.env.MODE
+      };
+      
+      console.log('📝 退出原因记录:', exitReason);
+      
+      // 显示退出提示
+      setError('系统即将退出，感谢您的使用！');
+      
+      // 延迟退出，让用户看到提示信息
+      setTimeout(async () => {
+        try {
+          // 尝试使用Tauri API退出
+          const { exit } = await import('@tauri-apps/plugin-process');
+          await exit(1);
+        } catch (tauriError) {
+          console.error('Tauri退出失败，使用备用方案:', tauriError);
+          
+          // 备用退出方案
+          if (typeof window !== 'undefined' && window.close) {
+            window.close();
+          } else {
+            // 最后的备用方案：刷新页面并显示错误
+            window.location.href = 'about:blank';
           }
-          // 有更新时强制阻止关闭对话框
-        }}
-        modalType="modal"
-      >
-        <DialogSurface className={styles.dialog}>
-          <DialogTitle>
-            {error ? '版本检查失败' : checkResult?.needsUpdate ? '发现新版本' : '版本检查完成'}
-          </DialogTitle>
-          <DialogBody>
-            <div className={styles.content}>
-              {error ? (
-                // 错误状态
-                <>
-                  <MessageBar intent="error">
-                    <MessageBarBody>
-                      <Warning24Regular />
-                      {error}
-                    </MessageBarBody>
-                  </MessageBar>
-                  
-                  <Text size={300}>
-                    无法连接到更新服务器，您可以选择重试或继续离线使用。
-                  </Text>
-                  
-                  {retryCount > 0 && (
-                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                      已重试 {retryCount} 次
-                    </Text>
-                  )}
-                </>
-              ) : checkResult && checkResult.needsUpdate ? (
-                // 有更新状态 - 统一按强制更新处理
-                <Card className={styles.updateCard}>
-                  <CardHeader
-                    header={
-                      <Text weight="semibold">
-                        需要强制更新
-                      </Text>
-                    }
-                    description={
-                      <Text size={200}>
-                        检测到新版本，必须更新后才能继续使用应用
-                      </Text>
-                    }
-                    image={<Warning24Regular />}
-                  />
-                  
-                  <div className={styles.updateBody}>
-                    <div className={styles.versionInfo}>
-                      <div className={styles.versionRow}>
-                        <Text weight="semibold">当前版本:</Text>
-                        <Text>{checkResult.currentVersion}</Text>
-                      </div>
-                      <div className={styles.versionRow}>
-                        <Text weight="semibold">最新版本:</Text>
-                        <Text>{checkResult.latestVersion}</Text>
-                      </div>
-                    </div>
-                    
-                    {checkResult.updateInfo && (
-                      <>
-                        <Divider style={{ margin: `${tokens.spacingVerticalM} 0` }} />
-                        
-                        <Text weight="semibold" block>
-                          更新说明:
-                        </Text>
-                        <div className={styles.releaseNotes}>
-                          <Text size={300}>
-                            {checkResult.updateInfo.releaseNotes || '暂无更新说明'}
-                          </Text>
-                          {checkResult.updateInfo.fileSize && (
-                            <Text size={200} style={{ marginTop: '8px', color: tokens.colorNeutralForeground3 }}>
-                              文件大小: {checkResult.updateInfo.fileSize}
-                            </Text>
-                          )}
-                        </div>
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ 强制退出失败:', error);
+      // 即使退出失败，也要尝试关闭窗口
+      if (typeof window !== 'undefined') {
+        window.close();
+      }
+    }
+  };
 
-                      </>
-                    )}
-                  </div>
-                  
-                  <CardFooter className={styles.updateFooter}>
-                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                      此更新包含重要修复，必须更新后才能继续使用
-                    </Text>
-                  </CardFooter>
-                </Card>
-              ) : checkResult ? (
-                // 无更新状态（在对话框中显示）
-                <Card className={styles.updateCard}>
-                  <CardHeader
-                    header={
-                      <Text weight="semibold">
-                        当前是最新版本
-                      </Text>
-                    }
-                    description="您的应用程序已是最新版本"
-                    image={<CheckmarkCircle24Filled className={styles.successIcon} />}
-                  />
-                  <CardPreview>
-                    <div style={{ padding: tokens.spacingVerticalS }}>
-                      <Text size={300} align="center">
-                        当前版本: {checkResult.currentVersion}
-                      </Text>
-                    </div>
-                  </CardPreview>
-                </Card>
-              ) : null}
+  // 组件渲染
+  return (
+    <div className={styles.container}>
+      <Card className={styles.card}>
+        <CardHeader className={styles.header}>
+          <Text size={600} weight="semibold">版本检查</Text>
+        </CardHeader>
+        
+        <div className={styles.content}>
+          {isChecking ? (
+            <div className={styles.loadingContainer}>
+              <Spinner size="medium" />
+              <Text>正在检查版本更新...</Text>
             </div>
-          </DialogBody>
-          <DialogActions>
-            {error ? (
-              // 错误状态的按钮
-              <div className={styles.errorActions}>
-                <Button
-                  appearance="secondary"
-                  onClick={handleOfflineUse}
-                >
-                  离线使用
-                </Button>
-                <Button
-                  appearance="primary"
-                  onClick={handleRetry}
-                  icon={<ArrowClockwise24Regular />}
-                >
-                  重试
-                </Button>
+          ) : error ? (
+            <div className={styles.errorContainer}>
+              <Text className={styles.errorText}>{error}</Text>
+              <div className="error-actions">
+                {isCriticalError ? (
+                  // 关键错误：只显示强制退出按钮
+                  <Button
+                    appearance="primary"
+                    onClick={handleForceExit}
+                    className="exit-button"
+                  >
+                    强制退出应用
+                  </Button>
+                ) : (
+                  // 非关键错误：显示重试和离线使用选项
+                  <>
+                    <Button
+                      appearance="primary"
+                      onClick={performVersionCheck}
+                      disabled={isChecking}
+                    >
+                      重试检查
+                    </Button>
+                    <Button
+                      appearance="secondary"
+                      onClick={handleOfflineUse}
+                    >
+                      离线使用
+                    </Button>
+                  </>
+                )}
               </div>
-            ) : checkResult?.needsUpdate ? (
-              // 有更新时统一显示立即更新按钮
-              <div className={styles.actions}>
-                <Button
-                  appearance="primary"
-                  onClick={handleUpdateNow}
-                  icon={<ArrowDownload24Regular />}
-                  size='large'
-                >
-                  立即更新
-                </Button>
-              </div>
-            ) : (
-              // 无更新状态的按钮
-              <div className={styles.actions}>
-                <Button
-                  appearance="primary"
-                  onClick={() => {
-                    setShowDialog(false);
-                    onCheckComplete(false, checkResult || undefined);
-                  }}
-                >
-                  继续使用
-                </Button>
-              </div>
-            )}
-          </DialogActions>
-        </DialogSurface>
-      </Dialog>
-    </>
+            </div>
+          ) : checkResult ? (
+            <div className={styles.successContainer}>
+              <Text>版本检查完成</Text>
+              {checkResult.needsUpdate ? (
+                <Text>发现新版本: {checkResult.latestVersion}</Text>
+              ) : (
+                <Text>当前已是最新版本</Text>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </Card>
+    </div>
   );
 };
 
