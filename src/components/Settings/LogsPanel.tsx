@@ -430,50 +430,19 @@ const LogsPanel: React.FC = () => {
       <div className={styles.content}>
         {/* 日志查看器 */}
         <Card className={mergeClasses(styles.card, styles.logViewer)}>
-          <CardHeader
-            image={<Document24Regular />}
-            header={<Text weight="semibold">日志系统</Text>}
-            description={<Text size={200}>实时查看结构化应用日志，支持设备状态和固件刷写追踪</Text>}
-            action={
-              <div className={styles.actionButtons}>
-                <Button
-                  appearance="secondary"
-                  size="small"
-                  icon={<ArrowClockwise24Regular />}
-                  onClick={handleRefreshLogs}
-                  disabled={isLoading}
-                >
-                  刷新
-                </Button>
-                <Button 
-                  appearance="secondary" 
-                  size="small"
-                  icon={<ArrowDownload24Regular />}
-                  onClick={() => handleExportLogs('text')}
-                >
-                  导出文本
-                </Button>
-                <Button 
-                  appearance="secondary" 
-                  size="small"
-                  icon={<ArrowDownload24Regular />}
-                  onClick={() => handleExportLogs('json')}
-                >
-                  导出JSON
-                </Button>
-                <Button 
-                  appearance="secondary" 
-                  size="small"
-                  icon={<Delete24Regular />}
-                  onClick={handleClearLogs}
-                >
-                  清空
-                </Button>
-              </div>
-            }
-          />
-
           <div className={styles.cardContent}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                显示 {filteredLogs.length} / {logs.length} 条日志记录
+              </Text>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Text size={200}>自动滚动:</Text>
+                <Switch
+                  checked={autoScroll}
+                  onChange={(_, data) => setAutoScroll(data.checked === true)}
+                />
+              </div>
+            </div>
             {/* 高级过滤器 */}
             <div className={styles.filterRow}>
               <Field label="日志级别:">
@@ -539,104 +508,10 @@ const LogsPanel: React.FC = () => {
               )}
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                显示 {filteredLogs.length} / {logs.length} 条日志记录
-              </Text>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Text size={200}>自动滚动:</Text>
-                <Switch
-                  checked={autoScroll}
-                  onChange={(_, data) => setAutoScroll(data.checked === true)}
-                />
-              </div>
-            </div>
+
           </div>
         </Card>
 
-        {/* 增强统计面板 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<DataHistogram24Regular />}
-            header={<Text weight="semibold">日志统计</Text>}
-            description={<Text size={200}>实时日志统计和错误模式分析</Text>}
-          />
-
-          <div className={styles.cardContent}>
-            {logStats ? (
-              <>
-                <div className={styles.statsGrid}>
-                  <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: "#8B0000" }}>
-                      {logStats.fatal}
-                    </div>
-                    <div className={styles.statLabel}>致命错误</div>
-                  </div>
-                  <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: "#DC143C" }}>
-                      {logStats.error}
-                    </div>
-                    <div className={styles.statLabel}>错误</div>
-                  </div>
-                  <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: "#FF8C00" }}>
-                      {logStats.warning}
-                    </div>
-                    <div className={styles.statLabel}>警告</div>
-                  </div>
-                  <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: "#4169E1" }}>
-                      {logStats.info}
-                    </div>
-                    <div className={styles.statLabel}>信息</div>
-                  </div>
-                  <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: "#808080" }}>
-                      {logStats.debug}
-                    </div>
-                    <div className={styles.statLabel}>调试</div>
-                  </div>
-                  <div className={styles.statCard}>
-                    <div className={styles.statValue} style={{ color: "var(--colorBrandForeground1)" }}>
-                      {logStats.total}
-                    </div>
-                    <div className={styles.statLabel}>总计</div>
-                  </div>
-                </div>
-
-                <Divider />
-
-                <Text weight="semibold" style={{ marginBottom: "8px" }}>分类统计</Text>
-                <div className={styles.statsGrid}>
-                  {Object.entries(logStats.byCategory).map(([category, count]) => (
-                    <div key={category} className={styles.settingRow}>
-                      <Text>{LogUtils.getCategoryIcon(category as LogCategory)} {category}:</Text>
-                      <Badge appearance="outline" color="brand">
-                        {count}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-
-                {logStats.recentErrors > 0 && (
-                  <>
-                    <Divider />
-                    <div className={styles.settingRow}>
-                      <Text weight="semibold" style={{ color: "#DC143C" }}>
-                        ⚠️ 近1小时错误:
-                      </Text>
-                      <Badge appearance="filled" color="danger">
-                        {logStats.recentErrors}
-                      </Badge>
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <Text>加载统计信息中...</Text>
-            )}
-          </div>
-        </Card>
 
         {/* 错误模式分析 */}
         {errorPatterns.length > 0 && (
@@ -666,55 +541,6 @@ const LogsPanel: React.FC = () => {
             </div>
           </Card>
         )}
-
-        {/* 日志设置 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Settings24Regular />}
-            header={<Text weight="semibold">日志配置</Text>}
-            description={<Text size={200}>配置日志记录和保留策略</Text>}
-          />
-
-          <div className={styles.cardContent}>
-            <Field label="系统日志级别:">
-              <Select
-                value={config.logLevel || "info"}
-                onChange={(_, data) => updateConfig({ logLevel: data.value as "debug" | "info" | "warn" | "error" })}
-              >
-                <option value="error">错误 (Error)</option>
-                <option value="warn">警告 (Warning)</option>
-                <option value="info">信息 (Info)</option>
-                <option value="debug">调试 (Debug)</option>
-              </Select>
-              <Text size={200} style={{ color: "var(--colorNeutralForeground2)", marginTop: "4px" }}>
-                调试级别会显示更多详细信息，但可能影响性能
-              </Text>
-            </Field>
-
-            <Field label="内存中最大日志条数:">
-              <Input
-                type="number"
-                value={maxLogEntries.toString()}
-                onChange={(_, data) => handleMaxLogEntriesChange(parseInt(data.value) || 2000)}
-                min={500}
-                max={10000}
-                step={500}
-              />
-              <Text size={200} style={{ color: "var(--colorNeutralForeground2)", marginTop: "4px" }}>
-                超过此数量的旧日志将从内存中移除，但仍保存在磁盘上
-              </Text>
-            </Field>
-
-            <Divider />
-
-
-            <Divider />
-
-            <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-              会话ID: {enhancedLogService.getSessionId()}
-            </Text>
-          </div>
-        </Card>
       </div>
     </div>
   );

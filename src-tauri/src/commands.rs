@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use crate::cache::get_cache_manager;
 use crate::adb_commands::{AdbToolsInfo, AdbIntegrityReport};
+use chrono::Local;
 
 
 
@@ -3479,4 +3480,520 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
             }
         }
     }
+}
+
+/// 结构化日志条目（用于日志持久化）
+#[derive(Deserialize, Serialize, Debug, Clone)]
+struct StructuredLogEntry {
+    id: String,
+    timestamp: String,
+    level: String,
+    category: String,
+    message: String,
+    source: String,
+    context: serde_json::Value,
+    metadata: serde_json::Value,
+}
+
+/// 获取应用数据目录 - 修改为使用运行目录，包含降级机制
+fn get_app_data_dir() -> Result<std::path::PathBuf> {
+    // 尝试获取当前可执行文件的目录
+    match std::env::current_exe() {
+        Ok(exe_path) => {
+            if let Some(app_dir) = exe_path.parent() {
+                let logs_dir = app_dir.join("logs");
+                
+                // 检查是否有写权限
+                if test_directory_writable(&logs_dir) {
+                    return Ok(app_dir.to_path_buf());
+                } else {
+                    log::warn!("运行目录无写权限，降级到临时目录");
+                }
+            }
+        }
+        Err(e) => {
+            log::warn!("获取可执行文件路径失败: {}，降级到临时目录", e);
+        }
+    }
+    
+    // 降级机制1：使用系统临时目录
+    if let Ok(temp_dir) = std::env::temp_dir().canonicalize() {
+        let app_temp_dir = temp_dir.join("admt_logs");
+        if test_directory_writable(&app_temp_dir) {
+            log::info!("使用临时目录作为日志存储: {}", app_temp_dir.display());
+            return Ok(app_temp_dir);
+        }
+    }
+    
+    // 降级机制2：使用原有的系统数据目录
+    use std::env;
+    let fallback_dir = if let Ok(local_data) = env::var("LOCALAPPDATA") {
+        std::path::PathBuf::from(local_data).join("ADMT")
+    } else if let Ok(home) = env::var("HOME") {
+        std::path::PathBuf::from(home).join(".admt")
+    } else {
+        // 最后降级到当前目录
+        std::env::current_dir()
+            .map_err(|e| HoutError::IoError { message: format!("获取当前目录失败: {}", e) })?
+            .join("logs")
+    };
+    
+    log::warn!("使用降级目录: {}", fallback_dir.display());
+    Ok(fallback_dir)
+}
+
+/// 测试目录是否可写
+fn test_directory_writable(dir: &std::path::Path) -> bool {
+    use std::fs;
+    
+    // 如果目录不存在，尝试创建
+    if !dir.exists() {
+        if let Err(_) = fs::create_dir_all(dir) {
+            return false;
+        }
+    }
+    
+    // 测试写权限
+    let test_file = dir.join(".write_test");
+    match fs::write(&test_file, "test") {
+        Ok(_) => {
+            let _ = fs::remove_file(&test_file); // 清理测试文件
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+/// 应用启动时检测并创建日志目录
+#[tauri::command]
+pub async fn initialize_log_directory() -> Result<String> {
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    if !logs_dir.exists() {
+        std::fs::create_dir_all(&logs_dir)
+            .map_err(|e| HoutError::IoError { 
+                message: format!("创建日志目录失败: {}", e) 
+            })?;
+        log::info!("创建日志目录: {}", logs_dir.display());
+    } else {
+        log::info!("日志目录已存在: {}", logs_dir.display());
+    }
+    
+    Ok(logs_dir.to_string_lossy().to_string())
+}
+
+/// 持久化日志到文件 - 使用新命名格式
+#[tauri::command]
+pub async fn persist_log_to_file(log_entry: String) -> Result<String> {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+    // 解析日志条目
+    let entry: StructuredLogEntry = serde_json::from_str(&log_entry)
+        .map_err(|e| HoutError::InvalidInput { message: format!("解析日志失败: {}", e) })?;
+    
+    // 新文件名格式：admt_log_YYYYMMDD.log
+    let date_str = Local::now().format("%Y%m%d").to_string();
+    let filename = format!("admt_log_{}.log", date_str);
+    
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    // 确保日志目录存在
+    std::fs::create_dir_all(&logs_dir)
+        .map_err(|e| HoutError::IoError { message: format!("创建日志目录失败: {}", e) })?;
+    
+    let log_file_path = logs_dir.join(&filename);
+    
+    // 格式化日志条目
+    let formatted_log = format_log_entry(&entry);
+    
+    // 追加写入文件
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file_path)
+        .map_err(|e| HoutError::IoError { message: format!("打开日志文件失败: {}", e) })?;
+    
+    writeln!(file, "{}", formatted_log)
+        .map_err(|e| HoutError::IoError { message: format!("写入日志失败: {}", e) })?;
+    
+    log::debug!("日志已持久化到文件: {}", log_file_path.display());
+    Ok(log_file_path.to_string_lossy().to_string())
+}
+
+/// 格式化日志条目为可读文本
+fn format_log_entry(entry: &StructuredLogEntry) -> String {
+    let timestamp = Local::now().format("%H:%M:%S").to_string();
+    
+    // 格式：[HH:MM:SS] [LEVEL] [CATEGORY] [SOURCE] MESSAGE
+    let base_log = format!(
+        "[{}] [{}] [{}] [{}] {}",
+        timestamp,
+        entry.level.to_uppercase(),
+        entry.category,
+        entry.source,
+        entry.message
+    );
+    
+    // 如果有上下文信息，添加到日志中
+    if !entry.context.is_null() && entry.context.as_object().map_or(false, |obj| !obj.is_empty()) {
+        let context_str = serde_json::to_string(&entry.context).unwrap_or_default();
+        format!("{} | Context: {}", base_log, context_str)
+    } else {
+        base_log
+    }
+}
+
+/// 基础的日志持久化命令（保持向后兼容）
+#[tauri::command]
+pub async fn persist_log(log_entry: String) -> Result<String> {
+    // 委托给新的文件持久化实现
+    persist_log_to_file(log_entry).await
+}
+
+/// 获取持久化的日志
+#[tauri::command]
+pub async fn get_logs(_filter: Option<String>) -> Result<String> {
+    use std::fs;
+    
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    if !logs_dir.exists() {
+        return Ok("[]".to_string()); // 返回空数组
+    }
+    
+    let mut all_logs = Vec::new();
+    
+    // 读取所有日志文件，按日期排序
+    let mut entries: Vec<_> = fs::read_dir(&logs_dir)
+        .map_err(|e| HoutError::IoError { message: format!("读取日志目录失败: {}", e) })?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| {
+            entry.path().is_file() && 
+            (
+                // 支持新格式: admt_log_YYYYMMDD.log
+                (entry.path().extension().map_or(false, |ext| ext == "log") &&
+                 entry.file_name().to_string_lossy().starts_with("admt_log_")) ||
+                // 兼容旧格式: YY-MM-DD_logs.txt
+                (entry.path().extension().map_or(false, |ext| ext == "txt") &&
+                 entry.file_name().to_string_lossy().ends_with("_logs.txt"))
+            )
+        })
+        .collect();
+    
+    // 按文件名排序（日期格式）
+    entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    
+    for entry in entries {
+        let path = entry.path();
+        let content = fs::read_to_string(&path)
+            .map_err(|e| HoutError::IoError { message: format!("读取日志文件失败: {}", e) })?;
+        
+        // 简单地按行分割并转换为JSON格式
+        for line in content.lines() {
+            if !line.trim().is_empty() {
+                all_logs.push(line.to_string());
+            }
+        }
+    }
+    
+    // 简化处理，直接返回日志行数组
+    let logs_json = serde_json::to_string(&all_logs)
+        .map_err(|e| HoutError::IoError { message: format!("序列化日志失败: {}", e) })?;
+    
+    Ok(logs_json)
+}
+
+/// 获取持久化的日志统计信息
+#[tauri::command]
+pub async fn get_log_statistics() -> Result<String> {
+    use std::fs;
+    use std::collections::HashMap;
+    
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    if !logs_dir.exists() {
+        return Ok(serde_json::to_string(&serde_json::json!({
+            "error": 0,
+            "warning": 0,
+            "info": 0,
+            "total": 0,
+            "fileCount": 0,
+            "oldestLog": null,
+            "newestLog": null
+        })).unwrap());
+    }
+    
+    let mut stats = HashMap::new();
+    stats.insert("error", 0);
+    stats.insert("warning", 0);
+    stats.insert("info", 0);
+    stats.insert("debug", 0);
+    stats.insert("fatal", 0);
+    
+    let mut total_logs = 0;
+    let mut file_count = 0;
+    let mut oldest_log: Option<String> = None;
+    let mut newest_log: Option<String> = None;
+    
+    let entries = fs::read_dir(&logs_dir)
+        .map_err(|e| HoutError::IoError { message: format!("读取日志目录失败: {}", e) })?;
+    
+    for entry in entries {
+        let entry = entry.map_err(|e| HoutError::IoError { message: format!("读取目录条目失败: {}", e) })?;
+        let path = entry.path();
+        
+        // 支持两种格式的日志文件
+        let is_log_file = if path.is_file() {
+            // 新格式: admt_YYYYMMDD.log
+            path.extension().map_or(false, |ext| ext == "log") &&
+             path.file_name().map_or(false, |name| name.to_string_lossy().starts_with("admt_log_"))
+        } else {
+            false
+        };
+        
+        if is_log_file {
+            file_count += 1;
+            
+            // 获取文件修改时间
+            if let Ok(metadata) = fs::metadata(&path) {
+                if let Ok(modified) = metadata.modified() {
+                    let datetime: chrono::DateTime<chrono::Utc> = modified.into();
+                    let time_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
+                    
+                    if oldest_log.is_none() || oldest_log.as_ref().unwrap() > &time_str {
+                        oldest_log = Some(time_str.clone());
+                    }
+                    if newest_log.is_none() || newest_log.as_ref().unwrap() < &time_str {
+                        newest_log = Some(time_str);
+                    }
+                }
+            }
+            
+            let content = fs::read_to_string(&path)
+                .map_err(|e| HoutError::IoError { message: format!("读取日志文件失败: {}", e) })?;
+            
+            for line in content.lines() {
+                if !line.trim().is_empty() {
+                    total_logs += 1;
+                    
+                    // 统计日志级别
+                    if line.contains("[ERROR]") {
+                        *stats.get_mut("error").unwrap() += 1;
+                    } else if line.contains("[WARNING]") || line.contains("[WARN]") {
+                        *stats.get_mut("warning").unwrap() += 1;
+                    } else if line.contains("[INFO]") {
+                        *stats.get_mut("info").unwrap() += 1;
+                    } else if line.contains("[DEBUG]") {
+                        *stats.get_mut("debug").unwrap() += 1;
+                    } else if line.contains("[FATAL]") {
+                        *stats.get_mut("fatal").unwrap() += 1;
+                    }
+                }
+            }
+        }
+    }
+    
+    let result = serde_json::json!({
+        "error": stats["error"],
+        "warning": stats["warning"],
+        "info": stats["info"],
+        "debug": stats["debug"],
+        "fatal": stats["fatal"],
+        "total": total_logs,
+        "fileCount": file_count,
+        "oldestLog": oldest_log,
+        "newestLog": newest_log
+    });
+    
+    Ok(serde_json::to_string(&result)
+        .map_err(|e| HoutError::IoError { message: format!("序列化统计信息失败: {}", e) })?)
+}
+
+/// 清空所有持久化日志
+#[tauri::command]
+pub async fn clear_logs() -> Result<String> {
+    use std::fs;
+    
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    if logs_dir.exists() {
+        // 删除整个日志目录并重新创建
+        fs::remove_dir_all(&logs_dir)
+            .map_err(|e| HoutError::IoError { message: format!("删除日志目录失败: {}", e) })?;
+        
+        fs::create_dir_all(&logs_dir)
+            .map_err(|e| HoutError::IoError { message: format!("重新创建日志目录失败: {}", e) })?;
+    }
+    
+    log::info!("所有持久化日志已清空");
+    Ok("OK".to_string())
+}
+
+/// 清理过期日志
+#[tauri::command]
+pub async fn cleanup_expired_logs(basic_cutoff: String, error_cutoff: String) -> Result<String> {
+    use std::fs;
+    use chrono::{DateTime, Utc};
+    
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    if !logs_dir.exists() {
+        return Ok("OK".to_string());
+    }
+    
+    let basic_cutoff_date = DateTime::parse_from_rfc3339(&basic_cutoff)
+        .map_err(|e| HoutError::InvalidInput { message: format!("解析基础截止日期失败: {}", e) })?;
+    let _error_cutoff_date = DateTime::parse_from_rfc3339(&error_cutoff)
+        .map_err(|e| HoutError::InvalidInput { message: format!("解析错误截止日期失败: {}", e) })?;
+    
+    let entries = fs::read_dir(&logs_dir)
+        .map_err(|e| HoutError::IoError { message: format!("读取日志目录失败: {}", e) })?;
+    
+    let mut removed_count = 0;
+    
+    for entry in entries {
+        let entry = entry.map_err(|e| HoutError::IoError { message: format!("读取目录条目失败: {}", e) })?;
+        let path = entry.path();
+        
+        // 支持两种格式的日志文件
+        let is_log_file = if path.is_file() {
+            // 新格式: admt_log_YYYYMMDD.log
+            (path.extension().map_or(false, |ext| ext == "log") &&
+             path.file_name().map_or(false, |name| name.to_string_lossy().starts_with("admt_log_"))) ||
+            // 旧格式: YY-MM-DD_logs.txt
+            (path.extension().map_or(false, |ext| ext == "txt") &&
+             path.file_name().map_or(false, |name| name.to_string_lossy().ends_with("_logs.txt")))
+        } else {
+            false
+        };
+        
+        if is_log_file {
+            if let Ok(metadata) = fs::metadata(&path) {
+                if let Ok(modified) = metadata.modified() {
+                    let modified_datetime: DateTime<Utc> = modified.into();
+                    
+                    // 检查文件是否过期
+                    if modified_datetime < basic_cutoff_date {
+                        if let Err(e) = fs::remove_file(&path) {
+                            log::warn!("删除过期日志文件失败: {} - {}", path.display(), e);
+                        } else {
+                            removed_count += 1;
+                            log::info!("删除过期日志文件: {}", path.display());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    log::info!("清理完成，删除了 {} 个过期日志文件", removed_count);
+    Ok("OK".to_string())
+}
+
+/// 批量写入日志到文件（支持自动刷新机制）
+#[tauri::command]
+pub async fn write_logs_to_file(logs: Vec<serde_json::Value>) -> Result<String> {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+    
+    if logs.is_empty() {
+        return Ok("OK".to_string());
+    }
+    
+    // 按日期分组日志
+    let date_str = Local::now().format("%Y%m%d").to_string();
+    let filename = format!("admt_log_{}.log", date_str);
+    
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    // 确保日志目录存在
+    std::fs::create_dir_all(&logs_dir)
+        .map_err(|e| HoutError::IoError { message: format!("创建日志目录失败: {}", e) })?;
+    
+    let log_file_path = logs_dir.join(&filename);
+    
+    // 打开文件进行追加写入
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file_path)
+        .map_err(|e| HoutError::IoError { message: format!("打开日志文件失败: {}", e) })?;
+    
+    // 保存日志数量用于后续日志记录
+    let logs_count = logs.len();
+    
+    // 批量写入日志
+    for log_value in logs {
+        // 尝试解析为结构化日志
+        if let Ok(entry) = serde_json::from_value::<StructuredLogEntry>(log_value.clone()) {
+            let formatted_log = format_log_entry(&entry);
+            if let Err(e) = writeln!(file, "{}", formatted_log) {
+                log::warn!("写入日志失败: {}", e);
+            }
+        } else {
+            // 如果解析失败，直接写入原始JSON
+            let raw_log = serde_json::to_string(&log_value).unwrap_or_default();
+            if let Err(e) = writeln!(file, "{}", raw_log) {
+                log::warn!("写入原始日志失败: {}", e);
+            }
+        }
+    }
+    
+    // 确保数据写入磁盘
+    if let Err(e) = file.flush() {
+        log::warn!("刷新日志文件失败: {}", e);
+    }
+    
+    log::debug!("批量写入 {} 条日志到文件: {}", logs_count, log_file_path.display());
+    Ok(log_file_path.to_string_lossy().to_string())
+}
+
+/// 清空所有日志（包括内存和文件）
+#[tauri::command]
+pub async fn clear_all_logs() -> Result<String> {
+    use std::fs;
+    
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    if logs_dir.exists() {
+        // 删除整个日志目录并重新创建
+        fs::remove_dir_all(&logs_dir)
+            .map_err(|e| HoutError::IoError { message: format!("删除日志目录失败: {}", e) })?;
+        
+        fs::create_dir_all(&logs_dir)
+            .map_err(|e| HoutError::IoError { message: format!("重新创建日志目录失败: {}", e) })?;
+    }
+    
+    log::info!("所有日志已清空（包括内存和文件）");
+    Ok("OK".to_string())
+}
+
+/// 获取日志文件路径信息
+#[tauri::command]
+pub async fn get_log_file_info() -> Result<serde_json::Value> {
+    let app_dir = get_app_data_dir()?;
+    let logs_dir = app_dir.join("logs");
+    
+    // 当前日志文件
+    let date_str = Local::now().format("%Y%m%d").to_string();
+    let current_filename = format!("admt_log_{}.log", date_str);
+    let current_file_path = logs_dir.join(&current_filename);
+    
+    let info = serde_json::json!({
+        "logsDirectory": logs_dir.to_string_lossy(),
+        "currentLogFile": current_filename,
+        "currentLogPath": current_file_path.to_string_lossy(),
+        "logFileExists": current_file_path.exists(),
+        "logsDirExists": logs_dir.exists()
+    });
+    
+    Ok(info)
 }
