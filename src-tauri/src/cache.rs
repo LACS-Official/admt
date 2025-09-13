@@ -289,10 +289,35 @@ pub async fn record_path_cache_hit() {
     stats.path_cache_hits += 1;
 }
 
+/// 工具路径监控和日志记录
+pub async fn log_tool_paths() {
+    let adb_path = get_cached_adb_path();
+    let fastboot_path = get_cached_fastboot_path();
+    
+    log::info!("Tool paths status:");
+    log::info!("  ADB: {} (exists: {})", adb_path.display(), adb_path.exists());
+    log::info!("  Fastboot: {} (exists: {})", fastboot_path.display(), fastboot_path.exists());
+    
+    if !adb_path.exists() || !fastboot_path.exists() {
+        log::error!("Critical tool files missing, functionality will be limited");
+    }
+}
+
+/// 验证工具路径完整性
+pub fn verify_tool_paths() -> bool {
+    let adb_path = get_cached_adb_path();
+    let fastboot_path = get_cached_fastboot_path();
+    
+    let adb_valid = adb_path.exists() && !adb_path.to_string_lossy().contains("INVALID");
+    let fastboot_valid = fastboot_path.exists() && !fastboot_path.to_string_lossy().contains("INVALID");
+    
+    adb_valid && fastboot_valid
+}
+
 
 
 /// 查找ADB路径（仅在首次调用时执行）
-/// 统一使用 src-tauri/tools/adb 目录中的可执行文件
+/// 统一使用 tools/adb 目录中的可执行文件
 fn find_adb_path() -> PathBuf {
     log::info!("Starting ADB path discovery (tools/adb directory only)...");
 
@@ -306,13 +331,22 @@ fn find_adb_path() -> PathBuf {
         log::info!("Executable path: {}", exe_dir.display());
         if let Some(parent) = exe_dir.parent() {
             log::info!("Executable parent directory: {}", parent.display());
-            let adb_path = parent.join("tools").join("adb").join("adb.exe");
-            log::info!("Checking production tools path: {}", adb_path.display());
-            if adb_path.exists() {
-                log::info!("✅ Found ADB at production tools: {}", adb_path.display());
-                return adb_path;
-            } else {
-                log::warn!("❌ ADB not found at production tools: {}", adb_path.display());
+            
+            // 生产环境的多个可能路径
+            let production_paths = [
+                parent.join("tools").join("adb").join("adb.exe"),
+                parent.join("resources").join("tools").join("adb").join("adb.exe"),
+                parent.join("adb").join("adb.exe"), // 备用路径
+            ];
+            
+            for path in &production_paths {
+                log::info!("Checking production path: {}", path.display());
+                if path.exists() {
+                    log::info!("✅ Found ADB at production path: {}", path.display());
+                    return path.clone();
+                } else {
+                    log::warn!("❌ ADB not found at production path: {}", path.display());
+                }
             }
         }
     } else {
@@ -323,50 +357,44 @@ fn find_adb_path() -> PathBuf {
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     log::info!("Current directory for development search: {}", current_dir.display());
     
-    let dev_path = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
+    let dev_paths = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
         // 如果当前目录已经是 src-tauri，直接使用 tools/adb
-        let path = current_dir.join("tools").join("adb").join("adb.exe");
-        log::info!("In src-tauri directory, checking: {}", path.display());
-        path
+        vec![
+            current_dir.join("tools").join("adb").join("adb.exe"),
+        ]
     } else {
-        // 否则添加 src-tauri 路径
-        let path = current_dir.join("src-tauri").join("tools").join("adb").join("adb.exe");
-        log::info!("Not in src-tauri directory, checking: {}", path.display());
-        path
+        // 否则尝试多个开发环境路径
+        vec![
+            current_dir.join("src-tauri").join("tools").join("adb").join("adb.exe"),
+            current_dir.join("tools").join("adb").join("adb.exe"),
+        ]
     };
     
-    log::info!("Checking development tools path: {}", dev_path.display());
-    if dev_path.exists() {
-        log::info!("✅ Found ADB at development tools: {}", dev_path.display());
-        return dev_path;
-    } else {
-        log::warn!("❌ ADB not found at development tools: {}", dev_path.display());
-    }
-
-    // 3. 相对路径：src-tauri/tools/adb（备用）
-    let relative_path = PathBuf::from("src-tauri/tools/adb/adb.exe");
-    log::info!("Checking relative tools path: {}", relative_path.display());
-    if relative_path.exists() {
-        log::info!("✅ Found ADB at relative tools: {}", relative_path.display());
-        return relative_path;
-    } else {
-        log::warn!("❌ ADB not found at relative tools: {}", relative_path.display());
+    for path in &dev_paths {
+        log::info!("Checking development path: {}", path.display());
+        if path.exists() {
+            log::info!("✅ Found ADB at development path: {}", path.display());
+            return path.clone();
+        } else {
+            log::warn!("❌ ADB not found at development path: {}", path.display());
+        }
     }
 
     // 如果所有路径都找不到，记录错误并返回空路径
-    log::error!("❌ ADB executable not found in any tools directory!");
+    log::error!("❌ ADB executable not found in any directory!");
     log::error!("Searched paths:");
     log::error!("  - Production: {{exe_dir}}/tools/adb/adb.exe");
+    log::error!("  - Production: {{exe_dir}}/resources/tools/adb/adb.exe");
     log::error!("  - Development: src-tauri/tools/adb/adb.exe");
-    log::error!("  - Relative: src-tauri/tools/adb/adb.exe");
-    log::error!("Please ensure adb.exe is placed in the src-tauri/tools/adb/ directory");
+    log::error!("  - Development: tools/adb/adb.exe");
+    log::error!("Please ensure adb.exe is placed in the correct tools/adb/ directory");
 
     // 返回一个明显无效的路径，这样后续的存在性检查会失败
     PathBuf::from("INVALID_ADB_PATH")
 }
 
 /// 查找Fastboot路径（仅在首次调用时执行）
-/// 统一使用 src-tauri/tools/adb 目录中的可执行文件
+/// 统一使用 tools/adb 目录中的可执行文件
 fn find_fastboot_path() -> PathBuf {
     log::info!("Starting Fastboot path discovery (tools/adb directory only)...");
 
@@ -375,13 +403,22 @@ fn find_fastboot_path() -> PathBuf {
         log::info!("Executable path: {}", exe_dir.display());
         if let Some(parent) = exe_dir.parent() {
             log::info!("Executable parent directory: {}", parent.display());
-            let fastboot_path = parent.join("tools").join("adb").join("fastboot.exe");
-            log::info!("Checking production tools path: {}", fastboot_path.display());
-            if fastboot_path.exists() {
-                log::info!("✅ Found Fastboot at production tools: {}", fastboot_path.display());
-                return fastboot_path;
-            } else {
-                log::warn!("❌ Fastboot not found at production tools: {}", fastboot_path.display());
+            
+            // 生产环境的多个可能路径
+            let production_paths = [
+                parent.join("tools").join("adb").join("fastboot.exe"),
+                parent.join("resources").join("tools").join("adb").join("fastboot.exe"),
+                parent.join("adb").join("fastboot.exe"), // 备用路径
+            ];
+            
+            for path in &production_paths {
+                log::info!("Checking production path: {}", path.display());
+                if path.exists() {
+                    log::info!("✅ Found Fastboot at production path: {}", path.display());
+                    return path.clone();
+                } else {
+                    log::warn!("❌ Fastboot not found at production path: {}", path.display());
+                }
             }
         }
     } else {
@@ -392,43 +429,37 @@ fn find_fastboot_path() -> PathBuf {
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     log::info!("Current directory for development search: {}", current_dir.display());
     
-    let dev_path = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
+    let dev_paths = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
         // 如果当前目录已经是 src-tauri，直接使用 tools/adb
-        let path = current_dir.join("tools").join("adb").join("fastboot.exe");
-        log::info!("In src-tauri directory, checking: {}", path.display());
-        path
+        vec![
+            current_dir.join("tools").join("adb").join("fastboot.exe"),
+        ]
     } else {
-        // 否则添加 src-tauri 路径
-        let path = current_dir.join("src-tauri").join("tools").join("adb").join("fastboot.exe");
-        log::info!("Not in src-tauri directory, checking: {}", path.display());
-        path
+        // 否则尝试多个开发环境路径
+        vec![
+            current_dir.join("src-tauri").join("tools").join("adb").join("fastboot.exe"),
+            current_dir.join("tools").join("adb").join("fastboot.exe"),
+        ]
     };
     
-    log::info!("Checking development tools path: {}", dev_path.display());
-    if dev_path.exists() {
-        log::info!("✅ Found Fastboot at development tools: {}", dev_path.display());
-        return dev_path;
-    } else {
-        log::warn!("❌ Fastboot not found at development tools: {}", dev_path.display());
-    }
-
-    // 3. 相对路径：src-tauri/tools/adb（备用）
-    let relative_path = PathBuf::from("src-tauri/tools/adb/fastboot.exe");
-    log::info!("Checking relative tools path: {}", relative_path.display());
-    if relative_path.exists() {
-        log::info!("✅ Found Fastboot at relative tools: {}", relative_path.display());
-        return relative_path;
-    } else {
-        log::warn!("❌ Fastboot not found at relative tools: {}", relative_path.display());
+    for path in &dev_paths {
+        log::info!("Checking development path: {}", path.display());
+        if path.exists() {
+            log::info!("✅ Found Fastboot at development path: {}", path.display());
+            return path.clone();
+        } else {
+            log::warn!("❌ Fastboot not found at development path: {}", path.display());
+        }
     }
 
     // 如果所有路径都找不到，记录错误并返回空路径
-    log::error!("❌ Fastboot executable not found in any tools directory!");
+    log::error!("❌ Fastboot executable not found in any directory!");
     log::error!("Searched paths:");
     log::error!("  - Production: {{exe_dir}}/tools/adb/fastboot.exe");
+    log::error!("  - Production: {{exe_dir}}/resources/tools/adb/fastboot.exe");
     log::error!("  - Development: src-tauri/tools/adb/fastboot.exe");
-    log::error!("  - Relative: src-tauri/tools/adb/fastboot.exe");
-    log::error!("Please ensure fastboot.exe is placed in the src-tauri/tools/adb/ directory");
+    log::error!("  - Development: tools/adb/fastboot.exe");
+    log::error!("Please ensure fastboot.exe is placed in the correct tools/adb/ directory");
 
     // 返回一个明显无效的路径，这样后续的存在性检查会失败
     PathBuf::from("INVALID_FASTBOOT_PATH")

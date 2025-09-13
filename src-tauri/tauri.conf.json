@@ -56,7 +56,10 @@
     "licenseFile": "../LICENSE",
     "externalBin": [],
     "resources": [
-      "../tools"
+      "tools",
+      "tools/adb",
+      "tools/scrcpy-win32-v3.3.1",
+      "tools/lacs"
     ],
     "windows": {
       "certificateThumbprint": null,

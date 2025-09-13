@@ -20,6 +20,7 @@ node_modules/
 .vscode/
 .augment/
 .idea/
+.qoder/
 *.swp
 *.swo
 *~

@@ -98,7 +98,58 @@ export class AutoStartService {
   }
 
   /**
-   * 启用开机自启动
+   * 启用开机自启动并验证
+   */
+  async enableAutoStartWithValidation(config?: Partial<AutoStartConfig>): Promise<boolean> {
+    try {
+      console.log('🚀 开始启用开机自启动并验证...');
+      
+      // 1. 尝试启用
+      const success = await this.enableAutoStart(config);
+      if (!success) {
+        console.error('❌ 启用自启动失败');
+        return false;
+      }
+
+      // 2. 等待一段时间再验证
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // 3. 验证设置
+      const validation = await this.validateAutoStart();
+      
+      if (!validation.isValid) {
+        console.warn('⚠️ 自启动设置验证失败:', validation.issues);
+        
+        // 4. 尝试修复
+        console.log('🔧 尝试修复自启动设置...');
+        const repaired = await this.repairAutoStart();
+        
+        if (repaired) {
+          // 再次验证
+          const finalValidation = await this.validateAutoStart();
+          if (finalValidation.isValid) {
+            console.log('✅ 自启动设置修复成功');
+            return true;
+          } else {
+            console.error('❌ 自启动设置修复后仍然无效:', finalValidation.issues);
+            return false;
+          }
+        } else {
+          console.error('❌ 自启动设置修复失败');
+          return false;
+        }
+      }
+
+      console.log('✅ 开机自启动启用及验证成功');
+      return true;
+    } catch (error) {
+      console.error('❌ 启用开机自启动失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 启用开机自启动（基础版本）
    */
   async enableAutoStart(config?: Partial<AutoStartConfig>): Promise<boolean> {
     try {

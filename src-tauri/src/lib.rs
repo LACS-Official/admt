@@ -99,6 +99,9 @@ pub fn run() {
             write_logs_to_file,
             clear_all_logs,
             get_log_file_info,
+            // 工具路径监控命令
+            get_tool_paths_status,
+            verify_tools_integrity,
             // 杂项控制功能命令
             restart_adb_service,
             install_device_driver,
@@ -110,6 +113,9 @@ pub fn run() {
             restart_application,
             get_detailed_device_fingerprint,
             // 系统功能
+            system_features::set_window_close_behavior,
+            system_features::should_minimize_to_tray,
+            system_features::get_window_close_behavior,
             system_features::create_system_tray,
             system_features::setup_tray_event_listener,
             system_features::update_tray_menu,

@@ -34,6 +34,8 @@ export class SystemTrayService {
   private static instance: SystemTrayService;
   private isInitialized = false;
   private currentWindow = getCurrentWindow();
+  private closeToTrayEnabled = false;
+  private closeEventUnlisten?: () => void;
 
   private constructor() {}
 
@@ -214,8 +216,17 @@ export class SystemTrayService {
   async cleanup(): Promise<void> {
     try {
       if (this.isInitialized) {
+        // 移除事件监听器
+        if (this.closeEventUnlisten) {
+          this.closeEventUnlisten();
+          this.closeEventUnlisten = undefined;
+        }
+        
+        // 销毁托盘
         await invoke('destroy_system_tray');
+        
         this.isInitialized = false;
+        this.closeToTrayEnabled = false;
         console.log('✅ 系统托盘已清理');
       }
     } catch (error) {
@@ -251,17 +262,40 @@ export class SystemTrayService {
   /**
    * 设置窗口关闭时的处理行为
    */
-  async setupWindowCloseHandler(minimizeToTray: boolean): Promise<void> {
+  async setupWindowCloseHandler(enabled: boolean): Promise<void> {
     try {
       if (!this.isInitialized) {
         throw new Error('系统托盘服务未初始化');
       }
 
-      // 这里可以设置窗口关闭时的行为
-      // 在实际的 Tauri 应用中，这通常在 Rust 后端处理
-      console.log(`设置窗口关闭处理器: ${minimizeToTray ? '最小化到托盘' : '直接退出'}`);
+      this.closeToTrayEnabled = enabled;
+      
+      // 移除之前的监听器
+      if (this.closeEventUnlisten) {
+        this.closeEventUnlisten();
+        this.closeEventUnlisten = undefined;
+      }
+
+      if (enabled) {
+        // 设置窗口关闭事件监听
+        const { listen } = await import('@tauri-apps/api/event');
+        this.closeEventUnlisten = await listen('tauri://close-requested', async (event) => {
+          if (this.closeToTrayEnabled && this.isInitialized) {
+            // 阻止默认关闭行为
+            // 在 Tauri 中，需要通过 API 来阻止窗口关闭
+            await this.minimizeToTray();
+          }
+        });
+      }
+
+      // 通知后端更新关闭行为
+      await invoke('set_window_close_behavior', { 
+        minimizeToTray: enabled 
+      });
+
+      console.log(`✅ 窗口关闭处理器已设置: ${enabled ? '最小化到托盘' : '直接退出'}`);
     } catch (error) {
-      console.error('设置窗口关闭处理器失败:', error);
+      console.error('❌ 设置窗口关闭处理器失败:', error);
       throw error;
     }
   }

@@ -7,7 +7,7 @@ use tauri::Emitter;
 use crate::activation::{ActivationValidator, ActivationRequest, ActivationResponse, AppConfig};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
-use crate::cache::get_cache_manager;
+use crate::cache::{get_cache_manager, log_tool_paths, verify_tool_paths};
 use crate::adb_commands::{AdbToolsInfo, AdbIntegrityReport};
 use chrono::Local;
 
@@ -3996,4 +3996,50 @@ pub async fn get_log_file_info() -> Result<serde_json::Value> {
     });
     
     Ok(info)
+}
+
+/// 获取工具路径状态
+#[tauri::command]
+pub async fn get_tool_paths_status() -> Result<serde_json::Value> {
+    use crate::cache::{get_cached_adb_path, get_cached_fastboot_path};
+    
+    // 记录工具路径状态
+    log_tool_paths().await;
+    
+    let adb_path = get_cached_adb_path();
+    let fastboot_path = get_cached_fastboot_path();
+    
+    let status = serde_json::json!({
+        "adb": {
+            "path": adb_path.to_string_lossy(),
+            "exists": adb_path.exists(),
+            "valid": adb_path.exists() && !adb_path.to_string_lossy().contains("INVALID")
+        },
+        "fastboot": {
+            "path": fastboot_path.to_string_lossy(),
+            "exists": fastboot_path.exists(),
+            "valid": fastboot_path.exists() && !fastboot_path.to_string_lossy().contains("INVALID")
+        },
+        "overall_valid": verify_tool_paths(),
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    });
+    
+    Ok(status)
+}
+
+/// 验证并记录工具路径完整性
+#[tauri::command]
+pub async fn verify_tools_integrity() -> Result<bool> {
+    // 记录详细的工具路径状态
+    log_tool_paths().await;
+    
+    let is_valid = verify_tool_paths();
+    
+    if is_valid {
+        log::info!("✅ All tools are properly configured and accessible");
+    } else {
+        log::error!("❌ Some tools are missing or inaccessible");
+    }
+    
+    Ok(is_valid)
 }

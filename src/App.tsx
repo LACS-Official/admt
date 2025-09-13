@@ -164,8 +164,44 @@ function App() {
   const [countdown, setCountdown] = useState(5); // 倒计时状态
 
 
-  const { initialize, config } = useAppStore();
+  const { initialize, config, setStatusBarMessage } = useAppStore();
   const { currentPhase } = useStartupFlowStore();
+
+  // 禁用F5刷新功能
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // 禁用F5刷新
+      if (event.key === 'F5' || (event.ctrlKey && event.key === 'r')) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // 显示提示信息
+        if (setStatusBarMessage) {
+          setStatusBarMessage({
+            type: "info",
+            message: "刷新功能已禁用以保护应用状态"
+          });
+        }
+        
+        logService.info('用户尝试刷新页面，已被拦截', 'App');
+      }
+      
+      // 禁用其他可能的刷新快捷键
+      if (event.ctrlKey && event.shiftKey && event.key === 'R') {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    // 添加全局监听器
+    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [setStatusBarMessage]);
 
   // 监听启动流程状态变化，确保删除激活码后能重新显示启动流程
   useEffect(() => {
