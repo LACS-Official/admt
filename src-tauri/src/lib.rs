@@ -26,6 +26,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             version::get_app_version,
             version::get_app_info,
+            version::check_for_updates,
             scan_devices,
             get_device_info,
             execute_adb_command,
@@ -50,6 +51,7 @@ pub fn run() {
             fastboot_flash_image,
             diagnose_adb_fastboot_paths,
             get_device_performance_info,
+            get_device_memory_storage_info,
             check_device_connection,
             get_device_connection_info,
             download_apk,

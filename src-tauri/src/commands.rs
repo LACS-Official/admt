@@ -1340,6 +1340,12 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
     }))
 }
 
+/// 获取设备内存、存储和电池信息（与 get_device_performance_info 相同的实现）
+#[tauri::command]
+pub async fn get_device_memory_storage_info(serial: String) -> Result<serde_json::Value> {
+    get_device_performance_info(serial).await
+}
+
 /// 检查设备连接状态
 #[tauri::command]
 pub async fn check_device_connection(serial: String) -> Result<CommandResult> {
@@ -3063,7 +3069,6 @@ fn extract_resolution_number(resolution: &str) -> String {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityConfig {
     pub api_base_url: String,
-    pub api_key: String,
     pub app_id: String,
     pub app_secret: String,
     pub signature_secret: String,
@@ -3080,19 +3085,22 @@ pub async fn get_security_config() -> Result<SecurityConfig> {
 
     // 在生产环境中，这些配置应该从安全的存储位置读取
     // 例如：加密的配置文件、系统密钥库等
+    
+    // 检测当前环境
+    let is_debug = cfg!(debug_assertions);
+    
     let config = SecurityConfig {
         api_base_url: "https://api-g.lacs.cc".to_string(), // 正确的API地址
-        api_key: "7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e".to_string(),
         app_id: "wanjiguanjia-desktop-v1.0.0".to_string(),
         app_secret: "wjgj_2024_secure_app_secret_key_for_user_behavior_stats".to_string(),
         signature_secret: "signature_secret_2024_wanjiguanjia_user_behavior_api_protection".to_string(),
-        enable_signature: true, // 启用签名验证
-        enable_strict_user_agent: true, // 启用严格用户代理验证
+        enable_signature: !is_debug, // 开发环境不启用签名，生产环境启用
+        enable_strict_user_agent: !is_debug, // 开发环境不严格检查，生产环境严格检查
         app_version: "1.0.0".to_string(), // 应用版本号（测试强制更新）
         software_id: 1, // 软件ID，对应API中的软件ID
     };
-
-    log::info!("Security configuration loaded successfully");
+    
+    log::info!("Security configuration loaded successfully, debug_mode: {}", is_debug);
     Ok(config)
 }
 
@@ -3104,11 +3112,6 @@ pub async fn validate_security_config() -> Result<bool> {
     match get_security_config().await {
         Ok(config) => {
             // 验证配置完整性
-            if config.api_key.len() < 32 {
-                log::error!("API key is too weak");
-                return Ok(false);
-            }
-
             if config.app_secret.len() < 16 {
                 log::error!("App secret is too weak");
                 return Ok(false);

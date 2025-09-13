@@ -7,6 +7,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { usePrivacyConsentStore } from '../stores/privacyConsentStore';
 import { SecurityConfigManager } from '../config/securityConfig';
+import { tauriHttpService } from './tauriHttpService';
 
 // 使用数据接口
 interface UsageData {
@@ -207,13 +208,9 @@ export class UsageTrackingService {
    */
   private async sendUsageData(data: UsageData): Promise<boolean> {
     try {
-      const securityConfig = SecurityConfigManager.getInstance();
-      const config = securityConfig.getConfig();
-
       const endpoint = '/api/user-behavior/usage';
-      const url = `${config.api_base_url}${endpoint}`;
 
-      console.log('📤 发送使用数据到:', url);
+      console.log('📤 发送使用数据到端点:', endpoint);
       console.log('📊 使用数据:', {
         softwareId: data.softwareId,
         softwareName: data.softwareName,
@@ -228,29 +225,20 @@ export class UsageTrackingService {
         return true; // 返回true避免重复尝试
       }
 
-      // 准备请求头 - 根据API文档，软件使用记录API无需任何认证头部
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data),
-        signal: AbortSignal.timeout(10000) // 10秒超时
+      // 使用tauriHttpService发送POST请求到用户行为统计API
+      const response = await tauriHttpService.post<ApiResponse>(endpoint, data, {
+        timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!response.success) {
+        throw new Error(response.error || '服务器返回错误');
       }
 
-      const result: ApiResponse = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || '服务器返回错误');
-      }
-
-      console.log('✅ 使用数据发送成功:', result.message);
+      console.log('✅ 使用数据发送成功:', response.data?.message || '成功');
 
       // 记录请求时间用于频率限制
       this.recordRequestTime('usage');

@@ -270,15 +270,15 @@ const useStyles = makeStyles({
   },
   
   "@keyframes pulse": {
-    "0%": { opacity: "1" },
-    "50%": { opacity: "0.4" },
-    "100%": { opacity: "1" },
+    "&0%": { opacity: "1" },
+    "&50%": { opacity: "0.4" },
+    "&100%": { opacity: "1" },
   },
   
   "@keyframes float": {
-    "0%": { transform: "translateY(0px)" },
-    "50%": { transform: "translateY(-10px)" },
-    "100%": { transform: "translateY(0px)" },
+    "&0%": { transform: "translateY(0px)" },
+    "&50%": { transform: "translateY(-10px)" },
+    "&100%": { transform: "translateY(0px)" },
   },
   
   floatingIcon: {

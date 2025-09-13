@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use tauri::command;
 use serde::{Deserialize, Serialize};
 use reqwest;
