@@ -34,6 +34,9 @@ const defaultConfig: AppConfig = {
   scanInterval: 2000,
   deviceDetectionInterval: 5000,
   logLevel: "info",
+  systemTrayEnabled: false,
+  autoStartEnabled: false,
+  minimizeToTrayOnClose: false,
 };
 
 export const useAppStore = create<AppStoreState>()(

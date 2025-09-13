@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   makeStyles,
   Text,
@@ -7,16 +7,72 @@ import {
   Switch,
   Field,
   Select,
+  Button,
+  Spinner,
 } from "@fluentui/react-components";
 import {
   Globe24Regular,
   Accessibility24Regular,
   ArrowMinimize24Regular,
   Play24Regular,
+  Warning24Regular,
+  CheckmarkCircle24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
 import { systemTrayService } from "../../services/systemTrayService";
 import { autoStartService } from "../../services/autoStartService";
+
+// 状态提示组件
+interface SystemFeatureStatus {
+  type: 'success' | 'error' | 'warning';
+  message: string;
+  action?: () => void;
+}
+
+const StatusIndicator: React.FC<{ status: SystemFeatureStatus | null }> = ({ status }) => {
+  if (!status) return null;
+  
+  const getIcon = () => {
+    switch (status.type) {
+      case 'success': return <CheckmarkCircle24Regular style={{ color: 'var(--colorStatusSuccessBackground)' }} />;
+      case 'error': return <Warning24Regular style={{ color: 'var(--colorStatusDangerBackground)' }} />;
+      case 'warning': return <Warning24Regular style={{ color: 'var(--colorStatusWarningBackground)' }} />;
+      default: return null;
+    }
+  };
+  
+  return (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '8px', 
+      marginTop: '8px',
+      padding: '8px',
+      backgroundColor: 'var(--colorNeutralBackground2)',
+      borderRadius: '4px'
+    }}>
+      {getIcon()}
+      <Text size={100}>{status.message}</Text>
+      {status.action && (
+        <Button size="small" onClick={status.action}>
+          重试
+        </Button>
+      )}
+    </div>
+  );
+};
+
+// 防抖函数
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 const useStyles = makeStyles({
   container: {
@@ -77,57 +133,81 @@ const useStyles = makeStyles({
 
 const OtherSettingsPanel: React.FC = () => {
   const styles = useStyles();
-
   const { config, updateConfig } = useAppStore();
   
-  // 界面设置状态
-  const [minimizeToTray, setMinimizeToTray] = useState(false);
-  const [startWithSystem, setStartWithSystem] = useState(false);
+  // 从配置中读取状态
+  const [minimizeToTray, setMinimizeToTray] = useState(config.systemTrayEnabled);
+  const [startWithSystem, setStartWithSystem] = useState(config.autoStartEnabled);
   const [traySupported, setTraySupported] = useState(false);
   const [autoStartSupported, setAutoStartSupported] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [trayStatus, setTrayStatus] = useState<SystemFeatureStatus | null>(null);
+  const [autoStartStatus, setAutoStartStatus] = useState<SystemFeatureStatus | null>(null);
+  
+  // 防抖检查系统功能，避免重复调用
+  const checkSystemFeatures = useMemo(() => 
+    debounce(async () => {
+      try {
+        const [traySupported, autoStartSupported] = await Promise.all([
+          systemTrayService.isSystemTraySupported(),
+          autoStartService.isAutoStartSupported()
+        ]);
+        
+        setTraySupported(traySupported);
+        setAutoStartSupported(autoStartSupported);
+      } catch (error) {
+        console.error('❌ 系统功能检查失败:', error);
+      }
+    }, 1000), []
+  );
 
-  // 初始化系统功能状态
+  // 初始化时同步状态
   useEffect(() => {
-    const initializeSystemFeatures = async () => {
+    const syncStates = async () => {
       try {
         setLoading(true);
-
-        // 检查系统托盘支持
-        const traySupport = await systemTrayService.isSystemTraySupported();
-        setTraySupported(traySupport);
-
-        // 检查开机自启动支持
-        await autoStartService.initialize('玩机管家');
-        const autoStartSupport = await autoStartService.isAutoStartSupported();
-        setAutoStartSupported(autoStartSupport);
-
-        // 获取当前自启动状态
-        if (autoStartSupport) {
-          const autoStartStatus = await autoStartService.getAutoStartStatus();
-          setStartWithSystem(autoStartStatus.isEnabled);
+        
+        // 检查系统支持
+        await checkSystemFeatures();
+        
+        // 同步托盘状态
+        const trayStatus = await systemTrayService.isReady();
+        if (trayStatus !== config.systemTrayEnabled) {
+          updateConfig({ systemTrayEnabled: trayStatus });
+          setMinimizeToTray(trayStatus);
         }
 
-        console.log('✅ 系统功能状态初始化完成');
+        // 同步自启动状态
+        if (autoStartSupported) {
+          await autoStartService.initialize('玩机管家');
+          const autoStartStatus = await autoStartService.getAutoStartStatus();
+          if (autoStartStatus.isEnabled !== config.autoStartEnabled) {
+            updateConfig({ autoStartEnabled: autoStartStatus.isEnabled });
+            setStartWithSystem(autoStartStatus.isEnabled);
+          }
+        }
       } catch (error) {
-        console.error('❌ 系统功能状态初始化失败:', error);
+        console.error('❌ 状态同步失败:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    initializeSystemFeatures();
+    syncStates();
   }, []);
 
-  const handleLanguageChange = (value: string) => {
-    updateConfig({ language: value as "zh-CN" | "en-US" });
-  };
+  // 更新配置时同步状态
+  useEffect(() => {
+    setMinimizeToTray(config.systemTrayEnabled);
+    setStartWithSystem(config.autoStartEnabled);
+  }, [config.systemTrayEnabled, config.autoStartEnabled]);
 
-  // 处理系统托盘切换
+  // 优化的托盘切换处理
   const handleMinimizeToTrayChange = async (checked: boolean) => {
     try {
       setLoading(true);
       setMinimizeToTray(checked);
+      setTrayStatus(null);
 
       if (checked) {
         // 启用系统托盘
@@ -139,45 +219,94 @@ const OtherSettingsPanel: React.FC = () => {
             { id: 'exit', label: '退出应用' }
           ]
         });
-
+        
         // 设置窗口关闭时最小化到托盘
         await systemTrayService.setupWindowCloseHandler(true);
         
-        console.log('✅ 系统托盘已启用');
+        setTrayStatus({
+          type: 'success',
+          message: '系统托盘已启用，关闭窗口时将最小化到托盘'
+        });
       } else {
         // 禁用系统托盘
+        await systemTrayService.setupWindowCloseHandler(false);
         await systemTrayService.cleanup();
-        console.log('✅ 系统托盘已禁用');
+        
+        setTrayStatus({
+          type: 'success',
+          message: '系统托盘已禁用，关闭窗口时将直接退出'
+        });
       }
+
+      // 保存到配置
+      updateConfig({ 
+        systemTrayEnabled: checked,
+        minimizeToTrayOnClose: checked 
+      });
+
+      console.log(`✅ 系统托盘已${checked ? '启用' : '禁用'}`);
     } catch (error) {
       console.error('❌ 系统托盘设置失败:', error);
       // 回滚状态
       setMinimizeToTray(!checked);
+      setTrayStatus({
+        type: 'error',
+        message: '系统托盘设置失败，请检查系统权限',
+        action: () => handleMinimizeToTrayChange(checked)
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // 处理开机自启动切换
+  // 优化的自启动切换处理
   const handleStartWithSystemChange = async (checked: boolean) => {
     try {
       setLoading(true);
+      setAutoStartStatus(null);
       
       const success = checked 
-        ? await autoStartService.enableAutoStart()
+        ? await autoStartService.enableAutoStartWithValidation()
         : await autoStartService.disableAutoStart();
 
       if (success) {
         setStartWithSystem(checked);
+        updateConfig({ autoStartEnabled: checked });
+        
+        setAutoStartStatus({
+          type: 'success',
+          message: `开机自启动已${checked ? '启用' : '禁用'}`
+        });
+        
         console.log(`✅ 开机自启动已${checked ? '启用' : '禁用'}`);
       } else {
-        console.error('❌ 开机自启动设置失败');
+        // 回滚状态
+        setStartWithSystem(!checked);
+        
+        setAutoStartStatus({
+          type: 'error',
+          message: `开机自启动${checked ? '启用' : '禁用'}失败，请以管理员身份运行`,
+          action: () => handleStartWithSystemChange(checked)
+        });
+        
+        console.error(`❌ 开机自启动${checked ? '启用' : '禁用'}失败`);
       }
     } catch (error) {
-      console.error('❌ 开机自启动设置失败:', error);
+      console.error(`❌ 开机自启动${checked ? '启用' : '禁用'}失败:`, error);
+      setStartWithSystem(!checked);
+      
+      setAutoStartStatus({
+        type: 'error',
+        message: '开机自启动设置失败，请检查系统权限',
+        action: () => handleStartWithSystemChange(checked)
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLanguageChange = (value: string) => {
+    updateConfig({ language: value as "zh-CN" | "en-US" });
   };
 
   return (
@@ -217,41 +346,6 @@ const OtherSettingsPanel: React.FC = () => {
           </div>
         </Card>
 
-        {/* 通知和声音
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Speaker224Regular />}
-            header={<Text weight="semibold">通知和声音</Text>}
-            description={<Text size={200}>提醒和音效设置</Text>}
-          />
-
-          <div className={styles.cardContent}>
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">启用声音效果</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  操作完成时播放提示音
-                </Text>
-              </div>
-              <Switch
-                checked={enableSounds}
-                onChange={(_, data) => setEnableSounds(data.checked === true)}
-              />
-            </div>
-
-
-            <Field label="通知类型:">
-              <div className={styles.checkboxGroup}>
-                <Checkbox label="操作完成通知" defaultChecked />
-                <Checkbox label="错误警告通知" defaultChecked />
-                <Checkbox label="设备连接通知" defaultChecked />
-                <Checkbox label="更新提醒通知" />
-              </div>
-            </Field>
-          </div>
-        </Card> */}
-
         {/* 行为设置 */}
         <Card className={styles.card}>
           <CardHeader
@@ -261,7 +355,15 @@ const OtherSettingsPanel: React.FC = () => {
           />
 
           <div className={styles.cardContent}>
+            {/* 加载指示器 */}
+            {loading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <Spinner size="tiny" />
+                <Text size={200}>正在处理...</Text>
+              </div>
+            )}
 
+            {/* 系统托盘设置 */}
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
                 <Text weight="semibold">
@@ -275,6 +377,7 @@ const OtherSettingsPanel: React.FC = () => {
                     : "当前系统不支持系统托盘功能"
                   }
                 </Text>
+                <StatusIndicator status={trayStatus} />
               </div>
               <Switch
                 checked={minimizeToTray}
@@ -283,6 +386,7 @@ const OtherSettingsPanel: React.FC = () => {
               />
             </div>
 
+            {/* 开机自启动设置 */}
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
                 <Text weight="semibold">
@@ -296,6 +400,7 @@ const OtherSettingsPanel: React.FC = () => {
                     : "当前系统不支持开机自启动功能"
                   }
                 </Text>
+                <StatusIndicator status={autoStartStatus} />
               </div>
               <Switch
                 checked={startWithSystem}
@@ -305,7 +410,6 @@ const OtherSettingsPanel: React.FC = () => {
             </div>
           </div>
         </Card>
-
 
       </div>
     </div>

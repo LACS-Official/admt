@@ -7,6 +7,9 @@ export interface AppConfig {
   logLevel: "debug" | "info" | "warn" | "error";
   adbPath?: string;
   fastbootPath?: string;
+  systemTrayEnabled: boolean;
+  autoStartEnabled: boolean;
+  minimizeToTrayOnClose: boolean;
 }
 
 export interface AppState {

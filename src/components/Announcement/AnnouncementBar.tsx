@@ -44,6 +44,9 @@ const useStyles = makeStyles({
     transition: 'all 0.2s ease',
     maxWidth: '300px',
     minWidth: '120px',
+    // 防止干扰窗口拖拽，但允许点击交互
+    position: 'relative',
+    zIndex: 10,
     ':hover': {
       backgroundColor: 'var(--colorNeutralBackground3)',
     },
@@ -260,7 +263,7 @@ const AnnouncementBar: React.FC<AnnouncementBarProps> = ({ className }) => {
       {/* 公告展示条 */}
       <Dialog open={isListDialogOpen} onOpenChange={(_, data) => setIsListDialogOpen(data.open)}>
         <DialogTrigger disableButtonEnhancement>
-          <div className={`${styles.announcementBar} ${className || ''}`}>
+          <div className={`${styles.announcementBar} ${className || ''}`} data-tauri-drag-region="false">
             <Megaphone24Regular className={styles.announcementIcon} />
             <Text className={styles.announcementText}>
               {getLatestAnnouncementText()}

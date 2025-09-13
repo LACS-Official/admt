@@ -5,9 +5,13 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Runtime};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "windows")]
 use winreg::{enums::*, RegKey};
+
+// 全局状态：是否启用最小化到托盘
+static MINIMIZE_TO_TRAY: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrayMenuItem {
@@ -41,6 +45,27 @@ pub struct AutoStartStatus {
 }
 
 // ============ 系统托盘功能 ============
+
+/// 设置窗口关闭行为
+#[tauri::command]
+pub async fn set_window_close_behavior(minimize_to_tray: bool) -> Result<(), String> {
+    MINIMIZE_TO_TRAY.store(minimize_to_tray, Ordering::Relaxed);
+    println!("✅ 窗口关闭行为已设置: {}", 
+        if minimize_to_tray { "最小化到托盘" } else { "直接关闭" });
+    Ok(())
+}
+
+/// 检查是否应该最小化到托盘
+#[tauri::command]
+pub async fn should_minimize_to_tray() -> Result<bool, String> {
+    Ok(MINIMIZE_TO_TRAY.load(Ordering::Relaxed))
+}
+
+/// 获取当前窗口关闭行为设置
+#[tauri::command]
+pub async fn get_window_close_behavior() -> Result<bool, String> {
+    Ok(MINIMIZE_TO_TRAY.load(Ordering::Relaxed))
+}
 
 /// 创建系统托盘（简化版本）
 #[tauri::command]
