@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { versionManager, useVersionInfo } from '../../utils/versionManager';
+import { checkForUpdates, VersionCheckResult } from '../../services/versionService';
 import { admtbgIcon } from "../../assets/icons";
 import { lacsbgIcon } from "../../assets/icons";
+
+import { useAppStore } from "../../stores/appStore";
 import {
   makeStyles,
   mergeClasses,
@@ -15,6 +18,9 @@ import {
   DialogBody,
   DialogContent,
   DialogActions,
+  Spinner,
+  MessageBar,
+  MessageBarBody,
 } from "@fluentui/react-components";
 import {
   Info24Regular,
@@ -24,7 +30,13 @@ import {
   ArrowUpload24Regular,
   Person24Regular,
   Building24Regular,
+  CheckmarkCircle24Regular,
+  ErrorCircle24Regular,
 } from "@fluentui/react-icons";
+
+
+
+
 
 const useStyles = makeStyles({
   appIconImage: {
@@ -273,10 +285,17 @@ const openUrl = (url: string) => {
 
 const AboutPanel: React.FC = () => {
   const styles = useStyles();
+  const { setStatusBarMessage } = useAppStore();
   const [isOpenSourceDialogOpen, setIsOpenSourceDialogOpen] = useState(false);
   const [isThanksDialogOpen, setIsThanksDialogOpen] = useState(false);
   const { versionInfo, loading: versionLoading } = useVersionInfo();
   const [fullVersionString, setFullVersionString] = useState('玩机管家 v1.0.0');
+  
+  // 版本检查状态
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<VersionCheckResult | null>(null);
+  const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   // 获取完整版本字符串
   useEffect(() => {
@@ -306,8 +325,50 @@ const AboutPanel: React.FC = () => {
     donate: "https://www.lacs.cc/donate",
   };
 
-  const handleCheckUpdate = () => {
-    openUrl(links.checkUpdate);
+  const handleCheckUpdate = async () => {
+    if (isCheckingUpdate) return; // 防止重复点击
+    
+    try {
+      setIsCheckingUpdate(true);
+      setUpdateMessage(null);
+      
+      // 调用版本检查服务
+      const result = await checkForUpdates();
+      
+      if (result.hasUpdate) {
+        // 显示更新对话框
+        setUpdateInfo(result);
+        setUpdateDialogOpen(true);
+      } else {
+        // 显示已是最新版本提示
+        setStatusBarMessage({
+          type: "success",
+          message: `当前已是最新版本: ${result.currentVersion}`,
+        });
+        // 3秒后自动清除提示
+        setTimeout(() => setUpdateMessage(null), 3000);
+      }
+    } catch (error) {
+      // 显示错误提示
+      const errorMessage = error instanceof Error ? error.message : '版本检查失败，请稍后重试';
+      setUpdateMessage({
+        type: 'error',
+        message: errorMessage
+      });
+      // 5秒后自动清除错误提示
+      setTimeout(() => setUpdateMessage(null), 5000);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const handleDownloadUpdate = () => {
+    if (updateInfo?.updateInfo?.downloadUrl) {
+      openUrl(updateInfo.updateInfo.downloadUrl);
+    } else {
+      openUrl(links.checkUpdate); // 降级到默认下载页面
+    }
+    setUpdateDialogOpen(false);
   };
 
   const handleOpenManual = () => {
@@ -358,10 +419,11 @@ const AboutPanel: React.FC = () => {
               <Button 
                 appearance="primary" 
                 size="medium"
-                icon={<ArrowUpload24Regular />}
+                icon={isCheckingUpdate ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
                 onClick={handleCheckUpdate}
+                disabled={isCheckingUpdate}
               >
-                检查更新
+                {isCheckingUpdate ? '检查中...' : '检查更新'}
               </Button>
               <Button 
                 appearance="secondary" 
@@ -388,6 +450,20 @@ const AboutPanel: React.FC = () => {
                 官方网站
               </Button>
             </div>
+
+            {/* 显示更新检查结果信息 */}
+            {updateMessage && (
+              <MessageBar 
+                intent={updateMessage.type === 'error' ? 'error' : updateMessage.type === 'success' ? 'success' : 'info'}
+                style={{ marginTop: '16px' }}
+              >
+                <MessageBarBody>
+                  {updateMessage.type === 'success' && <CheckmarkCircle24Regular style={{ marginRight: '8px' }} />}
+                  {updateMessage.type === 'error' && <ErrorCircle24Regular style={{ marginRight: '8px' }} />}
+                  {updateMessage.message}
+                </MessageBarBody>
+              </MessageBar>
+            )}
           </div>
         </Card>
 
@@ -477,7 +553,56 @@ const AboutPanel: React.FC = () => {
           </div>
         </Card>
 
-        {/* 开源项目详情弹窗 */}
+        {/* 更新对话框 */}
+        <Dialog open={updateDialogOpen} onOpenChange={(_e, data) => setUpdateDialogOpen(data.open)}>
+          <DialogSurface>
+            <DialogBody>
+              <DialogTitle>发现新版本</DialogTitle>
+              <DialogContent>
+                {updateInfo && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text weight="semibold">当前版本：</Text>
+                      <Text>{updateInfo.localVersion}</Text>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text weight="semibold">最新版本：</Text>
+                      <Text color="brand">{updateInfo.currentVersion}</Text>
+                    </div>
+                    <div style={{ 
+                      backgroundColor: 'var(--colorNeutralBackground2)', 
+                      padding: '12px', 
+                      borderRadius: '8px',
+                      marginTop: '8px'
+                    }}>
+                      <Text size={300} style={{ color: 'var(--colorNeutralForeground2)' }}>
+                        {updateInfo.updateInfo?.updateLog || '请在下载页面查看相关内容'}
+                      </Text>
+                    </div>
+                    <Text size={300} style={{ color: 'var(--colorNeutralForeground2)', textAlign: 'center' }}>
+                      点击“立即下载”将在浏览器中打开下载页面。
+                    </Text>
+                  </div>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button 
+                  appearance="primary" 
+                  onClick={handleDownloadUpdate}
+                  icon={<ArrowUpload24Regular />}
+                >
+                  立即下载
+                </Button>
+                <Button 
+                  appearance="secondary" 
+                  onClick={() => setUpdateDialogOpen(false)}
+                >
+                  稍后提醒
+                </Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
         <Dialog open={isOpenSourceDialogOpen} onOpenChange={(_e, data) => setIsOpenSourceDialogOpen(data.open)}>
           <DialogSurface className={styles.openSourceDialog}>
             <DialogBody>

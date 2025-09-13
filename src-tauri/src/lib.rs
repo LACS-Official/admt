@@ -8,6 +8,7 @@ mod download_manager;
 mod cache;
 mod version;
 mod system_features;
+mod adb_commands;
 
 
 use commands::*;
@@ -28,6 +29,10 @@ pub fn run() {
             scan_devices,
             get_device_info,
             execute_adb_command,
+            execute_adb_command_with_path,
+            execute_fastboot_command_with_path,
+            get_adb_tools_info,
+            verify_adb_tools_integrity,
             reboot_device,
             install_apk,
             push_file,
@@ -44,7 +49,7 @@ pub fn run() {
             scan_fastboot_devices,
             fastboot_flash_image,
             diagnose_adb_fastboot_paths,
-            get_device_memory_storage_info,
+            get_device_performance_info,
             check_device_connection,
             get_device_connection_info,
             download_apk,

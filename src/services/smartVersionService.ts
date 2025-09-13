@@ -5,6 +5,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { API_CONFIG, getApiBaseUrl, getSoftwareId } from '../config/api';
+import { tauriHttpService } from './tauriHttpService';
 
 // 版本通道类型
 export type VersionChannel = 'stable' | 'beta' | 'dev' | 'all';
@@ -197,12 +198,15 @@ class SmartVersionService {
 
       // 4. 调用API获取版本信息
       console.log(`🌐 调用API: ${config.apiEndpoint}`);
-      const response = await fetch(config.apiEndpoint);
-      const apiData = await response.json();
+      const response = await tauriHttpService.get(config.apiEndpoint, {
+        timeout: 10000
+      });
 
-      if (!apiData.success || !apiData.data) {
-        throw new Error('API响应无效');
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'API响应无效');
       }
+
+      const apiData = response.data;
 
       // 5. 处理版本数据
       const latestVersion = this.processVersionData(apiData.data, config);

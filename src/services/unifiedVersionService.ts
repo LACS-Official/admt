@@ -5,6 +5,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { API_CONFIG, getApiBaseUrl, getSoftwareId } from '../config/api';
+import { tauriHttpService } from './tauriHttpService';
 
 export interface VersionInfo {
   version: string;
@@ -283,21 +284,18 @@ class UnifiedVersionService {
   }
 
   /**
-   * 增强的API请求方法
+   * 增强的API请求方法 - 使用tauriHttpService
    */
-  private async fetchWithRetry(url: string, retries = 3): Promise<Response> {
+  private async fetchWithRetry(url: string, retries = 3): Promise<any> {
     const isDev = import.meta.env.DEV;
     
     for (let i = 0; i < retries; i++) {
       try {
         const currentVersion = await this.getCurrentVersion();
         
-        const controller = new AbortController();
         const timeout = isDev ? 15000 : 10000; // 开发环境更长超时
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
         
         const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
           'User-Agent': `ADMT/${currentVersion}`
         };
@@ -315,25 +313,23 @@ class UnifiedVersionService {
           headers: Object.keys(headers)
         });
         
-        const response = await fetch(url, {
-          method: 'GET',
-          headers,
-          signal: controller.signal
+        // 使用 tauriHttpService 替代原生 fetch
+        const response = await tauriHttpService.get<ApiVersionResponse>(url, {
+          timeout,
+          headers
         });
         
-        clearTimeout(timeoutId);
-
         VersionCheckMonitor.log('api_request_success', {
           url,
-          status: response.status,
+          success: response.success,
           attempt: i + 1
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (!response.success || !response.data) {
+          throw new Error(response.error || 'API请求失败');
         }
 
-        return response;
+        return response.data;
       } catch (error) {
         const isLastRetry = i === retries - 1;
         VersionCheckMonitor.log('api_request_failed', {
@@ -395,8 +391,7 @@ class UnifiedVersionService {
       VersionCheckMonitor.log('current_version_obtained', { currentVersion });
 
       // 调用版本检查API
-      const response = await this.fetchWithRetry(apiUrl);
-      const apiResponse: ApiVersionResponse = await response.json();
+      const apiResponse: ApiVersionResponse = await this.fetchWithRetry(apiUrl);
 
       VersionCheckMonitor.log('api_response_received', {
         success: apiResponse.success,

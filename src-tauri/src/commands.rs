@@ -8,6 +8,7 @@ use crate::activation::{ActivationValidator, ActivationRequest, ActivationRespon
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use crate::cache::get_cache_manager;
+use crate::adb_commands::{AdbToolsInfo, AdbIntegrityReport};
 
 
 
@@ -1037,9 +1038,57 @@ pub async fn fastboot_flash_image(serial: String, image_path: String, partition:
     Ok(result)
 }
 
-/// 获取设备内存、存储和电池详细信息
+/// 获取ADB工具信息
 #[tauri::command]
-pub async fn get_device_memory_storage_info(serial: String) -> Result<serde_json::Value> {
+pub async fn get_adb_tools_info(app_handle: tauri::AppHandle) -> Result<AdbToolsInfo> {
+    crate::adb_commands::get_adb_tools_info(&app_handle)
+}
+
+/// 验证ADB工具完整性
+#[tauri::command]
+pub async fn verify_adb_tools_integrity(app_handle: tauri::AppHandle) -> Result<AdbIntegrityReport> {
+    crate::adb_commands::verify_adb_tools_integrity(&app_handle)
+}
+
+/// 使用指定ADB路径执行命令
+#[tauri::command]
+pub async fn execute_adb_command_with_path(
+    adb_path: String,
+    serial: String,
+    command: String,
+    args: Vec<String>,
+    timeout: Option<u64>,
+) -> Result<CommandResult> {
+    crate::adb_commands::execute_adb_command_with_path(
+        &adb_path,
+        &serial,
+        &command,
+        &args,
+        timeout,
+    ).await
+}
+
+/// 使用指定Fastboot路径执行命令
+#[tauri::command]
+pub async fn execute_fastboot_command_with_path(
+    fastboot_path: String,
+    serial: String,
+    command: String,
+    args: Vec<String>,
+    timeout: Option<u64>,
+) -> Result<CommandResult> {
+    crate::adb_commands::execute_fastboot_command_with_path(
+        &fastboot_path,
+        &serial,
+        &command,
+        &args,
+        timeout,
+    ).await
+}
+
+/// 获取设备性能信息
+#[tauri::command]
+pub async fn get_device_performance_info(serial: String) -> Result<serde_json::Value> {
     use serde_json::json;
 
     let mut memory_info = json!({

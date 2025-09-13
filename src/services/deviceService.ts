@@ -7,24 +7,66 @@ import { logService } from "./logService";
 import { enhancedLogService } from "./enhancedLogService";
 import { deviceConnectionTrackingService } from "./deviceConnectionTrackingService";
 import { generateDeviceUniqueIdFromProperties } from "../utils/deviceIdentification";
+import { adbToolsManager } from "./adbToolsManager";
 
 export class DeviceService {
   private scanInterval: ReturnType<typeof setInterval> | null = null;
   private isScanning = false;
   private connectedDevices = new Map<string, { connectedAt: Date; properties?: DeviceProperties }>();
+  private adbInitialized = false;
+
+  /**
+   * 初始化ADB工具路径
+   */
+  async initializeAdbTools(): Promise<void> {
+    if (this.adbInitialized) {
+      return;
+    }
+
+    try {
+      await adbToolsManager.initialize();
+      this.adbInitialized = true;
+      await logService.info('ADB工具初始化成功', '设备服务');
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      await logService.error(`ADB工具初始化失败: ${errorMsg}`, '设备服务');
+      throw new Error(`ADB工具初始化失败: ${errorMsg}`);
+    }
+  }
+
+  /**
+   * 检查ADB工具是否可用
+   */
+  async checkAdbAvailability(): Promise<boolean> {
+    try {
+      return await adbToolsManager.checkAvailability();
+    } catch (error) {
+      await logService.error(`ADB工具可用性检查失败: ${error}`, '设备服务');
+      return false;
+    }
+  }
+
+  /**
+   * 获取ADB工具状态报告
+   */
+  async getAdbStatusReport() {
+    return await adbToolsManager.getStatusReport();
+  }
 
   async scanDevices(): Promise<DeviceInfo[]> {
-    try {
-      const devices = await invoke<DeviceInfo[]>("scan_devices");
+    return await adbToolsManager.executeWithFallback(async () => {
+      try {
+        const devices = await invoke<DeviceInfo[]>("scan_devices");
 
-      // 处理设备连接/断开统计
-      await this.handleDeviceConnectionChanges(devices);
+        // 处理设备连接/断开统计
+        await this.handleDeviceConnectionChanges(devices);
 
-      return devices;
-    } catch (error) {
-      console.error("Failed to scan devices:", error);
-      throw error;
-    }
+        return devices;
+      } catch (error) {
+        console.error("Failed to scan devices:", error);
+        throw error;
+      }
+    });
   }
 
   async getDeviceInfo(serial: string): Promise<DeviceInfo> {
@@ -53,45 +95,52 @@ export class DeviceService {
     args: string[] = [],
     timeout?: number
   ): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("execute_adb_command", {
-        serial,
-        command,
-        args,
-        timeout,
-      });
-      return result;
-    } catch (error) {
-      console.error("Failed to execute ADB command:", error);
-      throw error;
-    }
+    return await adbToolsManager.executeWithFallback(async () => {
+      try {
+        const result = await invoke<CommandResult>("execute_adb_command_with_path", {
+          adbPath: adbToolsManager.getAdbPath(),
+          serial,
+          command,
+          args,
+          timeout,
+        });
+        return result;
+      } catch (error) {
+        console.error("Failed to execute ADB command:", error);
+        throw error;
+      }
+    });
   }
 
   async rebootDevice(serial: string, mode: string): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("reboot_device", {
-        serial,
-        mode,
-      });
-      return result;
-    } catch (error) {
-      console.error("Failed to reboot device:", error);
-      throw error;
-    }
+    return await adbToolsManager.executeWithFallback(async () => {
+      try {
+        const result = await invoke<CommandResult>("reboot_device", {
+          serial,
+          mode,
+        });
+        return result;
+      } catch (error) {
+        console.error("Failed to reboot device:", error);
+        throw error;
+      }
+    });
   }
 
   async installApk(serial: string, apkPath: string, replace = false): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("install_apk", {
-        serial,
-        apkPath,
-        replace,
-      });
-      return result;
-    } catch (error) {
-      console.error("Failed to install APK:", error);
-      throw error;
-    }
+    return await adbToolsManager.executeWithFallback(async () => {
+      try {
+        const result = await invoke<CommandResult>("install_apk", {
+          serial,
+          apkPath,
+          replace,
+        });
+        return result;
+      } catch (error) {
+        console.error("Failed to install APK:", error);
+        throw error;
+      }
+    });
   }
 
   async pushFile(serial: string, localPath: string, remotePath: string): Promise<CommandResult> {
@@ -198,16 +247,6 @@ export class DeviceService {
       return operation;
     } catch (error) {
       console.error("Failed to batch uninstall apps:", error);
-      throw error;
-    }
-  }
-
-  async checkAdbAvailability(): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("check_adb_availability");
-      return result;
-    } catch (error) {
-      console.error("Failed to check ADB availability:", error);
       throw error;
     }
   }

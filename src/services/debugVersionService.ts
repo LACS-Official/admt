@@ -5,6 +5,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { API_CONFIG, getApiBaseUrl, getSoftwareId } from '../config/api';
+import { tauriHttpService } from './tauriHttpService';
 
 export interface DebugVersionResult {
   // 版本获取调试信息
@@ -354,24 +355,23 @@ class DebugVersionService {
     try {
       console.log(`🌐 调用API: ${apiConfig.endpoint}`);
       
-      const response = await fetch(apiConfig.endpoint, {
-        method: 'GET',
+      const response = await tauriHttpService.get(apiConfig.endpoint, {
+        timeout: 10000,
         headers: {
-          'Content-Type': 'application/json',
           'User-Agent': `ADMT/${finalVersion}`,
           'Accept': 'application/json'
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!response.success) {
+        throw new Error(response.error || 'tauriHttpService请求失败');
       }
 
-      apiResponse = await response.json();
+      apiResponse = response.data;
       console.log('📥 API响应:', apiResponse);
 
       // 更新缓存
-      if (apiResponse.success && apiResponse.data) {
+      if (apiResponse && apiResponse.success && apiResponse.data) {
         this.cache.set(cacheKey, {
           data: apiResponse.data,
           timestamp: Date.now()
