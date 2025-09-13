@@ -1,14 +1,17 @@
 import { getVersion } from '@tauri-apps/api/app';
+import { tauriHttpService } from './tauriHttpService';
+import { ApiResponse } from '../config/api';
 
-// API响应数据结构
+// API响应数据结构 - 根据实际API返回的结构
 interface VersionResponse {
   success: boolean;
   data: {
-    version: {
-      currentVersion: string;
-      updateLog?: string;
-      downloadUrl?: string;
-    };
+    id: number;
+    name: string;
+    currentVersion: string;
+    officialWebsite?: string;
+    latestDownloadUrl?: string;
+    [key: string]: any; // 其他字段
   };
   message?: string;
 }
@@ -65,7 +68,7 @@ function isUpdateRequired(remoteVersion: string, localVersion: string): boolean 
 }
 
 /**
- * 检查版本更新 - 优化后的版本检测逻辑
+ * 检查版本更新 - 使用tauriHttpService的版本检测逻辑
  * 仅通过GET请求访问API，当currentVersion大于本地版本时触发更新
  * @returns Promise<VersionCheckResult>
  */
@@ -74,29 +77,21 @@ export async function checkForUpdates(): Promise<VersionCheckResult> {
     // 获取本地应用版本
     const localVersion = await getVersion();
     
-    // 发送GET请求到版本检查API
-    const response = await fetch('https://api-g.lacs.cc/app/software/id/1', {
-      method: 'GET',
+    // 使用tauriHttpService发送GET请求到版本检查API
+    const response = await tauriHttpService.get<VersionResponse>('/app/software/id/1', {
+      timeout: 10000,
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'ADMT-App'
-      },
-      // 设置超时时间
-      signal: AbortSignal.timeout(10000) // 10秒超时
+      }
     });
     
     // 检查HTTP响应状态
-    if (!response.ok) {
-      throw new Error(`API请求失败: HTTP ${response.status} - ${response.statusText}`);
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'API请求失败');
     }
     
-    // 解析JSON响应
-    let data: VersionResponse;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      throw new Error(`JSON解析失败: ${parseError instanceof Error ? parseError.message : '未知错误'}`);
-    }
+    const data = response.data;
     
     // 验证API响应结构和必要字段
     if (!data || typeof data !== 'object') {
@@ -107,11 +102,11 @@ export async function checkForUpdates(): Promise<VersionCheckResult> {
       throw new Error(`API返回错误: ${data.message || '未知错误'}`);
     }
     
-    if (!data.data || !data.data.version || !data.data.version.currentVersion) {
+    if (!data.data || !data.data.currentVersion) {
       throw new Error('API响应格式无效: 缺少必要的版本信息字段');
     }
     
-    const currentVersion = data.data.version.currentVersion;
+    const currentVersion = data.data.currentVersion;
     
     // 验证版本号格式
     if (typeof currentVersion !== 'string' || !currentVersion.trim()) {

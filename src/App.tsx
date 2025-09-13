@@ -10,6 +10,7 @@ import { useAppStore } from "./stores/appStore";
 import { useStartupFlowStore } from "./stores/startupFlowStore";
 import { logService } from "./services/logService";
 import { ReactErrorFixer } from "./utils/reactErrorFix";
+import { adbToolsManager } from "./services/adbToolsManager";
 
 const useStyles = makeStyles({
   app: {
@@ -197,7 +198,32 @@ function App() {
         // 2. 初始化应用状态
         initialize();
 
-        // 3. 记录设备检测配置状态
+        // 3. 初始化ADB工具
+        logService.info('初始化ADB工具...', 'App');
+        try {
+          await adbToolsManager.initialize();
+          const adbInfo = adbToolsManager.getAdbInfo();
+          
+          if (adbInfo.isAvailable) {
+            logService.info(`ADB工具初始化成功: ${adbInfo.adbPath}`, 'App');
+            if (adbInfo.version) {
+              logService.info(`ADB版本: ${adbInfo.version}`, 'App');
+            }
+          } else {
+            logService.warning('ADB工具初始化失败，某些功能可能受限', 'App', {
+              error: adbInfo.error,
+              adbPath: adbInfo.adbPath,
+              fastbootPath: adbInfo.fastbootPath
+            });
+          }
+        } catch (adbError) {
+          const errorMsg = adbError instanceof Error ? adbError.message : '未知错误';
+          logService.error('ADB工具初始化异常', 'App', adbError);
+          // ADB工具初始化失败不阻止应用启动，只是功能受限
+          console.warn('ADB工具初始化失败，某些设备功能可能受限:', errorMsg);
+        }
+
+        // 4. 记录设备检测配置状态
         logService.info(`设备检测配置 - 自动检测: ${config.autoDetectDevices}, 扫描间隔: ${config.scanInterval}ms`, 'App');
 
         // 4. 初始化过程

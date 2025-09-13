@@ -86,6 +86,12 @@ pub enum HoutError {
 
     #[error("Unsupported format: {0}")]
     UnsupportedFormat(String),
+
+    #[error("Path resolution failed: {0}")]
+    PathResolution(String),
+
+    #[error("Command execution failed: {0}")]
+    Command(String),
 }
 
 impl From<std::io::Error> for HoutError {
