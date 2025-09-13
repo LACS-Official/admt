@@ -256,6 +256,20 @@ if (typeof window !== 'undefined') {
             }
             throw new Error('Missing logEntry parameter');
             
+          case 'persist_log_to_file':
+            // 处理持久化日志到文件的命令
+            if (args?.logEntry) {
+              const logEntry = typeof args.logEntry === 'string' ? JSON.parse(args.logEntry) : args.logEntry;
+              await logBackendMock.persistLog(logEntry);
+              return 'OK';
+            }
+            throw new Error('Missing logEntry parameter');
+            
+          case 'initialize_log_directory':
+            // 初始化日志目录的命令
+            console.debug('[LogBackend] 日志目录初始化完成');
+            return 'OK';
+            
           case 'get_logs':
             const logs = await logBackendMock.getLogs(args?.filter);
             return JSON.stringify(logs);

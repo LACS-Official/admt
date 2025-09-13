@@ -7,6 +7,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { usePrivacyConsentStore } from '../stores/privacyConsentStore';
 import { SecurityConfigManager } from '../config/securityConfig';
+import { tauriHttpService } from './tauriHttpService';
 
 // 设备连接数据接口
 interface DeviceConnectionData {
@@ -175,11 +176,13 @@ export class DeviceConnectionTrackingService {
    */
   private async sendConnectionData(data: DeviceConnectionData): Promise<boolean> {
     try {
-      const securityConfig = SecurityConfigManager.getInstance();
-      const config = securityConfig.getConfig();
-
       const endpoint = '/api/user-behavior/device-connections';
-      const url = `${config.api_base_url}${endpoint}`;
+      
+      // 环境检测和调试信息
+      const isDev = import.meta.env.DEV;
+      const environment = isDev ? 'development' : 'production';
+      
+      console.log(`🚀 [设备连接统计] 环境: ${environment}, 请求: POST ${endpoint}`);
 
       // 根据API文档，只发送必需的字段
       const apiData = {
@@ -188,41 +191,41 @@ export class DeviceConnectionTrackingService {
         userDeviceFingerprint: data.userDeviceFingerprint
       };
 
-      console.log('📤 发送设备连接数据到:', url);
+      console.log('📤 发送设备连接数据到端点:', endpoint);
       console.log('📊 连接数据:', {
         deviceSerial: apiData.deviceSerial,
         softwareId: apiData.softwareId,
         userDeviceFingerprint: apiData.userDeviceFingerprint.substring(0, 8) + '...'
       });
 
-      // 根据API文档，设备连接API无需任何认证头部
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiData),
-        signal: AbortSignal.timeout(10000) // 10秒超时
+      // 准备请求头
+      const extraHeaders: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-App-Environment': environment,
+      };
+      
+      // 在生产环境中添加额外的头部
+      if (!isDev) {
+        extraHeaders['X-Build-Type'] = 'production';
+      }
+      
+      // 使用tauriHttpService发送POST请求到设备连接统计API
+      const response = await tauriHttpService.post<ApiResponse>(endpoint, apiData, {
+        timeout: 10000,
+        headers: extraHeaders
       });
 
-      if (!response.ok) {
-        if (response.status === 429) {
+      if (!response.success) {
+        if (response.error?.includes('429')) {
           // 处理频率限制错误
-          const retryAfter = response.headers.get('Retry-After');
-          console.warn(`⏰ 服务器频率限制，建议等待 ${retryAfter || '10'} 秒后重试`);
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          console.warn(`⏰ 服务器频率限制，建议等待10秒后重试`);
         }
-        return false;
+        throw new Error(response.error || '服务器返回错误');
       }
 
-      const result: ApiResponse = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || '服务器返回错误');
-      }
-
-      console.log('✅ 设备连接数据发送成功:', result.message);
+      console.log(`✅ [设备连接统计] 请求成功`);
+      console.log('✅ 设备连接数据发送成功:', response.data?.message || '成功');
       return true;
 
     } catch (error) {

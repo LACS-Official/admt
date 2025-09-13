@@ -100,7 +100,8 @@ export class OptimizedUserBehaviorService {
         arch: this.deviceInfo.arch,
       };
 
-      const response = await this.sendRequest('/api/optimized-device-stats', 'POST', request);
+      // 修复 API 端点和请求方法
+      const response = await this.sendRequest('/api/user-behavior/device-stats', 'POST', request);
 
       if (response.success) {
         console.log(`✅ 应用启动记录成功 - 安装排名: #${response.installRank}, 运行次数: ${response.runCount}`);
@@ -177,11 +178,26 @@ export class OptimizedUserBehaviorService {
     const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${baseUrl}${path}`;
     
+    // 环境检测和调试信息
+    const isDev = import.meta.env.DEV;
+    const environment = isDev ? 'development' : 'production';
+    
+    console.log(`🚀 [用户行为统计] 环境: ${environment}, 请求: ${method} ${url}`);
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-API-Key': this.config.apiKey,
       'User-Agent': 'WanjiGuanjia-Desktop/1.0.0',
+      'X-App-Environment': environment,
     };
+    
+    // 在生产环境中添加额外的安全头
+    if (!isDev) {
+      headers['X-Build-Type'] = 'production';
+      if (this.config.enableEncryption) {
+        headers['X-Signature-Required'] = 'true';
+      }
+    }
 
     const requestOptions: RequestInit = {
       method,
@@ -196,18 +212,23 @@ export class OptimizedUserBehaviorService {
       try {
         const response = await fetch(url, requestOptions);
         
+        console.log(`🚀 [用户行为统计] 响应: ${response.status} ${response.statusText}`);
+        
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const result = await response.json();
+        console.log(`✅ [用户行为统计] 请求成功: ${method} ${url}`);
         return result;
         
       } catch (error) {
         lastError = error as Error;
+        console.warn(`⚠️ [用户行为统计] 请求失败 (第${attempt}次尝试): ${error}`);
+        
         // 只在最后一次尝试时输出错误日志，减少控制台噪音
         if (attempt === this.config.maxRetryCount) {
-          console.warn(`用户行为统计请求失败 (已尝试 ${this.config.maxRetryCount} 次):`, error);
+          console.error(`❌ [用户行为统计] 用户行为统计请求失败 (已尝试 ${this.config.maxRetryCount} 次):`, error);
         }
 
         if (attempt < this.config.maxRetryCount) {
@@ -225,7 +246,7 @@ export class OptimizedUserBehaviorService {
    */
   async getStatsOverview(): Promise<any> {
     try {
-      const response = await this.sendRequest('/api/optimized-device-stats/overview', 'GET');
+      const response = await this.sendRequest('/api/user-behavior/stats/overview', 'GET');
       return response.data;
     } catch (error) {
       console.error('获取统计概览失败:', error);
@@ -238,7 +259,7 @@ export class OptimizedUserBehaviorService {
    */
   async getCountryStats(limit: number = 10): Promise<any> {
     try {
-      const response = await this.sendRequest(`/api/optimized-device-stats/countries?limit=${limit}`, 'GET');
+      const response = await this.sendRequest(`/api/user-behavior/stats/countries?limit=${limit}`, 'GET');
       return response.data;
     } catch (error) {
       console.error('获取国家统计失败:', error);
@@ -251,7 +272,7 @@ export class OptimizedUserBehaviorService {
    */
   async getActivityTrends(days: number = 30): Promise<any> {
     try {
-      const response = await this.sendRequest(`/api/optimized-device-stats/trends?days=${days}`, 'GET');
+      const response = await this.sendRequest(`/api/user-behavior/stats/trends?days=${days}`, 'GET');
       return response.data;
     } catch (error) {
       console.error('获取活动趋势失败:', error);
@@ -289,8 +310,8 @@ export const createOptimizedUserBehaviorService = (config: OptimizedUserBehavior
 // 默认配置
 export const DEFAULT_OPTIMIZED_CONFIG: OptimizedUserBehaviorConfig = {
   apiBaseUrl: 'https://api-g.lacs.cc',
-  apiKey: 'your-api-key',
-  enableEncryption: false, // 简化版本暂时不启用加密
+  apiKey: import.meta.env.VITE_API_KEY || 'your-api-key',
+  enableEncryption: import.meta.env.VITE_ENABLE_SIGNATURE === 'true',
   enableOfflineCache: false,
   maxRetryCount: 3,
 };
