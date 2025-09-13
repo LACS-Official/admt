@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{HoutError, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AdbToolsInfo {
     pub adb_path: Option<String>,
     pub fastboot_path: Option<String>,
@@ -13,6 +14,7 @@ pub struct AdbToolsInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AdbIntegrityReport {
     pub success: bool,
     pub missing: Vec<String>,
@@ -31,31 +33,48 @@ pub fn get_adb_tools_info(app_handle: &tauri::AppHandle) -> Result<AdbToolsInfo>
     // 尝试解析ADB工具路径
     match resolve_adb_tools_paths(app_handle) {
         Ok((adb_path, fastboot_path)) => {
+            log::info!("ADB工具路径解析成功: ADB={}, Fastboot={}", adb_path.display(), fastboot_path.display());
+            
             // 验证ADB可执行文件存在
             if adb_path.exists() {
                 adb_info.adb_path = Some(adb_path.to_string_lossy().to_string());
+                log::info!("✅ ADB文件存在: {}", adb_path.display());
                 
                 // 获取ADB版本
-                if let Ok(version) = get_adb_version(&adb_path) {
-                    adb_info.version = Some(version);
+                match get_adb_version(&adb_path) {
+                    Ok(version) => {
+                        adb_info.version = Some(version.clone());
+                        log::info!("✅ ADB版本获取成功: {}", version);
+                    }
+                    Err(e) => {
+                        log::warn!("⚠️ ADB版本获取失败: {}", e);
+                        // 版本获取失败不影响可用性
+                    }
                 }
             } else {
-                adb_info.error = Some("ADB可执行文件不存在".to_string());
+                let error_msg = format!("ADB可执行文件不存在: {}", adb_path.display());
+                adb_info.error = Some(error_msg.clone());
+                log::error!("❌ {}", error_msg);
                 return Ok(adb_info);
             }
 
             // 验证Fastboot可执行文件存在
             if fastboot_path.exists() {
                 adb_info.fastboot_path = Some(fastboot_path.to_string_lossy().to_string());
+                log::info!("✅ Fastboot文件存在: {}", fastboot_path.display());
             } else {
-                log::warn!("Fastboot可执行文件不存在: {:?}", fastboot_path);
+                log::warn!("⚠️ Fastboot可执行文件不存在: {}", fastboot_path.display());
+                // Fastboot不存在不影响ADB的可用性
             }
 
             adb_info.is_available = true;
+            log::info!("🎉 ADB工具初始化成功，可用性: true");
         }
         Err(e) => {
-            adb_info.error = Some(format!("解析ADB工具路径失败: {}", e));
-            log::error!("Failed to resolve ADB tools paths: {}", e);
+            let error_msg = format!("解析ADB工具路径失败: {}", e);
+            adb_info.error = Some(error_msg.clone());
+            log::error!("❌ {}", error_msg);
+            // is_available 保持为 false
         }
     }
 
@@ -64,19 +83,21 @@ pub fn get_adb_tools_info(app_handle: &tauri::AppHandle) -> Result<AdbToolsInfo>
 
 /// 解析ADB工具的完整路径
 fn resolve_adb_tools_paths(_app_handle: &tauri::AppHandle) -> Result<(PathBuf, PathBuf)> {
-    // 在 Tauri 2.0 中，使用 app_handle.app_data_dir() 或其他新的 API
-    // 目前先使用相对路径作为临时解决方案
-    let app_dir = std::env::current_exe()
-        .map_err(|e| HoutError::PathResolution(format!("无法获取应用程序路径: {}", e)))?
-        .parent()
-        .ok_or_else(|| HoutError::PathResolution("无法获取应用程序目录".to_string()))?
-        .to_path_buf();
-    
-    let adb_path = app_dir.join("tools").join("adb").join("adb.exe");
-    let fastboot_path = app_dir.join("tools").join("adb").join("fastboot.exe");
+    // 使用与cache.rs相同的路径查找逻辑
+    let adb_path = crate::cache::get_cached_adb_path().clone();
+    let fastboot_path = crate::cache::get_cached_fastboot_path().clone();
 
     log::info!("Resolved ADB path: {:?}", adb_path);
     log::info!("Resolved Fastboot path: {:?}", fastboot_path);
+
+    // 检查路径是否有效
+    if adb_path.to_string_lossy().contains("INVALID_") {
+        return Err(HoutError::PathResolution("ADB可执行文件路径无效".to_string()));
+    }
+    
+    if fastboot_path.to_string_lossy().contains("INVALID_") {
+        return Err(HoutError::PathResolution("Fastboot可执行文件路径无效".to_string()));
+    }
 
     Ok((adb_path, fastboot_path))
 }
@@ -106,45 +127,42 @@ fn get_adb_version(adb_path: &Path) -> Result<String> {
 
 /// 验证ADB工具文件完整性
 pub fn verify_adb_tools_integrity(_app_handle: &tauri::AppHandle) -> Result<AdbIntegrityReport> {
-    let required_files = vec![
-        "tools/adb/adb.exe",
-        "tools/adb/fastboot.exe",
-        "tools/adb/AdbWinApi.dll",
-        "tools/adb/AdbWinUsbApi.dll",
-    ];
-
     let mut missing_files = Vec::new();
     
-    // 获取应用程序目录
-    let app_dir = match std::env::current_exe() {
-        Ok(exe_path) => {
-            match exe_path.parent() {
-                Some(dir) => dir.to_path_buf(),
-                None => {
-                    missing_files.push("无法获取应用程序目录".to_string());
-                    return Ok(AdbIntegrityReport {
-                        success: false,
-                        missing: missing_files,
-                    });
+    // 使用与cache.rs相同的路径查找逻辑
+    let adb_path = crate::cache::get_cached_adb_path();
+    let fastboot_path = crate::cache::get_cached_fastboot_path();
+    
+    // 检查ADB文件
+    if !adb_path.exists() {
+        missing_files.push(format!("adb.exe - {}", adb_path.display()));
+        log::warn!("Missing ADB file: {}", adb_path.display());
+    } else {
+        log::debug!("ADB tool file exists: {:?}", adb_path);
+    }
+    
+    // 检查Fastboot文件
+    if !fastboot_path.exists() {
+        missing_files.push(format!("fastboot.exe - {}", fastboot_path.display()));
+        log::warn!("Missing Fastboot file: {}", fastboot_path.display());
+    } else {
+        log::debug!("Fastboot tool file exists: {:?}", fastboot_path);
+    }
+    
+    // 检查ADB依赖DLL文件(仅在Windows上)
+    #[cfg(windows)]
+    {
+        if let Some(adb_dir) = adb_path.parent() {
+            let required_dlls = vec!["AdbWinApi.dll", "AdbWinUsbApi.dll"];
+            for dll_name in required_dlls {
+                let dll_path = adb_dir.join(dll_name);
+                if !dll_path.exists() {
+                    missing_files.push(format!("{} - {}", dll_name, dll_path.display()));
+                    log::warn!("Missing ADB DLL file: {}", dll_path.display());
+                } else {
+                    log::debug!("ADB DLL file exists: {:?}", dll_path);
                 }
             }
-        }
-        Err(e) => {
-            missing_files.push(format!("无法获取应用程序路径: {}", e));
-            return Ok(AdbIntegrityReport {
-                success: false,
-                missing: missing_files,
-            });
-        }
-    };
-
-    for file_path in &required_files {
-        let full_path = app_dir.join(file_path);
-        if !full_path.exists() {
-            missing_files.push(file_path.to_string());
-            log::warn!("Missing ADB tool file: {}", file_path);
-        } else {
-            log::debug!("ADB tool file exists: {:?}", full_path);
         }
     }
 

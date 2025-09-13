@@ -75,22 +75,60 @@ class EnhancedLogService {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  private generateUniqueId(): string {
+    // 使用更强的唯一性算法：时间戳 + 递增计数器 + 随机字符串
+    const timestamp = Date.now();
+    const counter = this.getAndIncrementCounter();
+    const random = Math.random().toString(36).substring(2, 11);
+    return `${timestamp}_${counter}_${random}`;
+  }
+
+  private static idCounter = 0;
+  private getAndIncrementCounter(): number {
+    return ++EnhancedLogService.idCounter;
+  }
+
   private async initializeService(): Promise<void> {
     try {
+      // 初始化日志目录，包含降级处理
+      const logDirectory = await this.initializeLogDirectoryWithFallback();
+      
+      // 清理过期日志
       await this.cleanupExpiredLogs();
       
       this.logStructured({
         level: "info",
         category: "system",
-        message: "增强日志服务已启动",
+        message: "增强日志服务已启动 - 使用新日志格式",
         source: "EnhancedLogService",
         context: {
           sessionId: this.sessionId,
-          retentionPolicy: this.retentionPolicy
+          retentionPolicy: this.retentionPolicy,
+          logFormat: "admt_log_YYYYMMDD.log",
+          logLocation: logDirectory || "{软件运行目录}/logs/"
         }
       });
     } catch (error) {
       console.error("日志服务初始化失败:", error);
+    }
+  }
+  
+  private async initializeLogDirectoryWithFallback(): Promise<string | null> {
+    try {
+      // 尝试初始化日志目录
+      const logDirectory = await invoke('initialize_log_directory');
+      return logDirectory as string;
+    } catch (error) {
+      console.warn("初始化日志目录失败，使用降级处理:", error);
+      
+      // 降级处理：仅使用内存日志
+      this.logWarning(
+        "日志目录初始化失败，将仅使用内存日志",
+        "EnhancedLogService",
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+      
+      return null;
     }
   }
 
@@ -119,7 +157,7 @@ class EnhancedLogService {
     stackTrace?: string;
   }): void {
     const entry: StructuredLogEntry = {
-      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: this.generateUniqueId(),
       timestamp: new Date().toISOString(),
       level: params.level,
       category: params.category,
@@ -151,11 +189,21 @@ class EnhancedLogService {
 
   private async persistLog(entry: StructuredLogEntry): Promise<void> {
     try {
-      await invoke('persist_log', {
-        logEntry: JSON.stringify(entry)
-      });
+      // 同时调用原有的和新的持久化方法
+      await Promise.all([
+        // 原有的内存持久化（向后兼容）
+        invoke('persist_log', { logEntry: JSON.stringify(entry) }).catch(error => {
+          console.warn("内存持久化失败:", error);
+        }),
+        // 新的文件持久化
+        invoke('persist_log_to_file', JSON.stringify(entry)).catch(error => {
+          console.warn("文件持久化失败:", error);
+        })
+      ]);
     } catch (error) {
       console.error("持久化日志失败:", error);
+      // 降级处理：如果持久化失败，仅保持在内存中
+      // 这里不再抛出错误，保证系统运行稳定性
     }
   }
 
@@ -373,7 +421,24 @@ class EnhancedLogService {
     });
   }
 
-  // 订阅日志更新
+  // 从后端刷新日志数据
+  async refreshFromBackend(): Promise<void> {
+    try {
+      // 从后端获取最新的持久化日志
+      const persistedLogs = await invoke('get_logs', {});
+      const logs: string[] = JSON.parse(persistedLogs);
+      
+      console.log("从后端获取到日志数量:", logs.length);
+      
+      // 这里可以添加更复杂的日志解析逻辑
+      // 目前简化处理，只作为刷新触发器
+      
+      this.logInfo("日志已从后端刷新", "EnhancedLogService", { count: logs.length });
+    } catch (error) {
+      console.error("从后端刷新日志失败:", error);
+      throw error;
+    }
+  }
   subscribe(listener: (logs: StructuredLogEntry[]) => void): () => void {
     this.listeners.push(listener);
     listener([...this.memoryLogs]);
@@ -422,12 +487,20 @@ class EnhancedLogService {
   // 清空日志
   async clearLogs(): Promise<void> {
     try {
+      // 同时清空内存和文件持久化的日志
       await invoke('clear_logs');
+      
+      // 清空内存日志
       this.memoryLogs = [];
+      
+      // 记录清空操作（在清空后）
       this.logInfo("所有日志已清空", "EnhancedLogService");
+      
+      // 通知监听器
       this.notifyListeners();
     } catch (error) {
       console.error("清空日志失败:", error);
+      throw error;
     }
   }
 

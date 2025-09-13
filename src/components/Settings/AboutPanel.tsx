@@ -302,10 +302,10 @@ const AboutPanel: React.FC = () => {
     const loadVersionString = async () => {
       try {
         const fullVersion = await versionManager.getFullVersionString();
-        setFullVersionString(`玩机管家 ${fullVersion}`);
+        setFullVersionString(`${fullVersion}`);
       } catch (error) {
         console.error('获取版本字符串失败:', error);
-        setFullVersionString('玩机管家 v1.0.0');
+        setFullVersionString('v1.0.0');
       }
     };
 
@@ -409,7 +409,10 @@ const AboutPanel: React.FC = () => {
             <img src={admtbgIcon} alt="appIcon" className={styles.appIconImage}/>
             
             <Text size={600} weight="bold">
-              {versionLoading ? '玩机管家 v1.0.0' : fullVersionString}
+              玩机管家
+            </Text>
+            <Text size={400} weight="bold">
+              {versionLoading ? 'v1.0.0' : fullVersionString}
             </Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
               基于Tauri框架开发的现代化Android设备免费玩机工具，体积小，功能强大
@@ -480,9 +483,13 @@ const AboutPanel: React.FC = () => {
             <img src={lacsbgIcon} alt="appIcon" className={styles.appIconImage}/>
             
             <Text size={600} weight="bold">领创工作室 LACS</Text>
+            <Text size={400} weight="bold">
+              Lead And Creative Studio
+            </Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
               致力于为用户提供高质量的工具和技术解决方案，全网粉丝1w+
             </Text>
+
 
             <div className={styles.buttonGroup}>
               <Button 

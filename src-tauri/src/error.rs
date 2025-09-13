@@ -92,6 +92,9 @@ pub enum HoutError {
 
     #[error("Command execution failed: {0}")]
     Command(String),
+
+    #[error("Invalid input: {message}")]
+    InvalidInput { message: String },
 }
 
 impl From<std::io::Error> for HoutError {

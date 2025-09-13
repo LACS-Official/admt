@@ -88,6 +88,17 @@ pub fn run() {
             get_cache_stats,
             clear_all_cache,
             invalidate_device_cache,
+            // 日志系统命令
+            initialize_log_directory,
+            persist_log,
+            persist_log_to_file,
+            get_logs,
+            get_log_statistics,
+            clear_logs,
+            cleanup_expired_logs,
+            write_logs_to_file,
+            clear_all_logs,
+            get_log_file_info,
             // 杂项控制功能命令
             restart_adb_service,
             install_device_driver,
