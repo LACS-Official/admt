@@ -175,14 +175,6 @@ function App() {
         event.preventDefault();
         event.stopPropagation();
         
-        // 显示提示信息
-        if (setStatusBarMessage) {
-          setStatusBarMessage({
-            type: "info",
-            message: "刷新功能已禁用以保护应用状态"
-          });
-        }
-        
         logService.info('用户尝试刷新页面，已被拦截', 'App');
       }
       

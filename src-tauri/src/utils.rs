@@ -6,6 +6,10 @@ use tokio::time::timeout;
 use crate::error::{HoutError, Result};
 use crate::cache::{get_cached_adb_path, get_cached_fastboot_path, record_path_cache_hit};
 
+// Windows平台特有导入
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 
 
 /// 获取ADB可执行文件路径（已弃用，请使用缓存版本）
@@ -148,11 +152,25 @@ pub async fn execute_command(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    // 在Windows上隐藏命令行窗口
-    #[cfg(windows)]
+    // 在发布版中隐藏命令行窗口，在调试版中保持可见
+    #[cfg(all(windows, not(debug_assertions)))]
     {
+        use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);
+        log::debug!("设置隐藏窗口标志 (发布版): {}", program.display());
+    }
+
+    // 在调试版中保持窗口可见以便调试
+    #[cfg(all(windows, debug_assertions))]
+    {
+        log::debug!("保持窗口可见 (调试版): {}", program.display());
+    }
+
+    // 非Windows平台的处理
+    #[cfg(not(windows))]
+    {
+        log::debug!("非Windows平台，使用默认设置: {}", program.display());
     }
 
     let timeout_duration = Duration::from_secs(timeout_secs.unwrap_or(30));
@@ -162,12 +180,20 @@ pub async fn execute_command(
             let stdout = String::from_utf8_lossy(&output.stdout).to_string();
             let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-            Ok(crate::device::CommandResult {
+            let result = crate::device::CommandResult {
                 success: output.status.success(),
                 output: stdout,
                 error: if stderr.is_empty() { None } else { Some(stderr) },
                 exit_code: output.status.code(),
-            })
+            };
+
+            if result.success {
+                log::debug!("命令执行成功: {} {}", program.display(), args.join(" "));
+            } else {
+                log::warn!("命令执行失败: {} {}, 错误: {:?}", program.display(), args.join(" "), result.error);
+            }
+
+            Ok(result)
         }
         Ok(Err(e)) => {
             // 提供更详细的错误信息
@@ -180,13 +206,18 @@ pub async fn execute_command(
                 format!("Failed to execute command: {}", e)
             };
 
+            log::error!("命令执行IO错误: {}", error_msg);
             Err(HoutError::IoError {
                 message: error_msg,
             })
         }
-        Err(_) => Err(HoutError::CommandTimeout {
-            command: format!("{} {}", program.display(), args.join(" ")),
-        }),
+        Err(_) => {
+            let timeout_error = format!("命令执行超时: {} {}", program.display(), args.join(" "));
+            log::error!("{}", timeout_error);
+            Err(HoutError::CommandTimeout {
+                command: format!("{} {}", program.display(), args.join(" ")),
+            })
+        }
     }
 }
 

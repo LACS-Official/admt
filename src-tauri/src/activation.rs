@@ -54,7 +54,6 @@ pub struct ActivationCode {
 pub struct ProductInfo {
     pub name: String,
     pub version: String,
-    pub features: Vec<String>,
 }
 
 /// API验证请求
@@ -432,11 +431,8 @@ impl ActivationValidator {
             Ok(activation_code) => {
                 log::info!("Activation successful for code: {}", request.activation_code);
 
-                // 提取功能列表
-                let features = activation_code.product_info
-                    .as_ref()
-                    .map(|info| info.features.clone())
-                    .unwrap_or_default();
+                // 不再从productInfo中提取features，使用默认的空列表
+                let features: Vec<String> = vec![];
 
                 Ok(ActivationResponse {
                     success: true,
