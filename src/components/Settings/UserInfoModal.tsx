@@ -178,7 +178,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
         activationCode: data.activationCode,
         expiryDate,
         activationDate,
-        features: data.features || [],
+        features: [],
         isExpired,
         remainingDays: Math.max(0, remainingDays),
       });

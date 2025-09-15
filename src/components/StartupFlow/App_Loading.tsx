@@ -28,6 +28,7 @@ import { SecurityConfigManager } from '../../config/securityConfig';
 import { checkForUpdates, versionService, VersionCheckResult } from '../../services/versionServiceAdapter';
 import { unifiedVersionService } from '../../services/unifiedVersionService';
 import { SecureDataTransmissionService } from '../../services/secureDataTransmissionService';
+import { apiErrorHandler } from '../../services/errorHandlerService';
 
 import StartupVersionChecker from '../Common/StartupVersionChecker';
 import { useAppStore } from '../../stores/appStore';
@@ -123,6 +124,10 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('正在加载应用...');
   const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isExiting, setIsExiting] = useState(false);
+  const [exitCountdown, setExitCountdown] = useState(0);
+  const [isAutoRetrying, setIsAutoRetrying] = useState(false);
 
   const [showEnterButton, setShowEnterButton] = useState(false);
   const [showVersionChecker, setShowVersionChecker] = useState(false);
@@ -136,7 +141,21 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   } = useStartupFlowStore();
 
   useEffect(() => {
+    // 设置错误处理服务的倒计时回调
+    apiErrorHandler.setCountdownCallback((seconds: number) => {
+      setExitCountdown(seconds);
+      if (seconds > 0) {
+        setIsExiting(true);
+        setStatusMessage(`版本检测失败，应用将在 ${seconds} 秒后退出`);
+      }
+    });
+    
     startLoadingAndVersionCheck();
+    
+    // 组件卸载时取消计划的退出
+    return () => {
+      apiErrorHandler.cancelScheduledExit();
+    };
   }, []);
 
   const startLoadingAndVersionCheck = async () => {
@@ -242,8 +261,24 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       setProgress(95);
       setStatusMessage('检查最新版本...');
       
-      const versionResult = await checkLatestVersionUnified();
+      await performVersionCheckWithRetry();
 
+    } catch (error) {
+      console.error('❗ 检查失败:', error);
+      await handleVersionCheckError(error);
+    }
+  };
+
+  // 带重试机制的版本检查
+  const performVersionCheckWithRetry = async (): Promise<void> => {
+    try {
+      const versionResult = await checkLatestVersionUnified();
+      
+      // 重置重试计数器
+      apiErrorHandler.resetRetryCounters();
+      setRetryCount(0);
+      setIsAutoRetrying(false);
+      
       setProgress(100);
       setStatusMessage('检查完成');
       setCheckResult(versionResult);
@@ -296,43 +331,60 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       }
 
     } catch (error) {
-      console.error('❌ 检查失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '检查失败';
+      throw error; // 重新抛出错误，由上层处理
+    }
+  };
+
+  // 处理版本检查错误
+  const handleVersionCheckError = async (error: Error): Promise<void> => {
+    try {
+      const handlingResult = await apiErrorHandler.handleVersionCheckError(error);
       
-      // 检查是否是网络频率限制错误
-      const isRateLimitError = errorMessage.includes('429') || errorMessage.includes('Too Many Requests');
+      setRetryCount(apiErrorHandler.getRetryStatus().versionCheckCount);
+      setStatusMessage(handlingResult.userMessage);
       
-      if (isRateLimitError) {
-        console.log('⚠️ 遇到API频率限制，显示版本检查弹窗让用户选择');
-        
-        // 对于频率限制错误，显示版本检查弹窗让用户选择
-        setShowVersionChecker(true);
-        setError(null); // 清除错误状态
+      if (handlingResult.shouldExit) {
+        setIsExiting(true);
         setIsChecking(false);
-        
-        // 添加警告通知
-        addNotification({
-          type: "warning",
-          title: "网络请求受限",
-          message: "检测到网络请求频率限制，请稍后重试",
-          duration: 5000,
-        });
-        
-        return; // 不退出应用，让用户选择
+        setIsLoading(false);
+        return;
       }
       
-      // 对于其他网络错误，采用降级处理，允许用户继续使用
-      setError(errorMessage);
+      if (handlingResult.shouldRetry) {
+        setIsAutoRetrying(true);
+        setStatusMessage(`${handlingResult.userMessage}，${handlingResult.retryDelay / 1000}秒后重试...`);
+        
+        setTimeout(async () => {
+          try {
+            await performVersionCheckWithRetry();
+          } catch (retryError) {
+            await handleVersionCheckError(retryError);
+          }
+        }, handlingResult.retryDelay);
+        
+        return;
+      }
+      
+      // 不可重试的错误，已由 apiErrorHandler 安排退出
       setIsChecking(false);
-
+      setIsLoading(false);
+      
+    } catch (handlerError) {
+      console.error('错误处理器失败:', handlerError);
+      
+      // 降级处理策略
+      setError('版本检查失败，请重试或检查网络连接');
+      setIsChecking(false);
+      setIsLoading(false);
+      
       // 添加错误通知
       addNotification({
         type: "error",
         title: "检查失败",
-        message: errorMessage,
+        message: "版本检查失败，请重试或检查网络连接",
         duration: 5000,
       });
-
+      
       // 采用降级处理，允许用户继续使用应用
       console.log('⚠️ 检查失败，采用降级处理，自动进入应用');
       setShowEnterButton(true);
@@ -554,8 +606,40 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       isChecking,
       checkResult: !!checkResult,
       showEnterButton,
-      hasUpdateInfo: !!checkResult?.updateInfo
+      hasUpdateInfo: !!checkResult?.updateInfo,
+      isExiting,
+      exitCountdown,
+      retryCount,
+      isAutoRetrying
     });
+
+    // 退出倒计时状态
+    if (isExiting && exitCountdown > 0) {
+      return (
+        <>
+          <div className={styles.header}>
+            <Warning24Filled style={{ color: '#d83b01', fontSize: '48px' }} />
+            <Title3>版本检查失败</Title3>
+          </div>
+
+          <div className={styles.progressSection}>
+            <Text className={styles.progressText} style={{ color: '#d83b01', fontWeight: 'bold' }}>
+              应用将在 {exitCountdown} 秒后退出
+            </Text>
+            <ProgressBar 
+              value={(5 - exitCountdown) / 5} 
+              color="error"
+            />
+          </div>
+          
+          <div className={styles.statusSection}>
+            <MessageBar intent="error">
+              版本检查多次失败，请检查网络连接后重试
+            </MessageBar>
+          </div>
+        </>
+      );
+    }
 
     if (isLoading || isChecking) {
       return (
@@ -568,10 +652,20 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
           <div className={styles.progressSection}>
             <Text className={styles.progressText}>{statusMessage}</Text>
             <ProgressBar value={progress / 100} />
+            
+            {/* 显示重试信息 */}
+            {retryCount > 0 && (
+              <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                <Badge 
+                  appearance="ghost" 
+                  color={isAutoRetrying ? "warning" : "important"}
+                  size="small"
+                >
+                  {isAutoRetrying ? `正在重试... (${retryCount}/3)` : `已重试 ${retryCount} 次`}
+                </Badge>
+              </div>
+            )}
           </div>
-
-
-
         </>
       );
     }
@@ -619,7 +713,6 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
                 </Body1>
               )}
 
-
               {/* 下载按钮区域 */}
               <div className={styles.actionSection} style={{ marginTop: '16px' }}>
                 {checkResult.updateInfo.downloadLinks?.official ? (
@@ -639,9 +732,6 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
               </div>
             </div>
           )}
-
-
-
         </>
       );
     }

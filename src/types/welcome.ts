@@ -47,7 +47,6 @@ export interface ActivationCode {
 export interface ProductInfo {
   name: string;
   version: string;
-  features: string[];
 }
 
 // API验证请求

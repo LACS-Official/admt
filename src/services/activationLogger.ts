@@ -212,7 +212,6 @@ export class ActivationLogger {
   public logActivationSuccess(response: any): void {
     this.info('ACTIVATION', '激活成功', {
       status: response.status,
-      features: response.features,
       expiryDate: response.expiryDate,
       hasApiValidation: !!response.apiValidation,
     });

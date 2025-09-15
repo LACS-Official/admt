@@ -991,6 +991,18 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
     Ok(serde_json::Value::Object(diagnosis.into_iter().collect()))
 }
 
+/// 退出应用
+#[tauri::command]
+pub async fn exit_app(exit_code: i32) -> Result<()> {
+    log::info!("应用退出请求，退出码: {}", exit_code);
+    
+    // 给一些时间让前端接收到响应
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    
+    // 退出应用
+    std::process::exit(exit_code);
+}
+
 /// 检查Fastboot可用性
 #[tauri::command]
 pub async fn check_fastboot_availability() -> Result<CommandResult> {
@@ -1803,6 +1815,95 @@ pub async fn cleanup_downloads(older_than_days: u64) -> Result<u64> {
 
 // ==================== 投屏相关命令 ====================
 
+/// 诊断scrcpy安装和配置
+#[tauri::command]
+pub async fn diagnose_scrcpy() -> Result<serde_json::Value> {
+    log::info!("Diagnosing scrcpy installation...");
+    
+    let mut diagnosis = serde_json::Map::new();
+    
+    // 1. 检查scrcpy路径
+    match find_scrcpy_executable() {
+        Ok(path) => {
+            diagnosis.insert("scrcpy_found".to_string(), serde_json::Value::Bool(true));
+            diagnosis.insert("scrcpy_path".to_string(), serde_json::Value::String(path.clone()));
+            
+            // 检查文件是否真的存在
+            let exists = std::path::Path::new(&path).exists();
+            diagnosis.insert("scrcpy_exists".to_string(), serde_json::Value::Bool(exists));
+            
+            // 如果存在，检查文件大小
+            if exists {
+                if let Ok(metadata) = std::fs::metadata(&path) {
+                    diagnosis.insert("scrcpy_size".to_string(), serde_json::Value::Number(serde_json::Number::from(metadata.len())));
+                }
+                
+                // 检查依赖文件
+                if let Some(parent_dir) = std::path::Path::new(&path).parent() {
+                    let required_files = ["scrcpy-server", "adb.exe", "SDL2.dll", "avcodec-61.dll"];
+                    let mut dependencies = serde_json::Map::new();
+                    
+                    for file in &required_files {
+                        let file_path = parent_dir.join(file);
+                        dependencies.insert(file.to_string(), serde_json::Value::Bool(file_path.exists()));
+                    }
+                    
+                    diagnosis.insert("dependencies".to_string(), serde_json::Value::Object(dependencies));
+                }
+            }
+        }
+        Err(e) => {
+            diagnosis.insert("scrcpy_found".to_string(), serde_json::Value::Bool(false));
+            diagnosis.insert("error".to_string(), serde_json::Value::String(format!("{}", e)));
+        }
+    }
+    
+    // 2. 检查当前可执行文件路径
+    if let Ok(exe_path) = std::env::current_exe() {
+        diagnosis.insert("current_exe".to_string(), serde_json::Value::String(exe_path.to_string_lossy().to_string()));
+        
+        if let Some(exe_dir) = exe_path.parent() {
+            diagnosis.insert("exe_directory".to_string(), serde_json::Value::String(exe_dir.to_string_lossy().to_string()));
+            
+            // 列出可执行文件目录下的tools相关文件
+            let tools_dir = exe_dir.join("tools");
+            if tools_dir.exists() {
+                if let Ok(entries) = std::fs::read_dir(&tools_dir) {
+                    let mut tools_content = Vec::new();
+                    for entry in entries {
+                        if let Ok(entry) = entry {
+                            tools_content.push(serde_json::Value::String(entry.file_name().to_string_lossy().to_string()));
+                        }
+                    }
+                    diagnosis.insert("tools_directory_content".to_string(), serde_json::Value::Array(tools_content));
+                }
+            }
+        }
+    }
+    
+    // 3. 检查系统PATH中的scrcpy
+    let mut cmd = std::process::Command::new("where");
+    cmd.arg("scrcpy");
+    
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    
+    if let Ok(output) = cmd.output() {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            diagnosis.insert("system_scrcpy".to_string(), serde_json::Value::String(path));
+        } else {
+            diagnosis.insert("system_scrcpy".to_string(), serde_json::Value::Null);
+        }
+    }
+    
+    Ok(serde_json::Value::Object(diagnosis))
+}
+
 /// 检查设备是否支持投屏
 #[tauri::command]
 pub async fn check_screen_mirror_support(device_serial: String) -> Result<ScreenMirrorDevice> {
@@ -2091,12 +2192,42 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
 
     // 检查scrcpy是否可用
     let scrcpy_path = find_scrcpy_executable()?;
-
+    log::info!("Using scrcpy path: {}", scrcpy_path);
     log::info!("Starting scrcpy with args: {:?}", args);
+
+    // 检查scrcpy文件是否存在
+    let scrcpy_file = std::path::Path::new(&scrcpy_path);
+    if !scrcpy_file.exists() {
+        let error_msg = format!("scrcpy executable not found at: {}", scrcpy_path);
+        log::error!("{}", error_msg);
+        return Err(HoutError::Tool(error_msg));
+    }
+
+    // 检查scrcpy所在目录的相关文件
+    if let Some(parent_dir) = scrcpy_file.parent() {
+        log::info!("scrcpy directory: {}", parent_dir.display());
+        
+        // 检查必要的依赖文件
+        let required_files = ["scrcpy-server", "adb.exe"];
+        for file in &required_files {
+            let file_path = parent_dir.join(file);
+            if !file_path.exists() {
+                log::warn!("Missing dependency file: {}", file_path.display());
+            } else {
+                log::info!("Found dependency: {}", file_path.display());
+            }
+        }
+    }
 
     // 启动进程
     let mut cmd = Command::new(&scrcpy_path);
     cmd.args(args);
+
+    // 设置工作目录为scrcpy所在目录，确保可以找到依赖文件
+    if let Some(parent_dir) = scrcpy_file.parent() {
+        cmd.current_dir(parent_dir);
+        log::info!("Set working directory to: {}", parent_dir.display());
+    }
 
     // 在Windows上隐藏命令行窗口
     #[cfg(windows)]
@@ -2109,12 +2240,21 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
     match cmd.spawn() {
         Ok(child) => {
             let pid = child.id();
-            log::info!("scrcpy process started with PID: {}", pid);
+            log::info!("scrcpy process started successfully with PID: {}", pid);
             Ok(pid)
         }
         Err(e) => {
-            log::error!("Failed to start scrcpy process: {}", e);
-            Err(HoutError::Process(format!("Failed to start scrcpy: {}", e)))
+            let error_msg = format!("Failed to start scrcpy process: {}. Path: {}", e, scrcpy_path);
+            log::error!("{}", error_msg);
+            
+            // 提供更详细的错误信息
+            if e.kind() == std::io::ErrorKind::NotFound {
+                return Err(HoutError::Tool(format!("scrcpy executable not found or cannot be executed: {}", scrcpy_path)));
+            } else if e.kind() == std::io::ErrorKind::PermissionDenied {
+                return Err(HoutError::Tool(format!("Permission denied when trying to execute scrcpy: {}", scrcpy_path)));
+            }
+            
+            Err(HoutError::Process(error_msg))
         }
     }
 }
@@ -2943,23 +3083,36 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
 fn find_scrcpy_executable() -> Result<String> {
     log::info!("Searching for scrcpy executable...");
 
-    // 1. 优先检查项目根目录下的 scrcpy
-    if let Ok(project_scrcpy_path) = find_project_scrcpy() {
-        log::info!("Found scrcpy in project directory: {}", project_scrcpy_path);
-        return Ok(project_scrcpy_path);
-    }
-
-    // 2. 检查应用程序资源目录
+    // 1. 检查应用程序资源目录（发布版本优先）
     let exe_dir = std::env::current_exe()
         .map_err(|e| HoutError::Io(format!("Failed to get executable directory: {}", e)))?
         .parent()
         .ok_or_else(|| HoutError::Io("Failed to get parent directory".to_string()))?
         .to_path_buf();
 
-    let scrcpy_path = exe_dir.join("scrcpy.exe");
-    if scrcpy_path.exists() {
-        log::info!("Found scrcpy in executable directory: {}", scrcpy_path.display());
-        return Ok(scrcpy_path.to_string_lossy().to_string());
+    // 发布版本中，scrcpy在应用程序根目录的tools/scrcpy-win32-v3.3.1/目录下
+    let scrcpy_resource_paths = [
+        // 直接在可执行文件目录
+        exe_dir.join("scrcpy.exe"),
+        // 在tools目录下
+        exe_dir.join("tools").join("scrcpy.exe"),
+        // 在tools/scrcpy-win32-v3.3.1目录下（主要路径）
+        exe_dir.join("tools").join("scrcpy-win32-v3.3.1").join("scrcpy.exe"),
+        // 在scrcpy-win32-v3.3.1目录下
+        exe_dir.join("scrcpy-win32-v3.3.1").join("scrcpy.exe"),
+    ];
+
+    for scrcpy_path in &scrcpy_resource_paths {
+        if scrcpy_path.exists() {
+            log::info!("Found scrcpy in resource directory: {}", scrcpy_path.display());
+            return Ok(scrcpy_path.to_string_lossy().to_string());
+        }
+    }
+
+    // 2. 检查项目根目录下的 scrcpy（开发模式）
+    if let Ok(project_scrcpy_path) = find_project_scrcpy() {
+        log::info!("Found scrcpy in project directory: {}", project_scrcpy_path);
+        return Ok(project_scrcpy_path);
     }
 
     // 3. 最后检查系统PATH中是否有scrcpy

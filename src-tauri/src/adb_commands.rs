@@ -3,6 +3,10 @@ use std::process::Command;
 use serde::{Deserialize, Serialize};
 use crate::error::{HoutError, Result};
 
+// Windows平台特有导入
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdbToolsInfo {
@@ -203,20 +207,40 @@ pub async fn execute_adb_command_with_path(
     log::debug!("Executing ADB command: {:?} {:?}", adb_path, cmd_args);
 
     // 执行命令
-    let mut cmd = Command::new(adb_path);
-    cmd.args(&cmd_args);
+    let mut cmd = tokio::process::Command::new(adb_path);
+    cmd.args(&cmd_args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    // 在发布版中隐藏控制台窗口，在调试版中保持可见
+    #[cfg(all(windows, not(debug_assertions)))]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        log::debug!("ADB命令设置隐藏窗口 (发布版): {}", adb_path.display());
+    }
+
+    // 在调试版中保持窗口可见以便调试
+    #[cfg(all(windows, debug_assertions))]
+    {
+        log::debug!("ADB命令保持窗口可见 (调试版): {}", adb_path.display());
+    }
+
+    // 非Windows平台的处理
+    #[cfg(not(windows))]
+    {
+        log::debug!("ADB命令在非Windows平台执行: {}", adb_path.display());
+    }
 
     // 设置超时
     let timeout_duration = std::time::Duration::from_secs(timeout.unwrap_or(30));
     
-    // 使用tokio执行命令（需要添加适当的异步处理）
-    let output = tokio::time::timeout(timeout_duration, tokio::task::spawn_blocking(move || {
-        cmd.output()
-    }))
-    .await
-    .map_err(|_| HoutError::Command("命令执行超时".to_string()))?
-    .map_err(|e| HoutError::Command(format!("命令执行任务失败: {}", e)))?
-    .map_err(|e| HoutError::Command(format!("ADB命令执行失败: {}", e)))?;
+    // 使用tokio执行命令
+    let output = tokio::time::timeout(timeout_duration, cmd.output())
+        .await
+        .map_err(|_| HoutError::Command("命令执行超时".to_string()))?
+        .map_err(|e| HoutError::Command(format!("ADB命令执行失败: {}", e)))?;
 
     let success = output.status.success();
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -261,20 +285,40 @@ pub async fn execute_fastboot_command_with_path(
     log::debug!("Executing Fastboot command: {:?} {:?}", fastboot_path, cmd_args);
 
     // 执行命令
-    let mut cmd = Command::new(fastboot_path);
-    cmd.args(&cmd_args);
+    let mut cmd = tokio::process::Command::new(fastboot_path);
+    cmd.args(&cmd_args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    // 在发布版中隐藏控制台窗口，在调试版中保持可见
+    #[cfg(all(windows, not(debug_assertions)))]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        log::debug!("Fastboot命令设置隐藏窗口 (发布版): {}", fastboot_path.display());
+    }
+
+    // 在调试版中保持窗口可见以便调试
+    #[cfg(all(windows, debug_assertions))]
+    {
+        log::debug!("Fastboot命令保持窗口可见 (调试版): {}", fastboot_path.display());
+    }
+
+    // 非Windows平台的处理
+    #[cfg(not(windows))]
+    {
+        log::debug!("Fastboot命令在非Windows平台执行: {}", fastboot_path.display());
+    }
 
     // 设置超时
     let timeout_duration = std::time::Duration::from_secs(timeout.unwrap_or(30));
     
     // 使用tokio执行命令
-    let output = tokio::time::timeout(timeout_duration, tokio::task::spawn_blocking(move || {
-        cmd.output()
-    }))
-    .await
-    .map_err(|_| HoutError::Command("命令执行超时".to_string()))?
-    .map_err(|e| HoutError::Command(format!("命令执行任务失败: {}", e)))?
-    .map_err(|e| HoutError::Command(format!("Fastboot命令执行失败: {}", e)))?;
+    let output = tokio::time::timeout(timeout_duration, cmd.output())
+        .await
+        .map_err(|_| HoutError::Command("命令执行超时".to_string()))?
+        .map_err(|e| HoutError::Command(format!("Fastboot命令执行失败: {}", e)))?;
 
     let success = output.status.success();
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();

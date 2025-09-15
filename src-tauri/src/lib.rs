@@ -61,6 +61,7 @@ pub fn run() {
             get_downloads_directory,
             cleanup_downloads,
             check_screen_mirror_support,
+            diagnose_scrcpy,
             start_screen_mirror,
             stop_screen_mirror,
             validate_activation_code_format,
@@ -131,7 +132,8 @@ pub fn run() {
             system_features::disable_auto_start,
             system_features::is_auto_start_supported,
             system_features::get_auto_start_config,
-            system_features::validate_auto_start
+            system_features::validate_auto_start,
+            exit_app
         ])
         .setup(|app| {
             // 只在调试模式下初始化日志插件

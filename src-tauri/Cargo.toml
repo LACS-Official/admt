@@ -1,6 +1,6 @@
 [package]
 name = "admt-lacs"
-version = "1.0.0"
+version = "1.0.1"
 description = "Android设备跨平台全能管家"
 authors = ["领创工作室"]
 license = "MIT"
@@ -45,3 +45,6 @@ hostname = "0.3"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"
+
+# Windows平台特有依赖，用于进程控制
+winapi = { version = "0.3", features = ["processthreadsapi", "winbase", "winuser"] }

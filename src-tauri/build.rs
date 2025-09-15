@@ -26,5 +26,26 @@ fn main() {
         println!("cargo:rustc-cfg=debug_build");
     }
     
+    // 在发布构建中自动启用隐藏控制台特性
+    if profile == "release" {
+        println!("cargo:rustc-cfg=hide_console");
+        println!("cargo:rustc-cfg=release_build");
+        println!("cargo:warning=Building in release mode with hidden console windows");
+    }
+    
+    // Windows平台特定配置
+    if cfg!(target_os = "windows") {
+        println!("cargo:rustc-link-lib=user32");
+        println!("cargo:rustc-link-lib=kernel32");
+        println!("cargo:rustc-cfg=windows_platform");
+    }
+    
+    // 设置环境变量区分开发/发布模式
+    if profile == "debug" {
+        println!("cargo:rustc-env=APP_MODE=development");
+    } else {
+        println!("cargo:rustc-env=APP_MODE=production");
+    }
+    
     tauri_build::build()
 }

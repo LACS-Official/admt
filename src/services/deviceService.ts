@@ -414,8 +414,62 @@ export class DeviceService {
 
     this.scanInterval = setInterval(scanDevicesInternal, interval);
 
-    // 立即执行一次扫描
-    scanDevicesInternal();
+    // 立即执行一次扫描，并处理启动前已连接的设备
+    this.initialDeviceScan();
+  }
+
+  /**
+   * 初始设备扫描，特别处理启动前已连接的设备
+   * 确保在软件启动前连接的设备也能发送连接统计数据
+   */
+  private async initialDeviceScan(): Promise<void> {
+    try {
+      console.log('🔍 执行初始设备扫描，检查启动前已连接的设备...');
+      logService.info('开始初始设备扫描', 'DeviceService');
+      
+      const devices = await this.scanDevices();
+      
+      // 更新设备列表
+      useDeviceStore.getState().setDevices(devices);
+      
+      // 特别处理：对所有已连接的设备记录连接统计
+      const connectedDevices = devices.filter(device => device.connected);
+      
+      if (connectedDevices.length > 0) {
+        console.log(`🔥 检测到 ${connectedDevices.length} 台启动前已连接的设备，开始记录连接统计...`);
+        logService.info(`检测到 ${connectedDevices.length} 台启动前已连接的设备`, 'DeviceService');
+        
+        // 为每个已连接的设备记录连接统计
+        for (const device of connectedDevices) {
+          try {
+            console.log(`📊 记录启动前连接设备: ${device.serial}`);
+            await this.recordDeviceConnection(device, true); // 标记为启动扫描
+          } catch (error) {
+            console.warn(`记录设备连接统计失败: ${device.serial}`, error);
+            logService.warning(`记录设备连接统计失败: ${device.serial}`, 'DeviceService', error);
+          }
+        }
+        
+        console.log('✅ 启动前已连接设备的连接统计记录完成');
+        logService.info('启动前已连接设备的连接统计记录完成', 'DeviceService');
+      } else {
+        console.log('📋 未检测到启动前已连接的设备');
+        logService.info('未检测到启动前已连接的设备', 'DeviceService');
+      }
+      
+    } catch (error) {
+      console.error('初始设备扫描失败:', error);
+      logService.error('初始设备扫描失败', 'DeviceService', error);
+      
+      // 初始扫描失败不应阻止应用正常运行，继续执行常规扫描
+      try {
+        const devices = await this.scanDevices();
+        useDeviceStore.getState().setDevices(devices);
+      } catch (fallbackError) {
+        console.error('备用设备扫描也失败:', fallbackError);
+        logService.error('备用设备扫描也失败', 'DeviceService', fallbackError);
+      }
+    }
   }
 
   stopScanning(): void {
@@ -494,9 +548,10 @@ export class DeviceService {
   /**
    * 记录设备连接
    */
-  private async recordDeviceConnection(device: DeviceInfo): Promise<void> {
+  private async recordDeviceConnection(device: DeviceInfo, isStartupScan: boolean = false): Promise<void> {
     try {
-      console.log('记录设备连接:', device.serial);
+      const scanType = isStartupScan ? '启动前连接' : '运行时连接';
+      console.log(`记录设备连接 (${scanType}):`, device.serial);
 
       // 获取设备详细属性
       let properties: DeviceProperties | undefined;
@@ -525,7 +580,8 @@ export class DeviceService {
           brand: properties?.brand,
           androidVersion: properties?.androidVersion,
           buildNumber: properties?.buildUser,
-          connectionType: device.mode === 'fastboot' ? 'Fastboot' : 'ADB'
+          connectionType: device.mode === 'fastboot' ? 'Fastboot' : 'ADB',
+          scanType // 添加扫描类型信息
         }
       });
 
@@ -538,7 +594,7 @@ export class DeviceService {
       };
 
       await deviceConnectionTrackingService.recordDeviceConnection(connectionData);
-      console.log('设备连接统计已记录:', device.serial);
+      console.log(`设备连接统计已记录 (${scanType}):`, device.serial);
     } catch (error) {
       console.error('记录设备连接失败:', error);
       enhancedLogService.logError(

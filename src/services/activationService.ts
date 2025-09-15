@@ -244,7 +244,7 @@ export class ActivationService {
         await this.saveActivationData({
           activationCode: request.activationCode,
           expiryDate: expiryDate,
-          features: response.features || [],
+          features: [],
           userConfig: request.userConfig,
           apiValidation: response.apiValidation // 保存完整的API验证信息
         });
