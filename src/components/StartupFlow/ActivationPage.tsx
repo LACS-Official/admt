@@ -3,7 +3,7 @@
  * 用户输入激活码并进行验证
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   makeStyles,
   Text,
@@ -19,14 +19,18 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Badge,
+  MessageBar,
 } from '@fluentui/react-components';
 import {
   Checkmark24Regular,
   Dismiss24Regular,
+  Warning24Filled,
 } from '@fluentui/react-icons';
 import { useWelcomeStore, useAppConfigStore } from '../../stores/welcomeStore';
 import { useStartupFlowStore } from '../../stores/startupFlowStore';
 import { activationService } from '../../services/activationService';
+import { apiErrorHandler } from '../../services/errorHandlerService';
 import { ActivationStatus } from '../../types/welcome';
 
 const useStyles = makeStyles({
@@ -323,9 +327,35 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     type: 'success' | 'error';
     details?: string;
   } | null>(null);
+  
+  // 错误处理状态
+  const [retryCount, setRetryCount] = useState(0);
+  const [isExiting, setIsExiting] = useState(false);
+  const [exitCountdown, setExitCountdown] = useState(0);
+  const [isAutoRetrying, setIsAutoRetrying] = useState(false);
+
+  // 防抖和重复输入控制
+  const inputTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastInputValueRef = useRef<string[]>(new Array(8).fill(''));
+  const isProcessingInputRef = useRef(false);
 
   // 清除自动保存的输入内容
   useEffect(() => {
+    // 设置错误处理服务的倒计时回调
+    apiErrorHandler.setCountdownCallback((seconds: number) => {
+      setExitCountdown(seconds);
+      if (seconds > 0) {
+        setIsExiting(true);
+        setDialogContent({
+          title: "激活失败",
+          message: `激活验证失败，应用将在 ${seconds} 秒后退出`,
+          type: "error",
+          details: "多次尝试失败，请检查激活码或网络连接"
+        });
+        setShowResultDialog(true);
+      }
+    });
+    
     // 页面加载时清空所有激活码输入框
     const clearInputs = () => {
       for (let i = 0; i < 8; i++) {
@@ -378,78 +408,140 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
       window.removeEventListener('beforeunload', handleBeforeUnload);
       // 组件卸载时清空激活码
       setActivationCode('');
+      // 取消计划的退出
+      apiErrorHandler.cancelScheduledExit();
+      // 清理防抖定时器
+      if (inputTimeoutRef.current) {
+        clearTimeout(inputTimeoutRef.current);
+      }
+      // 重置处理标志
+      isProcessingInputRef.current = false;
     };
   }, [setActivationCode]);
 
-  // 处理激活码输入
-  const handleActivationCodeChange = (value: string, index?: number) => {
-    // 清除输入框的自动保存属性
-    if (index !== undefined) {
-      const input = document.getElementById(`activation-code-${index}`) as HTMLInputElement;
-      if (input) {
-        // 重新设置随机name属性防止浏览器记忆
-        input.name = `temp-activation-${index}-${Math.random().toString(36).substr(2, 9)}`;
-        // 确保不会被自动保存
-        input.setAttribute('autocomplete', 'new-password');
-      }
-    }
-
-    // 如果是通过单个输入框输入
-    if (index !== undefined) {
-      const newCode = activationCode.split('');
-      newCode[index] = value.toUpperCase();
-      const formattedValue = newCode.join('').slice(0, 8);
-      setActivationCode(formattedValue);
-      
-      // 自动聚焦到下一个输入框
-      if (value && index < 7) {
-        const nextInput = document.getElementById(`activation-code-${index + 1}`);
-        if (nextInput) {
-          (nextInput as HTMLInputElement).focus();
-        }
-      }
-    } else {
-      // 如果是通过粘贴或其他方式输入
-      const formattedValue = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-      setActivationCode(formattedValue);
-      
-      // 聚焦到最后一个非空输入框或第一个空输入框
-      const length = formattedValue.length;
-      if (length > 0 && length < 8) {
-        const nextInput = document.getElementById(`activation-code-${length}`);
-        if (nextInput) {
-          (nextInput as HTMLInputElement).focus();
-        }
-      } else if (length === 8) {
-        const lastInput = document.getElementById(`activation-code-7`);
-        if (lastInput) {
-          (lastInput as HTMLInputElement).focus();
-        }
-      }
+  // 处理激活码输入 - 使用防抖和严格的重复检查
+  const handleActivationCodeChange = useCallback((value: string, index?: number) => {
+    // 防止并发处理
+    if (isProcessingInputRef.current) {
+      return;
     }
     
-    // 清除之前的验证结果
-    if (validationResult) {
-      setValidationResult(null);
-    }
+    isProcessingInputRef.current = true;
     
-    // 清除错误状态
-    if (error) {
-      setError(null);
-    }
-
-    // 防止浏览器保存输入历史
-    setTimeout(() => {
-      // 清除所有输入框的可能缓存
-      for (let i = 0; i < 8; i++) {
-        const input = document.getElementById(`activation-code-${i}`) as HTMLInputElement;
+    try {
+      // 防止重复触发 - 只处理单个字符
+      const sanitizedValue = value.slice(-1).toUpperCase().replace(/[^A-Z0-9]/g, '');
+      
+      // 清除输入框的自动保存属性
+      if (index !== undefined) {
+        const input = document.getElementById(`activation-code-${index}`) as HTMLInputElement;
         if (input) {
+          // 防止双倍输入：检查是否与上次输入值相同
+          if (lastInputValueRef.current[index] === sanitizedValue) {
+            return;
+          }
+          
+          // 防止双倍输入：如果输入框当前值已经是目标值，则不处理
+          if (input.value === sanitizedValue && sanitizedValue !== '') {
+            return;
+          }
+          
+          // 更新最后输入值记录
+          lastInputValueRef.current[index] = sanitizedValue;
+          
+          // 重新设置随机name属性防止浏览器记忆
+          input.name = `temp-activation-${index}-${Math.random().toString(36).substr(2, 9)}`;
+          // 确保不会被自动保存
           input.setAttribute('autocomplete', 'new-password');
-          input.name = `temp-activation-${i}-${Math.random().toString(36).substr(2, 9)}`;
         }
       }
-    }, 100);
-  };
+
+      // 清除之前的超时
+      if (inputTimeoutRef.current) {
+        clearTimeout(inputTimeoutRef.current);
+      }
+
+      // 使用防抖处理输入
+      inputTimeoutRef.current = setTimeout(() => {
+        // 如果是通过单个输入框输入
+        if (index !== undefined) {
+          const newCode = activationCode.split('');
+          newCode[index] = sanitizedValue;
+          const formattedValue = newCode.join('').slice(0, 8);
+          
+          // 防止重复更新相同的值
+          if (formattedValue === activationCode) {
+            return;
+          }
+          
+          setActivationCode(formattedValue);
+          
+          // 自动聚焦到下一个输入框
+          if (sanitizedValue && index < 7) {
+            setTimeout(() => {
+              const nextInput = document.getElementById(`activation-code-${index + 1}`);
+              if (nextInput) {
+                (nextInput as HTMLInputElement).focus();
+              }
+            }, 50);
+          }
+        } else {
+          // 如果是通过粘贴或其他方式输入
+          const formattedValue = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+          
+          // 防止重复更新相同的值
+          if (formattedValue === activationCode) {
+            return;
+          }
+          
+          setActivationCode(formattedValue);
+          
+          // 聚焦到最后一个非空输入框或第一个空输入框
+          setTimeout(() => {
+            const length = formattedValue.length;
+            if (length > 0 && length < 8) {
+              const nextInput = document.getElementById(`activation-code-${length}`);
+              if (nextInput) {
+                (nextInput as HTMLInputElement).focus();
+              }
+            } else if (length === 8) {
+              const lastInput = document.getElementById(`activation-code-7`);
+              if (lastInput) {
+                (lastInput as HTMLInputElement).focus();
+              }
+            }
+          }, 50);
+        }
+        
+        // 清除之前的验证结果
+        if (validationResult) {
+          setValidationResult(null);
+        }
+        
+        // 清除错误状态
+        if (error) {
+          setError(null);
+        }
+
+        // 防止浏览器保存输入历史
+        setTimeout(() => {
+          // 清除所有输入框的可能缓存
+          for (let i = 0; i < 8; i++) {
+            const input = document.getElementById(`activation-code-${i}`) as HTMLInputElement;
+            if (input) {
+              input.setAttribute('autocomplete', 'new-password');
+              input.name = `temp-activation-${i}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+          }
+        }, 100);
+      }, 50); // 50ms 防抖延迟
+    } finally {
+      // 延迟重置处理标志
+      setTimeout(() => {
+        isProcessingInputRef.current = false;
+      }, 100);
+    }
+  }, [activationCode, validationResult, error, setActivationCode, setValidationResult, setError]);
 
   // 处理粘贴事件
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, _index: number) => {
@@ -484,6 +576,22 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
 
   // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    // 允许的按键：字母、数字、退格、删除、Tab、方向键等
+    const allowedKeys = [
+      'Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 
+      'ArrowUp', 'ArrowDown', 'Home', 'End'
+    ];
+    
+    // 检查是否是字母或数字
+    const isAlphaNumeric = /^[A-Za-z0-9]$/.test(e.key);
+    
+    // 如果不是允许的按键且不是字母数字，阻止输入
+    if (!allowedKeys.includes(e.key) && !isAlphaNumeric) {
+      e.preventDefault();
+      return;
+    }
+    
+    // 处理退格键逻辑
     if (e.key === 'Backspace' && !activationCode[index] && index > 0) {
       const prevInput = document.getElementById(`activation-code-${index - 1}`);
       if (prevInput) {
@@ -493,7 +601,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
   };
 
   // 执行激活
-  const handleActivate = async () => {
+  const handleActivate = async (currentRetryCount: number = 0) => {
     if (!activationCode.trim()) {
       // 显示错误弹窗
       setDialogContent({
@@ -508,6 +616,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
 
     setLoading(true);
     setActivationStatus(ActivationStatus.ACTIVATING);
+    setRetryCount(currentRetryCount);
 
     try {
       // 使用激活服务
@@ -529,6 +638,11 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
       });
 
       if (response.success) {
+        // 重置重试计数器
+        apiErrorHandler.resetRetryCounters();
+        setRetryCount(0);
+        setIsAutoRetrying(false);
+        
         // 更新欢迎页面状态
         setActivationStatus(ActivationStatus.ACTIVATED);
         setError(null);
@@ -549,7 +663,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
           activationStatus: ActivationStatus.ACTIVATED,
           activationDate: new Date(),
           expiryDate,
-          features: response.features || [],
+          features: [],
           userConfig: {
             username: 'ADMT用户',
             language: 'zh-CN',
@@ -581,7 +695,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
           title: "激活成功",
           message: response.message || '激活成功！',
           type: "success",
-          details: response.features ? `已激活功能: ${response.features.join(', ')}` : undefined
+          details: undefined
         });
         setShowResultDialog(true);
 
@@ -590,26 +704,68 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
           onSuccess(response);
         }
       } else {
-        setActivationStatus(ActivationStatus.ACTIVATION_FAILED);
-        setError(response.message || '激活失败，请检查激活码是否正确');
-
-        // 显示失败弹窗
-        setDialogContent({
-          title: "激活失败",
-          message: response.message || '激活失败',
-          type: "error",
-          details: "请检查激活码是否正确，或检查网络连接后重试"
-        });
-        setShowResultDialog(true);
-
-        // 不调用错误回调，避免触发上层的错误处理导致页面跳转或应用退出
-        // 错误信息已经在当前页面显示，用户可以重试
-        console.log('❌ 激活失败，错误信息已在页面显示，用户可重试');
+        // 激活失败，使用错误处理服务
+        const error = new Error(response.message || '激活失败');
+        await handleActivationError(error, currentRetryCount);
       }
     } catch (error) {
       console.error('激活过程中发生错误:', error);
+      await handleActivationError(error as Error, currentRetryCount);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // 按钮点击处理器
+  const handleActivateClick = () => {
+    handleActivate(0);
+  };
+  
+  // 处理激活错误
+  const handleActivationError = async (error: Error, currentRetryCount: number): Promise<void> => {
+    try {
+      const handlingResult = await apiErrorHandler.handleActivationError(error);
+      
+      setRetryCount(apiErrorHandler.getRetryStatus().activationCount);
       setActivationStatus(ActivationStatus.ACTIVATION_FAILED);
-      const errorMessage = error instanceof Error ? error.message : '网络错误，请稍后重试';
+      setError(handlingResult.userMessage);
+      
+      if (handlingResult.shouldExit) {
+        setIsExiting(true);
+        // 已由 apiErrorHandler 安排退出，对话框将通过倒计时回调显示
+        return;
+      }
+      
+      if (handlingResult.shouldRetry) {
+        setIsAutoRetrying(true);
+        setError(`${handlingResult.userMessage}，${handlingResult.retryDelay / 1000}秒后重试...`);
+        
+        setTimeout(async () => {
+          try {
+            await handleActivate(apiErrorHandler.getRetryStatus().activationCount);
+          } catch (retryError) {
+            await handleActivationError(retryError as Error, apiErrorHandler.getRetryStatus().activationCount);
+          }
+        }, handlingResult.retryDelay);
+        
+        return;
+      }
+      
+      // 不可重试的错误，显示错误弹窗
+      setDialogContent({
+        title: "激活失败",
+        message: handlingResult.userMessage,
+        type: "error",
+        details: "请检查激活码是否正确，或检查网络连接后重试"
+      });
+      setShowResultDialog(true);
+      
+    } catch (handlerError) {
+      console.error('错误处理器失败:', handlerError);
+      
+      // 降级处理
+      setActivationStatus(ActivationStatus.ACTIVATION_FAILED);
+      const errorMessage = error?.message || '网络错误，请稍后重试';
       setError(errorMessage);
 
       // 显示错误弹窗
@@ -617,15 +773,9 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
         title: "激活失败",
         message: "网络错误，请稍后重试",
         type: "error",
-        details: error instanceof Error ? error.message : '未知错误'
+        details: errorMessage
       });
       setShowResultDialog(true);
-
-      // 不调用错误回调，避免触发上层的错误处理导致页面跳转或应用退出
-      // 错误信息已经在当前页面显示，用户可以重试
-      console.log('❌ 激活过程中发生错误，错误信息已在页面显示，用户可重试');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -654,7 +804,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
   const handleDialogRevalidate = () => {
     setShowResultDialog(false);
     setDialogContent(null);
-    handleActivate();
+    handleActivate(0);
   };
 
   return (
@@ -728,9 +878,28 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
                     id={`activation-code-${index}`}
                     className={styles.activationCodeInput}
                     value={activationCode[index] || ''}
-                    onChange={(e) => handleActivationCodeChange(e.target.value, index)}
+                    onChange={(e) => {
+                      // 防止重复触发和双倍输入
+                      const newValue = e.target.value;
+                      if (newValue !== activationCode[index]) {
+                        handleActivationCodeChange(newValue, index);
+                      }
+                    }}
+                    onInput={(e) => {
+                      // 允许数字和字母输入，阻止其他字符
+                      const target = e.target as HTMLInputElement;
+                      const value = target.value.toUpperCase();
+                      const filteredValue = value.replace(/[^A-Z0-9]/g, '');
+                      if (value !== filteredValue) {
+                        target.value = filteredValue;
+                      }
+                    }}
                     onKeyDown={(e) => handleKeyDown(e, index)}
                     onPaste={(e) => handlePaste(e, index)}
+                    onFocus={(e) => {
+                      // 聚焦时选中所有内容，便于替换
+                      e.target.select();
+                    }}
                     maxLength={1}
                     placeholder={index === 0 ? "A" : 
                                index === 1 ? "B" : 
@@ -745,6 +914,8 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
+                    inputMode="text"
+                    pattern="[A-Za-z0-9]*"
                     data-form-type="other"
                     data-lpignore="true"
                     data-1p-ignore="true"
@@ -754,13 +925,61 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
                 ))}
               </div>
             </Field>
+            
+            {/* 重试状态显示 */}
+            {(retryCount > 0 || isAutoRetrying) && (
+              <MessageBar
+                intent={isAutoRetrying ? "info" : "warning"}
+                style={{ marginBottom: '12px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isAutoRetrying && <Spinner size="tiny" />}
+                  <Text size={200}>
+                    {isAutoRetrying 
+                      ? `正在自动重试激活验证... (${retryCount}/3)` 
+                      : `激活验证已重试 ${retryCount} 次`
+                    }
+                  </Text>
+                </div>
+              </MessageBar>
+            )}
+            
+            {/* 退出倒计时显示 */}
+            {isExiting && exitCountdown > 0 && (
+              <MessageBar
+                intent="error"
+                style={{ marginBottom: '12px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Warning24Filled style={{ color: 'var(--colorPaletteRedForeground1)' }} />
+                  <Text size={200}>
+                    激活验证失败，应用将在 {exitCountdown} 秒后自动退出
+                  </Text>
+                </div>
+              </MessageBar>
+            )}
+            
             <Button
               className={styles.validateButton}
-              onClick={handleActivate}
-              disabled={isLoading}
+              onClick={handleActivateClick}
+              disabled={isLoading || isAutoRetrying || isExiting}
               appearance="primary"
             >
-              {isLoading ? <Spinner /> : '验证激活码'}
+              {isLoading ? (
+                <>
+                  <Spinner size="tiny" style={{ marginRight: '4px' }} /> 
+                  验证中...
+                </>
+              ) : isAutoRetrying ? (
+                <>
+                  <Spinner size="tiny" style={{ marginRight: '4px' }} /> 
+                  自动重试中...
+                </>
+              ) : isExiting ? (
+                '正在退出...'
+              ) : (
+                '验证激活码'
+              )}
             </Button>
           </Card>
         </div>
@@ -798,19 +1017,38 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
             <DialogActions>
               {dialogContent?.type === 'error' ? (
                 <>
-                  <Button
-                    appearance="secondary"
-                    onClick={handleDialogRetry}
-                  >
-                    清空重试
-                  </Button>
-                  <Button
-                    appearance="primary"
-                    onClick={handleDialogRevalidate}
-                    disabled={!activationCode.trim() || isLoading}
-                  >
-                    重新验证
-                  </Button>
+                  {!isExiting ? (
+                    <>
+                      <Button
+                        appearance="secondary"
+                        onClick={handleDialogRetry}
+                        disabled={isAutoRetrying}
+                      >
+                        清空重试
+                      </Button>
+                      <Button
+                        appearance="primary"
+                        onClick={handleDialogRevalidate}
+                        disabled={!activationCode.trim() || isLoading || isAutoRetrying}
+                      >
+                        {isAutoRetrying ? (
+                          <>
+                            <Spinner size="tiny" style={{ marginRight: '4px' }} />
+                            自动重试中...
+                          </>
+                        ) : (
+                          '重新验证'
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      appearance="primary"
+                      disabled
+                    >
+                      {exitCountdown > 0 ? `${exitCountdown}秒后退出` : '正在退出...'}
+                    </Button>
+                  )}
                 </>
               ) : (
                 <Button
