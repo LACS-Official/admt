@@ -1,8 +1,8 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "buildNumber": 1,
-  "versionName": "1.0.1",
-  "releaseDate": "2025-09-14",
+  "versionName": "1.0.2",
+  "releaseDate": "2025-09-15",
   "description": "统一版本管理配置文件",
   "changelog": [
     "实现统一版本管理系统",
@@ -12,11 +12,11 @@
   ],
   "environments": {
     "development": {
-      "version": "1.0.1-dev",
+      "version": "1.0.2-dev",
       "enableDebug": true
     },
     "production": {
-      "version": "1.0.1",
+      "version": "1.0.2",
       "enableDebug": false
     }
   },

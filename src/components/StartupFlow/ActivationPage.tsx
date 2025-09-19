@@ -35,10 +35,11 @@ import { ActivationStatus } from '../../types/welcome';
 
 const useStyles = makeStyles({
   Image: { 
-    width: '400px',
-    height: '90%',
-    objectFit: 'cover',
+    width: '100%',
+    height: 'auto',
+    objectFit: 'contain',
     borderRadius: '8px',
+    maxHeight: '500px',
   },
   container: {
     display: 'flex',
@@ -49,6 +50,7 @@ const useStyles = makeStyles({
     padding: '16px', // 减少内边角距
     gap: '16px', // 减少间距
     overflow: 'hidden', // 防止内容溢出
+    minWidth: '500px',
   },
 
   // 上半部分 - 标题区域
@@ -68,15 +70,15 @@ const useStyles = makeStyles({
   title: {
     marginBottom: '4px', // 减少间距
     color: 'var(--colorNeutralForeground1)',
-    fontSize: '24px', // 稍微减小标题字体
+    fontSize: '28px', // 稍微减小标题字体
     fontWeight: 'bold',
     textAlign: 'center',
     flexGrow: 1,
-    
+    letterSpacing: '5px', // 增加每个字的横向间距
   },
   subtitle: {
     color: 'var(--colorNeutralForeground2)',
-    maxWidth: '600px',
+    maxWidth: '900px',
     margin: '0 auto',
     fontSize: '20px', // 减小字体
     lineHeight: '1.4', // 减少行高
@@ -108,6 +110,7 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: '10px', // 减少间距
+    alignItems: 'center',
   },
 
   // 左侧卡片样式
@@ -197,13 +200,14 @@ const useStyles = makeStyles({
     border: '1px solid var(--colorNeutralStroke2)',
     borderRadius: '8px', // 减小圆角
     boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1)', // 减小阴影
+    minWidth: '880px',
+    maxHeight: '150px',
   },
 
   activationInput: {
     fontFamily: 'monospace',
-    fontSize: '16px',
+    fontSize: '20px',
     textAlign: 'center',
-    textTransform: 'uppercase',
   },
 
   // 激活码输入框容器
@@ -212,18 +216,19 @@ const useStyles = makeStyles({
     gap: '8px',
     justifyContent: 'center',
     margin: '16px 0',
+    flexWrap: 'wrap',
+    minWidth: '400px',
   },
 
   // 单个激活码输入框
   activationCodeInput: {
-    width: '40px',
-    height: '50px',
+    width: '50px',
+    height: '60px',
     textAlign: 'center',
     fontSize: '20px',
     fontWeight: 'bold',
     borderRadius: '8px',
     border: '2px solid var(--colorNeutralStroke2)',
-    textTransform: 'uppercase',
     backgroundColor: 'var(--colorNeutralBackground1)',
     color: 'var(--colorNeutralForeground1)',
     '&:focus': {
@@ -232,12 +237,22 @@ const useStyles = makeStyles({
     },
     '&::placeholder': {
       color: 'var(--colorNeutralForeground4)',
-    }
+    },
+    '@media (max-width: 768px)': {
+      width: '35px',
+      height: '45px',
+      fontSize: '18px',
+    },
   },
 
   validateButton: {
     alignSelf: 'center',
     minWidth: '120px',
+    minHeight:'60px',
+    whiteSpace: 'nowrap',
+    borderRadius: '8px',
+    //居右显示
+    justifyContent: 'flex-end',
   },
 
   statusCard: {
@@ -419,8 +434,8 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     };
   }, [setActivationCode]);
 
-  // 处理激活码输入 - 使用防抖和严格的重复检查
-  const handleActivationCodeChange = useCallback((value: string, index?: number) => {
+  // 处理激活码输入 - 优化版本
+  const handleActivationCodeChange = useCallback((value: string, index: number) => {
     // 防止并发处理
     if (isProcessingInputRef.current) {
       return;
@@ -429,148 +444,74 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     isProcessingInputRef.current = true;
     
     try {
-      // 防止重复触发 - 只处理单个字符
-      const sanitizedValue = value.slice(-1).toUpperCase().replace(/[^A-Z0-9]/g, '');
+      // 过滤非字母数字字符，并将小写字母转换为大写
+      const sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       
-      // 清除输入框的自动保存属性
-      if (index !== undefined) {
-        const input = document.getElementById(`activation-code-${index}`) as HTMLInputElement;
-        if (input) {
-          // 防止双倍输入：检查是否与上次输入值相同
-          if (lastInputValueRef.current[index] === sanitizedValue) {
-            return;
-          }
-          
-          // 防止双倍输入：如果输入框当前值已经是目标值，则不处理
-          if (input.value === sanitizedValue && sanitizedValue !== '') {
-            return;
-          }
-          
-          // 更新最后输入值记录
-          lastInputValueRef.current[index] = sanitizedValue;
-          
-          // 重新设置随机name属性防止浏览器记忆
-          input.name = `temp-activation-${index}-${Math.random().toString(36).substr(2, 9)}`;
-          // 确保不会被自动保存
-          input.setAttribute('autocomplete', 'new-password');
-        }
+      // 如果没有有效字符，直接返回
+      if (!sanitizedValue) {
+        isProcessingInputRef.current = false;
+        return;
       }
-
-      // 清除之前的超时
-      if (inputTimeoutRef.current) {
-        clearTimeout(inputTimeoutRef.current);
-      }
-
-      // 使用防抖处理输入
-      inputTimeoutRef.current = setTimeout(() => {
-        // 如果是通过单个输入框输入
-        if (index !== undefined) {
-          const newCode = activationCode.split('');
-          newCode[index] = sanitizedValue;
-          const formattedValue = newCode.join('').slice(0, 8);
-          
-          // 防止重复更新相同的值
-          if (formattedValue === activationCode) {
-            return;
-          }
-          
-          setActivationCode(formattedValue);
-          
-          // 自动聚焦到下一个输入框
-          if (sanitizedValue && index < 7) {
-            setTimeout(() => {
-              const nextInput = document.getElementById(`activation-code-${index + 1}`);
-              if (nextInput) {
-                (nextInput as HTMLInputElement).focus();
-              }
-            }, 50);
-          }
-        } else {
-          // 如果是通过粘贴或其他方式输入
-          const formattedValue = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-          
-          // 防止重复更新相同的值
-          if (formattedValue === activationCode) {
-            return;
-          }
-          
-          setActivationCode(formattedValue);
-          
-          // 聚焦到最后一个非空输入框或第一个空输入框
-          setTimeout(() => {
-            const length = formattedValue.length;
-            if (length > 0 && length < 8) {
-              const nextInput = document.getElementById(`activation-code-${length}`);
-              if (nextInput) {
-                (nextInput as HTMLInputElement).focus();
-              }
-            } else if (length === 8) {
-              const lastInput = document.getElementById(`activation-code-7`);
-              if (lastInput) {
-                (lastInput as HTMLInputElement).focus();
-              }
-            }
-          }, 50);
-        }
-        
-        // 清除之前的验证结果
-        if (validationResult) {
-          setValidationResult(null);
-        }
-        
-        // 清除错误状态
-        if (error) {
-          setError(null);
-        }
-
-        // 防止浏览器保存输入历史
+      
+      // 获取第一个字符（我们只处理一个字符的输入）
+      const char = sanitizedValue[0];
+      
+      // 更新激活码状态
+      const newCode = activationCode.split('');
+      newCode[index] = char;
+      const formattedValue = newCode.join('');
+      
+      setActivationCode(formattedValue);
+      
+      // 自动聚焦到下一个输入框
+      if (index < 7) {
         setTimeout(() => {
-          // 清除所有输入框的可能缓存
-          for (let i = 0; i < 8; i++) {
-            const input = document.getElementById(`activation-code-${i}`) as HTMLInputElement;
-            if (input) {
-              input.setAttribute('autocomplete', 'new-password');
-              input.name = `temp-activation-${i}-${Math.random().toString(36).substr(2, 9)}`;
-            }
+          const nextInput = document.getElementById(`activation-code-${index + 1}`);
+          if (nextInput) {
+            (nextInput as HTMLInputElement).focus();
           }
-        }, 100);
-      }, 50); // 50ms 防抖延迟
+        }, 10);
+      }
+      
+      // 清除之前的验证结果和错误
+      if (validationResult) {
+        setValidationResult(null);
+      }
+      if (error) {
+        setError(null);
+      }
     } finally {
-      // 延迟重置处理标志
+      // 重置处理标志
       setTimeout(() => {
         isProcessingInputRef.current = false;
-      }, 100);
+      }, 50);
     }
   }, [activationCode, validationResult, error, setActivationCode, setValidationResult, setError]);
 
   // 处理粘贴事件
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, _index: number) => {
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>, index: number) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text/plain').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    const pastedData = e.clipboardData.getData('text/plain').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
     
     if (pastedData) {
-      setActivationCode(pastedData);
+      setActivationCode(pastedData.padEnd(8, ' ').slice(0, 8));
       
       // 填充所有输入框
-      for (let i = 0; i < Math.min(pastedData.length, 8); i++) {
+      for (let i = 0; i < 8; i++) {
         const input = document.getElementById(`activation-code-${i}`);
         if (input) {
-          (input as HTMLInputElement).value = pastedData[i];
+          (input as HTMLInputElement).value = i < pastedData.length ? pastedData[i] : '';
         }
       }
       
-      // 聚焦到最后一个输入框或最后一个字符位置
-      if (pastedData.length >= 8) {
-        const lastInput = document.getElementById(`activation-code-7`);
-        if (lastInput) {
-          (lastInput as HTMLInputElement).focus();
-        }
-      } else {
-        const nextInput = document.getElementById(`activation-code-${pastedData.length}`);
+      // 聚焦到最后一个输入框
+      setTimeout(() => {
+        const focusIndex = Math.min(pastedData.length, 7);
+        const nextInput = document.getElementById(`activation-code-${focusIndex}`);
         if (nextInput) {
           (nextInput as HTMLInputElement).focus();
         }
-      }
+      }, 10);
     }
   };
 
@@ -592,11 +533,44 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
     }
     
     // 处理退格键逻辑
-    if (e.key === 'Backspace' && !activationCode[index] && index > 0) {
-      const prevInput = document.getElementById(`activation-code-${index - 1}`);
-      if (prevInput) {
-        (prevInput as HTMLInputElement).focus();
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      // 如果当前输入框有内容，清空当前输入框
+      if (activationCode[index]) {
+        const newCode = activationCode.split('');
+        newCode[index] = '';
+        setActivationCode(newCode.join(''));
+      } 
+      // 如果当前输入框为空且不是第一个输入框，聚焦到前一个输入框
+      else if (index > 0) {
+        const prevInput = document.getElementById(`activation-code-${index - 1}`);
+        if (prevInput) {
+          (prevInput as HTMLInputElement).focus();
+          // 清空前一个输入框的内容
+          const newCode = activationCode.split('');
+          newCode[index - 1] = '';
+          setActivationCode(newCode.join(''));
+        }
       }
+    }
+    
+    // 处理删除键逻辑
+    if (e.key === 'Delete') {
+      e.preventDefault();
+      // 清除当前及后续位置的字符
+      const newCode = activationCode.split('');
+      for (let i = index; i < 8; i++) {
+        newCode[i] = '';
+      }
+      setActivationCode(newCode.join(''));
+    }
+  };
+
+  // 处理输入框点击事件，自动选中内容
+  const handleInputClick = (index: number) => {
+    const input = document.getElementById(`activation-code-${index}`) as HTMLInputElement;
+    if (input) {
+      input.select();
     }
   };
 
@@ -809,120 +783,89 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* 上半部分 - 页面标题区域 */}
-      <div className={styles.header}>
-        <Title1 className={styles.title}>
-          目前您还未激活/已过期，请按照步骤进行激活
-        </Title1>
-
-      </div>
-
       {/* 下半部分 - 上下两部分布局 */}
       <div className={styles.mainContent}>
         {/* 上部分 - 激活方法说明和帮助信息 */}
         <div className={styles.topSection}>
           {/* 激活步骤说明 */}
-          <Card className={styles.infoCard}>
-          <Body1 className={styles.subtitle}>
-        为了更好的维护和开发,也为了防范泛滥的盗卖，我们使用激活码来控制使用，激活码获取方式完全免费
-      </Body1>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <img
-                src="/wxgzh-qr.jpg"
-                alt="公众号二维码"
-                className={styles.qrCodeImage}
-              />
-                <img
-                src="/wxgzh-step2.jpg"
-                alt="公众号二维码2"
+            <img
+                src="/jhm.webp"
+                alt="激活码获取方式"
                 className={styles.Image}
               />
-              <div style={{ flex: 1 }}>
-                <ol className={styles.stepsList}>
-                  <li>
-                    <div className={styles.stepNumber}>1</div>
-                    <div className={styles.stepText}>
-                      扫描二维码关注公众号
-                    </div>
-                  </li>
-                  <li>
-                    <div className={styles.stepNumber}>2</div>
-                    <div className={styles.stepText}>
-                      点击菜单的"领创账号"，再点击"ADMT激活码"
-                    </div>
-                  </li>
-                  <li>
-                    <div className={styles.stepNumber}>3</div>
-                    <div className={styles.stepText}>
-                      根据提示获取激活码并在下方输入
-                    </div>
-                  </li>
-                </ol>
-                </div>
-              </div>
-
-            </div>
-          </Card>
 
         </div>
 
         {/* 下部分 - 激活功能区域 */}
         <div className={styles.bottomSection}>
           <Card className={styles.activationCard}>
-            <Field label="激活码" validationMessage={error}>
-              <div className={styles.activationCodeContainer}>
-                {Array.from({ length: 8 }).map((_, index) => (
-                  <input
-                    key={index}
-                    id={`activation-code-${index}`}
-                    className={styles.activationCodeInput}
-                    value={activationCode[index] || ''}
-                    onChange={(e) => {
-                      // 防止重复触发和双倍输入
-                      const newValue = e.target.value;
-                      if (newValue !== activationCode[index]) {
-                        handleActivationCodeChange(newValue, index);
-                      }
-                    }}
-                    onInput={(e) => {
-                      // 允许数字和字母输入，阻止其他字符
-                      const target = e.target as HTMLInputElement;
-                      const value = target.value.toUpperCase();
-                      const filteredValue = value.replace(/[^A-Z0-9]/g, '');
-                      if (value !== filteredValue) {
-                        target.value = filteredValue;
-                      }
-                    }}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
-                    onPaste={(e) => handlePaste(e, index)}
-                    onFocus={(e) => {
-                      // 聚焦时选中所有内容，便于替换
-                      e.target.select();
-                    }}
-                    maxLength={1}
-                    placeholder={index === 0 ? "A" : 
-                               index === 1 ? "B" : 
-                               index === 2 ? "C" : 
-                               index === 3 ? "1" : 
-                               index === 4 ? "2" : 
-                               index === 5 ? "D" : 
-                               index === 6 ? "3" : 
-                               "4"}
-                    // 防止浏览器自动保存和自动填充
-                    autoComplete="new-password"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    inputMode="text"
-                    pattern="[A-Za-z0-9]*"
-                    data-form-type="other"
-                    data-lpignore="true"
-                    data-1p-ignore="true"
-                    data-bwignore="true"
-                    name={`temp-activation-${index}-${Math.random().toString(36).substr(2, 9)}`}
-                  />
-                ))}
+            <Field  validationMessage={error}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', justifyContent: 'center',borderRadius: '8px' }}>
+                <div className={styles.activationCodeContainer}>
+                  {Array.from({ length: 8 }).map((_, index) => (
+                    <input
+                      key={index}
+                      id={`activation-code-${index}`}
+                      className={styles.activationCodeInput}
+                      value={activationCode[index] || ''}
+                      onChange={(e) => {
+                        handleActivationCodeChange(e.target.value, index);
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, index)}
+                      onPaste={(e) => handlePaste(e, index)}
+                      onClick={() => handleInputClick(index)}
+                      onFocus={(e) => {
+                        // 聚焦时选中所有内容，便于替换
+                        e.target.select();
+                      }}
+                      maxLength={1}
+                      placeholder={index === 0 ? "请" : 
+                                 index === 1 ? "在" : 
+                                 index === 2 ? "此" : 
+                                 index === 3 ? "输" : 
+                                 index === 4 ? "入" : 
+                                 index === 5 ? "激" : 
+                                 index === 6 ? "活" : 
+                                 "码"}
+                      // 防止浏览器自动保存和自动填充
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      inputMode="text"
+                      pattern="[A-Z0-9]*"
+                      data-form-type="other"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-bwignore="true"
+                      name={`temp-activation-${index}-${Math.random().toString(36).substr(2, 9)}`}
+                    />
+                  ))}
+                </div>
+                <Button
+                  className={styles.validateButton}
+                  onClick={handleActivateClick}
+                  disabled={isLoading || isAutoRetrying || isExiting}
+                  appearance="primary"
+                  size='large'
+                  style={{ flexShrink: 0 }}
+                >
+                  {isLoading ? (
+                    <>
+                      <Spinner size="tiny" style={{ marginRight: '4px' }} /> 
+                      验证中...
+                    </>
+                  ) : isAutoRetrying ? (
+                    <>
+                      <Spinner size="tiny" style={{ marginRight: '4px' }} /> 
+                      自动重试中...
+                    </>
+                  ) : isExiting ? (
+                    '正在退出...'
+                  ) : (
+                    '验证激活码'
+                  )}
+                </Button>
               </div>
             </Field>
             
@@ -930,7 +873,7 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
             {(retryCount > 0 || isAutoRetrying) && (
               <MessageBar
                 intent={isAutoRetrying ? "info" : "warning"}
-                style={{ marginBottom: '12px' }}
+                style={{ marginTop: '12px' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {isAutoRetrying && <Spinner size="tiny" />}
@@ -947,8 +890,8 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
             {/* 退出倒计时显示 */}
             {isExiting && exitCountdown > 0 && (
               <MessageBar
-                intent="error"
-                style={{ marginBottom: '12px' }}
+                intent="error"                                              
+                style={{ marginTop: '12px' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Warning24Filled style={{ color: 'var(--colorPaletteRedForeground1)' }} />
@@ -958,29 +901,6 @@ const ActivationPage: React.FC<ActivationPageProps> = ({
                 </div>
               </MessageBar>
             )}
-            
-            <Button
-              className={styles.validateButton}
-              onClick={handleActivateClick}
-              disabled={isLoading || isAutoRetrying || isExiting}
-              appearance="primary"
-            >
-              {isLoading ? (
-                <>
-                  <Spinner size="tiny" style={{ marginRight: '4px' }} /> 
-                  验证中...
-                </>
-              ) : isAutoRetrying ? (
-                <>
-                  <Spinner size="tiny" style={{ marginRight: '4px' }} /> 
-                  自动重试中...
-                </>
-              ) : isExiting ? (
-                '正在退出...'
-              ) : (
-                '验证激活码'
-              )}
-            </Button>
           </Card>
         </div>
       </div>
