@@ -727,7 +727,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                   onChange={() => handleItemToggle('androidVersion')}
                 />
                 <Checkbox
-                  label="API级别"
+                  label="SDK版本"
                   checked={selectedItems.sdkVersion}
                   onChange={() => handleItemToggle('sdkVersion')}
                 />
@@ -835,10 +835,10 @@ const BasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles 
     </div>
 
     <div className={styles.infoItem}>
-      <Text className={styles.infoLabel}>API级别</Text>
+      <Text className={styles.infoLabel}>SDK版本</Text>
       <div
         className={styles.infoValue}
-        onClick={() => onCopyValue(device.properties?.sdkVersion || "未知", "API级别")}
+        onClick={() => onCopyValue(device.properties?.sdkVersion || "未知", "SDK版本")}
       >
         <Text>{device.properties?.sdkVersion || "未知"}</Text>
       </div>

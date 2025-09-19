@@ -1,11 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use serde_json::Value;
 use serde::{Deserialize, Serialize};
 use crate::error::{HoutError, Result};
-
-// Windows平台特有导入
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

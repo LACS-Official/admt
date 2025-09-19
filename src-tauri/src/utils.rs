@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::process::Command;
 use std::process::Stdio;
 use std::time::Duration;
 use tokio::process::Command as TokioCommand;
@@ -9,6 +10,7 @@ use crate::cache::{get_cached_adb_path, get_cached_fastboot_path, record_path_ca
 // Windows平台特有导入
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+use tauri::Manager;
 
 
 
