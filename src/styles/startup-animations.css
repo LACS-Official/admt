@@ -1,0 +1,224 @@
+/**
+ * 启动动画样式
+ * 为启动流程提供流畅的动画效果
+ */
+
+/* 性能优化：为低性能设备减少动画 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 低性能模式下的简化动画 */
+[data-performance-mode="low"] * {
+  animation-duration: 0.2s !important;
+  transition-duration: 0.2s !important;
+}
+
+/* 启动加载器动画 */
+@keyframes startupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes logoSpring {
+  0% {
+    transform: scale(0) rotate(-180deg);
+  }
+  60% {
+    transform: scale(1.1) rotate(0deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes progressPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes dotBounce {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* 过渡动画 */
+@keyframes circleExpand {
+  from {
+    clip-path: circle(0% at 50% 50%);
+  }
+  to {
+    clip-path: circle(150% at 50% 50%);
+  }
+}
+
+@keyframes circleContract {
+  from {
+    clip-path: circle(150% at 50% 50%);
+  }
+  to {
+    clip-path: circle(0% at 50% 50%);
+  }
+}
+
+/* 主界面入场动画 */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 卡片入场动画 */
+@keyframes cardSlideIn {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 工具类 */
+.startup-fade-in {
+  animation: startupFadeIn 0.6s ease-out;
+}
+
+.logo-spring {
+  animation: logoSpring 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.progress-pulse {
+  animation: progressPulse 2s ease-in-out infinite;
+}
+
+.dot-bounce-1 {
+  animation: dotBounce 1.4s ease-in-out infinite;
+}
+
+.dot-bounce-2 {
+  animation: dotBounce 1.4s ease-in-out infinite 0.2s;
+}
+
+.dot-bounce-3 {
+  animation: dotBounce 1.4s ease-in-out infinite 0.4s;
+}
+
+.shimmer-effect {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  background-size: 200px 100%;
+  animation: shimmer 2s infinite;
+}
+
+.main-content-enter {
+  animation: slideInFromRight 0.5s ease-out;
+}
+
+.sidebar-enter {
+  animation: slideInFromLeft 0.5s ease-out;
+}
+
+.card-enter {
+  animation: cardSlideIn 0.4s ease-out;
+}
+
+.card-enter-delayed {
+  animation: cardSlideIn 0.4s ease-out 0.1s both;
+}
+
+/* 响应式动画调整 */
+@media (max-width: 768px) {
+  .startup-fade-in,
+  .logo-spring,
+  .main-content-enter,
+  .sidebar-enter,
+  .card-enter {
+    animation-duration: 0.3s;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .shimmer-effect {
+    background: none;
+    animation: none;
+  }
+  
+  .progress-pulse {
+    animation: none;
+  }
+}
+
+/* 暗色主题优化 */
+@media (prefers-color-scheme: dark) {
+  .shimmer-effect {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+  }
+}

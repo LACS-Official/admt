@@ -4,6 +4,7 @@ import { FluentProvider, webLightTheme, webDarkTheme } from "@fluentui/react-com
 import App from "./App";
 import { useThemeStore } from "./stores/themeStore";
 import "./styles/global.css";
+import "./styles/startup-animations.css";
 
 function AppWithTheme() {
   const { isDarkMode, followSystemTheme, updateThemeBasedOnSystem } = useThemeStore();

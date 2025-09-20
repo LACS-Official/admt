@@ -821,8 +821,8 @@ const MainContent: React.FC = () => {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.sidebar}>
+    <div className={`${styles.container} startup-optimized`}>
+      <div className={`${styles.sidebar} sidebar-enter`}>
         {/* 设备信息区域 */}
         {renderDeviceInfo()}
 
@@ -851,7 +851,7 @@ const MainContent: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.content}>
+      <div className={`${styles.content} main-content-enter`}>
         {renderContent()}
       </div>
     </div>

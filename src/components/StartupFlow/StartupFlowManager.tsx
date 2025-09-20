@@ -18,6 +18,7 @@ import { OptimizedUserBehaviorService } from '@/services/optimizedUserBehaviorSe
 import { SecurityConfigManager } from '@/config/securityConfig';
 import { activationService } from '@/services/activationService';
 import { usePrivacyConsentStore, shouldShowPrivacyConsent, shouldExitApplication } from '@/stores/privacyConsentStore';
+import { useStartupOptimization } from '../../hooks/useStartupOptimization';
 
 // 导入各个阶段的组件
 import UnifiedLoadingVersionChecker from './App_Loading';
@@ -26,12 +27,22 @@ import DebugPanel from '../Debug/DebugPanel';
 import PrivacyDebugPanel from '../Debug/PrivacyDebugPanel';
 import { devToolsManager, isDevelopment } from '../../utils/devtools';
 import PrivacyConsentDialog from './PrivacyConsentDialog';
+import EnhancedStartupLoader from './EnhancedStartupLoader';
+import StartupTransition from './StartupTransition';
 
 const useStyles = makeStyles({
   container: {
     width: '100%',
     height: '100vh',
     overflow: 'hidden',
+    position: 'relative',
+  },
+  
+  contentContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    zIndex: 1,
   },
 });
 
@@ -47,6 +58,23 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
   const [showActivationValidator, setShowActivationValidator] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [showPrivacyDebugPanel, setShowPrivacyDebugPanel] = useState(false);
+  const [showEnhancedLoader, setShowEnhancedLoader] = useState(true);
+  const [loaderProgress, setLoaderProgress] = useState(0);
+  const [loaderStatus, setLoaderStatus] = useState('正在初始化');
+
+  // 使用启动优化 Hook
+  const {
+    isPreloading,
+    preloadProgress,
+    preloadStatus,
+    isTransitioning,
+    startupPhase,
+    startPreload,
+    startTransition,
+    completeStartup,
+    updatePhase,
+    getMetrics,
+  } = useStartupOptimization();
 
   const {
     currentPhase,
@@ -76,6 +104,36 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
   useEffect(() => {
     initializeStartupFlow();
   }, []);
+
+  // 监听启动阶段变化，更新加载器状态
+  useEffect(() => {
+    updatePhase(currentPhase);
+    
+    // 根据阶段更新进度和状态消息
+    const phaseProgress = {
+      'privacy-consent': { progress: 10, status: '检查隐私政策' },
+      'version-check': { progress: 30, status: '检查版本更新' },
+      'first-launch-detection': { progress: 50, status: '初始化设置' },
+      'activation-verification': { progress: 70, status: '验证激活状态' },
+      'main-app': { progress: 90, status: '加载主界面' },
+      'data-collection': { progress: 95, status: '启动服务' },
+      'completed': { progress: 100, status: '启动完成' },
+    };
+
+    const phaseInfo = phaseProgress[currentPhase as keyof typeof phaseProgress];
+    if (phaseInfo) {
+      setLoaderProgress(phaseInfo.progress);
+      setLoaderStatus(phaseInfo.status);
+    }
+  }, [currentPhase, updatePhase]);
+
+  // 监听预加载状态
+  useEffect(() => {
+    if (isPreloading) {
+      setLoaderProgress(Math.max(loaderProgress, preloadProgress));
+      setLoaderStatus(preloadStatus);
+    }
+  }, [isPreloading, preloadProgress, preloadStatus, loaderProgress]);
 
   // 监听阶段变化
   useEffect(() => {
@@ -108,6 +166,12 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
   const initializeStartupFlow = async () => {
     try {
       console.log('🚀 开始应用启动流程...');
+      setLoaderStatus('正在初始化应用');
+
+      // 开始预加载关键资源
+      console.log('📦 开始预加载关键资源...');
+      setLoaderStatus('预加载关键资源');
+      await startPreload();
 
       // 初始化开发者工具
       if (isDevelopment()) {
@@ -133,23 +197,32 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
 
       // 初始化安全配置
       console.log('🔐 初始化安全配置...');
+      setLoaderStatus('初始化安全配置');
       const securityConfig = SecurityConfigManager.getInstance();
       await securityConfig.initialize();
       console.log('✅ 安全配置初始化完成');
 
       // 检查本地激活状态（不阻塞启动流程）
       console.log('🔍 检查本地激活状态...');
+      setLoaderStatus('检查激活状态');
       await checkLocalActivationStatus();
       console.log('✅ 激活状态检查完成');
+
+      // 短暂延迟确保用户看到加载完成状态
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 开始启动流程：阶段1 - 隐私政策和用户协议
       setCurrentPhase('privacy-consent');
       setIsInitialized(true);
 
+      // 隐藏增强加载器，显示具体的启动流程界面
+      setShowEnhancedLoader(false);
+
     } catch (error) {
       console.error('❌ 启动流程初始化失败:', error);
       const errorMessage = error instanceof Error ? error.message : '初始化失败';
       setError(errorMessage);
+      setShowEnhancedLoader(false);
       onError(errorMessage);
     }
   };
@@ -481,8 +554,19 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
     // onError(`激活验证失败: ${error}`);
   };
 
-  const handleStartupComplete = () => {
+  const handleStartupComplete = async () => {
     console.log('🎉 启动流程完成');
+    
+    // 开始过渡动画
+    await startTransition();
+    
+    // 完成启动流程
+    completeStartup();
+    
+    // 记录性能指标
+    const metrics = getMetrics();
+    console.log('📊 启动性能指标:', metrics);
+    
     onComplete();
   };
 
@@ -546,26 +630,46 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
 
   return (
     <div className={styles.container}>
-      {/* 主要启动流程界面 */}
-      {renderCurrentPhase()}
-
-
-      {/* 隐私政策同意对话框 */}
-      <PrivacyConsentDialog
-        open={showPrivacyConsent}
-        onAccept={handlePrivacyConsentAccept}
-        onReject={handlePrivacyConsentReject}
+      {/* 增强的启动加载器 */}
+      <EnhancedStartupLoader
+        phase={currentPhase}
+        progress={loaderProgress}
+        statusMessage={loaderStatus}
+        isVisible={showEnhancedLoader}
+        onPreloadComplete={() => {
+          console.log('✅ 预加载完成');
+        }}
       />
 
-      {/* 调试面板（仅开发模式） */}
-      {isDevelopment() && showDebugPanel && (
-        <DebugPanel onClose={() => setShowDebugPanel(false)} />
-      )}
+      {/* 启动过渡动画 */}
+      <StartupTransition
+        isTransitioning={isTransitioning}
+        onTransitionComplete={() => {
+          console.log('✅ 过渡动画完成');
+        }}
+      />
 
-      {/* 隐私调试面板（仅开发模式） */}
-      {isDevelopment() && showPrivacyDebugPanel && (
-        <PrivacyDebugPanel onClose={() => setShowPrivacyDebugPanel(false)} />
-      )}
+      {/* 主要启动流程界面 */}
+      <div className={styles.contentContainer}>
+        {!showEnhancedLoader && renderCurrentPhase()}
+
+        {/* 隐私政策同意对话框 */}
+        <PrivacyConsentDialog
+          open={showPrivacyConsent}
+          onAccept={handlePrivacyConsentAccept}
+          onReject={handlePrivacyConsentReject}
+        />
+
+        {/* 调试面板（仅开发模式） */}
+        {isDevelopment() && showDebugPanel && (
+          <DebugPanel onClose={() => setShowDebugPanel(false)} />
+        )}
+
+        {/* 隐私调试面板（仅开发模式） */}
+        {isDevelopment() && showPrivacyDebugPanel && (
+          <PrivacyDebugPanel onClose={() => setShowPrivacyDebugPanel(false)} />
+        )}
+      </div>
     </div>
   );
 };

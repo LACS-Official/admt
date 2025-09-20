@@ -438,13 +438,6 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         console.warn('⚠️ 版本同步问题:', syncStatus.issues);
         console.log('📋 版本源状态:', syncStatus.sources);
         
-        // 添加版本同步问题通知
-        addNotification({
-          type: "warning",
-          title: "版本同步警告",
-          message: `检测到版本不一致问题: ${syncStatus.issues.slice(0, 2).join(', ')}`,
-          duration: 8000,
-        });
       }
       
       // 执行版本检查
