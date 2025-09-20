@@ -167,7 +167,7 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} startup-optimized`}>
       {/* 背景装饰 */}
       <div className={styles.backgroundDecoration} />
 
@@ -177,10 +177,12 @@ const HomePage: React.FC = () => {
       <div className={styles.mainContent}>
         {connectedDevices.length === 0 ? (
           /* 无设备连接时：显示全屏设备提示界面 */
-          <NoDevicePrompt
-            isScanning={isScanning}
-            onRefresh={handleManualRefresh}
-          />
+          <div className="card-enter">
+            <NoDevicePrompt
+              isScanning={isScanning}
+              onRefresh={handleManualRefresh}
+            />
+          </div>
         ) : (
           /* 有设备连接时：显示优化后的主页布局 */
           <div className={mergeClasses(styles.deviceSection)}>
@@ -190,7 +192,7 @@ const HomePage: React.FC = () => {
                   {/* 新的布局：上下两行布局 */}
                   <div className={mergeClasses(styles.mainContentGrid)}>
                     {/* 第一行：设备概览信息区域 - 占据60%高度 */}
-                    <div className={mergeClasses(styles.deviceOverviewSection)}>
+                    <div className={mergeClasses(styles.deviceOverviewSection, "card-enter")}>
                       <div className={styles.deviceInfoCard}>
                         <DeviceOverviewCard
                           device={selectedDevice}
@@ -215,19 +217,19 @@ const HomePage: React.FC = () => {
                     {/* 第二行：功能控制区域 - 占据40%高度 */}
                     <div className={mergeClasses(styles.deviceActionsSection)}>
                       {/* 左侧：设备重启卡片 */}
-                      <div className={mergeClasses(styles.rebootCard)}>
+                      <div className={mergeClasses(styles.rebootCard, "card-enter-delayed")}>
                         <DeviceRebootCard />
                       </div>
 
                       {/* 右侧：杂项功能卡片 */}
-                      <div className={mergeClasses(styles.miscCard)}>
+                      <div className={mergeClasses(styles.miscCard, "card-enter-delayed")}>
                         <MiscellaneousCard />
                       </div>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className={styles.noDevice}>
+                <div className={`${styles.noDevice} card-enter`}>
                   <Home24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
                   <Text size={400}>请选择一个设备</Text>
                   <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>

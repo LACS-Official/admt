@@ -273,13 +273,9 @@ function App() {
 
   const handleStartupFlowComplete = () => {
     logService.info('启动流程完成', 'App');
-    // 在启动流程完成后，显示加载动画，避免白屏
-    setIsMainContentLoading(true);
-    // 给一个短暂的延迟，确保UI更新
-    setTimeout(() => {
-      setShowStartupFlow(false);
-      setIsMainContentLoading(false);
-    }, 300);
+    // 直接切换到主界面，过渡动画已在 StartupFlowManager 中处理
+    setShowStartupFlow(false);
+    setIsMainContentLoading(false);
   };
 
   const handleStartupFlowError = async (error: string) => {
@@ -321,17 +317,7 @@ function App() {
     return null;
   }
 
-  // 显示启动流程完成后的加载动画
-  if (isMainContentLoading) {
-    return (
-      <div className={styles.loading}>
-        <div className={styles.loadingContent}>
-          <Spinner className={styles.spinner} />
-          <Text className={styles.loadingText}>正在加载主界面...</Text>
-        </div>
-      </div>
-    );
-  }
+  // 移除单独的主内容加载动画，因为过渡已在启动流程中处理
 
   // 显示错误通知
   if (showErrorNotification && error) {
