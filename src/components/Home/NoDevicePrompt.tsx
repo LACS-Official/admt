@@ -305,8 +305,9 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
         
         {/* 主标题 */}
         <Text className={styles.title}>
-          未检测到设备，请确保设备已正确连接，对应的驱动已安装
+          暂未检测到设备 请检查设备是否正常连接 对应驱动是否安装
         </Text>
+        
         {/* 扫描状态指示器 */}
         {isScanning && (
         <div className={styles.scanningIndicator}>

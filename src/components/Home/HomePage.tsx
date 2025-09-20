@@ -100,7 +100,7 @@ const useStyles = makeStyles({
     flex: "0 0 50%", // 固定占据60%的高度
     display: "flex",
     flexDirection: "column",
-    minHeight: "380px", // 稍微减少最小高度
+    minHeight: "400px",
     maxHeight: "60%", // 最大高度限制调整为60%
   },
   deviceInfoCard: {
@@ -128,72 +128,6 @@ const useStyles = makeStyles({
     minHeight: "100%",
     display: "flex",
     flexDirection: "column",
-  },
-  // 平板端响应式样式
-  deviceSectionTablet: {
-    "@media (max-width: 1024px)": {
-      minHeight: "600px",
-    },
-  },
-  deviceOverviewSectionTablet: {
-    "@media (max-width: 1024px)": {
-      flex: "0 0 50%",
-      minHeight: "320px",
-    },
-  },
-  deviceActionsSectionTablet: {
-    "@media (max-width: 1024px)": {
-      flex: "1 1 50%",
-      minHeight: "220px",
-    },
-  },
-  rebootCardTablet: {
-    "@media (max-width: 1024px)": {
-      flex: "0 0 40%",
-    },
-  },
-  miscCardTablet: {
-    "@media (max-width: 1024px)": {
-      flex: "0 0 60%",
-    },
-  },
-  // 移动端响应式样式
-  deviceSectionMobile: {
-    "@media (max-width: 768px)": {
-      minHeight: "500px",
-      gap: "12px",
-    },
-  },
-  mainContentGridMobile: {
-    "@media (max-width: 768px)": {
-      gap: "12px",
-    },
-  },
-  deviceOverviewSectionMobile: {
-    "@media (max-width: 768px)": {
-      flex: "0 0 55%",
-      minHeight: "250px",
-    },
-  },
-  deviceActionsSectionMobile: {
-    "@media (max-width: 768px)": {
-      flex: "1 1 45%",
-      flexDirection: "column",
-      gap: "8px",
-      minHeight: "200px",
-    },
-  },
-  rebootCardMobile: {
-    "@media (max-width: 768px)": {
-      flex: "0 0 auto",
-      minHeight: "80px",
-    },
-  },
-  miscCardMobile: {
-    "@media (max-width: 768px)": {
-      flex: "1 1 auto",
-      minHeight: "100px",
-    },
   },
   noDevice: {
     display: "flex",
@@ -249,14 +183,14 @@ const HomePage: React.FC = () => {
           />
         ) : (
           /* 有设备连接时：显示优化后的主页布局 */
-          <div className={mergeClasses(styles.deviceSection, styles.deviceSectionTablet, styles.deviceSectionMobile)}>
+          <div className={mergeClasses(styles.deviceSection)}>
               {selectedDevice ? (
                 <>
 
                   {/* 新的布局：上下两行布局 */}
-                  <div className={mergeClasses(styles.mainContentGrid, styles.mainContentGridMobile)}>
+                  <div className={mergeClasses(styles.mainContentGrid)}>
                     {/* 第一行：设备概览信息区域 - 占据60%高度 */}
-                    <div className={mergeClasses(styles.deviceOverviewSection, styles.deviceOverviewSectionTablet, styles.deviceOverviewSectionMobile)}>
+                    <div className={mergeClasses(styles.deviceOverviewSection)}>
                       <div className={styles.deviceInfoCard}>
                         <DeviceOverviewCard
                           device={selectedDevice}
@@ -279,14 +213,14 @@ const HomePage: React.FC = () => {
                     </div>
 
                     {/* 第二行：功能控制区域 - 占据40%高度 */}
-                    <div className={mergeClasses(styles.deviceActionsSection, styles.deviceActionsSectionTablet, styles.deviceActionsSectionMobile)}>
+                    <div className={mergeClasses(styles.deviceActionsSection)}>
                       {/* 左侧：设备重启卡片 */}
-                      <div className={mergeClasses(styles.rebootCard, styles.rebootCardTablet, styles.rebootCardMobile)}>
+                      <div className={mergeClasses(styles.rebootCard)}>
                         <DeviceRebootCard />
                       </div>
 
                       {/* 右侧：杂项功能卡片 */}
-                      <div className={mergeClasses(styles.miscCard, styles.miscCardTablet, styles.miscCardMobile)}>
+                      <div className={mergeClasses(styles.miscCard)}>
                         <MiscellaneousCard />
                       </div>
                     </div>

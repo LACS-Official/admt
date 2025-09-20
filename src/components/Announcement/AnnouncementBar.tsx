@@ -38,11 +38,11 @@ const useStyles = makeStyles({
     gap: '8px',
     padding: '4px 12px',
     backgroundColor: 'var(--colorNeutralBackground2)',
-    borderRadius: '16px',
+    borderRadius: '8px',
     border: '1px solid var(--colorNeutralStroke2)',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    maxWidth: '300px',
+    maxWidth: '400px',
     minWidth: '120px',
     // 防止干扰窗口拖拽，但允许点击交互
     position: 'relative',

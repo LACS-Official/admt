@@ -252,7 +252,6 @@ const TitleBar: React.FC = () => {
         {/* 左侧区域 - Logo和应用名称 - 支持拖拽 */}
         <div className={styles.leftSection} data-tauri-drag-region>
           <img src={admtLogo64} alt="Logo" className={styles.logo} />
-          <Text className={styles.title}>玩机管家</Text>
         </div>
 
         {/* 中间区域 - 公告展示条 - 支持拖拽 */}
@@ -272,14 +271,6 @@ const TitleBar: React.FC = () => {
             </UserInfoModal>
           </Tooltip>
 
-          <Tooltip content="设置" relationship="label">
-            <Button
-              appearance="subtle"
-              icon={<Settings24Regular />}
-              className={styles.titleBarButton}
-              onClick={handleSettingsClick}
-            />
-          </Tooltip>
 
           <Tooltip
             content={isDarkMode ? "切换到浅色模式" : "切换到深色模式"}
