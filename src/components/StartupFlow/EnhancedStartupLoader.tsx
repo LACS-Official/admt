@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { makeStyles, Text, ProgressBar, Spinner } from '@fluentui/react-components';
 import { motion, AnimatePresence } from 'framer-motion';
+import { versionManager, useVersionInfo } from '../../utils/versionManager';
 
 const useStyles = makeStyles({
   container: {
@@ -22,7 +23,14 @@ const useStyles = makeStyles({
     zIndex: 9999,
     overflow: 'hidden',
   },
-  
+  title: {
+    fontSize: '32px',
+    fontWeight: '700',
+    color: 'var(--colorBrandForeground1)',
+    textAlign: 'center',
+    letterSpacing: '-0.5px',
+    textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+  },
   logoContainer: {
     position: 'relative',
     marginBottom: '48px',
@@ -210,12 +218,12 @@ const EnhancedStartupLoader: React.FC<EnhancedStartupLoaderProps> = ({
 
   const getPhaseDisplayName = (phase: string): string => {
     switch (phase) {
+      case 'first-launch-detection':
+        return '初始化设置';
       case 'privacy-consent':
         return '隐私政策确认';
       case 'version-check':
         return '版本检查';
-      case 'first-launch-detection':
-        return '初始化设置';
       case 'activation-verification':
         return '激活验证';
       case 'main-app':
@@ -317,6 +325,9 @@ const EnhancedStartupLoader: React.FC<EnhancedStartupLoaderProps> = ({
     }
   };
 
+    const { versionInfo, loading: versionLoading } = useVersionInfo();
+    const [fullVersionString, setFullVersionString] = useState('玩机管家 v1.0.0');
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -345,8 +356,7 @@ const EnhancedStartupLoader: React.FC<EnhancedStartupLoaderProps> = ({
               }}
             />
             <motion.div variants={textVariants}>
-              <Text className={styles.appTitle}>玩机管家</Text>
-              <Text className={styles.appSubtitle}>Android Device Management Tool</Text>
+              <Text className={styles.title}>玩机管家</Text>
             </motion.div>
           </motion.div>
 

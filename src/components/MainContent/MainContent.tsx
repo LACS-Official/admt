@@ -170,12 +170,12 @@ const useStyles = makeStyles({
     boxSizing: "border-box",
   },
   deviceNameSection: {
-    marginBottom: "6px",
+    marginBottom: "4px",
   },
   deviceName: {
     fontSize: "16px", // 进一步减小字体
     fontWeight: "600",
-    color: "#00a0e9",
+    color: "var (--colorNeutralForeground1)",
     lineHeight: "1.2",
     maxWidth: "100%",
     wordBreak: "break-word",
@@ -184,7 +184,7 @@ const useStyles = makeStyles({
     WebkitLineClamp: 2,
     WebkitBoxOrient: "vertical",
     overflow: "hidden",
-    marginBottom: "0", // 移除底部间距
+    marginBottom: "4px", // 移除底部间距
   },
   deviceCodename: {
     fontSize: "12px", // 进一步减小字体
@@ -220,7 +220,7 @@ const useStyles = makeStyles({
   },
   compactBadge: {
     fontSize: "10px", // 稍微增大字体
-    padding: "3px 8px", // 增加内边距
+    padding: "3px 6px", // 增加内边距
     minHeight: "18px", // 增加高度
     borderRadius: "8px", // 更圆润的边角
     fontWeight: "500", // 增加字重
@@ -753,9 +753,13 @@ const MainContent: React.FC = () => {
                    selectedDevice.serial}
                 </Text>
                 {selectedDevice.properties?.deviceName && (
-                  <Text className={styles.deviceCodename}>
+                  <Badge                     appearance="outline"
+                    color="brand"
+                    size="medium"
+                    className={styles.compactBadge}
+                  >
                     {selectedDevice.properties.deviceName}
-                  </Text>
+                  </Badge>
                 )}
               </div>
 

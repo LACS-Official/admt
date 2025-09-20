@@ -279,7 +279,7 @@ function App() {
   };
 
   const handleStartupFlowError = async (error: string) => {
-    logService.error('启动流程失败', 'App', error);
+    logService.error('启动流程失败', 'App', error);0
     setError(error);
     
     // 显示错误通知并开始倒计时
@@ -368,6 +368,10 @@ function App() {
   // 显示启动流程
   if (showStartupFlow) {
     return (
+
+      
+
+
       <StartupFlowManager
         onComplete={handleStartupFlowComplete}
         onError={handleStartupFlowError}

@@ -4,6 +4,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import EnhancedStartupLoader from './EnhancedStartupLoader';
 import {
   makeStyles,
   Spinner,
@@ -34,6 +36,11 @@ import StartupVersionChecker from '../Common/StartupVersionChecker';
 import { useAppStore } from '../../stores/appStore';
 
 const useStyles = makeStyles({
+  rootContainer: {
+    position: 'relative',
+    minHeight: '100vh',
+    backgroundColor: '#ffffff',
+  },
   container: {
     display: 'flex',
     flexDirection: 'column',
@@ -43,6 +50,7 @@ const useStyles = makeStyles({
     padding: '32px',
     backgroundColor: '#ffffff',
     color: '#323130',
+    zIndex: 1,
   },
   card: {
     maxWidth: '800px',
@@ -150,7 +158,26 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       }
     });
     
-    startLoadingAndVersionCheck();
+    // 立即开始加载动画
+    setIsLoading(true);
+    setProgress(20);
+    setStatusMessage('正在初始化应用...');
+
+    // 异步执行版本检查和ADB初始化
+    const initTasks = async () => {
+      try {
+        // 并行执行ADB初始化和版本检查
+        await Promise.all([
+          startLoadingAndVersionCheck(),
+          // 模拟ADB初始化耗时
+          new Promise(resolve => setTimeout(resolve, 1000))
+        ]);
+      } catch (error) {
+        console.error('初始化任务失败:', error);
+      }
+    };
+
+    initTasks();
     
     // 组件卸载时取消计划的退出
     return () => {
@@ -160,29 +187,48 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
 
   const startLoadingAndVersionCheck = async () => {
     try {
-      // 阶段1：应用加载
-      setProgress(20);
+      // 阶段1：应用加载 (减少等待时间)
+      setProgress(30);
       setStatusMessage('初始化应用组件...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setProgress(40);
-      setStatusMessage('加载配置文件...');
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      setProgress(60);
-      setStatusMessage('准备版本检查...');
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // 阶段2：版本检查
-      setProgress(80);
+      setProgress(50);
+      setStatusMessage('加载配置文件...');
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      setProgress(70);
+      setStatusMessage('准备版本检查...');
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 阶段2：版本检查 (后台执行)
+      setProgress(90);
       setStatusMessage('正在检查版本更新...');
       setIsLoading(false);
       setIsChecking(true);
       
-      await performChecks();
+      // 不等待版本检查完成，直接进入应用
+      performChecks().catch(error => {
+        console.error('版本检查失败:', error);
+      });
+
+      // 模拟快速进入应用
+      setTimeout(() => {
+        if (!checkResult) {
+          const defaultResult: VersionCheckResult = {
+            hasUpdate: false,
+            needsUpdate: false,
+            currentVersion: '1.0.0',
+            localVersion: '1.0.0',
+            latestVersion: '1.0.0',
+            isForceUpdate: false,
+            message: '版本检查中...'
+          };
+          onComplete(defaultResult);
+        }
+      }, 1000);
 
     } catch (error) {
-      console.error('加载或版本检查失败:', error);
+      console.error('加载失败:', error);
       const errorMessage = error instanceof Error ? error.message : '加载失败';
       setError(errorMessage);
       onError(errorMessage);
@@ -634,6 +680,11 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       );
     }
 
+    // 使用EnhancedStartupLoader处理加载状态
+    if (isLoading || isChecking) {
+      return null;
+    }
+
     if (isLoading || isChecking) {
       return (
         <>
@@ -733,31 +784,51 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   };
 
   return (
-    <div className={styles.container}>
-      <Card className={styles.card}>
-        {renderContent()}
+    <div className={styles.rootContainer}>
+      <EnhancedStartupLoader
+        phase={isLoading ? 'version-check' : isChecking ? 'activation-verification' : 'main-app'}
+        progress={progress}
+        statusMessage={statusMessage}
+        isVisible={isLoading || isChecking}
+        onPreloadComplete={() => console.log('预加载完成')}
+      />
+      
+      <AnimatePresence>
+        {(!isLoading && !isChecking) && (
+          <motion.div
+            className={styles.container}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className={styles.card}>
+              {renderContent()}
 
-        {!isLoading && !isChecking && !checkResult && (
-          <div className={styles.actionSection}>
-            <Button
-              appearance="primary"
-              icon={<ArrowClockwise24Regular />}
-              onClick={handleRetry}
-            >
-              重试检查
-            </Button>
-          </div>
+              {!isLoading && !isChecking && !checkResult && (
+                <div className={styles.actionSection}>
+                  <Button
+                    appearance="primary"
+                    icon={<ArrowClockwise24Regular />}
+                    onClick={handleRetry}
+                  >
+                    重试检查
+                  </Button>
+                </div>
+              )}
+            </Card>
+
+            {/* 版本检查弹窗 */}
+            {showVersionChecker && checkResult && (
+              <StartupVersionChecker
+                checkResult={checkResult}
+                onCheckComplete={handleVersionCheckComplete}
+                onAllowOfflineUse={handleAllowOfflineUse}
+              />
+            )}
+          </motion.div>
         )}
-      </Card>
-
-      {/* 版本检查弹窗 */}
-      {showVersionChecker && checkResult && (
-        <StartupVersionChecker
-          checkResult={checkResult}
-          onCheckComplete={handleVersionCheckComplete}
-          onAllowOfflineUse={handleAllowOfflineUse}
-        />
-      )}
+      </AnimatePresence>
     </div>
   );
 };
