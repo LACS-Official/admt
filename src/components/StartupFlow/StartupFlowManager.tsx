@@ -7,8 +7,9 @@
  * 2. 版本检测
  * 3. 首次使用检测
  * 4. 激活码验证
- * 5. 进入主页面
- * 6. 数据收集
+ * 5. ADB/FASTBOOT 工具检查
+ * 6. 进入主页面
+ * 7. 数据收集
  */
 
 import React, { useEffect, useState } from 'react';
@@ -168,12 +169,11 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
       console.log('🚀 开始应用启动流程...');
       setLoaderStatus('正在初始化应用');
 
-      // 开始预加载关键资源
-      console.log('📦 开始预加载关键资源...');
-      setLoaderStatus('预加载关键资源');
-      await startPreload();
+      // 重置错误状态
+      setError(null);
+      resetRetryCount();
 
-      // 初始化开发者工具
+      // 初始化开发者工具（同步执行，不耗时）
       if (isDevelopment()) {
         console.log('🔧 开发模式：初始化开发者工具');
         devToolsManager.logEnvironmentInfo();
@@ -191,25 +191,85 @@ const StartupFlowManager: React.FC<StartupFlowManagerProps> = ({ onComplete, onE
         document.addEventListener('keydown', handleKeyDown);
       }
 
-      // 重置错误状态
-      setError(null);
-      resetRetryCount();
+      // 并行执行所有初始化任务
+      console.log('🔄 并行执行初始化任务...');
+      setLoaderStatus('并行初始化系统组件');
+      
+      const initializationTasks = [
+        // 任务1：预加载关键资源
+        startPreload().then(() => {
+          console.log('✅ 预加载完成');
+          return { task: 'preload', success: true };
+        }).catch(error => {
+          console.warn('⚠️ 预加载失败，但不影响启动:', error);
+          return { task: 'preload', success: false, error };
+        }),
 
-      // 初始化安全配置
-      console.log('🔐 初始化安全配置...');
-      setLoaderStatus('初始化安全配置');
-      const securityConfig = SecurityConfigManager.getInstance();
-      await securityConfig.initialize();
-      console.log('✅ 安全配置初始化完成');
+        // 任务2：初始化安全配置
+        (async () => {
+          console.log('🔐 初始化安全配置...');
+          const securityConfig = SecurityConfigManager.getInstance();
+          await securityConfig.initialize();
+          console.log('✅ 安全配置初始化完成');
+          return { task: 'security', success: true };
+        })().catch(error => {
+          console.error('❌ 安全配置初始化失败:', error);
+          return { task: 'security', success: false, error };
+        }),
 
-      // 检查本地激活状态（不阻塞启动流程）
-      console.log('🔍 检查本地激活状态...');
-      setLoaderStatus('检查激活状态');
-      await checkLocalActivationStatus();
-      console.log('✅ 激活状态检查完成');
+        // 任务3：检查本地激活状态
+        checkLocalActivationStatus().then(() => {
+          console.log('✅ 激活状态检查完成');
+          return { task: 'activation', success: true };
+        }).catch(error => {
+          console.warn('⚠️ 激活状态检查失败:', error);
+          return { task: 'activation', success: false, error };
+        }),
+
+        // 任务4：初始化ADB工具
+        (async () => {
+          console.log('🔧 初始化ADB工具...');
+          const { adbToolsManager } = await import('../../services/adbToolsManager');
+          await adbToolsManager.initialize();
+          const adbInfo = adbToolsManager.getAdbInfo();
+          
+          if (adbInfo.isAvailable) {
+            console.log(`✅ ADB工具初始化成功: ${adbInfo.adbPath}`);
+            if (adbInfo.version) {
+              console.log(`📋 ADB版本: ${adbInfo.version}`);
+            }
+          } else {
+            console.warn('⚠️ ADB工具初始化失败，某些功能可能受限');
+          }
+          return { task: 'adb', success: adbInfo.isAvailable, adbInfo };
+        })().catch(error => {
+          console.warn('⚠️ ADB工具初始化异常，某些设备功能可能受限:', error);
+          return { task: 'adb', success: false, error };
+        })
+      ];
+
+      // 等待所有任务完成（使用Promise.allSettled确保不会因单个任务失败而中断）
+      const results = await Promise.allSettled(initializationTasks);
+      
+      // 处理结果并记录
+      const taskResults = results.map(result => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          return { task: 'unknown', success: false, error: result.reason };
+        }
+      });
+
+      console.log('📊 初始化任务完成情况:', taskResults);
+
+      // 检查关键任务是否成功（安全配置是必需的）
+      const securityResult = taskResults.find(r => r.task === 'security');
+      if (securityResult && !securityResult.success) {
+        throw new Error('安全配置初始化失败，无法继续启动');
+      }
 
       // 短暂延迟确保用户看到加载完成状态
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // 开始启动流程：阶段1 - 隐私政策和用户协议
       setCurrentPhase('privacy-consent');
