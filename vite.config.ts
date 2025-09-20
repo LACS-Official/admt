@@ -11,9 +11,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 1420,
+    port: 2935,
     strictPort: false, // 允许使用其他端口
-    host: 'localhost',
+    host: '127.0.0.1', // 强制使用 IPv4
   },
   // @ts-ignore
   test: {

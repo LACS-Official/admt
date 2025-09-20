@@ -167,20 +167,23 @@ const OnlineResourcesPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('ADMT');
+  const [activeCategory, setActiveCategory] = useState<string>('ADMT'); // 默认选择ADMT分类，显示为"全部"
 
   // 加载软件列表
-  const loadSoftwareList = async (params: SearchParams = {}) => {
+  const loadSoftwareList = async (params: SearchParams = {}, category?: string) => {
     setLoading(true);
     setError(null);
     
     try {
+      // 使用传入的分类或当前活动分类
+      const currentCategory = category || activeCategory;
+      
       // 根据活动分类设置标签参数
       let tags = 'admt'; // 默认包含admt标签
       
       // 如果不是默认的ADMT分类，添加分类标签
-      if (activeCategory !== 'ADMT') {
-        tags = `admt,${activeCategory}`;
+      if (currentCategory !== 'ADMT') {
+        tags = `admt,${currentCategory}`;
       }
       
       const response = await onlineResourcesService.getSoftwareList({
@@ -265,6 +268,17 @@ const OnlineResourcesPanel: React.FC = () => {
     );
   };
 
+  // 当分类变化时自动触发搜索
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category);
+    // 分类变化后立即触发搜索，直接传入新的分类值，无需等待状态更新
+    if (searchKeyword.trim()) {
+      loadSoftwareList({ search: searchKeyword.trim() }, category);
+    } else {
+      loadSoftwareList({}, category);
+    }
+  };
+
   // 初始化加载
   useEffect(() => {
     loadSoftwareList();
@@ -303,17 +317,16 @@ const OnlineResourcesPanel: React.FC = () => {
           onChange={(_, data) => setSearchKeyword(data.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
         />
-        <Body1>分类:(选中后点击搜索)</Body1>
+        <Body1>分类:</Body1>
         <Dropdown
           placeholder="选择分类"
           selectedOptions={[activeCategory]}
           onOptionSelect={(_, data) => {
-            setActiveCategory(data.optionValue || 'ADMT');
-            handleSearch();
+            handleCategoryChange(data.optionValue || 'ADMT');
           }}
           style={{ minWidth: '120px' }}
         >
-          <Option value="ADMT">ADMT</Option>
+          <Option value="ADMT">全部</Option>
           <Option value="脚本">脚本</Option>
           <Option value="驱动">驱动</Option>
           <Option value="设置文件">设置文件</Option>
@@ -324,6 +337,7 @@ const OnlineResourcesPanel: React.FC = () => {
           icon={<Search24Regular />}
           onClick={handleSearch}
           disabled={loading}
+          title="搜索关键词"
         >
           搜索
         </Button>

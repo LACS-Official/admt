@@ -170,7 +170,7 @@ const useStyles = makeStyles({
     flex: 1,
     overflow: "auto",
     padding: "8px",
-    backgroundColor: "#fff",
+    backgroundColor: "var(--colorNeutralBackground1)",
     '& pre': {
       margin: 0,
       fontFamily: '"Cascadia Code", Consolas, monospace',
@@ -212,10 +212,10 @@ const useStyles = makeStyles({
   quickCommandsList: {
     flex: 1,
     overflowY: 'auto',
-    border: '1px solid #e1e1e1',
+    border: '1px solid var(--colorNeutralStroke2)',
     borderRadius: '4px',
     padding: '8px',
-    backgroundColor: '#fff',
+    backgroundColor: "var(--colorNeutralBackground1)",
     /*支持下拉 */
     position:'relative',
     maxHeight:'250px'
@@ -226,11 +226,11 @@ const useStyles = makeStyles({
     borderRadius: '4px',
     marginBottom: '4px',
     '&:hover': {
-      backgroundColor: '#f5f5f5',
+      backgroundColor: 'var(--colorNeutralBackground2)',
     },
   },
   selectedCommand: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'var(--colorNeutralBackground2)',
   },
 });
 

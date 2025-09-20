@@ -9,7 +9,7 @@ const useStyles = makeStyles({
   carousel: {
     position: "relative",
     width: "100%",
-    height: "130px",
+    height: "100px",
     overflow: "hidden",
     borderRadius: "8px",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -38,7 +38,7 @@ const useStyles = makeStyles({
     background: "linear-gradient(135deg, var(--colorBrandBackground) 0%, var(--colorBrandBackground2) 100%)",
     color: "var(--colorNeutralForegroundOnBrand)",
     textAlign: "center",
-    padding: "24px",
+    padding: "16px",
   },
   slideText: {
     display: "flex",
@@ -60,7 +60,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
     cursor: "pointer",
     transition: "all 0.2s ease",
-    "&:hover": {
+    ":hover": {
       backgroundColor: "rgba(255, 255, 255, 1)",
       transform: "translateY(-50%) scale(1.2)",
     },
@@ -90,7 +90,7 @@ const defaultSlides: CarouselSlide[] = [
   },
   {
     id: "2",
-    title: "强大的设备管理功能",
+    title: "强大的设备管理",
     description: "实时设备检测、详细信息展示",
     gradient: "linear-gradient(135deg, #16a085 0%, #27ae60 50%, #2ecc71 100%)",
   },
@@ -148,10 +148,10 @@ const CarouselComponent: React.FC<CarouselProps> = ({
               }}
             >
               <div className={styles.slideText}>
-                <Text size={600} weight="semibold" style={{ color: "white" }}>
+                <Text size={400} weight="semibold" style={{ color: "white" }}>
                   {slide.title}
                 </Text>
-                <Text size={400} style={{ color: "rgba(255, 255, 255, 0.9)" }}>
+                <Text size={200} style={{ color: "rgba(255, 255, 255, 0.9)" }}>
                   {slide.description}
                 </Text>
               </div>

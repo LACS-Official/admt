@@ -58,9 +58,8 @@ const useStyles = makeStyles({
     gap: "1px", // 添加分隔线效果
   },
   sidebar: {
-    width: "200px", // 增加宽度
-    minWidth: "200px",
-    maxWidth: "240px", // 更新最大宽度
+    width: "180px", // 增加宽度
+    maxWidth: "250px",
     backgroundColor: "var(--colorNeutralBackground2)", // 使用更深的背景色
     borderRight: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
     display: "flex",
@@ -73,7 +72,7 @@ const useStyles = makeStyles({
     background: "linear-gradient(180deg, var(--colorNeutralBackground2) 0%, var(--colorNeutralBackground1) 100%)",
   },
   deviceInfo: {
-    padding: "10px", // 增加内边距
+    padding: "5px", // 增加内边距
     borderBottom: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
     backdropFilter: "blur(10px)", // 毛玻璃效果
     overflow: "hidden",
@@ -97,26 +96,28 @@ const useStyles = makeStyles({
     width: "100%",
     overflow: "hidden",
     marginBottom: "4px", // 减少底部间距
+    border: "1px solid var(--colorNeutralStroke2)", // 更淡的边框
+    borderRadius: "8px", // 添加圆角
+    padding: "4px", // 添加内边距
   },
   deviceSelectorArea: {
     width: "100%",
-    overflow: "hidden",
-    marginTop: "4px", // 减少顶部间距
+    marginTop: "4px",
   },
   deviceIconSection: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "60px",
+    width: "40px",
     height: "auto", // 改为自动高度
     minHeight: "100px", // 设置最小高度以匹配文字信息区域
     flexShrink: 0,
     borderRadius: "6px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    border: "1px solid var(--colorNeutralStroke2)",
     position: "relative",
     overflow: "hidden",
     boxSizing: "border-box",
+    marginLeft: "4px", // 添加外边距
   },
   deviceSerialSection: {
     display: "flex",
@@ -129,28 +130,35 @@ const useStyles = makeStyles({
     fontFamily: "monospace",
   },
   deviceSelector: {
-    flex: 1, // 占用剩余空间
-    minWidth: 0, // 允许收缩
+    flex: 1,
+    minWidth: 0,
     overflow: "hidden",
+  },
+  deviceSelectorWrapper: {
+    width: "100%",
   },
   deviceSelectDropdown: {
     width: "100%",
-    padding: "4px 6px",
-    fontSize: "11px",
-    border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    color: "var(--colorNeutralForeground1)",
-    cursor: "pointer",
+    maxWidth: "100%",
+    minWidth: "100%",
     overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    ":focus": {
-      outline: "2px solid var(--colorBrandStroke1)",
-      outlineOffset: "1px",
-    },
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    gap: "4px",
+    minHeight: "20px",
+    textAlign: "center",
+    padding: "4px",
+    boxSizing: "border-box",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    color: "var(--colorNeutralForeground1)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+
   },
   deviceTextInfo: {
+    marginTop: "8px",
     marginLeft: "12px",
     flex: 1,
     display: "flex",
@@ -179,7 +187,7 @@ const useStyles = makeStyles({
     marginBottom: "0", // 移除底部间距
   },
   deviceCodename: {
-    fontSize: "10px", // 进一步减小字体
+    fontSize: "12px", // 进一步减小字体
     color: "var(--colorNeutralForeground3)",
     lineHeight: "1.1",
     maxWidth: "100%",
@@ -190,6 +198,7 @@ const useStyles = makeStyles({
     WebkitBoxOrient: "vertical",
     overflow: "hidden",
     fontFamily: "monospace",
+    marginTop: "4px", // 增加顶部间距
   },
   deviceStatusSection: {
     display: "flex",
@@ -201,6 +210,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "4px",
     minWidth: 0,
+    marginTop: "4px", // 增加顶部间距
   },
   statusLabel: {
     fontSize: "9px",
@@ -212,9 +222,10 @@ const useStyles = makeStyles({
     fontSize: "10px", // 稍微增大字体
     padding: "3px 8px", // 增加内边距
     minHeight: "18px", // 增加高度
-    borderRadius: "10px", // 更圆润的边角
+    borderRadius: "8px", // 更圆润的边角
     fontWeight: "500", // 增加字重
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)", // 添加微妙阴影
+    width: "80px", // 自适应宽度
   },
 
   deviceInfoHeader: {
@@ -689,7 +700,7 @@ const MainContent: React.FC = () => {
                 <div className={styles.noDeviceMessageSection}>
                   <Text className={styles.noDeviceTitle}>未检测到设备</Text>
                   <Text className={styles.noDeviceSubtitle}>
-                    请连接Android设备并启用USB调试
+                    请检查设备是否正常连接 对应驱动是否安装
                   </Text>
                 </div>
               </div>
@@ -697,15 +708,13 @@ const MainContent: React.FC = () => {
 
             {/* 下半部分：设备选择区域（保持一致性） */}
             <div className={styles.deviceSelectorArea}>
-              <div className={styles.deviceSelector}>
-                <select
-                  className={styles.deviceSelectDropdown}
-                  disabled
-                  value=""
-                >
-                  <option value="">暂无可用设备</option>
-                </select>
-              </div>
+              <select
+                className={styles.deviceSelectDropdown}
+                disabled
+                value=""
+              >
+                <option value="">暂无可用设备</option>
+              </select>
             </div>
           </div>
         </div>
@@ -752,70 +761,39 @@ const MainContent: React.FC = () => {
 
               {/* 状态信息区域 */}
               <div className={styles.deviceStatusSection}>
-                {/* 连接状态 */}
-                <div className={styles.statusBadgeRow}>
-                  <Text className={styles.statusLabel}>状态</Text>
-                  <Badge
-                    appearance="filled"
-                    color={getStatusColor() === "success" ? "success" :
-                           getStatusColor() === "warning" ? "warning" : "danger"}
-                    size="small"
-                    className={styles.compactBadge}
-                    icon={<Circle12Filled />}
-                  >
-                    {selectedDevice.connected ? "已连接" : "未连接"}
-                  </Badge>
-                </div>
+
 
                 {/* 设备模式 */}
                 <div className={styles.statusBadgeRow}>
-                  <Text className={styles.statusLabel}>模式</Text>
                   <Badge
                     appearance="outline"
                     color="brand"
-                    size="small"
+                    size="medium"
                     className={styles.compactBadge}
                   >
                     {getDeviceMode()}
                   </Badge>
                 </div>
-
-                {/* 连接类型 */}
-                {getConnectionType() && (
-                  <div className={styles.statusBadgeRow}>
-                    <Text className={styles.statusLabel}>连接</Text>
-                    <Badge
-                      appearance="filled"
-                      color={getConnectionType() === "ADB" ? "brand" : "important"}
-                      size="small"
-                      className={styles.compactBadge}
-                    >
-                      {getConnectionType()}
-                    </Badge>
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
           {/* 下半部分：设备选择框 */}
           <div className={styles.deviceSelectorArea}>
-            <div className={styles.deviceSelector}>
-              <select
-                className={styles.deviceSelectDropdown}
-                value={selectedDevice.serial}
-                onChange={(e) => {
-                  const device = connectedDevices.find(d => d.serial === e.target.value);
-                  if (device) handleDeviceSelect(device);
-                }}
-              >
-                {connectedDevices.map((device) => (
-                  <option key={device.serial} value={device.serial}>
-                    {device.properties?.marketName || device.properties?.model || device.serial}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              className={styles.deviceSelectDropdown}
+              value={selectedDevice.serial}
+              onChange={(e) => {
+                const device = connectedDevices.find(d => d.serial === e.target.value);
+                if (device) handleDeviceSelect(device);
+              }}
+            >
+              {connectedDevices.map((device) => (
+                <option key={device.serial} value={device.serial}>
+                  选择设备: {device.properties?.marketName || device.properties?.model || device.serial}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

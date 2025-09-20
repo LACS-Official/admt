@@ -113,7 +113,7 @@ const useStyles = makeStyles({
   headerLeft: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "10px",
     flex: "1 1 65%", // 占据65%的宽度
     minWidth: 0,
   },
@@ -233,6 +233,7 @@ const useStyles = makeStyles({
       border: "1px solid transparent",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
+      margin: "0 4px",
       
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground2)",
@@ -976,6 +977,15 @@ const HardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styl
 const SystemInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => (
   <div className={mergeClasses(styles.infoGrid, styles.noSelect)}>
     <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>系统版本</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.systemVersion || "未知", "系统版本")}
+      >
+        <Text>{device.properties?.systemVersion || "未知"}</Text>
+      </div>
+    </div>
+    <div className={styles.infoItem}>
       <Text className={styles.infoLabel}>Bootloader锁</Text>
       <div
         className={styles.infoValue}
@@ -1012,15 +1022,6 @@ const SystemInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles
       </div>
     </div>
 
-    <div className={styles.infoItem}>
-      <Text className={styles.infoLabel}>设备模式</Text>
-      <div
-        className={styles.infoValue}
-        onClick={() => onCopyValue(device.mode, "设备模式")}
-      >
-        <Text>{device.mode}</Text>
-      </div>
-    </div>
 
     <div className={styles.infoItem}>
       <Text className={styles.infoLabel}>安全补丁</Text>
@@ -1356,16 +1357,6 @@ const NetworkInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, style
         onClick={() => onCopyValue(device.properties?.buildDate || "未知", "构建日期")}
       >
         <Text>{device.properties?.buildDate || "未知"}</Text>
-      </div>
-    </div>
-
-    <div className={styles.infoItem}>
-      <Text className={styles.infoLabel}>系统版本</Text>
-      <div
-        className={styles.infoValue}
-        onClick={() => onCopyValue(device.properties?.systemVersion || "未知", "系统版本")}
-      >
-        <Text>{device.properties?.systemVersion || "未知"}</Text>
       </div>
     </div>
   </div>

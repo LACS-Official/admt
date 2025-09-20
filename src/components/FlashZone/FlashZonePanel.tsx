@@ -115,11 +115,6 @@ const FlashZonePanel: React.FC = () => {
       label: "线刷工具",
       icon: <Flash24Regular />,
     },
-    {
-      id: "system-backup" as FlashZoneView,
-      label: "系统备份",
-      icon: <Database24Regular />,
-    },
   ];
 
   const renderContent = () => {
