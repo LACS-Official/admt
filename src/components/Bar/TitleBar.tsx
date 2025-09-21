@@ -23,7 +23,7 @@ import { useAppStore } from "../../stores/appStore";
 import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import { admtbgIcon, admtLogo128, admtLogo64 } from "../../assets/icons";
+import { admtLogo64 } from "../../assets/icons";
 import UserInfoModal from "../Settings/UserInfoModal";
 import AnnouncementBar from "../Announcement/AnnouncementBar";
 

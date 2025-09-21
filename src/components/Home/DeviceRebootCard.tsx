@@ -57,9 +57,9 @@ const useStyles = makeStyles({
   },
   rebootOptions: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr", // 2列网格布局
-    gridTemplateRows: "1fr 1fr", // 2行网格布局
-    gap: "6px", // 增加间距以适应网格布局
+    gridTemplateColumns: "1fr 1fr",
+    gridTemplateRows: "1fr 1fr",
+    gap: "6px",
     flex: 1,
     alignItems: "stretch",
   },
@@ -68,19 +68,19 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "6px 4px", // 增加垂直内边距以适应网格布局
+    padding: "6px 4px",
     border: "1px solid var(--colorNeutralStroke3)",
-    borderRadius: "6px", // 稍稍微增加圆角
+    borderRadius: "6px",
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.2s ease",
     cursor: "pointer",
-    minHeight: "40px", // 增加最小高度以适应网格布局
+    minHeight: "40px",
     textAlign: "center",
     minWidth: 0,
-    position: "relative", // 添加相对定位以支持绝对定位的徽章
+    position: "relative",
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground2Hover)",
-      transform: "translateY(-1px)", // 添加轻微的悬停效果
+      transform: "translateY(-1px)",
       boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
     },
   },
@@ -90,35 +90,36 @@ const useStyles = makeStyles({
   },
   rebootOptionContent: {
     display: "flex",
-    flexDirection: "column", // 改为垂直排版：上方图标下方文字
+    flexDirection: "row",
     alignItems: "center",
-    gap: "4px", // 图标和文字之间的间距
-    justifyContent: "center", // 居中对齐
+    gap: "8px",
+    justifyContent: "flex-start",
     height: "100%",
+    position: "relative",
   },
   rebootOptionIcon: {
-    fontSize: "16px", // 增大图标以适配垂直布局
+    fontSize: "16px",
     color: "var(--colorBrandForeground1)",
     flexShrink: 0,
+    position: "absolute",
   },
   rebootOptionTitle: {
-    fontSize: "11px", // 稍稍微增大文字以适配垂直布局
+    fontSize: "12px",
     fontWeight: "600",
-    textAlign: "center", // 居中对齐
+    textAlign: "center",
     lineHeight: "1.2",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    width: "100%", // 占据全宽
+    width: "100%",
   },
   rebootOptionBadge: {
     fontSize: "8px",
-    padding: "2px 4px",
     minHeight: "14px",
     flexShrink: 0,
-    position: "absolute", // 绝对定位
-    top: "2px", // 距离顶部2px
-    right: "2px", // 距离右边2px
+    position: "absolute",
+    top: "2px",
+    right: "2px",
   },
   rebootButton: {
     width: "100%",
@@ -154,29 +155,43 @@ const DeviceRebootCard: React.FC = () => {
   const rebootOptions: RebootOption[] = [
     {
       id: "normal",
-      label: "System",
+      label: "系统模式 System",
       description: "重启到Android系统",
       command: "system", 
     },
     {
       id: "recovery",
-      label: "Recovery",
+      label: "恢复模式 Recovery",
       description: "进入恢复模式",
       command: "recovery", 
       warning: true,
     },
     {
       id: "bootloader",
-      label: "Bootloader",
+      label: "引导  Bootloader",
       description: "进入引导加载程序模式",
       command: "bootloader", 
       warning: true,
     },
     {
       id: "fastboot",
-      label: "Fastboot",
+      label: "快速引导 Fastboot",
       description: "进入快速启动模式",
       command: "fastboot", 
+      warning: true,  
+    },
+    {
+      id: "9008",
+      label: "高通深刷 9008",
+      description: "重启到9008模式",
+      command: "9008", 
+      warning: true,
+    },
+    {
+      id: "poweroff",
+      label: "关机模式 poweroff",
+      description: "关机",
+      command: "poweroff",
       warning: true,
     },
   ];
@@ -351,7 +366,7 @@ const DeviceRebootCard: React.FC = () => {
       <CardHeader
         header={
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Power24Regular />
+            <ArrowClockwise24Regular />
             <Text weight="semibold">将设备重启到</Text>
           </div>
         }
@@ -370,17 +385,9 @@ const DeviceRebootCard: React.FC = () => {
               onClick={() => handleReboot(option)}
             >
               <div className={styles.rebootOptionContent}>
-                <div className={styles.rebootOptionIcon}>
-                  {option.id === "normal" ? <ArrowClockwise24Regular /> : <Power24Regular />}
-                </div>
                 <Text className={styles.rebootOptionTitle}>
                   {option.label}
                 </Text>
-                {pendingRebootOption?.id === option.id && (
-                  <Badge appearance="filled" color="warning" className={styles.rebootOptionBadge}>
-                    待确认
-                  </Badge>
-                )}
                 {isRebooting && pendingRebootOption?.id === option.id && (
                   <Spinner size="tiny" />
                 )}

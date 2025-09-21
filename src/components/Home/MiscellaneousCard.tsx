@@ -110,7 +110,7 @@ const useStyles = makeStyles({
     width: "100%",
   },
   functionTitle: {
-    fontSize: "8px", // 稍微增大字体以适应3x3网格
+    fontSize: "10px", // 稍微增大字体以适应3x3网格
     fontWeight: tokens.fontWeightSemibold,
     color: tokens.colorNeutralForeground1,
     textAlign: "center",
