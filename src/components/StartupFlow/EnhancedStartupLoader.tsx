@@ -7,6 +7,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { makeStyles, Text, ProgressBar, Spinner } from '@fluentui/react-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { versionManager, useVersionInfo } from '../../utils/versionManager';
+import { admtLogo256 } from "../../assets/icons";
 
 const useStyles = makeStyles({
   container: {
@@ -347,7 +348,7 @@ const EnhancedStartupLoader: React.FC<EnhancedStartupLoaderProps> = ({
             variants={logoVariants}
           >
             <img
-              src="/src/assets/icons/admt/128x128.png"
+              src={admtLogo256}
               alt="玩机管家"
               className={styles.logo}
               onError={(e) => {

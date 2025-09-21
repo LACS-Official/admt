@@ -212,6 +212,31 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
     setIsLoading(false);
   };
 
+  // 设置实时进度更新监听器
+  const setupProgressListener = async () => {
+    try {
+      const { listen } = await import('@tauri-apps/api/event');
+      
+      // 监听下载进度事件
+      const unlisten = await listen('download-progress', (event: any) => {
+        const progressData = event.payload;
+        console.log('📊 收到下载进度更新:', progressData);
+        
+        // 重新加载任务列表以获取最新进度
+        const updatedTasks = onlineResourcesService.getAllDownloadTasks();
+        setTasks(updatedTasks);
+      });
+      
+      console.log('✅ 下载进度监听器设置成功');
+      
+      // 返回清理函数
+      return unlisten;
+    } catch (error) {
+      console.error('❌ 设置下载进度监听器失败:', error);
+      return () => {}; // 返回空的清理函数
+    }
+  };
+
   // 获取下载目录
   const loadDownloadDirectory = async () => {
     const dir = await onlineResourcesService.getDownloadsDirectory();
@@ -222,9 +247,22 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
     loadTasks();
     loadDownloadDirectory();
     
-    // 定期刷新任务状态
-    const interval = setInterval(loadTasks, 1000);
-    return () => clearInterval(interval);
+    let unlistenProgress: (() => void) | null = null;
+    
+    // 设置进度监听器
+    setupProgressListener().then((unlisten) => {
+      unlistenProgress = unlisten;
+    });
+    
+    // 定期刷新任务状态（作为备用机制）
+    const interval = setInterval(loadTasks, 5000); // 减少到5秒，因为有事件监听器
+    
+    return () => {
+      clearInterval(interval);
+      if (unlistenProgress) {
+        unlistenProgress();
+      }
+    };
   }, []);
 
   // 过滤和排序任务
