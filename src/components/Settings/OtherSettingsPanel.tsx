@@ -138,6 +138,8 @@ const OtherSettingsPanel: React.FC = () => {
   // 从配置中读取状态
   const [minimizeToTray, setMinimizeToTray] = useState(config.systemTrayEnabled);
   const [startWithSystem, setStartWithSystem] = useState(config.autoStartEnabled);
+  const [startMinimizedToTray, setStartMinimizedToTray] = useState(config.startMinimizedToTray);
+  const [minimizeToTrayOnClose, setMinimizeToTrayOnClose] = useState(config.minimizeToTrayOnClose);
   const [traySupported, setTraySupported] = useState(false);
   const [autoStartSupported, setAutoStartSupported] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -200,7 +202,8 @@ const OtherSettingsPanel: React.FC = () => {
   useEffect(() => {
     setMinimizeToTray(config.systemTrayEnabled);
     setStartWithSystem(config.autoStartEnabled);
-  }, [config.systemTrayEnabled, config.autoStartEnabled]);
+    setStartMinimizedToTray(config.startMinimizedToTray);
+  }, [config.systemTrayEnabled, config.autoStartEnabled, config.startMinimizedToTray]);
 
   // 优化的托盘切换处理
   const handleMinimizeToTrayChange = async (checked: boolean) => {
@@ -368,12 +371,12 @@ const OtherSettingsPanel: React.FC = () => {
               <div className={styles.settingInfo}>
                 <Text weight="semibold">
                   <ArrowMinimize24Regular style={{ marginRight: '8px' }} />
-                  最小化到系统托盘
+                  启用系统托盘
                 </Text>
                 <br />
                 <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
                   {traySupported 
-                    ? "关闭窗口时最小化到托盘" 
+                    ? "启用后程序将显示在系统托盘中，关闭后将最小化到托盘" 
                     : "当前系统不支持系统托盘功能"
                   }
                 </Text>
@@ -385,6 +388,7 @@ const OtherSettingsPanel: React.FC = () => {
                 onChange={(_, data) => handleMinimizeToTrayChange(data.checked === true)}
               />
             </div>
+
 
             {/* 开机自启动设置 */}
             <div className={styles.settingRow}>

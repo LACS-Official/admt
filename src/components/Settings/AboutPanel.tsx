@@ -317,7 +317,7 @@ const AboutPanel: React.FC = () => {
     checkUpdate: "https://admt.lacs.cc/download",
     userManual: "https://admt.lacs.cc/docs",
     feedback: "https://www.lacs.cc/contact",
-    otherapps:"https://app.lacs.cc/lacs",
+    otherapps:"https://www.lacs.cc/#projects",
     officialWebsite: "https://www.lacs.cc",
     officialADMTWeb: "https://admt.lacs.cc",
     officialGroup: "https://www.lacs.cc/contact#qun-group",

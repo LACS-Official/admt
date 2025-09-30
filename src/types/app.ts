@@ -10,6 +10,7 @@ export interface AppConfig {
   systemTrayEnabled: boolean;
   autoStartEnabled: boolean;
   minimizeToTrayOnClose: boolean;
+  startMinimizedToTray: boolean;
 }
 
 export interface AppState {
