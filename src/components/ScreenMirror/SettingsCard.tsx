@@ -256,29 +256,7 @@ const SettingsCard: React.FC = () => {
             />
           </div>
 
-          <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>启用音频传输</Text>
-            <Switch
-              checked={config.audioEnabled}
-              onChange={(_, data) => handleSwitchChange('audioEnabled', data.checked)}
-            />
-          </div>
-
-          <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>启用设备控制</Text>
-            <Switch
-              checked={config.controlEnabled}
-              onChange={(_, data) => handleSwitchChange('controlEnabled', data.checked)}
-            />
-          </div>
-
-          <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>录制屏幕</Text>
-            <Switch
-              checked={config.recordScreen}
-              onChange={(_, data) => handleSwitchChange('recordScreen', data.checked)}
-            />
-          </div>
+      
         </div>
 
         {/* 操作按钮 */}

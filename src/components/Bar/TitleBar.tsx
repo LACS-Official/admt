@@ -189,7 +189,17 @@ const TitleBar: React.FC = () => {
 
   const handleClose = async () => {
     try {
-      await getCurrentWindow().close();
+      // 检查是否启用了系统托盘和关闭时最小化到托盘
+      const { config } = useAppStore.getState();
+      
+      if (config.systemTrayEnabled && config.minimizeToTrayOnClose) {
+        // 最小化到托盘
+        const { systemTrayService } = await import("../../services/systemTrayService");
+        await systemTrayService.minimizeToTray();
+      } else {
+        // 直接关闭应用
+        await getCurrentWindow().close();
+      }
     } catch (error) {
       console.error("关闭窗口失败:", error);
     }

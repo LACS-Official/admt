@@ -199,24 +199,6 @@ const DisplaySettingsPanel: React.FC = () => {
           </div>
         </Card>
 
-        {/* 布局设置 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Grid24Regular />}
-            header={<Text weight="semibold">布局设置</Text>}
-          />
-          <div className={styles.cardContent}>
-            <div className={styles.settingRow}>
-              <div className={styles.settingLabel}>
-                <Label>紧凑模式</Label>
-                <Text className={styles.settingDescription}>减少界面元素间距，显示更多内容</Text>
-              </div>
-              <Switch checked={false} onChange={() => {}} />
-            </div>
-            
-          </div>
-        </Card>
-
       </div>
     </div>
   );
