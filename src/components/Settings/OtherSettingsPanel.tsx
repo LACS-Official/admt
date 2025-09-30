@@ -172,9 +172,10 @@ const OtherSettingsPanel: React.FC = () => {
         // 检查系统支持
         await checkSystemFeatures();
         
-        // 同步托盘状态
+        // 同步托盘状态（不重复初始化）
         const trayStatus = await systemTrayService.isReady();
         if (trayStatus !== config.systemTrayEnabled) {
+          console.log(`🔄 同步托盘状态: ${trayStatus ? '已启用' : '未启用'}`);
           updateConfig({ systemTrayEnabled: trayStatus });
           setMinimizeToTray(trayStatus);
         }

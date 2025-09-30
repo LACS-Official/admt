@@ -69,6 +69,9 @@ pub async fn get_window_close_behavior() -> Result<bool, String> {
     Ok(MINIMIZE_TO_TRAY.load(Ordering::Relaxed))
 }
 
+// 全局状态：托盘是否已创建
+static TRAY_CREATED: AtomicBool = AtomicBool::new(false);
+
 /// 创建系统托盘（简化版本）
 #[tauri::command]
 pub async fn create_system_tray<R: Runtime>(
@@ -78,6 +81,12 @@ pub async fn create_system_tray<R: Runtime>(
     _menu_items: Option<Vec<TrayMenuItem>>,
 ) -> Result<(), String> {
     let app = _app.clone();
+
+    // 检查是否已经创建过托盘
+    if TRAY_CREATED.load(Ordering::Relaxed) {
+        println!("⚠️ 托盘已存在，跳过重复创建");
+        return Ok(());
+    }
 
     // 构建菜单
     let menu_result = if let Some(items) = _menu_items {
@@ -124,6 +133,9 @@ pub async fn create_system_tray<R: Runtime>(
     let _tray = builder
         .build(&app)
         .map_err(|e| format!("build tray failed: {e}"))?;
+
+    // 标记托盘已创建
+    TRAY_CREATED.store(true, Ordering::Relaxed);
 
     // 监听菜单事件，向前端派发事件
     let app_for_menu = app.clone();
@@ -199,8 +211,14 @@ pub async fn is_system_tray_supported() -> Result<bool, String> {
 pub async fn destroy_system_tray<R: Runtime>(
     _app: AppHandle<R>,
 ) -> Result<(), String> {
-    // 在 Tauri 2.x 中，托盘会在应用退出时自动销毁
-    println!("✅ 系统托盘已销毁");
+    if TRAY_CREATED.load(Ordering::Relaxed) {
+        println!("🗑️ 正在销毁系统托盘");
+        TRAY_CREATED.store(false, Ordering::Relaxed);
+        println!("✅ 系统托盘已销毁");
+    } else {
+        println!("ℹ️ 没有找到需要销毁的托盘实例");
+    }
+    
     Ok(())
 }
 

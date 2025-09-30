@@ -11,7 +11,7 @@ import { useStartupFlowStore } from "./stores/startupFlowStore";
 import { logService } from "./services/logService";
 import { ReactErrorFixer } from "./utils/reactErrorFix";
 import { adbToolsManager } from "./services/adbToolsManager";
-import { systemTrayService } from "./services/systemTrayService";
+
 import React from "react";
 
 const useStyles = makeStyles({
@@ -210,17 +210,7 @@ function App() {
       try {
         logService.info('开始初始化ADMT应用...', 'App');
         
-        // 初始化系统托盘服务
-        const traySupported = await systemTrayService.isSystemTraySupported();
-        logService.info(`系统托盘支持状态: ${traySupported}`, 'App');
-        
-        if (traySupported && config.systemTrayEnabled) {
-          logService.info('初始化系统托盘服务...', 'App');
-          await systemTrayService.initialize();
-          
-          // 设置关闭时的行为
-          await systemTrayService.setupWindowCloseHandler(config.minimizeToTrayOnClose);
-        }
+
 
         // 1. 执行React错误检查和修复
         logService.info('执行React错误检查和修复...', 'App');
@@ -260,28 +250,7 @@ function App() {
     initializeApp();
   }, [initialize]);
 
-  // 监听配置变化，更新系统托盘行为
-  React.useEffect(() => {
-    const updateTrayBehavior = async () => {
-      try {
-        const traySupported = await systemTrayService.isSystemTraySupported();
-        
-        if (traySupported) {
-          if (config.systemTrayEnabled && !systemTrayService.isReady()) {
-            // 如果启用了系统托盘但未初始化，则初始化
-            await systemTrayService.initialize();
-          }
-          
-          // 更新关闭行为设置
-          await systemTrayService.setupWindowCloseHandler(config.minimizeToTrayOnClose);
-        }
-      } catch (error) {
-        logService.error('更新系统托盘行为失败:', 'App', error);
-      }
-    };
-    
-    updateTrayBehavior();
-  }, [config.systemTrayEnabled, config.minimizeToTrayOnClose]);
+
 
   const handleStartupFlowComplete = () => {
     logService.info('启动流程完成', 'App');
