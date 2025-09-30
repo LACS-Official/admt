@@ -34,6 +34,7 @@ import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 
 import { usageTrackingService } from "../../services/usageTrackingService";
+import { systemTrayManager } from "../../services/systemTrayManager";
 
 
 const useStyles = makeStyles({
@@ -628,6 +629,45 @@ const MainContent: React.FC = () => {
     console.log('🏢 MainContent useEffect 被触发');
     trackMainContentEntry();
   }, []); // 空依赖数组，确保只在组件挂载时执行一次
+
+  // 系统托盘初始化 - 单例模式管理
+  useEffect(() => {
+    const initializeSystemTray = async () => {
+      try {
+        await systemTrayManager.initialize({
+          systemTrayEnabled: config.systemTrayEnabled,
+          minimizeToTrayOnClose: config.minimizeToTrayOnClose
+        });
+      } catch (error) {
+        console.error('系统托盘初始化失败:', error);
+      }
+    };
+
+    initializeSystemTray();
+
+    // 清理函数
+    return () => {
+      systemTrayManager.cleanup().catch(error => {
+        console.error('系统托盘清理失败:', error);
+      });
+    };
+  }, []); // 只在组件挂载时执行一次
+
+  // 监听配置变化，更新系统托盘行为
+  useEffect(() => {
+    const updateTrayConfig = async () => {
+      try {
+        await systemTrayManager.updateConfig({
+          systemTrayEnabled: config.systemTrayEnabled,
+          minimizeToTrayOnClose: config.minimizeToTrayOnClose
+        });
+      } catch (error) {
+        console.error('更新系统托盘配置失败:', error);
+      }
+    };
+
+    updateTrayConfig();
+  }, [config.systemTrayEnabled, config.minimizeToTrayOnClose]);
 
   const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setCurrentView(data.value as AppView);

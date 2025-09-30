@@ -54,6 +54,12 @@ export class SystemTrayService {
    */
   async initialize(config: TrayConfig = {}): Promise<void> {
     try {
+      // 如果已经初始化，先清理旧的托盘
+      if (this.isInitialized) {
+        console.log('🔄 检测到托盘已存在，先清理旧托盘...');
+        await this.cleanup();
+      }
+
       const defaultConfig: TrayConfig = {
         tooltip: '玩机管家',
         icon: 'icons/tray-icon.png',
@@ -201,12 +207,20 @@ export class SystemTrayService {
       // 清理托盘
       await this.cleanup();
       
-      // 退出应用
-      await exit(0);
+      // 使用 Tauri 的退出命令
+      await invoke('exit_app', { exitCode: 0 });
     } catch (error) {
       console.error('❌ 退出应用失败:', error);
-      // 强制退出
-      await exit(1);
+      try {
+        // 尝试使用插件退出
+        await exit(1);
+      } catch (fallbackError) {
+        console.error('❌ 强制退出也失败:', fallbackError);
+        // 最后的降级方案
+        if (typeof window !== 'undefined') {
+          window.close();
+        }
+      }
     }
   }
 
@@ -216,6 +230,8 @@ export class SystemTrayService {
   async cleanup(): Promise<void> {
     try {
       if (this.isInitialized) {
+        console.log('🧹 开始清理系统托盘资源...');
+        
         // 移除事件监听器
         if (this.closeEventUnlisten) {
           this.closeEventUnlisten();
@@ -223,7 +239,11 @@ export class SystemTrayService {
         }
         
         // 销毁托盘
-        await invoke('destroy_system_tray');
+        try {
+          await invoke('destroy_system_tray');
+        } catch (destroyError) {
+          console.warn('⚠️ 销毁托盘时出现警告:', destroyError);
+        }
         
         this.isInitialized = false;
         this.closeToTrayEnabled = false;
@@ -231,6 +251,9 @@ export class SystemTrayService {
       }
     } catch (error) {
       console.error('❌ 清理系统托盘失败:', error);
+      // 即使清理失败，也要重置状态
+      this.isInitialized = false;
+      this.closeToTrayEnabled = false;
     }
   }
 
