@@ -1,19 +1,21 @@
-use crate::device::{DeviceInfo, DeviceMode, DeviceProperties, CommandResult, InstalledApp, ApkInfo, BatchOperation, DeviceFile};
-use crate::error::{HoutError, Result};
-use crate::screen_mirror::{ScreenMirrorSession, ScreenMirrorConfig, ScreenMirrorDevice};
-use crate::utils::{execute_adb_command as utils_execute_adb_command, execute_fastboot_command, parse_adb_device_list, parse_fastboot_device_list};
-use crate::download_manager::DownloadManager;
-use tauri::Emitter;
-use crate::activation::{ActivationValidator, ActivationRequest, ActivationResponse, AppConfig};
-use serde::{Deserialize, Serialize};
-use tauri::Manager;
+use crate::activation::{ActivationRequest, ActivationResponse, ActivationValidator, AppConfig};
+use crate::adb_commands::{AdbIntegrityReport, AdbToolsInfo};
 use crate::cache::{get_cache_manager, log_tool_paths, verify_tool_paths};
-use crate::adb_commands::{AdbToolsInfo, AdbIntegrityReport};
+use crate::device::{
+    ApkInfo, BatchOperation, CommandResult, DeviceFile, DeviceInfo, DeviceMode, DeviceProperties,
+    InstalledApp,
+};
+use crate::download_manager::DownloadManager;
+use crate::error::{HoutError, Result};
+use crate::screen_mirror::{ScreenMirrorConfig, ScreenMirrorDevice, ScreenMirrorSession};
+use crate::utils::{
+    execute_adb_command as utils_execute_adb_command, execute_fastboot_command,
+    parse_adb_device_list, parse_fastboot_device_list,
+};
 use chrono::Local;
-
-
-
-
+use serde::{Deserialize, Serialize};
+use tauri::Emitter;
+use tauri::Manager;
 
 /// 扫描连接的设备（使用缓存）
 #[tauri::command]
@@ -21,12 +23,15 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
     // 首先尝试从缓存获取
     let cache_manager = get_cache_manager();
     if let Some(cached_devices) = cache_manager.get_device_list().await {
-        log::debug!("Device list cache hit with {} devices", cached_devices.len());
+        log::debug!(
+            "Device list cache hit with {} devices",
+            cached_devices.len()
+        );
         return Ok(cached_devices);
     }
 
     let mut devices = Vec::new();
-    
+
     // 扫描ADB设备
     match utils_execute_adb_command(&["devices"], Some(10)).await {
         Ok(result) if result.success => {
@@ -43,7 +48,7 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
             log::error!("Failed to execute ADB devices command: {}", e);
         }
     }
-    
+
     // 扫描Fastboot设备
     log::info!("Scanning for Fastboot devices...");
     match execute_fastboot_command(&["devices"], Some(10)).await {
@@ -63,8 +68,12 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
             }
         }
         Ok(result) => {
-            log::warn!("Fastboot devices command failed: success={}, output={}, error={:?}",
-                result.success, result.output, result.error);
+            log::warn!(
+                "Fastboot devices command failed: success={}, output={}, error={:?}",
+                result.success,
+                result.output,
+                result.error
+            );
         }
         Err(e) => {
             log::error!("Failed to execute Fastboot devices command: {}", e);
@@ -87,12 +96,14 @@ pub async fn get_device_info(serial: String) -> Result<DeviceInfo> {
     let device = devices
         .into_iter()
         .find(|d| d.serial == serial)
-        .ok_or_else(|| HoutError::DeviceNotFound { serial: serial.clone() })?;
-    
+        .ok_or_else(|| HoutError::DeviceNotFound {
+            serial: serial.clone(),
+        })?;
+
     if device.mode == DeviceMode::Unauthorized {
         return Err(HoutError::DeviceUnauthorized { serial });
     }
-    
+
     Ok(device)
 }
 
@@ -103,7 +114,10 @@ async fn get_device_properties_batch(serial: &str) -> Result<DeviceProperties> {
 
     if !result.success {
         let error_msg = result.error.unwrap_or_else(|| "Unknown error".to_string());
-        return Err(HoutError::Device(format!("Failed to get device properties: {}", error_msg)));
+        return Err(HoutError::Device(format!(
+            "Failed to get device properties: {}",
+            error_msg
+        )));
     }
 
     let mut properties = DeviceProperties::default();
@@ -166,27 +180,45 @@ async fn get_device_properties_batch(serial: &str) -> Result<DeviceProperties> {
     }
 
     // 获取电池电量信息
-    if let Ok(battery_result) = utils_execute_adb_command(&["-s", serial, "shell", "dumpsys", "battery"], Some(10)).await {
+    if let Ok(battery_result) =
+        utils_execute_adb_command(&["-s", serial, "shell", "dumpsys", "battery"], Some(10)).await
+    {
         if battery_result.success {
             properties.battery_level = parse_battery_level(&battery_result.output);
-            log::debug!("Battery level for {}: {:?}", serial, properties.battery_level);
+            log::debug!(
+                "Battery level for {}: {:?}",
+                serial,
+                properties.battery_level
+            );
         } else {
-            log::warn!("Failed to get battery info for {}: {:?}", serial, battery_result.error);
+            log::warn!(
+                "Failed to get battery info for {}: {:?}",
+                serial,
+                battery_result.error
+            );
         }
     } else {
         log::warn!("Failed to execute battery command for {}", serial);
     }
 
     // 获取屏幕分辨率信息
-    if let Ok(screen_result) = utils_execute_adb_command(&["-s", serial, "shell", "wm", "size"], Some(5)).await {
+    if let Ok(screen_result) =
+        utils_execute_adb_command(&["-s", serial, "shell", "wm", "size"], Some(5)).await
+    {
         if screen_result.success {
             properties.screen_resolution = parse_screen_resolution(&screen_result.output);
-            log::debug!("Screen resolution for {}: {:?}", serial, properties.screen_resolution);
+            log::debug!(
+                "Screen resolution for {}: {:?}",
+                serial,
+                properties.screen_resolution
+            );
         }
     }
 
     // 获取内存信息
-    if let Ok(memory_result) = utils_execute_adb_command(&["-s", serial, "shell", "cat", "/proc/meminfo"], Some(5)).await {
+    if let Ok(memory_result) =
+        utils_execute_adb_command(&["-s", serial, "shell", "cat", "/proc/meminfo"], Some(5)).await
+    {
         if memory_result.success {
             if let Some(total_memory) = parse_total_memory(&memory_result.output) {
                 properties.total_memory = Some(format!("{} MB", total_memory / 1024));
@@ -196,11 +228,17 @@ async fn get_device_properties_batch(serial: &str) -> Result<DeviceProperties> {
     }
 
     // 获取存储信息
-    if let Ok(storage_result) = utils_execute_adb_command(&["-s", serial, "shell", "df", "/data"], Some(5)).await {
+    if let Ok(storage_result) =
+        utils_execute_adb_command(&["-s", serial, "shell", "df", "/data"], Some(5)).await
+    {
         if storage_result.success {
             if let Some(available_storage) = parse_available_storage(&storage_result.output) {
                 properties.available_storage = Some(format!("{} MB", available_storage / 1024));
-                log::debug!("Available storage for {}: {:?}", serial, properties.available_storage);
+                log::debug!(
+                    "Available storage for {}: {:?}",
+                    serial,
+                    properties.available_storage
+                );
             }
         }
     }
@@ -319,12 +357,10 @@ pub async fn get_device_properties(serial: String) -> Result<DeviceProperties> {
     let properties = get_device_properties_batch(&serial).await?;
 
     // 缓存设备属性
-    cache_manager.set_device_properties(serial.clone(), properties.clone()).await;
-    
+    cache_manager
+        .set_device_properties(serial.clone(), properties.clone())
+        .await;
 
-
-
-    
     Ok(properties)
 }
 
@@ -382,7 +418,14 @@ pub async fn execute_adb_command(
     let mut cmd_args = vec!["-s", &serial];
     cmd_args.push(&command);
 
-    let string_args: Vec<String> = args.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join(" ").split_whitespace().map(|s| s.to_string()).collect();
+    let string_args: Vec<String> = args
+        .iter()
+        .map(|s| s.as_str())
+        .collect::<Vec<&str>>()
+        .join(" ")
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect();
     let str_args: Vec<&str> = string_args.iter().map(|s| s.as_str()).collect();
     cmd_args.extend(str_args);
 
@@ -507,11 +550,11 @@ pub async fn list_device_files(serial: String, path: String) -> Result<Vec<Devic
     let mut files = Vec::new();
     let mut line_count = 0;
     println!("=== 开始解析文件列表 ===");
-    
+
     for line in result.output.lines() {
         line_count += 1;
         println!("处理第{}行: '{}'", line_count, line);
-        
+
         if line.trim().is_empty() || line.starts_with("total") {
             println!("跳过空行或total行");
             continue;
@@ -532,7 +575,11 @@ pub async fn list_device_files(serial: String, path: String) -> Result<Vec<Devic
         let name = if parts.len() >= 9 {
             // 名称可能包含空格，使用 splitn 获取第9个字段之后的所有内容
             let name_part_vec: Vec<&str> = trimmed.splitn(9, ' ').collect();
-            let mut nm = if name_part_vec.len() >= 9 { name_part_vec[8].to_string() } else { parts.last().unwrap_or(&"").to_string() };
+            let mut nm = if name_part_vec.len() >= 9 {
+                name_part_vec[8].to_string()
+            } else {
+                parts.last().unwrap_or(&"").to_string()
+            };
             // 处理符号链接："name -> target" 取左侧 name
             if let Some(idx) = nm.find(" -> ") {
                 nm = nm[..idx].to_string();
@@ -542,9 +589,9 @@ pub async fn list_device_files(serial: String, path: String) -> Result<Vec<Devic
             // 回退：取最后一个字段
             parts.last().unwrap_or(&"").to_string()
         };
-        
+
         println!("处理后文件名: '{}', 是目录: {}", name, is_directory);
-        
+
         // 跳过 . 和 .. 目录
         if name == "." || name == ".." {
             println!("跳过特殊目录: {}", name);
@@ -561,11 +608,11 @@ pub async fn list_device_files(serial: String, path: String) -> Result<Vec<Devic
             name: name.clone(),
             path: file_path,
             is_directory,
-            size: None, // ls -F 没有大小信息
+            size: None,        // ls -F 没有大小信息
             permissions: None, // ls -F 没有权限信息
             modified_time: None,
         };
-        
+
         println!("添加文件到列表: {:?}", file);
         files.push(file);
     }
@@ -614,7 +661,11 @@ pub async fn get_installed_apps(serial: String, include_system: bool) -> Result<
 
 /// 卸载应用
 #[tauri::command]
-pub async fn uninstall_app(serial: String, package_name: String, keep_data: bool) -> Result<CommandResult> {
+pub async fn uninstall_app(
+    serial: String,
+    package_name: String,
+    keep_data: bool,
+) -> Result<CommandResult> {
     let device = get_device_info(serial.clone()).await?;
 
     if !device.is_adb_available() {
@@ -640,19 +691,18 @@ pub async fn get_apk_info(apk_path: String) -> Result<ApkInfo> {
 
     let path = Path::new(&apk_path);
     if !path.exists() {
-        return Err(HoutError::FileNotFound {
-            path: apk_path,
-        });
+        return Err(HoutError::FileNotFound { path: apk_path });
     }
 
     let file_size = fs::metadata(&apk_path)
         .map_err(|e| HoutError::IoError {
-            message: format!("Failed to get file size: {}", e)
+            message: format!("Failed to get file size: {}", e),
         })?
         .len();
 
     // 使用aapt获取APK信息
-    let result = utils_execute_adb_command(&["shell", "aapt", "dump", "badging", &apk_path], Some(30)).await;
+    let result =
+        utils_execute_adb_command(&["shell", "aapt", "dump", "badging", &apk_path], Some(30)).await;
 
     let mut apk_info = ApkInfo {
         file_path: apk_path.clone(),
@@ -685,11 +735,13 @@ pub async fn get_apk_info(apk_path: String) -> Result<ApkInfo> {
 pub async fn batch_install_apks(
     serial: String,
     apk_paths: Vec<String>,
-    replace_existing: bool
+    replace_existing: bool,
 ) -> Result<BatchOperation> {
-    use uuid::Uuid;
+    use crate::device::{
+        BatchOperationItem, BatchOperationStatus, BatchOperationType, InstallStatus,
+    };
     use chrono::Utc;
-    use crate::device::{BatchOperationType, BatchOperationStatus, BatchOperationItem, InstallStatus};
+    use uuid::Uuid;
 
     let device = get_device_info(serial.clone()).await?;
 
@@ -707,20 +759,23 @@ pub async fn batch_install_apks(
         completed_items: 0,
         failed_items: 0,
         status: BatchOperationStatus::Running,
-        items: apk_paths.iter().map(|path| {
-            let file_name = std::path::Path::new(path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("unknown.apk")
-                .to_string();
+        items: apk_paths
+            .iter()
+            .map(|path| {
+                let file_name = std::path::Path::new(path)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown.apk")
+                    .to_string();
 
-            BatchOperationItem {
-                id: Uuid::new_v4().to_string(),
-                name: file_name,
-                status: InstallStatus::Pending,
-                message: None,
-            }
-        }).collect(),
+                BatchOperationItem {
+                    id: Uuid::new_v4().to_string(),
+                    name: file_name,
+                    status: InstallStatus::Pending,
+                    message: None,
+                }
+            })
+            .collect(),
         start_time: Utc::now(),
         end_time: None,
     };
@@ -745,7 +800,8 @@ pub async fn batch_install_apks(
                     batch_operation.completed_items += 1;
                 } else {
                     batch_operation.items[index].status = InstallStatus::Failed;
-                    batch_operation.items[index].message = Some(cmd_result.error.unwrap_or_default());
+                    batch_operation.items[index].message =
+                        Some(cmd_result.error.unwrap_or_default());
                     batch_operation.failed_items += 1;
                 }
             }
@@ -775,11 +831,13 @@ pub async fn batch_install_apks(
 pub async fn batch_uninstall_apps(
     serial: String,
     package_names: Vec<String>,
-    keep_data: bool
+    keep_data: bool,
 ) -> Result<BatchOperation> {
-    use uuid::Uuid;
+    use crate::device::{
+        BatchOperationItem, BatchOperationStatus, BatchOperationType, InstallStatus,
+    };
     use chrono::Utc;
-    use crate::device::{BatchOperationType, BatchOperationStatus, BatchOperationItem, InstallStatus};
+    use uuid::Uuid;
 
     let device = get_device_info(serial.clone()).await?;
 
@@ -797,14 +855,15 @@ pub async fn batch_uninstall_apps(
         completed_items: 0,
         failed_items: 0,
         status: BatchOperationStatus::Running,
-        items: package_names.iter().map(|package| {
-            BatchOperationItem {
+        items: package_names
+            .iter()
+            .map(|package| BatchOperationItem {
                 id: Uuid::new_v4().to_string(),
                 name: package.clone(),
                 status: InstallStatus::Pending,
                 message: None,
-            }
-        }).collect(),
+            })
+            .collect(),
         start_time: Utc::now(),
         end_time: None,
     };
@@ -829,7 +888,8 @@ pub async fn batch_uninstall_apps(
                     batch_operation.completed_items += 1;
                 } else {
                     batch_operation.items[index].status = InstallStatus::Failed;
-                    batch_operation.items[index].message = Some(cmd_result.error.unwrap_or_default());
+                    batch_operation.items[index].message =
+                        Some(cmd_result.error.unwrap_or_default());
                     batch_operation.failed_items += 1;
                 }
             }
@@ -890,28 +950,49 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
     let current_dir = std::env::current_dir()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "Unknown".to_string());
-    diagnosis.insert("current_working_directory".to_string(), serde_json::Value::String(current_dir));
+    diagnosis.insert(
+        "current_working_directory".to_string(),
+        serde_json::Value::String(current_dir),
+    );
 
     // 获取可执行文件目录
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|p| p.display().to_string()))
         .unwrap_or_else(|| "Unknown".to_string());
-    diagnosis.insert("executable_directory".to_string(), serde_json::Value::String(exe_dir));
+    diagnosis.insert(
+        "executable_directory".to_string(),
+        serde_json::Value::String(exe_dir),
+    );
 
     // 获取 PATH 环境变量
     let path_env = std::env::var("PATH").unwrap_or_else(|_| "Not found".to_string());
-    diagnosis.insert("path_environment".to_string(), serde_json::Value::String(path_env));
+    diagnosis.insert(
+        "path_environment".to_string(),
+        serde_json::Value::String(path_env),
+    );
 
     // 获取缓存的 ADB 路径
     let adb_path = get_cached_adb_path();
-    diagnosis.insert("cached_adb_path".to_string(), serde_json::Value::String(adb_path.display().to_string()));
-    diagnosis.insert("adb_exists".to_string(), serde_json::Value::Bool(adb_path.exists()));
+    diagnosis.insert(
+        "cached_adb_path".to_string(),
+        serde_json::Value::String(adb_path.display().to_string()),
+    );
+    diagnosis.insert(
+        "adb_exists".to_string(),
+        serde_json::Value::Bool(adb_path.exists()),
+    );
 
     // 获取缓存的 Fastboot 路径
     let fastboot_path = get_cached_fastboot_path();
-    diagnosis.insert("cached_fastboot_path".to_string(), serde_json::Value::String(fastboot_path.display().to_string()));
-    diagnosis.insert("fastboot_exists".to_string(), serde_json::Value::Bool(fastboot_path.exists()));
+    diagnosis.insert(
+        "cached_fastboot_path".to_string(),
+        serde_json::Value::String(fastboot_path.display().to_string()),
+    );
+    diagnosis.insert(
+        "fastboot_exists".to_string(),
+        serde_json::Value::Bool(fastboot_path.exists()),
+    );
 
     // 检查资源目录（仅检查预期的路径）
     let mut resource_paths = Vec::new();
@@ -954,38 +1035,47 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
         "fastboot_exists": relative_tools.join("fastboot.exe").exists()
     }));
 
-    diagnosis.insert("resource_directories".to_string(), serde_json::Value::Array(resource_paths));
+    diagnosis.insert(
+        "resource_directories".to_string(),
+        serde_json::Value::Array(resource_paths),
+    );
 
     // 尝试执行 ADB 和 Fastboot 命令
     let adb_test = utils_execute_adb_command(&["version"], Some(5)).await;
-    diagnosis.insert("adb_command_test".to_string(), serde_json::json!({
-        "success": adb_test.is_ok(),
-        "result": match adb_test {
-            Ok(result) => serde_json::json!({
-                "success": result.success,
-                "output": result.output,
-                "error": result.error
-            }),
-            Err(e) => serde_json::json!({
-                "error": e.to_string()
-            })
-        }
-    }));
+    diagnosis.insert(
+        "adb_command_test".to_string(),
+        serde_json::json!({
+            "success": adb_test.is_ok(),
+            "result": match adb_test {
+                Ok(result) => serde_json::json!({
+                    "success": result.success,
+                    "output": result.output,
+                    "error": result.error
+                }),
+                Err(e) => serde_json::json!({
+                    "error": e.to_string()
+                })
+            }
+        }),
+    );
 
     let fastboot_test = execute_fastboot_command(&["--version"], Some(5)).await;
-    diagnosis.insert("fastboot_command_test".to_string(), serde_json::json!({
-        "success": fastboot_test.is_ok(),
-        "result": match fastboot_test {
-            Ok(result) => serde_json::json!({
-                "success": result.success,
-                "output": result.output,
-                "error": result.error
-            }),
-            Err(e) => serde_json::json!({
-                "error": e.to_string()
-            })
-        }
-    }));
+    diagnosis.insert(
+        "fastboot_command_test".to_string(),
+        serde_json::json!({
+            "success": fastboot_test.is_ok(),
+            "result": match fastboot_test {
+                Ok(result) => serde_json::json!({
+                    "success": result.success,
+                    "output": result.output,
+                    "error": result.error
+                }),
+                Err(e) => serde_json::json!({
+                    "error": e.to_string()
+                })
+            }
+        }),
+    );
 
     log::info!("ADB/Fastboot path diagnosis completed");
     Ok(serde_json::Value::Object(diagnosis.into_iter().collect()))
@@ -995,10 +1085,10 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
 #[tauri::command]
 pub async fn exit_app(exit_code: i32) -> Result<()> {
     log::info!("应用退出请求，退出码: {}", exit_code);
-    
+
     // 给一些时间让前端接收到响应
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    
+
     // 退出应用
     std::process::exit(exit_code);
 }
@@ -1031,18 +1121,28 @@ pub async fn scan_fastboot_devices() -> Result<CommandResult> {
     log::info!("Scanning fastboot devices for debugging...");
     let result = execute_fastboot_command(&["devices"], Some(10)).await?;
 
-    log::info!("Fastboot devices result: success={}, output='{}', error={:?}",
-        result.success, result.output, result.error);
+    log::info!(
+        "Fastboot devices result: success={}, output='{}', error={:?}",
+        result.success,
+        result.output,
+        result.error
+    );
 
     Ok(result)
 }
 
 /// 使用 Fastboot 刷入镜像到指定分区
 #[tauri::command]
-pub async fn fastboot_flash_image(serial: String, image_path: String, partition: String) -> Result<CommandResult> {
+pub async fn fastboot_flash_image(
+    serial: String,
+    image_path: String,
+    partition: String,
+) -> Result<CommandResult> {
     log::info!(
         "Fastboot flashing image. serial={}, partition={}, image_path={}",
-        serial, partition, image_path
+        serial,
+        partition,
+        image_path
     );
 
     let args = vec!["-s", &serial, "flash", &partition, &image_path];
@@ -1059,7 +1159,9 @@ pub async fn get_adb_tools_info(app_handle: tauri::AppHandle) -> Result<AdbTools
 
 /// 验证ADB工具完整性
 #[tauri::command]
-pub async fn verify_adb_tools_integrity(app_handle: tauri::AppHandle) -> Result<AdbIntegrityReport> {
+pub async fn verify_adb_tools_integrity(
+    app_handle: tauri::AppHandle,
+) -> Result<AdbIntegrityReport> {
     crate::adb_commands::verify_adb_tools_integrity(&app_handle)
 }
 
@@ -1072,13 +1174,8 @@ pub async fn execute_adb_command_with_path(
     args: Vec<String>,
     timeout: Option<u64>,
 ) -> Result<CommandResult> {
-    crate::adb_commands::execute_adb_command_with_path(
-        &adb_path,
-        &serial,
-        &command,
-        &args,
-        timeout,
-    ).await
+    crate::adb_commands::execute_adb_command_with_path(&adb_path, &serial, &command, &args, timeout)
+        .await
 }
 
 /// 使用指定Fastboot路径执行命令
@@ -1096,7 +1193,8 @@ pub async fn execute_fastboot_command_with_path(
         &command,
         &args,
         timeout,
-    ).await
+    )
+    .await
 }
 
 /// 获取设备性能信息
@@ -1128,7 +1226,9 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
     });
 
     // 获取内存信息
-    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/proc/meminfo"], Some(10)).await {
+    if let Ok(result) =
+        utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/proc/meminfo"], Some(10)).await
+    {
         if result.success {
             let mut mem_total_kb = 0u64;
             let mut mem_available_kb = 0u64;
@@ -1170,7 +1270,9 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
     }
 
     // 获取存储信息
-    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "df", "/data"], Some(10)).await {
+    if let Ok(result) =
+        utils_execute_adb_command(&["-s", &serial, "shell", "df", "/data"], Some(10)).await
+    {
         if result.success {
             let lines: Vec<&str> = result.output.lines().collect();
             if lines.len() > 1 {
@@ -1180,7 +1282,7 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
                     if let (Ok(total_kb), Ok(used_kb), Ok(available_kb)) = (
                         parts[1].parse::<u64>(),
                         parts[2].parse::<u64>(),
-                        parts[3].parse::<u64>()
+                        parts[3].parse::<u64>(),
                     ) {
                         let total_mb = total_kb / 1024;
                         let used_mb = used_kb / 1024;
@@ -1204,7 +1306,9 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
     }
 
     // 获取电池信息
-    if let Ok(result) = utils_execute_adb_command(&["-s", &serial, "shell", "dumpsys", "battery"], Some(10)).await {
+    if let Ok(result) =
+        utils_execute_adb_command(&["-s", &serial, "shell", "dumpsys", "battery"], Some(10)).await
+    {
         if result.success {
             let mut battery_level: Option<u32> = None;
             let mut battery_health_status: Option<String> = None;
@@ -1265,15 +1369,33 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
                         log::info!("Calculated actual capacity from Charge counter: {} mAh (counter: {} μAh, level: {}%)",
                                  actual_capacity_mah, counter_uah, level);
                     } else {
-                        log::warn!("Calculated capacity {} mAh is out of reasonable range, ignoring", actual_capacity_mah);
+                        log::warn!(
+                            "Calculated capacity {} mAh is out of reasonable range, ignoring",
+                            actual_capacity_mah
+                        );
                     }
                 } else {
-                    log::warn!("Invalid data for capacity calculation: counter={:?}, level={:?}", charge_counter_uah, battery_level);
+                    log::warn!(
+                        "Invalid data for capacity calculation: counter={:?}, level={:?}",
+                        charge_counter_uah,
+                        battery_level
+                    );
                 }
             }
 
             // 尝试获取设计容量信息（标称容量）
-            if let Ok(capacity_result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/sys/class/power_supply/battery/charge_full_design"], Some(5)).await {
+            if let Ok(capacity_result) = utils_execute_adb_command(
+                &[
+                    "-s",
+                    &serial,
+                    "shell",
+                    "cat",
+                    "/sys/class/power_supply/battery/charge_full_design",
+                ],
+                Some(5),
+            )
+            .await
+            {
                 if capacity_result.success {
                     if let Ok(design_capacity) = capacity_result.output.trim().parse::<u32>() {
                         battery_design_capacity = Some(design_capacity / 1000); // 转换为mAh
@@ -1284,11 +1406,25 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
 
             // 如果没有获取到设计容量，尝试另一个路径
             if battery_design_capacity.is_none() {
-                if let Ok(capacity_result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/sys/class/power_supply/battery/charge_full"], Some(5)).await {
+                if let Ok(capacity_result) = utils_execute_adb_command(
+                    &[
+                        "-s",
+                        &serial,
+                        "shell",
+                        "cat",
+                        "/sys/class/power_supply/battery/charge_full",
+                    ],
+                    Some(5),
+                )
+                .await
+                {
                     if capacity_result.success {
                         if let Ok(full_capacity) = capacity_result.output.trim().parse::<u32>() {
                             battery_design_capacity = Some(full_capacity / 1000); // 转换为mAh
-                            log::info!("Found full capacity as design capacity: {} mAh", full_capacity / 1000);
+                            log::info!(
+                                "Found full capacity as design capacity: {} mAh",
+                                full_capacity / 1000
+                            );
                         }
                     }
                 }
@@ -1298,18 +1434,37 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
             if battery_actual_capacity.is_none() {
                 log::info!("Charge counter method failed, falling back to traditional method");
 
-                if let Ok(capacity_result) = utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/sys/class/power_supply/battery/charge_now"], Some(5)).await {
+                if let Ok(capacity_result) = utils_execute_adb_command(
+                    &[
+                        "-s",
+                        &serial,
+                        "shell",
+                        "cat",
+                        "/sys/class/power_supply/battery/charge_now",
+                    ],
+                    Some(5),
+                )
+                .await
+                {
                     if capacity_result.success {
                         if let Ok(current_capacity) = capacity_result.output.trim().parse::<u32>() {
                             battery_actual_capacity = Some(current_capacity / 1000); // 转换为mAh
-                            log::info!("Found current capacity (fallback): {} mAh", current_capacity / 1000);
+                            log::info!(
+                                "Found current capacity (fallback): {} mAh",
+                                current_capacity / 1000
+                            );
                         }
                     }
                 }
             }
 
             // 计算电池健康度百分比和状态
-            let (battery_health_percent, health_calculation_method) = if let (Some(actual), Some(design)) = (battery_actual_capacity, battery_design_capacity) {
+            let (battery_health_percent, health_calculation_method) = if let (
+                Some(actual),
+                Some(design),
+            ) =
+                (battery_actual_capacity, battery_design_capacity)
+            {
                 if design > 0 {
                     let health_percent = ((actual as f64 / design as f64) * 100.0).round() as u32;
                     let limited_health = std::cmp::min(health_percent, 150); // 允许稍微超过100%，但限制在150%以内
@@ -1318,7 +1473,11 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
                     } else {
                         "系统文件计算"
                     };
-                    log::info!("Battery health calculated: {}% using method: {}", limited_health, method);
+                    log::info!(
+                        "Battery health calculated: {}% using method: {}",
+                        limited_health,
+                        method
+                    );
                     (Some(limited_health), Some(method.to_string()))
                 } else {
                     log::warn!("Design capacity is 0, cannot calculate health");
@@ -1416,7 +1575,8 @@ pub async fn get_device_connection_info(serial: String) -> Result<serde_json::Va
         // 获取ADB版本
         if let Ok(version_result) = utils_execute_adb_command(&["version"], Some(5)).await {
             if version_result.success {
-                let version_line = version_result.output
+                let version_line = version_result
+                    .output
                     .lines()
                     .find(|line| line.contains("Android Debug Bridge version"))
                     .unwrap_or("")
@@ -1460,9 +1620,12 @@ async fn parse_package_line(line: &str, serial: &str) -> Option<InstalledApp> {
     };
 
     // 获取应用名称
-    if let Ok(result) = utils_execute_adb_command(&[
-        "-s", serial, "shell", "pm", "dump", &package_name
-    ], Some(10)).await {
+    if let Ok(result) = utils_execute_adb_command(
+        &["-s", serial, "shell", "pm", "dump", &package_name],
+        Some(10),
+    )
+    .await
+    {
         if result.success {
             parse_package_dump(&result.output, &mut app);
         }
@@ -1479,15 +1642,19 @@ fn parse_package_dump(output: &str, app: &mut InstalledApp) {
         if line.starts_with("versionName=") {
             app.version_name = line.strip_prefix("versionName=").map(|s| s.to_string());
         } else if line.starts_with("versionCode=") {
-            app.version_code = line.strip_prefix("versionCode=")
+            app.version_code = line
+                .strip_prefix("versionCode=")
                 .and_then(|s| s.split_whitespace().next())
                 .map(|s| s.to_string());
         } else if line.starts_with("firstInstallTime=") {
-            app.install_time = line.strip_prefix("firstInstallTime=").map(|s| s.to_string());
+            app.install_time = line
+                .strip_prefix("firstInstallTime=")
+                .map(|s| s.to_string());
         } else if line.starts_with("lastUpdateTime=") {
             app.update_time = line.strip_prefix("lastUpdateTime=").map(|s| s.to_string());
         } else if line.starts_with("enabled=") {
-            app.is_enabled = line.strip_prefix("enabled=")
+            app.is_enabled = line
+                .strip_prefix("enabled=")
                 .map(|s| s == "true")
                 .unwrap_or(true);
         }
@@ -1505,13 +1672,16 @@ fn parse_aapt_output(output: &str, apk_info: &mut ApkInfo) {
 
                 if let Some(version_start) = line.find("versionCode='") {
                     if let Some(version_end) = line[version_start + 13..].find('\'') {
-                        apk_info.version_code = Some(line[version_start + 13..version_start + 13 + version_end].to_string());
+                        apk_info.version_code = Some(
+                            line[version_start + 13..version_start + 13 + version_end].to_string(),
+                        );
                     }
                 }
 
                 if let Some(name_start) = line.find("versionName='") {
                     if let Some(name_end) = line[name_start + 13..].find('\'') {
-                        apk_info.version_name = Some(line[name_start + 13..name_start + 13 + name_end].to_string());
+                        apk_info.version_name =
+                            Some(line[name_start + 13..name_start + 13 + name_end].to_string());
                     }
                 }
             }
@@ -1565,18 +1735,14 @@ fn get_app_downloads_dir() -> Result<std::path::PathBuf> {
 
 /// 下载APK文件
 #[tauri::command]
-pub async fn download_apk(
-    url: String,
-    file_name: String,
-    is_direct: bool,
-) -> Result<String> {
-
+pub async fn download_apk(url: String, file_name: String, is_direct: bool) -> Result<String> {
     use tokio::fs;
     use tokio::io::AsyncWriteExt;
 
     // 创建下载目录
     let downloads_dir = get_app_downloads_dir()?;
-    fs::create_dir_all(&downloads_dir).await
+    fs::create_dir_all(&downloads_dir)
+        .await
         .map_err(|e| HoutError::Io(format!("Failed to create downloads directory: {}", e)))?;
 
     // 生成文件路径
@@ -1592,28 +1758,36 @@ pub async fn download_apk(
 
     // 下载文件
     let client = reqwest::Client::new();
-    let response = client.get(&download_url)
+    let response = client
+        .get(&download_url)
         .send()
         .await
         .map_err(|e| HoutError::Network(format!("Failed to start download: {}", e)))?;
 
     if !response.status().is_success() {
-        return Err(HoutError::Network(format!("Download failed with status: {}", response.status())));
+        return Err(HoutError::Network(format!(
+            "Download failed with status: {}",
+            response.status()
+        )));
     }
 
-    let mut file = fs::File::create(&file_path).await
+    let mut file = fs::File::create(&file_path)
+        .await
         .map_err(|e| HoutError::Io(format!("Failed to create file: {}", e)))?;
 
     let mut stream = response.bytes_stream();
     use futures_util::StreamExt;
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| HoutError::Network(format!("Failed to read chunk: {}", e)))?;
-        file.write_all(&chunk).await
+        let chunk =
+            chunk.map_err(|e| HoutError::Network(format!("Failed to read chunk: {}", e)))?;
+        file.write_all(&chunk)
+            .await
             .map_err(|e| HoutError::Io(format!("Failed to write chunk: {}", e)))?;
     }
 
-    file.flush().await
+    file.flush()
+        .await
         .map_err(|e| HoutError::Io(format!("Failed to flush file: {}", e)))?;
 
     Ok(file_path.to_string_lossy().to_string())
@@ -1626,14 +1800,16 @@ async fn get_redirect_url(url: &str) -> Result<String> {
         .build()
         .map_err(|e| HoutError::Network(format!("Failed to create HTTP client: {}", e)))?;
 
-    let response = client.head(url)
+    let response = client
+        .head(url)
         .send()
         .await
         .map_err(|e| HoutError::Network(format!("Failed to send HEAD request: {}", e)))?;
 
     if response.status().is_redirection() {
         if let Some(location) = response.headers().get("location") {
-            let redirect_url = location.to_str()
+            let redirect_url = location
+                .to_str()
                 .map_err(|e| HoutError::Network(format!("Invalid redirect URL: {}", e)))?;
             return Ok(redirect_url.to_string());
         }
@@ -1653,15 +1829,18 @@ pub async fn get_download_size(url: String, is_direct: bool) -> Result<u64> {
     };
 
     let client = reqwest::Client::new();
-    let response = client.head(&download_url)
+    let response = client
+        .head(&download_url)
         .send()
         .await
         .map_err(|e| HoutError::Network(format!("Failed to get file info: {}", e)))?;
 
     if let Some(content_length) = response.headers().get("content-length") {
-        let size_str = content_length.to_str()
+        let size_str = content_length
+            .to_str()
             .map_err(|e| HoutError::Network(format!("Invalid content-length header: {}", e)))?;
-        let size = size_str.parse::<u64>()
+        let size = size_str
+            .parse::<u64>()
             .map_err(|e| HoutError::Network(format!("Failed to parse content-length: {}", e)))?;
         Ok(size)
     } else {
@@ -1677,9 +1856,9 @@ pub async fn download_file(
     task_id: String,
     window: tauri::Window,
 ) -> Result<String> {
+    use futures_util::StreamExt;
     use tokio::fs;
     use tokio::io::AsyncWriteExt;
-    use futures_util::StreamExt;
 
     log::info!("开始下载文件: {} -> {}", url, file_name);
 
@@ -1687,7 +1866,8 @@ pub async fn download_file(
     let downloads_dir = get_app_downloads_dir()?;
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let daily_dir = downloads_dir.join(&today);
-    fs::create_dir_all(&daily_dir).await
+    fs::create_dir_all(&daily_dir)
+        .await
         .map_err(|e| HoutError::Io(format!("Failed to create downloads directory: {}", e)))?;
 
     // 生成文件路径
@@ -1695,13 +1875,17 @@ pub async fn download_file(
 
     // 开始下载
     let client = reqwest::Client::new();
-    let response = client.get(&url)
+    let response = client
+        .get(&url)
         .send()
         .await
         .map_err(|e| HoutError::Network(format!("Failed to start download: {}", e)))?;
 
     if !response.status().is_success() {
-        return Err(HoutError::Network(format!("Download failed with status: {}", response.status())));
+        return Err(HoutError::Network(format!(
+            "Download failed with status: {}",
+            response.status()
+        )));
     }
 
     // 获取文件总大小
@@ -1709,17 +1893,20 @@ pub async fn download_file(
     let mut downloaded_size = 0u64;
 
     // 创建文件
-    let mut file = fs::File::create(&file_path).await
+    let mut file = fs::File::create(&file_path)
+        .await
         .map_err(|e| HoutError::Io(format!("Failed to create file: {}", e)))?;
 
     // 下载文件流
     let mut stream = response.bytes_stream();
 
     while let Some(chunk_result) = stream.next().await {
-        let chunk = chunk_result.map_err(|e| HoutError::Network(format!("Failed to read chunk: {}", e)))?;
+        let chunk =
+            chunk_result.map_err(|e| HoutError::Network(format!("Failed to read chunk: {}", e)))?;
 
         // 写入文件
-        file.write_all(&chunk).await
+        file.write_all(&chunk)
+            .await
             .map_err(|e| HoutError::Io(format!("Failed to write chunk: {}", e)))?;
 
         // 更新进度
@@ -1731,16 +1918,20 @@ pub async fn download_file(
         };
 
         // 发送进度事件到前端
-        let _ = window.emit("download-progress", serde_json::json!({
-            "taskId": task_id,
-            "progress": progress,
-            "downloadedSize": downloaded_size,
-            "totalSize": total_size
-        }));
+        let _ = window.emit(
+            "download-progress",
+            serde_json::json!({
+                "taskId": task_id,
+                "progress": progress,
+                "downloadedSize": downloaded_size,
+                "totalSize": total_size
+            }),
+        );
     }
 
     // 确保文件写入完成
-    file.flush().await
+    file.flush()
+        .await
         .map_err(|e| HoutError::Io(format!("Failed to flush file: {}", e)))?;
 
     log::info!("文件下载完成: {}", file_path.display());
@@ -1753,9 +1944,12 @@ pub async fn cancel_download(task_id: String, window: tauri::Window) -> Result<(
     log::info!("取消下载任务: {}", task_id);
 
     // 发送取消事件到前端
-    let _ = window.emit("download-cancelled", serde_json::json!({
-        "taskId": task_id
-    }));
+    let _ = window.emit(
+        "download-cancelled",
+        serde_json::json!({
+            "taskId": task_id
+        }),
+    );
 
     Ok(())
 }
@@ -1770,8 +1964,8 @@ pub async fn get_downloads_directory() -> Result<String> {
 /// 清理下载文件
 #[tauri::command]
 pub async fn cleanup_downloads(older_than_days: u64) -> Result<u64> {
-    use tokio::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
+    use tokio::fs;
 
     let downloads_dir = get_app_downloads_dir()?;
     if !downloads_dir.exists() {
@@ -1781,28 +1975,36 @@ pub async fn cleanup_downloads(older_than_days: u64) -> Result<u64> {
     let cutoff_time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_secs() - (older_than_days * 24 * 60 * 60);
+        .as_secs()
+        - (older_than_days * 24 * 60 * 60);
 
     let mut deleted_count = 0;
-    let mut entries = fs::read_dir(&downloads_dir).await
+    let mut entries = fs::read_dir(&downloads_dir)
+        .await
         .map_err(|e| HoutError::Io(format!("Failed to read downloads directory: {}", e)))?;
 
-    while let Some(entry) = entries.next_entry().await
-        .map_err(|e| HoutError::Io(format!("Failed to read directory entry: {}", e)))? {
-
-        let metadata = entry.metadata().await
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .map_err(|e| HoutError::Io(format!("Failed to read directory entry: {}", e)))?
+    {
+        let metadata = entry
+            .metadata()
+            .await
             .map_err(|e| HoutError::Io(format!("Failed to get file metadata: {}", e)))?;
 
         if let Ok(modified) = metadata.modified() {
             if let Ok(modified_secs) = modified.duration_since(UNIX_EPOCH) {
                 if modified_secs.as_secs() < cutoff_time {
                     if metadata.is_file() {
-                        fs::remove_file(entry.path()).await
+                        fs::remove_file(entry.path())
+                            .await
                             .map_err(|e| HoutError::Io(format!("Failed to delete file: {}", e)))?;
                         deleted_count += 1;
                     } else if metadata.is_dir() {
-                        fs::remove_dir_all(entry.path()).await
-                            .map_err(|e| HoutError::Io(format!("Failed to delete directory: {}", e)))?;
+                        fs::remove_dir_all(entry.path()).await.map_err(|e| {
+                            HoutError::Io(format!("Failed to delete directory: {}", e))
+                        })?;
                         deleted_count += 1;
                     }
                 }
@@ -1819,52 +2021,73 @@ pub async fn cleanup_downloads(older_than_days: u64) -> Result<u64> {
 #[tauri::command]
 pub async fn diagnose_scrcpy() -> Result<serde_json::Value> {
     log::info!("Diagnosing scrcpy installation...");
-    
+
     let mut diagnosis = serde_json::Map::new();
-    
+
     // 1. 检查scrcpy路径
     match find_scrcpy_executable() {
         Ok(path) => {
             diagnosis.insert("scrcpy_found".to_string(), serde_json::Value::Bool(true));
-            diagnosis.insert("scrcpy_path".to_string(), serde_json::Value::String(path.clone()));
-            
+            diagnosis.insert(
+                "scrcpy_path".to_string(),
+                serde_json::Value::String(path.clone()),
+            );
+
             // 检查文件是否真的存在
             let exists = std::path::Path::new(&path).exists();
             diagnosis.insert("scrcpy_exists".to_string(), serde_json::Value::Bool(exists));
-            
+
             // 如果存在，检查文件大小
             if exists {
                 if let Ok(metadata) = std::fs::metadata(&path) {
-                    diagnosis.insert("scrcpy_size".to_string(), serde_json::Value::Number(serde_json::Number::from(metadata.len())));
+                    diagnosis.insert(
+                        "scrcpy_size".to_string(),
+                        serde_json::Value::Number(serde_json::Number::from(metadata.len())),
+                    );
                 }
-                
+
                 // 检查依赖文件
                 if let Some(parent_dir) = std::path::Path::new(&path).parent() {
                     let required_files = ["scrcpy-server", "adb.exe", "SDL2.dll", "avcodec-61.dll"];
                     let mut dependencies = serde_json::Map::new();
-                    
+
                     for file in &required_files {
                         let file_path = parent_dir.join(file);
-                        dependencies.insert(file.to_string(), serde_json::Value::Bool(file_path.exists()));
+                        dependencies.insert(
+                            file.to_string(),
+                            serde_json::Value::Bool(file_path.exists()),
+                        );
                     }
-                    
-                    diagnosis.insert("dependencies".to_string(), serde_json::Value::Object(dependencies));
+
+                    diagnosis.insert(
+                        "dependencies".to_string(),
+                        serde_json::Value::Object(dependencies),
+                    );
                 }
             }
         }
         Err(e) => {
             diagnosis.insert("scrcpy_found".to_string(), serde_json::Value::Bool(false));
-            diagnosis.insert("error".to_string(), serde_json::Value::String(format!("{}", e)));
+            diagnosis.insert(
+                "error".to_string(),
+                serde_json::Value::String(format!("{}", e)),
+            );
         }
     }
-    
+
     // 2. 检查当前可执行文件路径
     if let Ok(exe_path) = std::env::current_exe() {
-        diagnosis.insert("current_exe".to_string(), serde_json::Value::String(exe_path.to_string_lossy().to_string()));
-        
+        diagnosis.insert(
+            "current_exe".to_string(),
+            serde_json::Value::String(exe_path.to_string_lossy().to_string()),
+        );
+
         if let Some(exe_dir) = exe_path.parent() {
-            diagnosis.insert("exe_directory".to_string(), serde_json::Value::String(exe_dir.to_string_lossy().to_string()));
-            
+            diagnosis.insert(
+                "exe_directory".to_string(),
+                serde_json::Value::String(exe_dir.to_string_lossy().to_string()),
+            );
+
             // 列出可执行文件目录下的tools相关文件
             let tools_dir = exe_dir.join("tools");
             if tools_dir.exists() {
@@ -1872,26 +2095,31 @@ pub async fn diagnose_scrcpy() -> Result<serde_json::Value> {
                     let mut tools_content = Vec::new();
                     for entry in entries {
                         if let Ok(entry) = entry {
-                            tools_content.push(serde_json::Value::String(entry.file_name().to_string_lossy().to_string()));
+                            tools_content.push(serde_json::Value::String(
+                                entry.file_name().to_string_lossy().to_string(),
+                            ));
                         }
                     }
-                    diagnosis.insert("tools_directory_content".to_string(), serde_json::Value::Array(tools_content));
+                    diagnosis.insert(
+                        "tools_directory_content".to_string(),
+                        serde_json::Value::Array(tools_content),
+                    );
                 }
             }
         }
     }
-    
+
     // 3. 检查系统PATH中的scrcpy
     let mut cmd = std::process::Command::new("where");
     cmd.arg("scrcpy");
-    
+
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
-    
+
     if let Ok(output) = cmd.output() {
         if output.status.success() {
             let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -1900,34 +2128,60 @@ pub async fn diagnose_scrcpy() -> Result<serde_json::Value> {
             diagnosis.insert("system_scrcpy".to_string(), serde_json::Value::Null);
         }
     }
-    
+
     Ok(serde_json::Value::Object(diagnosis))
 }
 
 /// 检查设备是否支持投屏
 #[tauri::command]
 pub async fn check_screen_mirror_support(device_serial: String) -> Result<ScreenMirrorDevice> {
-    log::info!("Checking screen mirror support for device: {}", device_serial);
+    log::info!(
+        "Checking screen mirror support for device: {}",
+        device_serial
+    );
 
     // 检查设备连接状态
     let devices = scan_devices().await?;
-    let device = devices.iter()
+    let device = devices
+        .iter()
         .find(|d| d.serial == device_serial)
         .ok_or_else(|| HoutError::Device(format!("Device {} not found", device_serial)))?;
 
     if !device.connected {
-        return Err(HoutError::Device(format!("Device {} is not connected", device_serial)));
+        return Err(HoutError::Device(format!(
+            "Device {} is not connected",
+            device_serial
+        )));
     }
 
     // 只获取Android版本信息（轻量级检查）
-    let android_version = match utils_execute_adb_command(&["-s", &device_serial, "shell", "getprop", "ro.build.version.release"], Some(5)).await {
+    let android_version = match utils_execute_adb_command(
+        &[
+            "-s",
+            &device_serial,
+            "shell",
+            "getprop",
+            "ro.build.version.release",
+        ],
+        Some(5),
+    )
+    .await
+    {
         Ok(result) if result.success => {
             let version = result.output.trim().to_string();
-            log::info!("Got Android version for device {}: {}", device_serial, version);
+            log::info!(
+                "Got Android version for device {}: {}",
+                device_serial,
+                version
+            );
             version
-        },
+        }
         Ok(result) => {
-            log::error!("ADB command failed for device {}: {}", device_serial, result.output);
+            log::error!(
+                "ADB command failed for device {}: {}",
+                device_serial,
+                result.output
+            );
             return Ok(ScreenMirrorDevice {
                 serial: device_serial,
                 name: None,
@@ -1938,7 +2192,7 @@ pub async fn check_screen_mirror_support(device_serial: String) -> Result<Screen
                 is_supported: false,
                 supported_codecs: vec![],
             });
-        },
+        }
         Err(e) => {
             log::error!("ADB command error for device {}: {}", device_serial, e);
             return Ok(ScreenMirrorDevice {
@@ -1959,20 +2213,30 @@ pub async fn check_screen_mirror_support(device_serial: String) -> Result<Screen
         false
     } else {
         // 解析版本号，支持主版本号 >= 5 的设备
-        match android_version.split('.').next().and_then(|v| v.parse::<i32>().ok()) {
+        match android_version
+            .split('.')
+            .next()
+            .and_then(|v| v.parse::<i32>().ok())
+        {
             Some(major_version) => major_version >= 5,
             None => false,
         }
     };
 
     // 获取屏幕分辨率
-    let resolution = get_device_resolution(&device_serial).await.unwrap_or_default();
+    let resolution = get_device_resolution(&device_serial)
+        .await
+        .unwrap_or_default();
 
     Ok(ScreenMirrorDevice {
         serial: device_serial,
         name: None, // 暂时不获取详细信息，提高性能
         model: None,
-        resolution: if resolution.is_empty() { None } else { Some(resolution) },
+        resolution: if resolution.is_empty() {
+            None
+        } else {
+            Some(resolution)
+        },
         density: None,
         orientation: None, // 需要实时获取
         is_supported,
@@ -1982,10 +2246,8 @@ pub async fn check_screen_mirror_support(device_serial: String) -> Result<Screen
 
 /// 获取设备屏幕分辨率
 async fn get_device_resolution(device_serial: &str) -> Result<String> {
-    let result = utils_execute_adb_command(
-        &["-s", device_serial, "shell", "wm", "size"],
-        Some(10)
-    ).await?;
+    let result =
+        utils_execute_adb_command(&["-s", device_serial, "shell", "wm", "size"], Some(10)).await?;
 
     if result.success {
         // 解析输出，格式通常是 "Physical size: 1080x2340"
@@ -2003,13 +2265,18 @@ async fn get_device_resolution(device_serial: &str) -> Result<String> {
 
 /// 开始投屏
 #[tauri::command]
-pub async fn start_screen_mirror(device_serial: String, config: ScreenMirrorConfig) -> Result<ScreenMirrorSession> {
+pub async fn start_screen_mirror(
+    device_serial: String,
+    config: ScreenMirrorConfig,
+) -> Result<ScreenMirrorSession> {
     log::info!("Starting screen mirror for device: {}", device_serial);
 
     // 检查设备支持
     let device = check_screen_mirror_support(device_serial.clone()).await?;
     if !device.is_supported {
-        return Err(HoutError::Device("Device does not support screen mirroring".to_string()));
+        return Err(HoutError::Device(
+            "Device does not support screen mirroring".to_string(),
+        ));
     }
 
     // 创建会话
@@ -2027,7 +2294,6 @@ pub async fn start_screen_mirror(device_serial: String, config: ScreenMirrorConf
         format!("{}M", config.quality.bitrate),
         "--max-fps".to_string(),
         config.quality.framerate.to_string(),
-
     ];
 
     // 添加其他选项
@@ -2051,14 +2317,15 @@ pub async fn start_screen_mirror(device_serial: String, config: ScreenMirrorConf
         args.push("--no-audio".to_string());
     }
 
-
-
     // 启动scrcpy进程
     match start_scrcpy_process(&args).await {
         Ok(process_id) => {
             session.set_connected(process_id, 8080); // 默认端口
             session.set_streaming();
-            log::info!("Screen mirror started successfully with PID: {}", process_id);
+            log::info!(
+                "Screen mirror started successfully with PID: {}",
+                process_id
+            );
             Ok(session)
         }
         Err(e) => {
@@ -2078,7 +2345,10 @@ pub async fn validate_activation_code_format(activation_code: String) -> Result<
 /// 激活应用
 #[tauri::command]
 pub async fn activate_application(request: ActivationRequest) -> Result<ActivationResponse> {
-    log::info!("Processing activation request for user: {}", request.user_config.username);
+    log::info!(
+        "Processing activation request for user: {}",
+        request.user_config.username
+    );
 
     let validator = ActivationValidator::new();
     let response = validator.activate(request).await?;
@@ -2115,7 +2385,7 @@ pub async fn validate_local_activation_data(encrypted_data: String) -> Result<bo
     }
 
     // 检查数据格式是否为有效的base64
-    use base64::{Engine as _, engine::general_purpose};
+    use base64::{engine::general_purpose, Engine as _};
     match general_purpose::STANDARD.decode(&encrypted_data) {
         Ok(_) => {
             log::info!("Local activation data format is valid");
@@ -2164,7 +2434,10 @@ pub async fn get_app_config() -> Result<Option<AppConfig>> {
 /// 保存应用配置
 #[tauri::command]
 pub async fn save_app_config(config: AppConfig) -> Result<bool> {
-    log::info!("Saving app config for user: {}", config.user_config.username);
+    log::info!(
+        "Saving app config for user: {}",
+        config.user_config.username
+    );
     // 这里应该将配置保存到本地存储
     // 暂时返回true表示保存成功
     Ok(true)
@@ -2206,7 +2479,7 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
     // 检查scrcpy所在目录的相关文件
     if let Some(parent_dir) = scrcpy_file.parent() {
         log::info!("scrcpy directory: {}", parent_dir.display());
-        
+
         // 检查必要的依赖文件
         let required_files = ["scrcpy-server", "adb.exe"];
         for file in &required_files {
@@ -2244,23 +2517,31 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
             Ok(pid)
         }
         Err(e) => {
-            let error_msg = format!("Failed to start scrcpy process: {}. Path: {}", e, scrcpy_path);
+            let error_msg = format!(
+                "Failed to start scrcpy process: {}. Path: {}",
+                e, scrcpy_path
+            );
             log::error!("{}", error_msg);
-            
+
             // 提供更详细的错误信息
             if e.kind() == std::io::ErrorKind::NotFound {
-                return Err(HoutError::Tool(format!("scrcpy executable not found or cannot be executed: {}", scrcpy_path)));
+                return Err(HoutError::Tool(format!(
+                    "scrcpy executable not found or cannot be executed: {}",
+                    scrcpy_path
+                )));
             } else if e.kind() == std::io::ErrorKind::PermissionDenied {
-                return Err(HoutError::Tool(format!("Permission denied when trying to execute scrcpy: {}", scrcpy_path)));
+                return Err(HoutError::Tool(format!(
+                    "Permission denied when trying to execute scrcpy: {}",
+                    scrcpy_path
+                )));
             }
-            
+
             Err(HoutError::Process(error_msg))
         }
     }
 }
 
 // ==================== 杂项控制功能命令 ====================
-
 
 /// 重启ADB服务
 #[tauri::command]
@@ -2273,7 +2554,11 @@ pub async fn restart_adb_service() -> Result<CommandResult> {
 
     match &kill_result {
         Ok(result) => {
-            log::info!("ADB kill-server result: success={}, output={}", result.success, result.output);
+            log::info!(
+                "ADB kill-server result: success={}, output={}",
+                result.success,
+                result.output
+            );
             if let Some(ref error) = result.error {
                 log::warn!("ADB kill-server error: {}", error);
             }
@@ -2289,8 +2574,8 @@ pub async fn restart_adb_service() -> Result<CommandResult> {
     // 第二步：验证ADB服务已停止（通过检查进程）
     #[cfg(windows)]
     {
-        use std::process::Command;
         use std::os::windows::process::CommandExt;
+        use std::process::Command;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         let mut check_cmd = Command::new("tasklist");
@@ -2326,7 +2611,11 @@ pub async fn restart_adb_service() -> Result<CommandResult> {
 
     match start_result {
         Ok(result) => {
-            log::info!("ADB start-server result: success={}, output={}", result.success, result.output);
+            log::info!(
+                "ADB start-server result: success={}, output={}",
+                result.success,
+                result.output
+            );
 
             if result.success || result.output.contains("daemon started successfully") {
                 // 第四步：验证ADB服务是否正常工作
@@ -2394,14 +2683,19 @@ pub async fn install_device_driver() -> Result<CommandResult> {
         // 这里假设驱动文件在resources目录下
         let driver_path = std::env::current_exe()
             .ok()
-            .and_then(|exe| exe.parent().map(|p| p.join("resources").join("android_winusb.inf")))
+            .and_then(|exe| {
+                exe.parent()
+                    .map(|p| p.join("resources").join("android_winusb.inf"))
+            })
             .unwrap_or_else(|| std::path::PathBuf::from("resources/android_winusb.inf"));
 
         if !driver_path.exists() {
             return Ok(CommandResult {
                 success: false,
                 output: String::new(),
-                error: Some("驱动文件不存在，请确保android_winusb.inf文件在resources目录下".to_string()),
+                error: Some(
+                    "驱动文件不存在，请确保android_winusb.inf文件在resources目录下".to_string(),
+                ),
                 exit_code: Some(1),
             });
         }
@@ -2466,7 +2760,9 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
     {
         use std::process::Command;
 
-        let bat_path = std::path::Path::new("tools").join("lacs").join("Usb_fix.bat");
+        let bat_path = std::path::Path::new("tools")
+            .join("lacs")
+            .join("Usb_fix.bat");
         let mut cmd = Command::new("cmd");
         cmd.args(&["/C", bat_path.to_str().unwrap()]);
 
@@ -2513,14 +2809,12 @@ pub async fn run_usb_fix_script() -> Result<CommandResult> {
         use std::process::{Command, Stdio};
 
         // 获取当前工作目录并构建bat文件路径
-        let current_dir = std::env::current_dir().map_err(|e| {
-            HoutError::IoError { 
-                message: format!("Failed to get current directory: {}", e) 
-            }
+        let current_dir = std::env::current_dir().map_err(|e| HoutError::IoError {
+            message: format!("Failed to get current directory: {}", e),
         })?;
-        
+
         let bat_path = current_dir.join("tools").join("lacs").join("Usb_fix.bat");
-        
+
         if !bat_path.exists() {
             return Ok(CommandResult {
                 success: false,
@@ -2541,14 +2835,13 @@ pub async fn run_usb_fix_script() -> Result<CommandResult> {
                 bat_path.display()
             )
         ]);
-        
-        cmd.stdout(Stdio::piped())
-           .stderr(Stdio::piped());
+
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
         match cmd.spawn() {
             Ok(mut child) => {
                 let mut output = String::new();
-                
+
                 // 等待进程完成
                 match child.wait() {
                     Ok(status) => {
@@ -2556,7 +2849,7 @@ pub async fn run_usb_fix_script() -> Result<CommandResult> {
                             output.push_str("USB 3.0修复脚本执行完成\n");
                             output.push_str("已修改注册表项以解决USB 3.0连接问题\n");
                             output.push_str("请重新连接您的Android设备\n");
-                            
+
                             log::info!("USB fix script completed successfully");
                             Ok(CommandResult {
                                 success: true,
@@ -2613,13 +2906,20 @@ pub async fn run_usb_fix_script() -> Result<CommandResult> {
 
 /// 执行批处理文件（用于线刷等操作）
 #[tauri::command]
-pub async fn execute_batch_file(batch_file_name: String, working_directory: String) -> Result<CommandResult> {
-    log::info!("Executing batch file: {} in directory: {}", batch_file_name, working_directory);
+pub async fn execute_batch_file(
+    batch_file_name: String,
+    working_directory: String,
+) -> Result<CommandResult> {
+    log::info!(
+        "Executing batch file: {} in directory: {}",
+        batch_file_name,
+        working_directory
+    );
 
     #[cfg(windows)]
     {
-        use std::process::{Command, Stdio};
         use std::path::Path;
+        use std::process::{Command, Stdio};
 
         // 验证工作目录存在
         let work_dir = Path::new(&working_directory);
@@ -2648,8 +2948,11 @@ pub async fn execute_batch_file(batch_file_name: String, working_directory: Stri
         // 使用cmd执行批处理文件，确保继承完整的环境变量
         let system_root = std::env::var("SYSTEMROOT").unwrap_or("C:\\Windows".to_string());
         let current_path = std::env::var("PATH").unwrap_or_default();
-        let enhanced_path = format!("{};{}\\System32;{}\\System32\\Wbem", current_path, system_root, system_root);
-        
+        let enhanced_path = format!(
+            "{};{}\\System32;{}\\System32\\Wbem",
+            current_path, system_root, system_root
+        );
+
         let mut cmd = Command::new("cmd");
         cmd.args(&["/c", &batch_file_name])
             .current_dir(&working_directory)
@@ -2670,12 +2973,19 @@ pub async fn execute_batch_file(batch_file_name: String, working_directory: Stri
                     format!("{}\n{}", stdout, stderr)
                 };
 
-                log::info!("Batch file execution completed with exit code: {:?}", output.status.code());
+                log::info!(
+                    "Batch file execution completed with exit code: {:?}",
+                    output.status.code()
+                );
 
                 Ok(CommandResult {
                     success: output.status.success(),
                     output: combined_output,
-                    error: if output.status.success() { None } else { Some(stderr.to_string()) },
+                    error: if output.status.success() {
+                        None
+                    } else {
+                        Some(stderr.to_string())
+                    },
                     exit_code: output.status.code(),
                 })
             }
@@ -2707,16 +3017,20 @@ pub async fn execute_batch_file(batch_file_name: String, working_directory: Stri
 #[tauri::command]
 pub async fn execute_batch_file_stream(
     app_handle: tauri::AppHandle,
-    batch_file_name: String, 
-    working_directory: String
+    batch_file_name: String,
+    working_directory: String,
 ) -> Result<CommandResult> {
-    log::info!("Executing batch file with streaming: {} in directory: {}", batch_file_name, working_directory);
+    log::info!(
+        "Executing batch file with streaming: {} in directory: {}",
+        batch_file_name,
+        working_directory
+    );
 
     #[cfg(windows)]
     {
-        use std::process::{Command, Stdio};
-        use std::path::Path;
         use std::io::{BufRead, BufReader};
+        use std::path::Path;
+        use std::process::{Command, Stdio};
         use tokio::task;
 
         // 验证工作目录存在
@@ -2741,13 +3055,19 @@ pub async fn execute_batch_file_stream(
             });
         }
 
-        log::info!("Executing batch file with streaming at: {}", batch_path.display());
+        log::info!(
+            "Executing batch file with streaming at: {}",
+            batch_path.display()
+        );
 
         // 使用cmd执行批处理文件，确保继承完整的环境变量
         let system_root = std::env::var("SYSTEMROOT").unwrap_or("C:\\Windows".to_string());
         let current_path = std::env::var("PATH").unwrap_or_default();
-        let enhanced_path = format!("{};{}\\System32;{}\\System32\\Wbem", current_path, system_root, system_root);
-        
+        let enhanced_path = format!(
+            "{};{}\\System32;{}\\System32\\Wbem",
+            current_path, system_root, system_root
+        );
+
         let mut cmd = Command::new("cmd");
         cmd.args(&["/c", &batch_file_name])
             .current_dir(&working_directory)
@@ -2762,25 +3082,28 @@ pub async fn execute_batch_file_stream(
             Ok(mut child) => {
                 let stdout = child.stdout.take().unwrap();
                 let stderr = child.stderr.take().unwrap();
-                
+
                 let app_handle_stdout = app_handle.clone();
                 let app_handle_stderr = app_handle.clone();
-                
+
                 // 处理stdout流
                 let stdout_handle = task::spawn_blocking(move || {
                     let reader = BufReader::new(stdout);
                     let mut output_lines = Vec::new();
-                    
+
                     for line in reader.lines() {
                         match line {
                             Ok(line_content) => {
                                 output_lines.push(line_content.clone());
-                                
+
                                 // 发送实时输出事件
-                                let _ = app_handle_stdout.emit("batch-output", serde_json::json!({
-                                    "type": "stdout",
-                                    "data": format!("{}\n", line_content)
-                                }));
+                                let _ = app_handle_stdout.emit(
+                                    "batch-output",
+                                    serde_json::json!({
+                                        "type": "stdout",
+                                        "data": format!("{}\n", line_content)
+                                    }),
+                                );
                             }
                             Err(e) => {
                                 log::error!("Error reading stdout line: {}", e);
@@ -2795,17 +3118,20 @@ pub async fn execute_batch_file_stream(
                 let stderr_handle = task::spawn_blocking(move || {
                     let reader = BufReader::new(stderr);
                     let mut error_lines = Vec::new();
-                    
+
                     for line in reader.lines() {
                         match line {
                             Ok(line_content) => {
                                 error_lines.push(line_content.clone());
-                                
+
                                 // 发送实时错误输出事件
-                                let _ = app_handle_stderr.emit("batch-output", serde_json::json!({
-                                    "type": "stderr",
-                                    "data": format!("{}\n", line_content)
-                                }));
+                                let _ = app_handle_stderr.emit(
+                                    "batch-output",
+                                    serde_json::json!({
+                                        "type": "stderr",
+                                        "data": format!("{}\n", line_content)
+                                    }),
+                                );
                             }
                             Err(e) => {
                                 log::error!("Error reading stderr line: {}", e);
@@ -2818,7 +3144,7 @@ pub async fn execute_batch_file_stream(
 
                 // 等待进程完成
                 let exit_status = child.wait();
-                
+
                 // 等待输出流处理完成
                 let stdout_result = stdout_handle.await.unwrap_or_default();
                 let stderr_result = stderr_handle.await.unwrap_or_default();
@@ -2831,12 +3157,19 @@ pub async fn execute_batch_file_stream(
                             format!("{}\n{}", stdout_result, stderr_result)
                         };
 
-                        log::info!("Batch file streaming execution completed with exit code: {:?}", status.code());
+                        log::info!(
+                            "Batch file streaming execution completed with exit code: {:?}",
+                            status.code()
+                        );
 
                         Ok(CommandResult {
                             success: status.success(),
                             output: combined_output,
-                            error: if status.success() { None } else { Some(stderr_result) },
+                            error: if status.success() {
+                                None
+                            } else {
+                                Some(stderr_result)
+                            },
                             exit_code: status.code(),
                         })
                     }
@@ -3001,8 +3334,8 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
     // 在Windows上，我们需要使用一个更可靠的重启方法
     #[cfg(windows)]
     {
-        use std::process::Command;
         use std::os::windows::process::CommandExt;
+        use std::process::Command;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         // 创建一个批处理脚本来重启应用
@@ -3059,7 +3392,6 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
                 // 尝试使用Tauri的内置重启功能作为备用
                 log::info!("Falling back to Tauri restart method");
                 app_handle.restart();
-
             }
         }
     }
@@ -3076,8 +3408,6 @@ pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<Command
         })
     }
 }
-
-
 
 /// 查找scrcpy可执行文件
 fn find_scrcpy_executable() -> Result<String> {
@@ -3097,14 +3427,20 @@ fn find_scrcpy_executable() -> Result<String> {
         // 在tools目录下
         exe_dir.join("tools").join("scrcpy.exe"),
         // 在tools/scrcpy-win32-v3.3.1目录下（主要路径）
-        exe_dir.join("tools").join("scrcpy-win32-v3.3.1").join("scrcpy.exe"),
+        exe_dir
+            .join("tools")
+            .join("scrcpy-win32-v3.3.1")
+            .join("scrcpy.exe"),
         // 在scrcpy-win32-v3.3.1目录下
         exe_dir.join("scrcpy-win32-v3.3.1").join("scrcpy.exe"),
     ];
 
     for scrcpy_path in &scrcpy_resource_paths {
         if scrcpy_path.exists() {
-            log::info!("Found scrcpy in resource directory: {}", scrcpy_path.display());
+            log::info!(
+                "Found scrcpy in resource directory: {}",
+                scrcpy_path.display()
+            );
             return Ok(scrcpy_path.to_string_lossy().to_string());
         }
     }
@@ -3139,7 +3475,9 @@ fn find_scrcpy_executable() -> Result<String> {
         }
     }
 
-    Err(HoutError::Tool("scrcpy not found. Please install scrcpy or place it in the project directory.".to_string()))
+    Err(HoutError::Tool(
+        "scrcpy not found. Please install scrcpy or place it in the project directory.".to_string(),
+    ))
 }
 
 /// 查找项目根目录下的 scrcpy
@@ -3148,11 +3486,13 @@ fn find_project_scrcpy() -> Result<String> {
     let exe_path = std::env::current_exe()
         .map_err(|e| HoutError::Io(format!("Failed to get executable path: {}", e)))?;
 
-    let mut current_dir = exe_path.parent()
+    let mut current_dir = exe_path
+        .parent()
         .ok_or_else(|| HoutError::Io("Failed to get parent directory".to_string()))?;
 
     // 向上查找项目根目录（包含 package.json 的目录）
-    for _ in 0..10 { // 最多向上查找10级目录
+    for _ in 0..10 {
+        // 最多向上查找10级目录
         // 检查是否是项目根目录（包含 package.json 或 src-tauri 目录）
         let package_json = current_dir.join("package.json");
         let src_tauri = current_dir.join("src-tauri");
@@ -3172,9 +3512,15 @@ fn find_project_scrcpy() -> Result<String> {
                 current_dir.join("tools").join("scrcpy.exe"),
                 current_dir.join("tools").join("scrcpy").join("scrcpy.exe"),
                 // 在 tools/scrcpy-win32-v3.3.1 目录 (用户指定路径)
-                current_dir.join("tools").join("scrcpy-win32-v3.3.1").join("scrcpy.exe"),
+                current_dir
+                    .join("tools")
+                    .join("scrcpy-win32-v3.3.1")
+                    .join("scrcpy.exe"),
                 // 在 tools/scrcpy-win64-v3.3.1 目录
-                current_dir.join("tools").join("scrcpy-win64-v3.3.1").join("scrcpy.exe"),
+                current_dir
+                    .join("tools")
+                    .join("scrcpy-win64-v3.3.1")
+                    .join("scrcpy.exe"),
             ];
 
             for scrcpy_path in &scrcpy_locations {
@@ -3185,7 +3531,10 @@ fn find_project_scrcpy() -> Result<String> {
             }
 
             // 如果在项目根目录但没找到 scrcpy，记录日志并继续
-            log::warn!("Found project root at {} but no scrcpy executable found", current_dir.display());
+            log::warn!(
+                "Found project root at {} but no scrcpy executable found",
+                current_dir.display()
+            );
             break;
         }
 
@@ -3197,7 +3546,9 @@ fn find_project_scrcpy() -> Result<String> {
         }
     }
 
-    Err(HoutError::Tool("scrcpy not found in project directory".to_string()))
+    Err(HoutError::Tool(
+        "scrcpy not found in project directory".to_string(),
+    ))
 }
 
 /// 从分辨率字符串中提取数字（用于scrcpy的max-size参数）
@@ -3238,22 +3589,26 @@ pub async fn get_security_config() -> Result<SecurityConfig> {
 
     // 在生产环境中，这些配置应该从安全的存储位置读取
     // 例如：加密的配置文件、系统密钥库等
-    
+
     // 检测当前环境
     let is_debug = cfg!(debug_assertions);
-    
+
     let config = SecurityConfig {
         api_base_url: "https://api-g.lacs.cc".to_string(), // 正确的API地址
         app_id: "wanjiguanjia-desktop-v1.0.0".to_string(),
         app_secret: "wjgj_2024_secure_app_secret_key_for_user_behavior_stats".to_string(),
-        signature_secret: "signature_secret_2024_wanjiguanjia_user_behavior_api_protection".to_string(),
+        signature_secret: "signature_secret_2024_wanjiguanjia_user_behavior_api_protection"
+            .to_string(),
         enable_signature: !is_debug, // 开发环境不启用签名，生产环境启用
         enable_strict_user_agent: !is_debug, // 开发环境不严格检查，生产环境严格检查
         app_version: "1.0.0".to_string(), // 应用版本号（测试强制更新）
-        software_id: 1, // 软件ID，对应API中的软件ID
+        software_id: 1,              // 软件ID，对应API中的软件ID
     };
-    
-    log::info!("Security configuration loaded successfully, debug_mode: {}", is_debug);
+
+    log::info!(
+        "Security configuration loaded successfully, debug_mode: {}",
+        is_debug
+    );
     Ok(config)
 }
 
@@ -3366,14 +3721,18 @@ pub async fn open_devtools(_app: tauri::AppHandle) -> Result<()> {
             Ok(())
         } else {
             log::error!("无法找到主窗口");
-            Err(HoutError::FileOperationFailed { message: "无法找到主窗口".to_string() })
+            Err(HoutError::FileOperationFailed {
+                message: "无法找到主窗口".to_string(),
+            })
         }
     }
 
     #[cfg(not(debug_assertions))]
     {
         log::warn!("开发者工具在生产模式下不可用");
-        Err(HoutError::FileOperationFailed { message: "开发者工具在生产模式下不可用".to_string() })
+        Err(HoutError::FileOperationFailed {
+            message: "开发者工具在生产模式下不可用".to_string(),
+        })
     }
 }
 
@@ -3387,15 +3746,18 @@ pub async fn is_debug_mode() -> Result<bool> {
 #[tauri::command]
 pub async fn set_window_always_on_top(app: tauri::AppHandle, always_on_top: bool) -> Result<()> {
     if let Some(window) = app.get_webview_window("main") {
-        window.set_always_on_top(always_on_top)
+        window
+            .set_always_on_top(always_on_top)
             .map_err(|e| HoutError::FileOperationFailed {
-                message: format!("设置窗口置顶状态失败: {}", e)
+                message: format!("设置窗口置顶状态失败: {}", e),
             })?;
         log::info!("窗口置顶状态已设置为: {}", always_on_top);
         Ok(())
     } else {
         log::error!("无法找到主窗口");
-        Err(HoutError::FileOperationFailed { message: "无法找到主窗口".to_string() })
+        Err(HoutError::FileOperationFailed {
+            message: "无法找到主窗口".to_string(),
+        })
     }
 }
 
@@ -3403,15 +3765,19 @@ pub async fn set_window_always_on_top(app: tauri::AppHandle, always_on_top: bool
 #[tauri::command]
 pub async fn get_window_always_on_top(app: tauri::AppHandle) -> Result<bool> {
     if let Some(window) = app.get_webview_window("main") {
-        let is_always_on_top = window.is_always_on_top()
-            .map_err(|e| HoutError::FileOperationFailed {
-                message: format!("获取窗口置顶状态失败: {}", e)
-            })?;
+        let is_always_on_top =
+            window
+                .is_always_on_top()
+                .map_err(|e| HoutError::FileOperationFailed {
+                    message: format!("获取窗口置顶状态失败: {}", e),
+                })?;
         log::info!("窗口置顶状态: {}", is_always_on_top);
         Ok(is_always_on_top)
     } else {
         log::error!("无法找到主窗口");
-        Err(HoutError::FileOperationFailed { message: "无法找到主窗口".to_string() })
+        Err(HoutError::FileOperationFailed {
+            message: "无法找到主窗口".to_string(),
+        })
     }
 }
 
@@ -3420,10 +3786,22 @@ pub async fn get_window_always_on_top(app: tauri::AppHandle) -> Result<bool> {
 pub async fn get_app_environment() -> Result<serde_json::Value> {
     let mut env_info = serde_json::Map::new();
 
-    env_info.insert("debug_mode".to_string(), serde_json::Value::Bool(cfg!(debug_assertions)));
-    env_info.insert("platform".to_string(), serde_json::Value::String(std::env::consts::OS.to_string()));
-    env_info.insert("arch".to_string(), serde_json::Value::String(std::env::consts::ARCH.to_string()));
-    env_info.insert("family".to_string(), serde_json::Value::String(std::env::consts::FAMILY.to_string()));
+    env_info.insert(
+        "debug_mode".to_string(),
+        serde_json::Value::Bool(cfg!(debug_assertions)),
+    );
+    env_info.insert(
+        "platform".to_string(),
+        serde_json::Value::String(std::env::consts::OS.to_string()),
+    );
+    env_info.insert(
+        "arch".to_string(),
+        serde_json::Value::String(std::env::consts::ARCH.to_string()),
+    );
+    env_info.insert(
+        "family".to_string(),
+        serde_json::Value::String(std::env::consts::FAMILY.to_string()),
+    );
 
     // 添加版本信息
     if let Ok(version) = std::env::var("CARGO_PKG_VERSION") {
@@ -3440,7 +3818,9 @@ pub async fn download_and_extract_software<R: tauri::Runtime>(
     request: crate::download_manager::DownloadRequest,
 ) -> Result<String> {
     let download_manager = DownloadManager::new();
-    let result_path = download_manager.download_and_extract(&app_handle, request).await?;
+    let result_path = download_manager
+        .download_and_extract(&app_handle, request)
+        .await?;
     Ok(result_path.to_string_lossy().to_string())
 }
 
@@ -3451,8 +3831,9 @@ pub async fn get_default_download_directory() -> Result<String> {
     let app_downloads_dir = get_app_downloads_dir()?;
 
     // 确保目录存在
-    std::fs::create_dir_all(&app_downloads_dir)
-        .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+    std::fs::create_dir_all(&app_downloads_dir).map_err(|e| HoutError::IoError {
+        message: e.to_string(),
+    })?;
 
     Ok(app_downloads_dir.to_string_lossy().to_string())
 }
@@ -3463,7 +3844,9 @@ pub async fn open_folder(path: String) -> Result<()> {
     let path = std::path::Path::new(&path);
 
     if !path.exists() {
-        return Err(HoutError::FileNotFound { path: path.to_string_lossy().to_string() });
+        return Err(HoutError::FileNotFound {
+            path: path.to_string_lossy().to_string(),
+        });
     }
 
     #[cfg(target_os = "windows")]
@@ -3505,11 +3888,13 @@ pub async fn delete_file(path: String) -> Result<()> {
     let path = std::path::Path::new(&path);
 
     if path.is_file() {
-        std::fs::remove_file(path)
-            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+        std::fs::remove_file(path).map_err(|e| HoutError::IoError {
+            message: e.to_string(),
+        })?;
     } else if path.is_dir() {
-        std::fs::remove_dir_all(path)
-            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+        std::fs::remove_dir_all(path).map_err(|e| HoutError::IoError {
+            message: e.to_string(),
+        })?;
     }
 
     Ok(())
@@ -3523,14 +3908,19 @@ pub async fn read_json_file(path: String) -> Result<serde_json::Value> {
     let path = std::path::Path::new(&path);
 
     if !path.exists() {
-        return Err(HoutError::FileNotFound { path: path.to_string_lossy().to_string() });
+        return Err(HoutError::FileNotFound {
+            path: path.to_string_lossy().to_string(),
+        });
     }
 
-    let content = fs::read_to_string(path)
-        .map_err(|e| HoutError::IoError { message: format!("Failed to read file: {}", e) })?;
+    let content = fs::read_to_string(path).map_err(|e| HoutError::IoError {
+        message: format!("Failed to read file: {}", e),
+    })?;
 
-    let json: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| HoutError::IoError { message: format!("Failed to parse JSON: {}", e) })?;
+    let json: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| HoutError::IoError {
+            message: format!("Failed to parse JSON: {}", e),
+        })?;
 
     Ok(json)
 }
@@ -3538,41 +3928,49 @@ pub async fn read_json_file(path: String) -> Result<serde_json::Value> {
 /// 在新窗口中执行脚本文件
 #[tauri::command]
 pub async fn execute_script_in_new_window(script_path: String) -> Result<CommandResult> {
-    use std::process::Command;
     use std::path::Path;
+    use std::process::Command;
 
     // 转换为绝对路径
     let path = if Path::new(&script_path).is_absolute() {
         Path::new(&script_path).to_path_buf()
     } else {
         std::env::current_dir()
-            .map_err(|e| HoutError::IoError { message: format!("Failed to get current directory: {}", e) })?
+            .map_err(|e| HoutError::IoError {
+                message: format!("Failed to get current directory: {}", e),
+            })?
             .join(&script_path)
     };
 
     if !path.exists() {
         log::error!("Script file not found: {}", path.display());
-        return Err(HoutError::FileNotFound { path: path.to_string_lossy().to_string() });
+        return Err(HoutError::FileNotFound {
+            path: path.to_string_lossy().to_string(),
+        });
     }
 
     log::info!("Executing script in new window: {}", path.display());
 
     #[cfg(target_os = "windows")]
     {
-
         // 获取脚本的绝对路径
-        let script_absolute_path = path.canonicalize()
-            .map_err(|e| HoutError::IoError { message: format!("Failed to canonicalize path: {}", e) })?;
+        let script_absolute_path = path.canonicalize().map_err(|e| HoutError::IoError {
+            message: format!("Failed to canonicalize path: {}", e),
+        })?;
 
         // 设置工作目录为脚本所在目录
-        let working_dir = script_absolute_path.parent()
-            .ok_or_else(|| HoutError::IoError { message: "Failed to get script parent directory".to_string() })?;
+        let working_dir = script_absolute_path
+            .parent()
+            .ok_or_else(|| HoutError::IoError {
+                message: "Failed to get script parent directory".to_string(),
+            })?;
 
         log::info!("Script absolute path: {}", script_absolute_path.display());
         log::info!("Working directory: {}", working_dir.display());
 
         // 使用简单的start命令在新窗口中启动脚本
-        let script_name = script_absolute_path.file_name()
+        let script_name = script_absolute_path
+            .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("bypass.cmd");
 
@@ -3594,7 +3992,10 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
             }
             Err(e) => {
                 log::error!("Failed to start script in new window: {}", e);
-                Err(HoutError::Process(format!("Failed to execute script: {}", e)))
+                Err(HoutError::Process(format!(
+                    "Failed to execute script: {}",
+                    e
+                )))
             }
         }
     }
@@ -3602,14 +4003,18 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
     #[cfg(not(target_os = "windows"))]
     {
         // 对于非Windows系统，使用默认终端
-        let script_absolute_path = path.canonicalize()
-            .map_err(|e| HoutError::IoError { message: format!("Failed to canonicalize path: {}", e) })?;
+        let script_absolute_path = path.canonicalize().map_err(|e| HoutError::IoError {
+            message: format!("Failed to canonicalize path: {}", e),
+        })?;
 
         let script_str = script_absolute_path.to_string_lossy().to_string();
 
         // 设置工作目录为脚本所在目录
-        let working_dir = script_absolute_path.parent()
-            .ok_or_else(|| HoutError::IoError { message: "Failed to get script parent directory".to_string() })?;
+        let working_dir = script_absolute_path
+            .parent()
+            .ok_or_else(|| HoutError::IoError {
+                message: "Failed to get script parent directory".to_string(),
+            })?;
 
         log::info!("Script absolute path: {}", script_str);
         log::info!("Working directory: {}", working_dir.display());
@@ -3632,7 +4037,10 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
             }
             Err(e) => {
                 log::error!("Failed to start script: {}", e);
-                Err(HoutError::Process(format!("Failed to execute script: {}", e)))
+                Err(HoutError::Process(format!(
+                    "Failed to execute script: {}",
+                    e
+                )))
             }
         }
     }
@@ -3658,7 +4066,7 @@ fn get_app_data_dir() -> Result<std::path::PathBuf> {
         Ok(exe_path) => {
             if let Some(app_dir) = exe_path.parent() {
                 let logs_dir = app_dir.join("logs");
-                
+
                 // 检查是否有写权限
                 if test_directory_writable(&logs_dir) {
                     return Ok(app_dir.to_path_buf());
@@ -3671,7 +4079,7 @@ fn get_app_data_dir() -> Result<std::path::PathBuf> {
             log::warn!("获取可执行文件路径失败: {}，降级到临时目录", e);
         }
     }
-    
+
     // 降级机制1：使用系统临时目录
     if let Ok(temp_dir) = std::env::temp_dir().canonicalize() {
         let app_temp_dir = temp_dir.join("admt_logs");
@@ -3680,7 +4088,7 @@ fn get_app_data_dir() -> Result<std::path::PathBuf> {
             return Ok(app_temp_dir);
         }
     }
-    
+
     // 降级机制2：使用原有的系统数据目录
     use std::env;
     let fallback_dir = if let Ok(local_data) = env::var("LOCALAPPDATA") {
@@ -3690,10 +4098,12 @@ fn get_app_data_dir() -> Result<std::path::PathBuf> {
     } else {
         // 最后降级到当前目录
         std::env::current_dir()
-            .map_err(|e| HoutError::IoError { message: format!("获取当前目录失败: {}", e) })?
+            .map_err(|e| HoutError::IoError {
+                message: format!("获取当前目录失败: {}", e),
+            })?
             .join("logs")
     };
-    
+
     log::warn!("使用降级目录: {}", fallback_dir.display());
     Ok(fallback_dir)
 }
@@ -3701,14 +4111,14 @@ fn get_app_data_dir() -> Result<std::path::PathBuf> {
 /// 测试目录是否可写
 fn test_directory_writable(dir: &std::path::Path) -> bool {
     use std::fs;
-    
+
     // 如果目录不存在，尝试创建
     if !dir.exists() {
         if let Err(_) = fs::create_dir_all(dir) {
             return false;
         }
     }
-    
+
     // 测试写权限
     let test_file = dir.join(".write_test");
     match fs::write(&test_file, "test") {
@@ -3725,17 +4135,16 @@ fn test_directory_writable(dir: &std::path::Path) -> bool {
 pub async fn initialize_log_directory() -> Result<String> {
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     if !logs_dir.exists() {
-        std::fs::create_dir_all(&logs_dir)
-            .map_err(|e| HoutError::IoError { 
-                message: format!("创建日志目录失败: {}", e) 
-            })?;
+        std::fs::create_dir_all(&logs_dir).map_err(|e| HoutError::IoError {
+            message: format!("创建日志目录失败: {}", e),
+        })?;
         log::info!("创建日志目录: {}", logs_dir.display());
     } else {
         log::info!("日志目录已存在: {}", logs_dir.display());
     }
-    
+
     Ok(logs_dir.to_string_lossy().to_string())
 }
 
@@ -3745,35 +4154,41 @@ pub async fn persist_log_to_file(log_entry: String) -> Result<String> {
     use std::fs::OpenOptions;
     use std::io::Write;
     // 解析日志条目
-    let entry: StructuredLogEntry = serde_json::from_str(&log_entry)
-        .map_err(|e| HoutError::InvalidInput { message: format!("解析日志失败: {}", e) })?;
-    
+    let entry: StructuredLogEntry =
+        serde_json::from_str(&log_entry).map_err(|e| HoutError::InvalidInput {
+            message: format!("解析日志失败: {}", e),
+        })?;
+
     // 新文件名格式：admt_log_YYYYMMDD.log
     let date_str = Local::now().format("%Y%m%d").to_string();
     let filename = format!("admt_log_{}.log", date_str);
-    
+
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     // 确保日志目录存在
-    std::fs::create_dir_all(&logs_dir)
-        .map_err(|e| HoutError::IoError { message: format!("创建日志目录失败: {}", e) })?;
-    
+    std::fs::create_dir_all(&logs_dir).map_err(|e| HoutError::IoError {
+        message: format!("创建日志目录失败: {}", e),
+    })?;
+
     let log_file_path = logs_dir.join(&filename);
-    
+
     // 格式化日志条目
     let formatted_log = format_log_entry(&entry);
-    
+
     // 追加写入文件
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
         .open(&log_file_path)
-        .map_err(|e| HoutError::IoError { message: format!("打开日志文件失败: {}", e) })?;
-    
-    writeln!(file, "{}", formatted_log)
-        .map_err(|e| HoutError::IoError { message: format!("写入日志失败: {}", e) })?;
-    
+        .map_err(|e| HoutError::IoError {
+            message: format!("打开日志文件失败: {}", e),
+        })?;
+
+    writeln!(file, "{}", formatted_log).map_err(|e| HoutError::IoError {
+        message: format!("写入日志失败: {}", e),
+    })?;
+
     log::debug!("日志已持久化到文件: {}", log_file_path.display());
     Ok(log_file_path.to_string_lossy().to_string())
 }
@@ -3781,7 +4196,7 @@ pub async fn persist_log_to_file(log_entry: String) -> Result<String> {
 /// 格式化日志条目为可读文本
 fn format_log_entry(entry: &StructuredLogEntry) -> String {
     let timestamp = Local::now().format("%H:%M:%S").to_string();
-    
+
     // 格式：[HH:MM:SS] [LEVEL] [CATEGORY] [SOURCE] MESSAGE
     let base_log = format!(
         "[{}] [{}] [{}] [{}] {}",
@@ -3791,9 +4206,14 @@ fn format_log_entry(entry: &StructuredLogEntry) -> String {
         entry.source,
         entry.message
     );
-    
+
     // 如果有上下文信息，添加到日志中
-    if !entry.context.is_null() && entry.context.as_object().map_or(false, |obj| !obj.is_empty()) {
+    if !entry.context.is_null()
+        && entry
+            .context
+            .as_object()
+            .map_or(false, |obj| !obj.is_empty())
+    {
         let context_str = serde_json::to_string(&entry.context).unwrap_or_default();
         format!("{} | Context: {}", base_log, context_str)
     } else {
@@ -3812,41 +4232,44 @@ pub async fn persist_log(log_entry: String) -> Result<String> {
 #[tauri::command]
 pub async fn get_logs(_filter: Option<String>) -> Result<String> {
     use std::fs;
-    
+
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     if !logs_dir.exists() {
         return Ok("[]".to_string()); // 返回空数组
     }
-    
+
     let mut all_logs = Vec::new();
-    
+
     // 读取所有日志文件，按日期排序
     let mut entries: Vec<_> = fs::read_dir(&logs_dir)
-        .map_err(|e| HoutError::IoError { message: format!("读取日志目录失败: {}", e) })?
+        .map_err(|e| HoutError::IoError {
+            message: format!("读取日志目录失败: {}", e),
+        })?
         .filter_map(|entry| entry.ok())
         .filter(|entry| {
-            entry.path().is_file() && 
-            (
-                // 支持新格式: admt_log_YYYYMMDD.log
-                (entry.path().extension().map_or(false, |ext| ext == "log") &&
+            entry.path().is_file()
+                && (
+                    // 支持新格式: admt_log_YYYYMMDD.log
+                    (entry.path().extension().map_or(false, |ext| ext == "log") &&
                  entry.file_name().to_string_lossy().starts_with("admt_log_")) ||
                 // 兼容旧格式: YY-MM-DD_logs.txt
                 (entry.path().extension().map_or(false, |ext| ext == "txt") &&
                  entry.file_name().to_string_lossy().ends_with("_logs.txt"))
-            )
+                )
         })
         .collect();
-    
+
     // 按文件名排序（日期格式）
     entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
-    
+
     for entry in entries {
         let path = entry.path();
-        let content = fs::read_to_string(&path)
-            .map_err(|e| HoutError::IoError { message: format!("读取日志文件失败: {}", e) })?;
-        
+        let content = fs::read_to_string(&path).map_err(|e| HoutError::IoError {
+            message: format!("读取日志文件失败: {}", e),
+        })?;
+
         // 简单地按行分割并转换为JSON格式
         for line in content.lines() {
             if !line.trim().is_empty() {
@@ -3854,23 +4277,24 @@ pub async fn get_logs(_filter: Option<String>) -> Result<String> {
             }
         }
     }
-    
+
     // 简化处理，直接返回日志行数组
-    let logs_json = serde_json::to_string(&all_logs)
-        .map_err(|e| HoutError::IoError { message: format!("序列化日志失败: {}", e) })?;
-    
+    let logs_json = serde_json::to_string(&all_logs).map_err(|e| HoutError::IoError {
+        message: format!("序列化日志失败: {}", e),
+    })?;
+
     Ok(logs_json)
 }
 
 /// 获取持久化的日志统计信息
 #[tauri::command]
 pub async fn get_log_statistics() -> Result<String> {
-    use std::fs;
     use std::collections::HashMap;
-    
+    use std::fs;
+
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     if !logs_dir.exists() {
         return Ok(serde_json::to_string(&serde_json::json!({
             "error": 0,
@@ -3880,46 +4304,52 @@ pub async fn get_log_statistics() -> Result<String> {
             "fileCount": 0,
             "oldestLog": null,
             "newestLog": null
-        })).unwrap());
+        }))
+        .unwrap());
     }
-    
+
     let mut stats = HashMap::new();
     stats.insert("error", 0);
     stats.insert("warning", 0);
     stats.insert("info", 0);
     stats.insert("debug", 0);
     stats.insert("fatal", 0);
-    
+
     let mut total_logs = 0;
     let mut file_count = 0;
     let mut oldest_log: Option<String> = None;
     let mut newest_log: Option<String> = None;
-    
-    let entries = fs::read_dir(&logs_dir)
-        .map_err(|e| HoutError::IoError { message: format!("读取日志目录失败: {}", e) })?;
-    
+
+    let entries = fs::read_dir(&logs_dir).map_err(|e| HoutError::IoError {
+        message: format!("读取日志目录失败: {}", e),
+    })?;
+
     for entry in entries {
-        let entry = entry.map_err(|e| HoutError::IoError { message: format!("读取目录条目失败: {}", e) })?;
+        let entry = entry.map_err(|e| HoutError::IoError {
+            message: format!("读取目录条目失败: {}", e),
+        })?;
         let path = entry.path();
-        
+
         // 支持两种格式的日志文件
         let is_log_file = if path.is_file() {
             // 新格式: admt_YYYYMMDD.log
-            path.extension().map_or(false, |ext| ext == "log") &&
-             path.file_name().map_or(false, |name| name.to_string_lossy().starts_with("admt_log_"))
+            path.extension().map_or(false, |ext| ext == "log")
+                && path.file_name().map_or(false, |name| {
+                    name.to_string_lossy().starts_with("admt_log_")
+                })
         } else {
             false
         };
-        
+
         if is_log_file {
             file_count += 1;
-            
+
             // 获取文件修改时间
             if let Ok(metadata) = fs::metadata(&path) {
                 if let Ok(modified) = metadata.modified() {
                     let datetime: chrono::DateTime<chrono::Utc> = modified.into();
                     let time_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
-                    
+
                     if oldest_log.is_none() || oldest_log.as_ref().unwrap() > &time_str {
                         oldest_log = Some(time_str.clone());
                     }
@@ -3928,14 +4358,15 @@ pub async fn get_log_statistics() -> Result<String> {
                     }
                 }
             }
-            
-            let content = fs::read_to_string(&path)
-                .map_err(|e| HoutError::IoError { message: format!("读取日志文件失败: {}", e) })?;
-            
+
+            let content = fs::read_to_string(&path).map_err(|e| HoutError::IoError {
+                message: format!("读取日志文件失败: {}", e),
+            })?;
+
             for line in content.lines() {
                 if !line.trim().is_empty() {
                     total_logs += 1;
-                    
+
                     // 统计日志级别
                     if line.contains("[ERROR]") {
                         *stats.get_mut("error").unwrap() += 1;
@@ -3952,7 +4383,7 @@ pub async fn get_log_statistics() -> Result<String> {
             }
         }
     }
-    
+
     let result = serde_json::json!({
         "error": stats["error"],
         "warning": stats["warning"],
@@ -3964,28 +4395,33 @@ pub async fn get_log_statistics() -> Result<String> {
         "oldestLog": oldest_log,
         "newestLog": newest_log
     });
-    
-    Ok(serde_json::to_string(&result)
-        .map_err(|e| HoutError::IoError { message: format!("序列化统计信息失败: {}", e) })?)
+
+    Ok(
+        serde_json::to_string(&result).map_err(|e| HoutError::IoError {
+            message: format!("序列化统计信息失败: {}", e),
+        })?,
+    )
 }
 
 /// 清空所有持久化日志
 #[tauri::command]
 pub async fn clear_logs() -> Result<String> {
     use std::fs;
-    
+
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     if logs_dir.exists() {
         // 删除整个日志目录并重新创建
-        fs::remove_dir_all(&logs_dir)
-            .map_err(|e| HoutError::IoError { message: format!("删除日志目录失败: {}", e) })?;
-        
-        fs::create_dir_all(&logs_dir)
-            .map_err(|e| HoutError::IoError { message: format!("重新创建日志目录失败: {}", e) })?;
+        fs::remove_dir_all(&logs_dir).map_err(|e| HoutError::IoError {
+            message: format!("删除日志目录失败: {}", e),
+        })?;
+
+        fs::create_dir_all(&logs_dir).map_err(|e| HoutError::IoError {
+            message: format!("重新创建日志目录失败: {}", e),
+        })?;
     }
-    
+
     log::info!("所有持久化日志已清空");
     Ok("OK".to_string())
 }
@@ -3993,30 +4429,37 @@ pub async fn clear_logs() -> Result<String> {
 /// 清理过期日志
 #[tauri::command]
 pub async fn cleanup_expired_logs(basic_cutoff: String, error_cutoff: String) -> Result<String> {
-    use std::fs;
     use chrono::{DateTime, Utc};
-    
+    use std::fs;
+
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     if !logs_dir.exists() {
         return Ok("OK".to_string());
     }
-    
-    let basic_cutoff_date = DateTime::parse_from_rfc3339(&basic_cutoff)
-        .map_err(|e| HoutError::InvalidInput { message: format!("解析基础截止日期失败: {}", e) })?;
-    let _error_cutoff_date = DateTime::parse_from_rfc3339(&error_cutoff)
-        .map_err(|e| HoutError::InvalidInput { message: format!("解析错误截止日期失败: {}", e) })?;
-    
-    let entries = fs::read_dir(&logs_dir)
-        .map_err(|e| HoutError::IoError { message: format!("读取日志目录失败: {}", e) })?;
-    
+
+    let basic_cutoff_date =
+        DateTime::parse_from_rfc3339(&basic_cutoff).map_err(|e| HoutError::InvalidInput {
+            message: format!("解析基础截止日期失败: {}", e),
+        })?;
+    let _error_cutoff_date =
+        DateTime::parse_from_rfc3339(&error_cutoff).map_err(|e| HoutError::InvalidInput {
+            message: format!("解析错误截止日期失败: {}", e),
+        })?;
+
+    let entries = fs::read_dir(&logs_dir).map_err(|e| HoutError::IoError {
+        message: format!("读取日志目录失败: {}", e),
+    })?;
+
     let mut removed_count = 0;
-    
+
     for entry in entries {
-        let entry = entry.map_err(|e| HoutError::IoError { message: format!("读取目录条目失败: {}", e) })?;
+        let entry = entry.map_err(|e| HoutError::IoError {
+            message: format!("读取目录条目失败: {}", e),
+        })?;
         let path = entry.path();
-        
+
         // 支持两种格式的日志文件
         let is_log_file = if path.is_file() {
             // 新格式: admt_log_YYYYMMDD.log
@@ -4028,12 +4471,12 @@ pub async fn cleanup_expired_logs(basic_cutoff: String, error_cutoff: String) ->
         } else {
             false
         };
-        
+
         if is_log_file {
             if let Ok(metadata) = fs::metadata(&path) {
                 if let Ok(modified) = metadata.modified() {
                     let modified_datetime: DateTime<Utc> = modified.into();
-                    
+
                     // 检查文件是否过期
                     if modified_datetime < basic_cutoff_date {
                         if let Err(e) = fs::remove_file(&path) {
@@ -4047,7 +4490,7 @@ pub async fn cleanup_expired_logs(basic_cutoff: String, error_cutoff: String) ->
             }
         }
     }
-    
+
     log::info!("清理完成，删除了 {} 个过期日志文件", removed_count);
     Ok("OK".to_string())
 }
@@ -4057,34 +4500,37 @@ pub async fn cleanup_expired_logs(basic_cutoff: String, error_cutoff: String) ->
 pub async fn write_logs_to_file(logs: Vec<serde_json::Value>) -> Result<String> {
     use std::fs::OpenOptions;
     use std::io::Write;
-    
+
     if logs.is_empty() {
         return Ok("OK".to_string());
     }
-    
+
     // 按日期分组日志
     let date_str = Local::now().format("%Y%m%d").to_string();
     let filename = format!("admt_log_{}.log", date_str);
-    
+
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     // 确保日志目录存在
-    std::fs::create_dir_all(&logs_dir)
-        .map_err(|e| HoutError::IoError { message: format!("创建日志目录失败: {}", e) })?;
-    
+    std::fs::create_dir_all(&logs_dir).map_err(|e| HoutError::IoError {
+        message: format!("创建日志目录失败: {}", e),
+    })?;
+
     let log_file_path = logs_dir.join(&filename);
-    
+
     // 打开文件进行追加写入
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
         .open(&log_file_path)
-        .map_err(|e| HoutError::IoError { message: format!("打开日志文件失败: {}", e) })?;
-    
+        .map_err(|e| HoutError::IoError {
+            message: format!("打开日志文件失败: {}", e),
+        })?;
+
     // 保存日志数量用于后续日志记录
     let logs_count = logs.len();
-    
+
     // 批量写入日志
     for log_value in logs {
         // 尝试解析为结构化日志
@@ -4101,13 +4547,17 @@ pub async fn write_logs_to_file(logs: Vec<serde_json::Value>) -> Result<String> 
             }
         }
     }
-    
+
     // 确保数据写入磁盘
     if let Err(e) = file.flush() {
         log::warn!("刷新日志文件失败: {}", e);
     }
-    
-    log::debug!("批量写入 {} 条日志到文件: {}", logs_count, log_file_path.display());
+
+    log::debug!(
+        "批量写入 {} 条日志到文件: {}",
+        logs_count,
+        log_file_path.display()
+    );
     Ok(log_file_path.to_string_lossy().to_string())
 }
 
@@ -4115,19 +4565,21 @@ pub async fn write_logs_to_file(logs: Vec<serde_json::Value>) -> Result<String> 
 #[tauri::command]
 pub async fn clear_all_logs() -> Result<String> {
     use std::fs;
-    
+
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     if logs_dir.exists() {
         // 删除整个日志目录并重新创建
-        fs::remove_dir_all(&logs_dir)
-            .map_err(|e| HoutError::IoError { message: format!("删除日志目录失败: {}", e) })?;
-        
-        fs::create_dir_all(&logs_dir)
-            .map_err(|e| HoutError::IoError { message: format!("重新创建日志目录失败: {}", e) })?;
+        fs::remove_dir_all(&logs_dir).map_err(|e| HoutError::IoError {
+            message: format!("删除日志目录失败: {}", e),
+        })?;
+
+        fs::create_dir_all(&logs_dir).map_err(|e| HoutError::IoError {
+            message: format!("重新创建日志目录失败: {}", e),
+        })?;
     }
-    
+
     log::info!("所有日志已清空（包括内存和文件）");
     Ok("OK".to_string())
 }
@@ -4137,12 +4589,12 @@ pub async fn clear_all_logs() -> Result<String> {
 pub async fn get_log_file_info() -> Result<serde_json::Value> {
     let app_dir = get_app_data_dir()?;
     let logs_dir = app_dir.join("logs");
-    
+
     // 当前日志文件
     let date_str = Local::now().format("%Y%m%d").to_string();
     let current_filename = format!("admt_log_{}.log", date_str);
     let current_file_path = logs_dir.join(&current_filename);
-    
+
     let info = serde_json::json!({
         "logsDirectory": logs_dir.to_string_lossy(),
         "currentLogFile": current_filename,
@@ -4150,7 +4602,7 @@ pub async fn get_log_file_info() -> Result<serde_json::Value> {
         "logFileExists": current_file_path.exists(),
         "logsDirExists": logs_dir.exists()
     });
-    
+
     Ok(info)
 }
 
@@ -4158,13 +4610,13 @@ pub async fn get_log_file_info() -> Result<serde_json::Value> {
 #[tauri::command]
 pub async fn get_tool_paths_status() -> Result<serde_json::Value> {
     use crate::cache::{get_cached_adb_path, get_cached_fastboot_path};
-    
+
     // 记录工具路径状态
     log_tool_paths().await;
-    
+
     let adb_path = get_cached_adb_path();
     let fastboot_path = get_cached_fastboot_path();
-    
+
     let status = serde_json::json!({
         "adb": {
             "path": adb_path.to_string_lossy(),
@@ -4179,7 +4631,7 @@ pub async fn get_tool_paths_status() -> Result<serde_json::Value> {
         "overall_valid": verify_tool_paths(),
         "timestamp": chrono::Utc::now().to_rfc3339()
     });
-    
+
     Ok(status)
 }
 
@@ -4188,14 +4640,14 @@ pub async fn get_tool_paths_status() -> Result<serde_json::Value> {
 pub async fn verify_tools_integrity() -> Result<bool> {
     // 记录详细的工具路径状态
     log_tool_paths().await;
-    
+
     let is_valid = verify_tool_paths();
-    
+
     if is_valid {
         log::info!("✅ All tools are properly configured and accessible");
     } else {
         log::error!("❌ Some tools are missing or inaccessible");
     }
-    
+
     Ok(is_valid)
 }

@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceInfo {
@@ -13,15 +13,15 @@ pub struct DeviceInfo {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum DeviceMode {
-    Sys,        // 系统模式
-    Rec,        // Recovery模式
-    Fastboot,   // Fastboot模式
-    Fastbootd,  // Fastbootd模式
-    Sideload,   // Sideload模式
-    Edl,        // EDL模式
+    Sys,          // 系统模式
+    Rec,          // Recovery模式
+    Fastboot,     // Fastboot模式
+    Fastbootd,    // Fastbootd模式
+    Sideload,     // Sideload模式
+    Edl,          // EDL模式
     Unauthorized, // 未授权
-    Offline,    // 离线
-    Unknown,    // 未知
+    Offline,      // 离线
+    Unknown,      // 未知
 }
 
 impl DeviceMode {
@@ -35,7 +35,7 @@ impl DeviceMode {
             _ => DeviceMode::Unknown,
         }
     }
-    
+
     #[allow(dead_code)]
     pub fn from_fastboot_status(_status: &str) -> Self {
         // Fastboot通常只返回设备序列号，需要进一步检测是fastboot还是fastbootd
@@ -47,30 +47,30 @@ impl DeviceMode {
 #[serde(rename_all = "camelCase")]
 pub struct DeviceProperties {
     // 设备基本信息
-    pub market_name: Option<String>,        // ro.product.marketname
-    pub product_name: Option<String>,       // ro.product.name
-    pub brand: Option<String>,              // ro.product.brand
-    pub model: Option<String>,              // ro.product.model
-    pub device_name: Option<String>,        // ro.product.device
-    pub manufacturer: Option<String>,       // ro.product.manufacturer
-    pub serial_number: Option<String>,      // ro.serialno
+    pub market_name: Option<String>,   // ro.product.marketname
+    pub product_name: Option<String>,  // ro.product.name
+    pub brand: Option<String>,         // ro.product.brand
+    pub model: Option<String>,         // ro.product.model
+    pub device_name: Option<String>,   // ro.product.device
+    pub manufacturer: Option<String>,  // ro.product.manufacturer
+    pub serial_number: Option<String>, // ro.serialno
 
     // 系统版本信息
-    pub android_version: Option<String>,    // ro.build.version.release
-    pub sdk_version: Option<String>,        // ro.build.version.sdk
-    pub build_id: Option<String>,           // ro.build.id
-    pub build_display_id: Option<String>,   // ro.build.display.id
-    pub system_version: Option<String>,     // ro.system.build.version.incremental
+    pub android_version: Option<String>, // ro.build.version.release
+    pub sdk_version: Option<String>,     // ro.build.version.sdk
+    pub build_id: Option<String>,        // ro.build.id
+    pub build_display_id: Option<String>, // ro.build.display.id
+    pub system_version: Option<String>,  // ro.system.build.version.incremental
     pub security_patch_level: Option<String>, // ro.build.version.security_patch
-    pub build_fingerprint: Option<String>,  // ro.build.fingerprint
-    pub build_date: Option<String>,         // ro.build.date
-    pub build_user: Option<String>,         // ro.build.user
-    pub build_host: Option<String>,         // ro.build.host
+    pub build_fingerprint: Option<String>, // ro.build.fingerprint
+    pub build_date: Option<String>,      // ro.build.date
+    pub build_user: Option<String>,      // ro.build.user
+    pub build_host: Option<String>,      // ro.build.host
 
     // 硬件信息
     pub cpu_abi: Option<String>,           // ro.product.cpu.abi
     pub cpu_abi_list: Option<String>,      // ro.product.cpu.abilist
-    pub soc_manufacturer: Option<String>,   // ro.soc.manufacturer
+    pub soc_manufacturer: Option<String>,  // ro.soc.manufacturer
     pub soc_model: Option<String>,         // ro.soc.model
     pub hardware: Option<String>,          // ro.hardware
     pub hardware_chipname: Option<String>, // ro.hardware.chipname
@@ -78,37 +78,37 @@ pub struct DeviceProperties {
     pub product_board: Option<String>,     // ro.product.board
 
     // 安全和启动信息
-    pub bootloader_locked: Option<bool>,    // ro.boot.flash.locked
+    pub bootloader_locked: Option<bool>, // ro.boot.flash.locked
     pub verified_boot_state: Option<String>, // ro.boot.verifiedbootstate
-    pub verity_mode: Option<String>,       // ro.boot.veritymode
-    pub debuggable: Option<bool>,          // ro.debuggable
-    pub secure: Option<bool>,              // ro.secure
-    pub adb_secure: Option<bool>,          // ro.adb.secure
+    pub verity_mode: Option<String>,     // ro.boot.veritymode
+    pub debuggable: Option<bool>,        // ro.debuggable
+    pub secure: Option<bool>,            // ro.secure
+    pub adb_secure: Option<bool>,        // ro.adb.secure
 
     // 显示和UI信息
-    pub lcd_density: Option<String>,       // ro.sf.lcd_density
-    pub locale: Option<String>,            // ro.product.locale
-    pub timezone: Option<String>,          // persist.sys.timezone
+    pub lcd_density: Option<String>, // ro.sf.lcd_density
+    pub locale: Option<String>,      // ro.product.locale
+    pub timezone: Option<String>,    // persist.sys.timezone
 
     // 网络和通信
-    pub default_network: Option<String>,   // ro.telephony.default_network
-    pub first_api_level: Option<String>,   // ro.product.first_api_level
-    pub vndk_version: Option<String>,      // ro.vndk.version
+    pub default_network: Option<String>, // ro.telephony.default_network
+    pub first_api_level: Option<String>, // ro.product.first_api_level
+    pub vndk_version: Option<String>,    // ro.vndk.version
 
     // 运行时信息
     pub imei: Option<String>,              // 需要特殊权限获取
     pub battery_level: Option<i32>,        // dumpsys battery
-    pub screen_resolution: Option<String>,  // wm size
+    pub screen_resolution: Option<String>, // wm size
     pub total_memory: Option<String>,      // /proc/meminfo
     pub available_storage: Option<String>, // df /data
 
     // 详细内存和存储信息
-    pub memory_total: Option<u64>,         // 总内存 (MB)
-    pub memory_used: Option<u64>,          // 已使用内存 (MB)
-    pub memory_available: Option<u64>,     // 可用内存 (MB)
-    pub storage_total: Option<u64>,        // 总存储 (MB)
-    pub storage_used: Option<u64>,         // 已使用存储 (MB)
-    pub storage_available: Option<u64>,    // 可用存储 (MB)
+    pub memory_total: Option<u64>,      // 总内存 (MB)
+    pub memory_used: Option<u64>,       // 已使用内存 (MB)
+    pub memory_available: Option<u64>,  // 可用内存 (MB)
+    pub storage_total: Option<u64>,     // 总存储 (MB)
+    pub storage_used: Option<u64>,      // 已使用存储 (MB)
+    pub storage_available: Option<u64>, // 可用存储 (MB)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -240,17 +240,20 @@ impl DeviceInfo {
             last_seen: Some(Utc::now()),
         }
     }
-    
+
     #[allow(dead_code)]
     pub fn update_properties(&mut self, properties: DeviceProperties) {
         self.properties = Some(properties);
         self.last_seen = Some(Utc::now());
     }
-    
+
     pub fn is_adb_available(&self) -> bool {
-        matches!(self.mode, DeviceMode::Sys | DeviceMode::Rec | DeviceMode::Sideload)
+        matches!(
+            self.mode,
+            DeviceMode::Sys | DeviceMode::Rec | DeviceMode::Sideload
+        )
     }
-    
+
     pub fn is_fastboot_available(&self) -> bool {
         matches!(self.mode, DeviceMode::Fastboot | DeviceMode::Fastbootd)
     }

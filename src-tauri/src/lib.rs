@@ -1,23 +1,23 @@
+mod activation;
+mod adb_commands;
+mod cache;
 mod commands;
 mod device;
+mod download_manager;
 mod error;
 mod screen_mirror;
-mod utils;
-mod activation;
-mod download_manager;
-mod cache;
-mod version;
 mod system_features;
-mod adb_commands;
+mod utils;
+mod version;
 
-
-use commands::*;
 use activation::check_activation_expiry;
 use cache::cache_cleanup_task;
+use commands::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

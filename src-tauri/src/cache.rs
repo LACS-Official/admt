@@ -1,9 +1,9 @@
+use crate::device::{DeviceInfo, DeviceProperties};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use crate::device::{DeviceProperties, DeviceInfo};
 
 /// 缓存统计信息
 #[derive(Debug, Clone)]
@@ -47,8 +47,6 @@ impl CacheStats {
             self.device_cache_hits as f64 / total as f64
         }
     }
-
-
 }
 
 /// 带TTL的缓存项
@@ -99,7 +97,7 @@ impl CacheManager {
             device_list_cache: RwLock::new(None),
             stats: RwLock::new(CacheStats::default()),
             device_cache_ttl: Duration::from_secs(30), // 30秒TTL
-            device_list_ttl: Duration::from_secs(5), // 5秒TTL，设备列表变化较快
+            device_list_ttl: Duration::from_secs(5),   // 5秒TTL，设备列表变化较快
         }
     }
 
@@ -111,14 +109,17 @@ impl CacheManager {
                 // 缓存命中
                 let mut stats = self.stats.write().await;
                 stats.device_cache_hits += 1;
-                log::debug!("Device cache hit for {}, TTL remaining: {:?}", 
-                    serial, item.remaining_ttl());
+                log::debug!(
+                    "Device cache hit for {}, TTL remaining: {:?}",
+                    serial,
+                    item.remaining_ttl()
+                );
                 return Some(item.value.clone());
             } else {
                 log::debug!("Device cache expired for {}", serial);
             }
         }
-        
+
         // 缓存未命中
         let mut stats = self.stats.write().await;
         stats.device_cache_misses += 1;
@@ -140,7 +141,10 @@ impl CacheManager {
             if !item.is_expired() {
                 let mut stats = self.stats.write().await;
                 stats.device_cache_hits += 1;
-                log::debug!("Device list cache hit, TTL remaining: {:?}", item.remaining_ttl());
+                log::debug!(
+                    "Device list cache hit, TTL remaining: {:?}",
+                    item.remaining_ttl()
+                );
                 return Some(item.value.clone());
             } else {
                 log::debug!("Device list cache expired");
@@ -157,7 +161,10 @@ impl CacheManager {
         let mut cache = self.device_list_cache.write().await;
         let item = CacheItem::new(devices, self.device_list_ttl);
         *cache = Some(item);
-        log::debug!("Cached device list with {} devices", cache.as_ref().unwrap().value.len());
+        log::debug!(
+            "Cached device list with {} devices",
+            cache.as_ref().unwrap().value.len()
+        );
     }
 
     /// 清除过期的缓存项
@@ -214,7 +221,11 @@ impl CacheManager {
         *list_cache = None;
         stats.cache_evictions += (count + list_count) as u64;
 
-        log::info!("Cleared all caches ({} device properties, {} device list)", count, list_count);
+        log::info!(
+            "Cleared all caches ({} device properties, {} device list)",
+            count,
+            list_count
+        );
     }
 
     /// 获取缓存统计信息
@@ -236,7 +247,10 @@ impl CacheManager {
         let list_cache = self.device_list_cache.read().await;
         let mut info = HashMap::new();
         info.insert("device_cache_size".to_string(), cache.len());
-        info.insert("device_list_cached".to_string(), if list_cache.is_some() { 1 } else { 0 });
+        info.insert(
+            "device_list_cached".to_string(),
+            if list_cache.is_some() { 1 } else { 0 },
+        );
         info
     }
 
@@ -293,11 +307,19 @@ pub async fn record_path_cache_hit() {
 pub async fn log_tool_paths() {
     let adb_path = get_cached_adb_path();
     let fastboot_path = get_cached_fastboot_path();
-    
+
     log::info!("Tool paths status:");
-    log::info!("  ADB: {} (exists: {})", adb_path.display(), adb_path.exists());
-    log::info!("  Fastboot: {} (exists: {})", fastboot_path.display(), fastboot_path.exists());
-    
+    log::info!(
+        "  ADB: {} (exists: {})",
+        adb_path.display(),
+        adb_path.exists()
+    );
+    log::info!(
+        "  Fastboot: {} (exists: {})",
+        fastboot_path.display(),
+        fastboot_path.exists()
+    );
+
     if !adb_path.exists() || !fastboot_path.exists() {
         log::error!("Critical tool files missing, functionality will be limited");
     }
@@ -307,14 +329,13 @@ pub async fn log_tool_paths() {
 pub fn verify_tool_paths() -> bool {
     let adb_path = get_cached_adb_path();
     let fastboot_path = get_cached_fastboot_path();
-    
+
     let adb_valid = adb_path.exists() && !adb_path.to_string_lossy().contains("INVALID");
-    let fastboot_valid = fastboot_path.exists() && !fastboot_path.to_string_lossy().contains("INVALID");
-    
+    let fastboot_valid =
+        fastboot_path.exists() && !fastboot_path.to_string_lossy().contains("INVALID");
+
     adb_valid && fastboot_valid
 }
-
-
 
 /// 查找ADB路径（仅在首次调用时执行）
 /// 统一使用 tools/adb 目录中的可执行文件
@@ -331,14 +352,18 @@ fn find_adb_path() -> PathBuf {
         log::info!("Executable path: {}", exe_dir.display());
         if let Some(parent) = exe_dir.parent() {
             log::info!("Executable parent directory: {}", parent.display());
-            
+
             // 生产环境的多个可能路径
             let production_paths = [
                 parent.join("tools").join("adb").join("adb.exe"),
-                parent.join("resources").join("tools").join("adb").join("adb.exe"),
+                parent
+                    .join("resources")
+                    .join("tools")
+                    .join("adb")
+                    .join("adb.exe"),
                 parent.join("adb").join("adb.exe"), // 备用路径
             ];
-            
+
             for path in &production_paths {
                 log::info!("Checking production path: {}", path.display());
                 if path.exists() {
@@ -355,21 +380,26 @@ fn find_adb_path() -> PathBuf {
 
     // 2. 开发环境：当前工作目录下的 tools/adb（考虑当前目录可能已经在 src-tauri 中）
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    log::info!("Current directory for development search: {}", current_dir.display());
-    
+    log::info!(
+        "Current directory for development search: {}",
+        current_dir.display()
+    );
+
     let dev_paths = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
         // 如果当前目录已经是 src-tauri，直接使用 tools/adb
-        vec![
-            current_dir.join("tools").join("adb").join("adb.exe"),
-        ]
+        vec![current_dir.join("tools").join("adb").join("adb.exe")]
     } else {
         // 否则尝试多个开发环境路径
         vec![
-            current_dir.join("src-tauri").join("tools").join("adb").join("adb.exe"),
+            current_dir
+                .join("src-tauri")
+                .join("tools")
+                .join("adb")
+                .join("adb.exe"),
             current_dir.join("tools").join("adb").join("adb.exe"),
         ]
     };
-    
+
     for path in &dev_paths {
         log::info!("Checking development path: {}", path.display());
         if path.exists() {
@@ -403,21 +433,28 @@ fn find_fastboot_path() -> PathBuf {
         log::info!("Executable path: {}", exe_dir.display());
         if let Some(parent) = exe_dir.parent() {
             log::info!("Executable parent directory: {}", parent.display());
-            
+
             // 生产环境的多个可能路径
             let production_paths = [
                 parent.join("tools").join("adb").join("fastboot.exe"),
-                parent.join("resources").join("tools").join("adb").join("fastboot.exe"),
+                parent
+                    .join("resources")
+                    .join("tools")
+                    .join("adb")
+                    .join("fastboot.exe"),
                 parent.join("adb").join("fastboot.exe"), // 备用路径
             ];
-            
+
             for path in &production_paths {
                 log::info!("Checking production path: {}", path.display());
                 if path.exists() {
                     log::info!("✅ Found Fastboot at production path: {}", path.display());
                     return path.clone();
                 } else {
-                    log::warn!("❌ Fastboot not found at production path: {}", path.display());
+                    log::warn!(
+                        "❌ Fastboot not found at production path: {}",
+                        path.display()
+                    );
                 }
             }
         }
@@ -427,28 +464,36 @@ fn find_fastboot_path() -> PathBuf {
 
     // 2. 开发环境：当前工作目录下的 tools/adb（考虑当前目录可能已经在 src-tauri 中）
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    log::info!("Current directory for development search: {}", current_dir.display());
-    
+    log::info!(
+        "Current directory for development search: {}",
+        current_dir.display()
+    );
+
     let dev_paths = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
         // 如果当前目录已经是 src-tauri，直接使用 tools/adb
-        vec![
-            current_dir.join("tools").join("adb").join("fastboot.exe"),
-        ]
+        vec![current_dir.join("tools").join("adb").join("fastboot.exe")]
     } else {
         // 否则尝试多个开发环境路径
         vec![
-            current_dir.join("src-tauri").join("tools").join("adb").join("fastboot.exe"),
+            current_dir
+                .join("src-tauri")
+                .join("tools")
+                .join("adb")
+                .join("fastboot.exe"),
             current_dir.join("tools").join("adb").join("fastboot.exe"),
         ]
     };
-    
+
     for path in &dev_paths {
         log::info!("Checking development path: {}", path.display());
         if path.exists() {
             log::info!("✅ Found Fastboot at development path: {}", path.display());
             return path.clone();
         } else {
-            log::warn!("❌ Fastboot not found at development path: {}", path.display());
+            log::warn!(
+                "❌ Fastboot not found at development path: {}",
+                path.display()
+            );
         }
     }
 
@@ -465,8 +510,6 @@ fn find_fastboot_path() -> PathBuf {
     PathBuf::from("INVALID_FASTBOOT_PATH")
 }
 
-
-
 /// 缓存清理任务
 pub async fn cache_cleanup_task() {
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(60)); // 每分钟清理一次
@@ -480,7 +523,8 @@ pub async fn cache_cleanup_task() {
         // 每10分钟输出一次缓存统计
         let stats = cache_manager.get_stats().await;
         if stats.last_reset.elapsed().as_secs() >= 600 {
-            log::info!("Cache stats - Path hit rate: {:.2}%, Device hit rate: {:.2}%, Evictions: {}",
+            log::info!(
+                "Cache stats - Path hit rate: {:.2}%, Device hit rate: {:.2}%, Evictions: {}",
                 stats.path_hit_rate() * 100.0,
                 stats.device_hit_rate() * 100.0,
                 stats.cache_evictions

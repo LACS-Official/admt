@@ -1,14 +1,10 @@
+use crate::cache::{get_cached_adb_path, get_cached_fastboot_path, record_path_cache_hit};
+use crate::error::{HoutError, Result};
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::time::Duration;
 use tokio::process::Command as TokioCommand;
 use tokio::time::timeout;
-use crate::error::{HoutError, Result};
-use crate::cache::{get_cached_adb_path, get_cached_fastboot_path, record_path_cache_hit};
-
-
-
-
 
 /// 获取ADB可执行文件路径（已弃用，请使用缓存版本）
 #[deprecated(note = "Use get_cached_adb_path() for better performance")]
@@ -33,7 +29,10 @@ pub fn get_adb_path() -> PathBuf {
         .join("adb")
         .join("adb.exe");
     if current_dir_tools.exists() {
-        log::info!("Found ADB at current dir tools: {}", current_dir_tools.display());
+        log::info!(
+            "Found ADB at current dir tools: {}",
+            current_dir_tools.display()
+        );
         return current_dir_tools;
     }
 
@@ -76,14 +75,20 @@ pub fn get_fastboot_path() -> PathBuf {
         .join("adb")
         .join("fastboot.exe");
     if current_dir_tools.exists() {
-        log::info!("Found Fastboot at current dir tools: {}", current_dir_tools.display());
+        log::info!(
+            "Found Fastboot at current dir tools: {}",
+            current_dir_tools.display()
+        );
         return current_dir_tools;
     }
 
     // 3. 尝试从相对路径获取（开发模式备选）
     let relative_path = PathBuf::from("src-tauri/tools/adb/fastboot.exe");
     if relative_path.exists() {
-        log::info!("Found Fastboot at relative path: {}", relative_path.display());
+        log::info!(
+            "Found Fastboot at relative path: {}",
+            relative_path.display()
+        );
         return relative_path;
     }
 
@@ -125,7 +130,11 @@ pub async fn execute_command(
     // 检查程序路径是否有效
     let program_str = program.to_string_lossy();
     if program_str.contains("INVALID_") {
-        let tool_name = if program_str.contains("ADB") { "ADB" } else { "Fastboot" };
+        let tool_name = if program_str.contains("ADB") {
+            "ADB"
+        } else {
+            "Fastboot"
+        };
         return Err(HoutError::IoError {
             message: format!(
                 "{} executable not found in tools directory. Please ensure {}.exe is placed in src-tauri/tools/adb/",
@@ -146,9 +155,7 @@ pub async fn execute_command(
     }
 
     let mut cmd = TokioCommand::new(program);
-    cmd.args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
 
     // 在发布版中隐藏命令行窗口，在调试版中保持可见
     #[cfg(all(windows, not(debug_assertions)))]
@@ -181,14 +188,23 @@ pub async fn execute_command(
             let result = crate::device::CommandResult {
                 success: output.status.success(),
                 output: stdout,
-                error: if stderr.is_empty() { None } else { Some(stderr) },
+                error: if stderr.is_empty() {
+                    None
+                } else {
+                    Some(stderr)
+                },
                 exit_code: output.status.code(),
             };
 
             if result.success {
                 log::debug!("命令执行成功: {} {}", program.display(), args.join(" "));
             } else {
-                log::warn!("命令执行失败: {} {}, 错误: {:?}", program.display(), args.join(" "), result.error);
+                log::warn!(
+                    "命令执行失败: {} {}, 错误: {:?}",
+                    program.display(),
+                    args.join(" "),
+                    result.error
+                );
             }
 
             Ok(result)
@@ -205,9 +221,7 @@ pub async fn execute_command(
             };
 
             log::error!("命令执行IO错误: {}", error_msg);
-            Err(HoutError::IoError {
-                message: error_msg,
-            })
+            Err(HoutError::IoError { message: error_msg })
         }
         Err(_) => {
             let timeout_error = format!("命令执行超时: {} {}", program.display(), args.join(" "));
@@ -254,22 +268,18 @@ pub fn parse_fastboot_device_list(output: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-
-
-
-
 /// 格式化文件大小
 #[allow(dead_code)]
 pub fn format_file_size(size: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = size as f64;
     let mut unit_index = 0;
-    
+
     while size >= 1024.0 && unit_index < UNITS.len() - 1 {
         size /= 1024.0;
         unit_index += 1;
     }
-    
+
     if unit_index == 0 {
         format!("{} {}", size as u64, UNITS[unit_index])
     } else {
@@ -280,5 +290,8 @@ pub fn format_file_size(size: u64) -> String {
 /// 验证设备序列号格式
 #[allow(dead_code)]
 pub fn is_valid_serial(serial: &str) -> bool {
-    !serial.is_empty() && serial.chars().all(|c| c.is_alphanumeric() || c == ':' || c == '.')
+    !serial.is_empty()
+        && serial
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == ':' || c == '.')
 }
