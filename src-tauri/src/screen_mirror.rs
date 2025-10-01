@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// 投屏质量设置
@@ -210,34 +210,46 @@ impl ScreenMirrorSession {
 #[allow(dead_code)]
 pub fn get_quality_presets() -> HashMap<String, ScreenMirrorQuality> {
     let mut presets = HashMap::new();
-    
-    presets.insert("ultra".to_string(), ScreenMirrorQuality {
-        resolution: "auto".to_string(),
-        bitrate: 8,
-        framerate: 60,
-        codec: "h264".to_string(),
-    });
-    
-    presets.insert("high".to_string(), ScreenMirrorQuality {
-        resolution: "1920x1080".to_string(),
-        bitrate: 4,
-        framerate: 30,
-        codec: "h264".to_string(),
-    });
-    
-    presets.insert("medium".to_string(), ScreenMirrorQuality {
-        resolution: "1280x720".to_string(),
-        bitrate: 2,
-        framerate: 30,
-        codec: "h264".to_string(),
-    });
-    
-    presets.insert("low".to_string(), ScreenMirrorQuality {
-        resolution: "854x480".to_string(),
-        bitrate: 1,
-        framerate: 15,
-        codec: "h264".to_string(),
-    });
-    
+
+    presets.insert(
+        "ultra".to_string(),
+        ScreenMirrorQuality {
+            resolution: "auto".to_string(),
+            bitrate: 8,
+            framerate: 60,
+            codec: "h264".to_string(),
+        },
+    );
+
+    presets.insert(
+        "high".to_string(),
+        ScreenMirrorQuality {
+            resolution: "1920x1080".to_string(),
+            bitrate: 4,
+            framerate: 30,
+            codec: "h264".to_string(),
+        },
+    );
+
+    presets.insert(
+        "medium".to_string(),
+        ScreenMirrorQuality {
+            resolution: "1280x720".to_string(),
+            bitrate: 2,
+            framerate: 30,
+            codec: "h264".to_string(),
+        },
+    );
+
+    presets.insert(
+        "low".to_string(),
+        ScreenMirrorQuality {
+            resolution: "854x480".to_string(),
+            bitrate: 1,
+            framerate: 15,
+            codec: "h264".to_string(),
+        },
+    );
+
     presets
 }

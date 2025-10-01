@@ -18,9 +18,12 @@ import {
   Warning24Regular,
   CheckmarkCircle24Regular,
 } from "@fluentui/react-icons";
-import { useAppStore } from "../../stores/appStore";
-import { systemTrayService } from "../../services/systemTrayService";
-import { autoStartService } from "../../services/autoStartService";
+import { useAppStore } from '../../stores/appStore';
+import { systemTrayService } from '../../services/systemTrayService';
+import { autoStartService } from '../../services/autoStartService';
+import { enable, isEnabled, disable } from '@tauri-apps/plugin-autostart';
+// when using `"withGlobalTauri": true`, you may use
+// const { enable, isEnabled, disable } = window.__TAURI__.autostart;
 
 // 状态提示组件
 interface SystemFeatureStatus {
@@ -152,7 +155,7 @@ const OtherSettingsPanel: React.FC = () => {
       try {
         const [traySupported, autoStartSupported] = await Promise.all([
           systemTrayService.isSystemTraySupported(),
-          autoStartService.isAutoStartSupported()
+          isEnabled().then(() => true).catch(() => false), // 检查自启动支持
         ]);
         
         setTraySupported(traySupported);
@@ -185,6 +188,7 @@ const OtherSettingsPanel: React.FC = () => {
           await autoStartService.initialize('玩机管家');
           const autoStartStatus = await autoStartService.getAutoStartStatus();
           if (autoStartStatus.isEnabled !== config.autoStartEnabled) {
+            console.log(`🔄 同步自启动状态: ${autoStartStatus.isEnabled ? '已启用' : '未启用'}`);
             updateConfig({ autoStartEnabled: autoStartStatus.isEnabled });
             setStartWithSystem(autoStartStatus.isEnabled);
           }
@@ -263,55 +267,64 @@ const OtherSettingsPanel: React.FC = () => {
     }
   };
 
-  // 优化的自启动切换处理
-  const handleStartWithSystemChange = async (checked: boolean) => {
-    try {
-      setLoading(true);
-      setAutoStartStatus(null);
-      
-      const success = checked 
-        ? await autoStartService.enableAutoStartWithValidation()
-        : await autoStartService.disableAutoStart();
 
-      if (success) {
-        setStartWithSystem(checked);
-        updateConfig({ autoStartEnabled: checked });
-        
-        setAutoStartStatus({
-          type: 'success',
-          message: `开机自启动已${checked ? '启用' : '禁用'}`
-        });
-        
-        console.log(`✅ 开机自启动已${checked ? '启用' : '禁用'}`);
-      } else {
-        // 回滚状态
-        setStartWithSystem(!checked);
-        
-        setAutoStartStatus({
-          type: 'error',
-          message: `开机自启动${checked ? '启用' : '禁用'}失败，请以管理员身份运行`,
-          action: () => handleStartWithSystemChange(checked)
-        });
-        
-        console.error(`❌ 开机自启动${checked ? '启用' : '禁用'}失败`);
-      }
-    } catch (error) {
-      console.error(`❌ 开机自启动${checked ? '启用' : '禁用'}失败:`, error);
-      setStartWithSystem(!checked);
-      
-      setAutoStartStatus({
-        type: 'error',
-        message: '开机自启动设置失败，请检查系统权限',
-        action: () => handleStartWithSystemChange(checked)
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLanguageChange = (value: string) => {
     updateConfig({ language: value as "zh-CN" | "en-US" });
   };
+
+function handleStartWithSystemChange(checked: boolean): void {
+    if (!autoStartSupported) {
+      setAutoStartStatus({
+        type: 'error',
+        message: '当前系统不支持自启动功能'
+      });
+      return;
+    }
+    
+    (async () => {
+      try {
+        setLoading(true);
+        setAutoStartStatus(null);
+        
+        if (checked) {
+          const success = await autoStartService.enableAutoStart();
+          if (success) {
+            setAutoStartStatus({
+              type: 'success',
+              message: '自启动已启用'
+            });
+          } else {
+            throw new Error('启用自启动失败');
+          }
+        } else {
+          const success = await autoStartService.disableAutoStart();
+          if (success) {
+            setAutoStartStatus({
+              type: 'success',
+              message: '自启动已禁用'
+            });
+          } else {
+            throw new Error('禁用自启动失败');
+          }
+        }
+        
+        // 更新配置
+        updateConfig({ autoStartEnabled: checked });
+        setStartWithSystem(checked);
+        
+      } catch (error) {
+        console.error('自启动设置失败:', error);
+        setAutoStartStatus({
+          type: 'error',
+          message: '自启动设置失败，请重试',
+          action: () => handleStartWithSystemChange(checked)
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }
 
   return (
     <div className={styles.container}>

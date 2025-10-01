@@ -1,7 +1,7 @@
+use crate::error::{HoutError, Result};
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use serde::{Deserialize, Serialize};
-use crate::error::{HoutError, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,13 +33,17 @@ pub fn get_adb_tools_info(app_handle: &tauri::AppHandle) -> Result<AdbToolsInfo>
     // 尝试解析ADB工具路径
     match resolve_adb_tools_paths(app_handle) {
         Ok((adb_path, fastboot_path)) => {
-            log::info!("ADB工具路径解析成功: ADB={}, Fastboot={}", adb_path.display(), fastboot_path.display());
-            
+            log::info!(
+                "ADB工具路径解析成功: ADB={}, Fastboot={}",
+                adb_path.display(),
+                fastboot_path.display()
+            );
+
             // 验证ADB可执行文件存在
             if adb_path.exists() {
                 adb_info.adb_path = Some(adb_path.to_string_lossy().to_string());
                 log::info!("✅ ADB文件存在: {}", adb_path.display());
-                
+
                 // 获取ADB版本
                 match get_adb_version(&adb_path) {
                     Ok(version) => {
@@ -92,11 +96,15 @@ fn resolve_adb_tools_paths(_app_handle: &tauri::AppHandle) -> Result<(PathBuf, P
 
     // 检查路径是否有效
     if adb_path.to_string_lossy().contains("INVALID_") {
-        return Err(HoutError::PathResolution("ADB可执行文件路径无效".to_string()));
+        return Err(HoutError::PathResolution(
+            "ADB可执行文件路径无效".to_string(),
+        ));
     }
-    
+
     if fastboot_path.to_string_lossy().contains("INVALID_") {
-        return Err(HoutError::PathResolution("Fastboot可执行文件路径无效".to_string()));
+        return Err(HoutError::PathResolution(
+            "Fastboot可执行文件路径无效".to_string(),
+        ));
     }
 
     Ok((adb_path, fastboot_path))
@@ -114,7 +122,7 @@ fn get_adb_version(adb_path: &Path) -> Result<String> {
     }
 
     let version_output = String::from_utf8_lossy(&output.stdout);
-    
+
     // 解析版本信息，提取版本号
     for line in version_output.lines() {
         if line.contains("Android Debug Bridge version") {
@@ -128,11 +136,11 @@ fn get_adb_version(adb_path: &Path) -> Result<String> {
 /// 验证ADB工具文件完整性
 pub fn verify_adb_tools_integrity(_app_handle: &tauri::AppHandle) -> Result<AdbIntegrityReport> {
     let mut missing_files = Vec::new();
-    
+
     // 使用与cache.rs相同的路径查找逻辑
     let adb_path = crate::cache::get_cached_adb_path();
     let fastboot_path = crate::cache::get_cached_fastboot_path();
-    
+
     // 检查ADB文件
     if !adb_path.exists() {
         missing_files.push(format!("adb.exe - {}", adb_path.display()));
@@ -140,7 +148,7 @@ pub fn verify_adb_tools_integrity(_app_handle: &tauri::AppHandle) -> Result<AdbI
     } else {
         log::debug!("ADB tool file exists: {:?}", adb_path);
     }
-    
+
     // 检查Fastboot文件
     if !fastboot_path.exists() {
         missing_files.push(format!("fastboot.exe - {}", fastboot_path.display()));
@@ -148,7 +156,7 @@ pub fn verify_adb_tools_integrity(_app_handle: &tauri::AppHandle) -> Result<AdbI
     } else {
         log::debug!("Fastboot tool file exists: {:?}", fastboot_path);
     }
-    
+
     // 检查ADB依赖DLL文件(仅在Windows上)
     #[cfg(windows)]
     {
@@ -167,7 +175,7 @@ pub fn verify_adb_tools_integrity(_app_handle: &tauri::AppHandle) -> Result<AdbI
     }
 
     let success = missing_files.is_empty();
-    
+
     if success {
         log::info!("ADB工具完整性验证通过");
     } else {
@@ -189,10 +197,13 @@ pub async fn execute_adb_command_with_path(
     timeout: Option<u64>,
 ) -> Result<crate::device::CommandResult> {
     let adb_path = Path::new(adb_path);
-    
+
     // 验证ADB路径是否存在
     if !adb_path.exists() {
-        return Err(HoutError::Command(format!("ADB可执行文件不存在: {}", adb_path.display())));
+        return Err(HoutError::Command(format!(
+            "ADB可执行文件不存在: {}",
+            adb_path.display()
+        )));
     }
 
     // 构建完整的命令参数
@@ -231,7 +242,7 @@ pub async fn execute_adb_command_with_path(
 
     // 设置超时
     let timeout_duration = std::time::Duration::from_secs(timeout.unwrap_or(30));
-    
+
     // 使用tokio执行命令
     let output = tokio::time::timeout(timeout_duration, cmd.output())
         .await
@@ -245,7 +256,11 @@ pub async fn execute_adb_command_with_path(
     let result = crate::device::CommandResult {
         success,
         output: stdout,
-        error: if stderr.is_empty() { None } else { Some(stderr) },
+        error: if stderr.is_empty() {
+            None
+        } else {
+            Some(stderr)
+        },
         exit_code: output.status.code(),
     };
 
@@ -267,10 +282,13 @@ pub async fn execute_fastboot_command_with_path(
     timeout: Option<u64>,
 ) -> Result<crate::device::CommandResult> {
     let fastboot_path = Path::new(fastboot_path);
-    
+
     // 验证Fastboot路径是否存在
     if !fastboot_path.exists() {
-        return Err(HoutError::Command(format!("Fastboot可执行文件不存在: {}", fastboot_path.display())));
+        return Err(HoutError::Command(format!(
+            "Fastboot可执行文件不存在: {}",
+            fastboot_path.display()
+        )));
     }
 
     // 构建完整的命令参数
@@ -278,7 +296,11 @@ pub async fn execute_fastboot_command_with_path(
     cmd_args.push(command.to_string());
     cmd_args.extend_from_slice(args);
 
-    log::debug!("Executing Fastboot command: {:?} {:?}", fastboot_path, cmd_args);
+    log::debug!(
+        "Executing Fastboot command: {:?} {:?}",
+        fastboot_path,
+        cmd_args
+    );
 
     // 执行命令
     let mut cmd = tokio::process::Command::new(fastboot_path);
@@ -292,24 +314,33 @@ pub async fn execute_fastboot_command_with_path(
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);
-        log::debug!("Fastboot命令设置隐藏窗口 (发布版): {}", fastboot_path.display());
+        log::debug!(
+            "Fastboot命令设置隐藏窗口 (发布版): {}",
+            fastboot_path.display()
+        );
     }
 
     // 在调试版中保持窗口可见以便调试
     #[cfg(all(windows, debug_assertions))]
     {
-        log::debug!("Fastboot命令保持窗口可见 (调试版): {}", fastboot_path.display());
+        log::debug!(
+            "Fastboot命令保持窗口可见 (调试版): {}",
+            fastboot_path.display()
+        );
     }
 
     // 非Windows平台的处理
     #[cfg(not(windows))]
     {
-        log::debug!("Fastboot命令在非Windows平台执行: {}", fastboot_path.display());
+        log::debug!(
+            "Fastboot命令在非Windows平台执行: {}",
+            fastboot_path.display()
+        );
     }
 
     // 设置超时
     let timeout_duration = std::time::Duration::from_secs(timeout.unwrap_or(30));
-    
+
     // 使用tokio执行命令
     let output = tokio::time::timeout(timeout_duration, cmd.output())
         .await
@@ -323,7 +354,11 @@ pub async fn execute_fastboot_command_with_path(
     let result = crate::device::CommandResult {
         success,
         output: stdout,
-        error: if stderr.is_empty() { None } else { Some(stderr) },
+        error: if stderr.is_empty() {
+            None
+        } else {
+            Some(stderr)
+        },
         exit_code: output.status.code(),
     };
 

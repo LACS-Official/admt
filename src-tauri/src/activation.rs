@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use crate::error::{HoutError, Result};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// 激活状态枚举
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -180,7 +180,7 @@ impl ActivationValidator {
                 .unwrap_or_else(|_| reqwest::Client::new()),
         }
     }
-    
+
     /// 验证激活码格式（修改为8位大写字母和数字）
     pub fn validate_format(&self, code: &str) -> bool {
         // 安全性检查：防止空值和过长输入
@@ -190,7 +190,10 @@ impl ActivationValidator {
         }
 
         // 安全性检查：只允许大写字母和数字
-        if !code.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) {
+        if !code
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+        {
             log::warn!("Invalid characters in activation code");
             return false;
         }
@@ -198,7 +201,7 @@ impl ActivationValidator {
         log::debug!("Activation code format validation passed");
         true
     }
-    
+
     /// 检查激活码是否过期
     pub fn is_activation_expired(&self, activation_code: &ActivationCode) -> bool {
         let now = chrono::Utc::now();
@@ -231,7 +234,8 @@ impl ActivationValidator {
 
         log::info!("Verifying activation code with API: {}", verify_url);
 
-        match self.client
+        match self
+            .client
             .post(&verify_url)
             .header("Content-Type", "application/json")
             .header("User-Agent", "HOUT-Client/1.0.0")
@@ -282,19 +286,29 @@ impl ActivationValidator {
                                         if let Some(verify_data) = verify_response.data {
                                             // 将VerifyResponseData转换为ActivationCode
                                             // 解析API返回的时间字段
-                                            let created_at = chrono::DateTime::parse_from_rfc3339(&verify_data.created_at)
-                                                .map(|dt| dt.with_timezone(&chrono::Utc))
-                                                .unwrap_or_else(|_| chrono::Utc::now());
+                                            let created_at = chrono::DateTime::parse_from_rfc3339(
+                                                &verify_data.created_at,
+                                            )
+                                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                                            .unwrap_or_else(|_| chrono::Utc::now());
 
-                                            let expires_at = chrono::DateTime::parse_from_rfc3339(&verify_data.expires_at)
-                                                .map(|dt| dt.with_timezone(&chrono::Utc))
-                                                .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(365));
+                                            let expires_at = chrono::DateTime::parse_from_rfc3339(
+                                                &verify_data.expires_at,
+                                            )
+                                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                                            .unwrap_or_else(|_| {
+                                                chrono::Utc::now() + chrono::Duration::days(365)
+                                            });
 
-                                            let used_at = verify_data.used_at.as_ref().and_then(|used_at_str| {
-                                                chrono::DateTime::parse_from_rfc3339(used_at_str)
+                                            let used_at = verify_data.used_at.as_ref().and_then(
+                                                |used_at_str| {
+                                                    chrono::DateTime::parse_from_rfc3339(
+                                                        used_at_str,
+                                                    )
                                                     .map(|dt| dt.with_timezone(&chrono::Utc))
                                                     .ok()
-                                            });
+                                                },
+                                            );
 
                                             let activation_code = ActivationCode {
                                                 id: verify_data.id,
@@ -311,18 +325,27 @@ impl ActivationValidator {
                                             Err(HoutError::Tool("API响应数据为空".to_string()))
                                         }
                                     } else {
-                                        let error_msg = verify_response.error.unwrap_or("未知错误".to_string());
+                                        let error_msg =
+                                            verify_response.error.unwrap_or("未知错误".to_string());
                                         Err(HoutError::Tool(error_msg))
                                     }
                                 }
                                 Err(e) => {
                                     log::error!("Failed to deserialize VerifyResponse: {}", e);
-                                    log::error!("JSON structure: {}", serde_json::to_string_pretty(&json_value).unwrap_or_default());
+                                    log::error!(
+                                        "JSON structure: {}",
+                                        serde_json::to_string_pretty(&json_value)
+                                            .unwrap_or_default()
+                                    );
 
                                     // 尝试提取错误信息
-                                    if let Some(error_msg) = json_value.get("error").and_then(|v| v.as_str()) {
+                                    if let Some(error_msg) =
+                                        json_value.get("error").and_then(|v| v.as_str())
+                                    {
                                         Err(HoutError::Tool(error_msg.to_string()))
-                                    } else if let Some(message) = json_value.get("message").and_then(|v| v.as_str()) {
+                                    } else if let Some(message) =
+                                        json_value.get("message").and_then(|v| v.as_str())
+                                    {
                                         Err(HoutError::Tool(message.to_string()))
                                     } else {
                                         Err(HoutError::Tool(format!("API响应结构不匹配: {}", e)))
@@ -340,8 +363,11 @@ impl ActivationValidator {
                     // 处理HTTP错误状态码
                     match status.as_u16() {
                         400 => {
-                            if let Ok(error_response) = serde_json::from_str::<VerifyResponse>(&response_text) {
-                                let error_msg = error_response.error.unwrap_or("激活码无效".to_string());
+                            if let Ok(error_response) =
+                                serde_json::from_str::<VerifyResponse>(&response_text)
+                            {
+                                let error_msg =
+                                    error_response.error.unwrap_or("激活码无效".to_string());
                                 Err(HoutError::Tool(error_msg))
                             } else {
                                 Err(HoutError::Tool("激活码无效".to_string()))
@@ -349,7 +375,7 @@ impl ActivationValidator {
                         }
                         404 => Err(HoutError::Tool("激活码不存在".to_string())),
                         500 => Err(HoutError::Tool("服务器内部错误，请稍后重试".to_string())),
-                        _ => Err(HoutError::Tool(format!("验证失败，HTTP状态码: {}", status)))
+                        _ => Err(HoutError::Tool(format!("验证失败，HTTP状态码: {}", status))),
                     }
                 }
             }
@@ -359,11 +385,14 @@ impl ActivationValidator {
             }
         }
     }
-    
+
     /// 执行激活
     pub async fn activate(&self, request: ActivationRequest) -> Result<ActivationResponse> {
         // 记录激活尝试
-        log::info!("Activation attempt started for user: {}", request.user_config.username);
+        log::info!(
+            "Activation attempt started for user: {}",
+            request.user_config.username
+        );
 
         // 输入验证和安全检查
         if request.activation_code.trim().is_empty() {
@@ -380,8 +409,11 @@ impl ActivationValidator {
 
         // 验证激活码长度和格式
         let code = request.activation_code.trim();
-        if code.len() !=8 {
-            log::warn!("Activation attempt with invalid code length: {}", code.len());
+        if code.len() != 8 {
+            log::warn!(
+                "Activation attempt with invalid code length: {}",
+                code.len()
+            );
             return Ok(ActivationResponse {
                 success: false,
                 status: ActivationStatus::ActivationFailed,
@@ -407,7 +439,10 @@ impl ActivationValidator {
         // 验证用户名长度和字符
         let username = request.user_config.username.trim();
         if username.len() > 50 {
-            log::warn!("Activation attempt with username too long: {}", username.len());
+            log::warn!(
+                "Activation attempt with username too long: {}",
+                username.len()
+            );
             return Ok(ActivationResponse {
                 success: false,
                 status: ActivationStatus::ActivationFailed,
@@ -424,12 +459,18 @@ impl ActivationValidator {
         } else {
             "****".to_string()
         };
-        log::info!("Processing activation request for code: {} by user: {}",
-                  code_prefix, request.user_config.username);
+        log::info!(
+            "Processing activation request for code: {} by user: {}",
+            code_prefix,
+            request.user_config.username
+        );
 
         match self.validate_code(&request.activation_code).await {
             Ok(activation_code) => {
-                log::info!("Activation successful for code: {}", request.activation_code);
+                log::info!(
+                    "Activation successful for code: {}",
+                    request.activation_code
+                );
 
                 // 不再从productInfo中提取features，使用默认的空列表
                 let features: Vec<String> = vec![];
@@ -444,7 +485,11 @@ impl ActivationValidator {
                 })
             }
             Err(e) => {
-                log::warn!("Activation failed for code {}: {}", request.activation_code, e);
+                log::warn!(
+                    "Activation failed for code {}: {}",
+                    request.activation_code,
+                    e
+                );
 
                 Ok(ActivationResponse {
                     success: false,
@@ -467,7 +512,9 @@ impl Default for ActivationValidator {
 
 // Tauri命令：检查激活码过期状态
 #[tauri::command]
-pub async fn check_activation_expiry(activation_data: String) -> std::result::Result<serde_json::Value, String> {
+pub async fn check_activation_expiry(
+    activation_data: String,
+) -> std::result::Result<serde_json::Value, String> {
     match serde_json::from_str::<ActivationCode>(&activation_data) {
         Ok(activation_code) => {
             let validator = ActivationValidator::new();
@@ -485,6 +532,6 @@ pub async fn check_activation_expiry(activation_data: String) -> std::result::Re
 
             Ok(result)
         }
-        Err(e) => Err(format!("解析激活码数据失败: {}", e))
+        Err(e) => Err(format!("解析激活码数据失败: {}", e)),
     }
 }

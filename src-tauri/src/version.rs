@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
-use tauri::command;
-use serde::{Deserialize, Serialize};
 use reqwest;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppVersion {
@@ -34,28 +34,26 @@ fn read_version_config() -> Result<VersionConfig, String> {
         "../version.config.json",
         "../../version.config.json",
     ];
-    
+
     for config_path in &config_paths {
         if Path::new(config_path).exists() {
             match fs::read_to_string(config_path) {
-                Ok(content) => {
-                    match serde_json::from_str::<VersionConfig>(&content) {
-                        Ok(config) => {
-                            println!("✅ 成功读取版本配置文件: {}", config_path);
-                            return Ok(config);
-                        }
-                        Err(e) => {
-                            eprintln!("❌ 版本配置文件格式错误 {}: {}", config_path, e);
-                        }
+                Ok(content) => match serde_json::from_str::<VersionConfig>(&content) {
+                    Ok(config) => {
+                        println!("✅ 成功读取版本配置文件: {}", config_path);
+                        return Ok(config);
                     }
-                }
+                    Err(e) => {
+                        eprintln!("❌ 版本配置文件格式错误 {}: {}", config_path, e);
+                    }
+                },
                 Err(e) => {
                     eprintln!("❌ 读取版本配置文件失败 {}: {}", config_path, e);
                 }
             }
         }
     }
-    
+
     // 如果无法读取配置文件，返回默认配置
     eprintln!("⚠️  无法读取版本配置文件，使用默认版本信息");
     Ok(VersionConfig {
@@ -88,10 +86,10 @@ pub fn get_app_info() -> Result<AppVersion, String> {
     // 优先使用统一版本配置
     let version = get_unified_version();
     let build_date = env!("BUILD_DATE");
-    
+
     // 在编译时获取Git提交哈希（如果可用）
     let commit_hash = option_env!("GIT_HASH").map(|s| s.to_string());
-    
+
     Ok(AppVersion {
         version,
         build_date: build_date.to_string(),
@@ -112,14 +110,14 @@ pub struct UpdateCheckResult {
 #[command]
 pub async fn check_for_updates() -> Result<UpdateCheckResult, String> {
     let current_version = get_unified_version();
-    
+
     // API端点配置
     let api_url = if cfg!(debug_assertions) {
         "http://localhost:3001/api/version/check"
     } else {
         "https://api-g.lacs.cc/api/version/check"
     };
-    
+
     match check_version_from_api(&api_url, &current_version).await {
         Ok(result) => Ok(result),
         Err(e) => {
@@ -136,29 +134,30 @@ pub async fn check_for_updates() -> Result<UpdateCheckResult, String> {
     }
 }
 
-async fn check_version_from_api(api_url: &str, current_version: &str) -> Result<UpdateCheckResult, Box<dyn std::error::Error>> {
+async fn check_version_from_api(
+    api_url: &str,
+    current_version: &str,
+) -> Result<UpdateCheckResult, Box<dyn std::error::Error>> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()?;
-    
+
     let response = client
         .get(api_url)
         .header("User-Agent", format!("ADMT/{}", current_version))
         .send()
         .await?;
-    
+
     if !response.status().is_success() {
         return Err(format!("API请求失败: {}", response.status()).into());
     }
-    
+
     let api_response: serde_json::Value = response.json().await?;
-    
-    let latest_version = api_response["version"]
-        .as_str()
-        .unwrap_or(current_version);
-    
+
+    let latest_version = api_response["version"].as_str().unwrap_or(current_version);
+
     let has_update = compare_versions(current_version, latest_version);
-    
+
     Ok(UpdateCheckResult {
         has_update,
         current_version: current_version.to_string(),
@@ -174,25 +173,21 @@ fn compare_versions(current: &str, latest: &str) -> bool {
     if current == latest {
         return false;
     }
-    
-    let current_parts: Vec<u32> = current.split('.')
-        .filter_map(|s| s.parse().ok())
-        .collect();
-    let latest_parts: Vec<u32> = latest.split('.')
-        .filter_map(|s| s.parse().ok())
-        .collect();
-    
+
+    let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
+    let latest_parts: Vec<u32> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
+
     for i in 0..std::cmp::max(current_parts.len(), latest_parts.len()) {
         let current_part = current_parts.get(i).unwrap_or(&0);
         let latest_part = latest_parts.get(i).unwrap_or(&0);
-        
+
         if latest_part > current_part {
             return true;
         } else if latest_part < current_part {
             return false;
         }
     }
-    
+
     false
 }
 
@@ -206,7 +201,7 @@ mod tests {
         assert!(result.is_ok());
         let version = result.unwrap();
         assert!(!version.is_empty());
-        
+
         // 验证版本格式
         let parts: Vec<&str> = version.split('.').collect();
         assert_eq!(parts.len(), 3, "版本号应该是 major.minor.patch 格式");
@@ -220,7 +215,7 @@ mod tests {
         assert!(!info.version.is_empty());
         assert!(!info.build_date.is_empty());
     }
-    
+
     #[test]
     fn test_compare_versions() {
         assert_eq!(compare_versions("1.0.0", "1.0.1"), true);

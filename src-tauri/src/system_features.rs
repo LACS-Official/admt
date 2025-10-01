@@ -2,12 +2,11 @@
  * 系统功能模块
  * 包含系统托盘和开机自启动的简化实现
  */
-
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Runtime, Emitter};
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::{AppHandle, Emitter, Runtime};
 
 #[cfg(target_os = "windows")]
 use winreg::{enums::*, RegKey};
@@ -52,8 +51,14 @@ pub struct AutoStartStatus {
 #[tauri::command]
 pub async fn set_window_close_behavior(minimize_to_tray: bool) -> Result<(), String> {
     MINIMIZE_TO_TRAY.store(minimize_to_tray, Ordering::Relaxed);
-    println!("✅ 窗口关闭行为已设置: {}", 
-        if minimize_to_tray { "最小化到托盘" } else { "直接关闭" });
+    println!(
+        "✅ 窗口关闭行为已设置: {}",
+        if minimize_to_tray {
+            "最小化到托盘"
+        } else {
+            "直接关闭"
+        }
+    );
     Ok(())
 }
 
@@ -94,22 +99,32 @@ pub async fn create_system_tray<R: Runtime>(
 
         for it in items {
             if it.label == "-" {
-                let separator = PredefinedMenuItem::separator(&app).map_err(|e| format!("Failed to create separator: {}", e))?;
-                menu.append(&separator).map_err(|e| format!("Failed to append separator: {}", e))?;
+                let separator = PredefinedMenuItem::separator(&app)
+                    .map_err(|e| format!("Failed to create separator: {}", e))?;
+                menu.append(&separator)
+                    .map_err(|e| format!("Failed to append separator: {}", e))?;
             } else {
-                let item = MenuItem::new(&app, &it.label, true, None::<&str>).map_err(|e| format!("Failed to create menu item: {}", e))?;
-                menu.append(&item).map_err(|e| format!("Failed to append menu item: {}", e))?;
+                let item = MenuItem::new(&app, &it.label, true, None::<&str>)
+                    .map_err(|e| format!("Failed to create menu item: {}", e))?;
+                menu.append(&item)
+                    .map_err(|e| format!("Failed to append menu item: {}", e))?;
             }
         }
         menu
     } else {
         let menu = Menu::new(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
-        let show_item = MenuItem::new(&app, "显示窗口", true, None::<&str>).map_err(|e| format!("Failed to create show item: {}", e))?;
-        menu.append(&show_item).map_err(|e| format!("Failed to append show item: {}", e))?;
-        let separator = PredefinedMenuItem::separator(&app).map_err(|e| format!("Failed to create separator: {}", e))?;
-        menu.append(&separator).map_err(|e| format!("Failed to append separator: {}", e))?;
-        let exit_item = MenuItem::new(&app, "退出应用", true, None::<&str>).map_err(|e| format!("Failed to create exit item: {}", e))?;
-        menu.append(&exit_item).map_err(|e| format!("Failed to append exit item: {}", e))?;
+        let show_item = MenuItem::new(&app, "显示窗口", true, None::<&str>)
+            .map_err(|e| format!("Failed to create show item: {}", e))?;
+        menu.append(&show_item)
+            .map_err(|e| format!("Failed to append show item: {}", e))?;
+        let separator = PredefinedMenuItem::separator(&app)
+            .map_err(|e| format!("Failed to create separator: {}", e))?;
+        menu.append(&separator)
+            .map_err(|e| format!("Failed to append separator: {}", e))?;
+        let exit_item = MenuItem::new(&app, "退出应用", true, None::<&str>)
+            .map_err(|e| format!("Failed to create exit item: {}", e))?;
+        menu.append(&exit_item)
+            .map_err(|e| format!("Failed to append exit item: {}", e))?;
         menu
     };
 
@@ -155,9 +170,7 @@ pub async fn create_system_tray<R: Runtime>(
 
 /// 设置托盘事件监听器
 #[tauri::command]
-pub async fn setup_tray_event_listener<R: Runtime>(
-    _app: AppHandle<R>,
-) -> Result<(), String> {
+pub async fn setup_tray_event_listener<R: Runtime>(_app: AppHandle<R>) -> Result<(), String> {
     // 事件监听在 create_system_tray 中构建托盘时已设置，这里返回成功
     println!("✅ 托盘事件监听器设置完成");
     Ok(())
@@ -208,9 +221,7 @@ pub async fn is_system_tray_supported() -> Result<bool, String> {
 
 /// 销毁系统托盘
 #[tauri::command]
-pub async fn destroy_system_tray<R: Runtime>(
-    _app: AppHandle<R>,
-) -> Result<(), String> {
+pub async fn destroy_system_tray<R: Runtime>(_app: AppHandle<R>) -> Result<(), String> {
     if TRAY_CREATED.load(Ordering::Relaxed) {
         println!("🗑️ 正在销毁系统托盘");
         TRAY_CREATED.store(false, Ordering::Relaxed);
@@ -218,7 +229,7 @@ pub async fn destroy_system_tray<R: Runtime>(
     } else {
         println!("ℹ️ 没有找到需要销毁的托盘实例");
     }
-    
+
     Ok(())
 }
 
@@ -241,7 +252,7 @@ pub async fn get_auto_start_status(app_name: String) -> Result<AutoStartStatus, 
     {
         get_windows_auto_start_status(app_name).await
     }
-    
+
     #[cfg(not(target_os = "windows"))]
     {
         Ok(AutoStartStatus {
@@ -260,7 +271,7 @@ pub async fn enable_auto_start(config: AutoStartConfig) -> Result<bool, String> 
     {
         enable_windows_auto_start(config).await
     }
-    
+
     #[cfg(not(target_os = "windows"))]
     {
         let _ = config; // 避免未使用变量警告
@@ -275,7 +286,7 @@ pub async fn disable_auto_start(app_name: String) -> Result<bool, String> {
     {
         disable_windows_auto_start(app_name).await
     }
-    
+
     #[cfg(not(target_os = "windows"))]
     {
         let _ = app_name; // 避免未使用变量警告
@@ -290,7 +301,7 @@ pub async fn is_auto_start_supported() -> Result<bool, String> {
     {
         Ok(true)
     }
-    
+
     #[cfg(not(target_os = "windows"))]
     {
         Ok(false)
@@ -301,7 +312,7 @@ pub async fn is_auto_start_supported() -> Result<bool, String> {
 #[tauri::command]
 pub async fn get_auto_start_config(app_name: String) -> Result<Option<AutoStartConfig>, String> {
     let status = get_auto_start_status(app_name.clone()).await?;
-    
+
     if !status.is_enabled {
         return Ok(None);
     }
@@ -319,7 +330,7 @@ pub async fn get_auto_start_config(app_name: String) -> Result<Option<AutoStartC
 pub async fn validate_auto_start(app_name: String) -> Result<ValidationResult, String> {
     let status = get_auto_start_status(app_name.clone()).await?;
     let mut issues = Vec::new();
-    
+
     if status.is_enabled {
         if let Some(path) = &status.path {
             if !std::path::Path::new(path).exists() {
@@ -329,7 +340,7 @@ pub async fn validate_auto_start(app_name: String) -> Result<ValidationResult, S
             issues.push("未找到应用路径".to_string());
         }
     }
-    
+
     Ok(ValidationResult {
         is_valid: issues.is_empty(),
         issues,
@@ -348,24 +359,22 @@ pub struct ValidationResult {
 async fn get_windows_auto_start_status(app_name: String) -> Result<AutoStartStatus, String> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let run_key = hkcu.open_subkey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run");
-    
+
     match run_key {
-        Ok(key) => {
-            match key.get_value::<String, _>(&app_name) {
-                Ok(path) => Ok(AutoStartStatus {
-                    is_enabled: true,
-                    method: "registry".to_string(),
-                    path: Some(path),
-                    error: None,
-                }),
-                Err(_) => Ok(AutoStartStatus {
-                    is_enabled: false,
-                    method: "none".to_string(),
-                    path: None,
-                    error: None,
-                }),
-            }
-        }
+        Ok(key) => match key.get_value::<String, _>(&app_name) {
+            Ok(path) => Ok(AutoStartStatus {
+                is_enabled: true,
+                method: "registry".to_string(),
+                path: Some(path),
+                error: None,
+            }),
+            Err(_) => Ok(AutoStartStatus {
+                is_enabled: false,
+                method: "none".to_string(),
+                path: None,
+                error: None,
+            }),
+        },
         Err(e) => Ok(AutoStartStatus {
             is_enabled: false,
             method: "none".to_string(),
@@ -378,24 +387,29 @@ async fn get_windows_auto_start_status(app_name: String) -> Result<AutoStartStat
 #[cfg(target_os = "windows")]
 async fn enable_windows_auto_start(config: AutoStartConfig) -> Result<bool, String> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let run_key = hkcu.open_subkey_with_flags("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", KEY_WRITE)
+    let run_key = hkcu
+        .open_subkey_with_flags(
+            "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+            KEY_WRITE,
+        )
         .map_err(|e| format!("Failed to open registry key: {}", e))?;
-    
+
     let app_path = if config.app_path.is_empty() {
         get_current_app_path().await?
     } else {
         config.app_path
     };
-    
+
     let command = if let Some(args) = config.args {
         format!("\"{}\" {}", app_path, args.join(" "))
     } else {
         format!("\"{}\"", app_path)
     };
-    
-    run_key.set_value(&config.app_name, &command)
+
+    run_key
+        .set_value(&config.app_name, &command)
         .map_err(|e| format!("Failed to set registry value: {}", e))?;
-    
+
     println!("✅ Windows 自启动已启用: {}", command);
     Ok(true)
 }
@@ -403,9 +417,13 @@ async fn enable_windows_auto_start(config: AutoStartConfig) -> Result<bool, Stri
 #[cfg(target_os = "windows")]
 async fn disable_windows_auto_start(app_name: String) -> Result<bool, String> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let run_key = hkcu.open_subkey_with_flags("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", KEY_WRITE)
+    let run_key = hkcu
+        .open_subkey_with_flags(
+            "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+            KEY_WRITE,
+        )
         .map_err(|e| format!("Failed to open registry key: {}", e))?;
-    
+
     match run_key.delete_value(&app_name) {
         Ok(_) => {
             println!("✅ Windows 自启动已禁用");

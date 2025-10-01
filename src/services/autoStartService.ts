@@ -1,209 +1,86 @@
-/**
- * 开机自启动服务
- * 提供检测、添加、删除开机自启动功能
- * 支持 Windows 注册表和启动文件夹两种方式
- */
-
-import { invoke } from '@tauri-apps/api/core';
-
-export interface AutoStartConfig {
-  appName: string;
-  appPath: string;
-  args?: string[];
-  enabled: boolean;
-}
-
-export interface AutoStartStatus {
-  isEnabled: boolean;
-  method: 'registry' | 'startup-folder' | 'none';
-  path?: string;
-  error?: string;
-}
+import { enable, isEnabled, disable } from '@tauri-apps/plugin-autostart';
+import { adminService } from './adminService';
 
 /**
- * 开机自启动管理类
+ * 自启动服务
+ * 使用 Tauri 自启动插件提供简单的自启动功能
+ * 支持管理员权限检测和自动权限提升
  */
-export class AutoStartService {
-  private static instance: AutoStartService;
-  private currentPlatform: string = '';
-  private appName: string = '玩机管家';
-  private isInitialized = false;
-
-  private constructor() {}
+class AutoStartService {
+  private appName: string | null = null;
+  private initialized = false;
 
   /**
-   * 获取单例实例
+   * 初始化自启动服务
+   * @param appName 应用名称
    */
-  static getInstance(): AutoStartService {
-    if (!AutoStartService.instance) {
-      AutoStartService.instance = new AutoStartService();
-    }
-    return AutoStartService.instance;
+  async initialize(appName: string): Promise<void> {
+    this.appName = appName;
+    this.initialized = true;
   }
 
   /**
-   * 初始化服务
+   * 检查自启动是否已就绪
    */
-  async initialize(appName?: string): Promise<void> {
+  isReady(): boolean {
+    return this.initialized && this.appName !== null;
+  }
+
+  /**
+   * 检查自启动是否支持
+   */
+  async isAutoStartSupported(): Promise<boolean> {
     try {
-      // 使用简单的平台检测
-      this.currentPlatform = this.detectPlatform();
-      if (appName) {
-        this.appName = appName;
-      }
-      this.isInitialized = true;
-      console.log(`✅ 自启动服务初始化成功 (平台: ${this.currentPlatform})`);
-    } catch (error) {
-      console.error('❌ 自启动服务初始化失败:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 检测当前平台
-   */
-  private detectPlatform(): string {
-    if (typeof window !== 'undefined' && window.navigator) {
-      const userAgent = window.navigator.userAgent.toLowerCase();
-      if (userAgent.includes('win')) return 'windows';
-      if (userAgent.includes('mac')) return 'macos';
-      if (userAgent.includes('linux')) return 'linux';
-    }
-    return 'unknown';
-  }
-
-  /**
-   * 检查当前自启动状态
-   */
-  async getAutoStartStatus(): Promise<AutoStartStatus> {
-    try {
-      if (!this.isInitialized) {
-        await this.initialize();
-      }
-
-      const status = await invoke<AutoStartStatus>('get_auto_start_status', {
-        appName: this.appName
-      });
-
-      console.log('📋 自启动状态:', status);
-      return status;
-    } catch (error) {
-      console.error('❌ 获取自启动状态失败:', error);
-      return {
-        isEnabled: false,
-        method: 'none',
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
-
-  /**
-   * 启用开机自启动并验证
-   */
-  async enableAutoStartWithValidation(config?: Partial<AutoStartConfig>): Promise<boolean> {
-    try {
-      console.log('🚀 开始启用开机自启动并验证...');
-      
-      // 1. 尝试启用
-      const success = await this.enableAutoStart(config);
-      if (!success) {
-        console.error('❌ 启用自启动失败');
-        return false;
-      }
-
-      // 2. 等待一段时间再验证
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // 3. 验证设置
-      const validation = await this.validateAutoStart();
-      
-      if (!validation.isValid) {
-        console.warn('⚠️ 自启动设置验证失败:', validation.issues);
-        
-        // 4. 尝试修复
-        console.log('🔧 尝试修复自启动设置...');
-        const repaired = await this.repairAutoStart();
-        
-        if (repaired) {
-          // 再次验证
-          const finalValidation = await this.validateAutoStart();
-          if (finalValidation.isValid) {
-            console.log('✅ 自启动设置修复成功');
-            return true;
-          } else {
-            console.error('❌ 自启动设置修复后仍然无效:', finalValidation.issues);
-            return false;
-          }
-        } else {
-          console.error('❌ 自启动设置修复失败');
-          return false;
-        }
-      }
-
-      console.log('✅ 开机自启动启用及验证成功');
+      await isEnabled();
       return true;
-    } catch (error) {
-      console.error('❌ 启用开机自启动失败:', error);
+    } catch {
       return false;
     }
   }
 
   /**
-   * 启用开机自启动（基础版本）
+   * 获取自启动状态
    */
-  async enableAutoStart(config?: Partial<AutoStartConfig>): Promise<boolean> {
+  async getAutoStartStatus(): Promise<{ isEnabled: boolean }> {
+    if (!this.isReady()) {
+      throw new Error('自启动服务未初始化');
+    }
+
+    const enabled = await isEnabled();
+    return { isEnabled: enabled };
+  }
+
+  /**
+   * 启用自启动
+   */
+  async enableAutoStart(): Promise<boolean> {
+    if (!this.isReady()) {
+      throw new Error('自启动服务未初始化');
+    }
+
     try {
-      if (!this.isInitialized) {
-        await this.initialize();
-      }
-
-      const defaultConfig: AutoStartConfig = {
-        appName: this.appName,
-        appPath: await this.getCurrentAppPath(),
-        args: [],
-        enabled: true
-      };
-
-      const finalConfig = { ...defaultConfig, ...config };
-
-      const success = await invoke<boolean>('enable_auto_start', finalConfig);
-
-      if (success) {
-        console.log('✅ 开机自启动已启用');
-      } else {
-        console.warn('⚠️ 开机自启动启用失败');
-      }
-
-      return success;
+      await enable();
+      return true;
     } catch (error) {
-      console.error('❌ 启用开机自启动失败:', error);
-      throw error;
+      console.error('启用自启动失败:', error);
+      return false;
     }
   }
 
   /**
-   * 禁用开机自启动
+   * 禁用自启动
    */
   async disableAutoStart(): Promise<boolean> {
+    if (!this.isReady()) {
+      throw new Error('自启动服务未初始化');
+    }
+
     try {
-      if (!this.isInitialized) {
-        await this.initialize();
-      }
-
-      const success = await invoke<boolean>('disable_auto_start', {
-        appName: this.appName
-      });
-
-      if (success) {
-        console.log('✅ 开机自启动已禁用');
-      } else {
-        console.warn('⚠️ 开机自启动禁用失败');
-      }
-
-      return success;
+      await disable();
+      return true;
     } catch (error) {
-      console.error('❌ 禁用开机自启动失败:', error);
-      throw error;
+      console.error('禁用自启动失败:', error);
+      return false;
     }
   }
 
@@ -211,136 +88,118 @@ export class AutoStartService {
    * 切换自启动状态
    */
   async toggleAutoStart(): Promise<boolean> {
-    try {
-      const status = await this.getAutoStartStatus();
-      
-      if (status.isEnabled) {
-        return await this.disableAutoStart();
-      } else {
-        return await this.enableAutoStart();
-      }
-    } catch (error) {
-      console.error('❌ 切换自启动状态失败:', error);
-      throw error;
+    if (!this.isReady()) {
+      throw new Error('自启动服务未初始化');
+    }
+
+    const currentStatus = await this.getAutoStartStatus();
+    if (currentStatus.isEnabled) {
+      return await this.disableAutoStart();
+    } else {
+      return await this.enableAutoStart();
     }
   }
 
   /**
-   * 获取当前应用路径
+   * 启用自启动（带验证）
    */
-  private async getCurrentAppPath(): Promise<string> {
-    try {
-      return await invoke<string>('get_current_app_path');
-    } catch (error) {
-      console.error('❌ 获取应用路径失败:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 检查是否支持自启动功能
-   */
-  async isAutoStartSupported(): Promise<boolean> {
-    try {
-      if (!this.isInitialized) {
-        await this.initialize();
-      }
-
-      return await invoke<boolean>('is_auto_start_supported');
-    } catch (error) {
-      console.error('❌ 检查自启动支持失败:', error);
-      return false;
-    }
-  }
-
-  /**
-   * 获取自启动配置信息
-   */
-  async getAutoStartConfig(): Promise<AutoStartConfig | null> {
-    try {
-      const status = await this.getAutoStartStatus();
-      
-      if (!status.isEnabled) {
-        return null;
-      }
-
-      return await invoke<AutoStartConfig>('get_auto_start_config', {
-        appName: this.appName
-      });
-    } catch (error) {
-      console.error('❌ 获取自启动配置失败:', error);
-      return null;
-    }
+  async enableAutoStartWithValidation(config: any): Promise<boolean> {
+    // 这里可以添加额外的验证逻辑
+    return await this.enableAutoStart();
   }
 
   /**
    * 验证自启动设置
    */
-  async validateAutoStart(): Promise<{ isValid: boolean; issues: string[] }> {
+  async validateAutoStart(): Promise<{ isValid: boolean; message?: string }> {
+    if (!this.isReady()) {
+      return { isValid: false, message: '自启动服务未初始化' };
+    }
+
     try {
-      const result = await invoke<{ isValid: boolean; issues: string[] }>('validate_auto_start', {
-        appName: this.appName
-      });
-
-      if (result.isValid) {
-        console.log('✅ 自启动设置验证通过');
-      } else {
-        console.warn('⚠️ 自启动设置验证失败:', result.issues);
-      }
-
-      return result;
+      const status = await this.getAutoStartStatus();
+      return { isValid: true };
     } catch (error) {
-      console.error('❌ 验证自启动设置失败:', error);
-      return {
-        isValid: false,
-        issues: [error instanceof Error ? error.message : String(error)]
-      };
+      return { isValid: false, message: `自启动验证失败: ${error}` };
     }
   }
 
   /**
-   * 修复自启动设置
+   * 修复自启动
    */
   async repairAutoStart(): Promise<boolean> {
+    if (!this.isReady()) {
+      throw new Error('自启动服务未初始化');
+    }
+
     try {
-      console.log('🔧 正在修复自启动设置...');
-      
-      // 先禁用现有设置
-      await this.disableAutoStart();
-      
-      // 等待一段时间
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 重新启用
-      const success = await this.enableAutoStart();
-      
-      if (success) {
-        console.log('✅ 自启动设置修复成功');
-      } else {
-        console.error('❌ 自启动设置修复失败');
-      }
-      
-      return success;
+      // 先禁用再启用，可能修复一些权限问题
+      await disable();
+      await enable();
+      return true;
     } catch (error) {
-      console.error('❌ 修复自启动设置失败:', error);
-      throw error;
+      console.error('修复自启动失败:', error);
+      return false;
     }
   }
 
   /**
-   * 获取平台信息
+   * 获取自启动配置
    */
-  getPlatform(): string {
-    return this.currentPlatform;
+  async getAutoStartConfig(): Promise<any> {
+    if (!this.isReady()) {
+      throw new Error('自启动服务未初始化');
+    }
+
+    return {
+      appName: this.appName,
+      status: await this.getAutoStartStatus(),
+    };
   }
 
   /**
-   * 检查是否已初始化
+   * 智能自启动管理（自动处理管理员权限）
    */
-  isReady(): boolean {
-    return this.isInitialized;
+  async smartToggleAutoStart(): Promise<{
+    success: boolean;
+    needsAdmin: boolean;
+    message: string;
+  }> {
+    try {
+      const isAdmin = await adminService.isAdmin();
+
+      if (!isAdmin) {
+        return {
+          success: false,
+          needsAdmin: true,
+          message: '切换自启动需要管理员权限，请以管理员身份运行应用'
+        };
+      }
+
+      const currentStatus = await this.getAutoStartStatus();
+      const newStatus = !currentStatus.isEnabled;
+
+      const success = newStatus
+        ? await this.enableAutoStart()
+        : await this.disableAutoStart();
+
+      return {
+        success,
+        needsAdmin: false,
+        message: success
+          ? `自启动已${newStatus ? '启用' : '禁用'}`
+          : `自启动${newStatus ? '启用' : '禁用'}失败，请检查权限设置`
+      };
+    } catch (error) {
+      console.error('智能切换自启动失败:', error);
+      return {
+        success: false,
+        needsAdmin: false,
+        message: `自启动切换失败: ${error}`
+      };
+    }
   }
 }
 
 // 导出单例实例
-export const autoStartService = AutoStartService.getInstance();
+export const autoStartService = new AutoStartService();

@@ -6,6 +6,9 @@
     "main"
   ],
   "permissions": [
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
     "core:default",
     "core:window:allow-minimize",
     "core:window:allow-maximize",

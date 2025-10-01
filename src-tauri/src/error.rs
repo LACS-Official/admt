@@ -5,31 +5,31 @@ use thiserror::Error;
 pub enum HoutError {
     #[error("ADB command failed: {message}")]
     AdbCommandFailed { message: String },
-    
+
     #[error("Device not found: {serial}")]
     DeviceNotFound { serial: String },
-    
+
     #[error("Device unauthorized: {serial}")]
     DeviceUnauthorized { serial: String },
-    
+
     #[error("File operation failed: {message}")]
     FileOperationFailed { message: String },
-    
+
     #[error("Invalid device mode: {mode}")]
     InvalidDeviceMode { mode: String },
-    
+
     #[error("Command timeout: {command}")]
     CommandTimeout { command: String },
-    
+
     #[error("Parse error: {message}")]
     ParseError { message: String },
-    
+
     #[error("IO error: {message}")]
     IoError { message: String },
-    
+
     #[error("Configuration error: {message}")]
     ConfigError { message: String },
-    
+
     #[error("Unknown error: {message}")]
     Unknown { message: String },
 

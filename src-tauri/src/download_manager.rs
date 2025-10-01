@@ -1,10 +1,10 @@
 use crate::error::{HoutError, Result};
+use futures_util::StreamExt;
+use reqwest;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 use std::fs;
 use std::io::{self, Write};
-use reqwest;
-use futures_util::StreamExt;
+use std::path::{Path, PathBuf};
 use tauri::Emitter;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,7 +62,10 @@ impl DownloadManager {
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
                 let downloads_dir = exe_dir.join("downloads");
-                println!("🎯 使用应用程序目录下的downloads: {}", downloads_dir.display());
+                println!(
+                    "🎯 使用应用程序目录下的downloads: {}",
+                    downloads_dir.display()
+                );
                 return Ok(downloads_dir);
             }
         }
@@ -88,11 +91,16 @@ impl DownloadManager {
     ) -> Result<PathBuf> {
         // 1. 下载文件
         let downloaded_file = self.download_file(app_handle, &request).await?;
-        
+
         // 2. 检查是否需要解压
         if self.is_archive_file(&downloaded_file) {
-            println!("🗜️ 检测到压缩文件，开始自动解压: {}", downloaded_file.display());
-            let extract_dir = self.extract_archive(app_handle, &downloaded_file, &request).await?;
+            println!(
+                "🗜️ 检测到压缩文件，开始自动解压: {}",
+                downloaded_file.display()
+            );
+            let extract_dir = self
+                .extract_archive(app_handle, &downloaded_file, &request)
+                .await?;
 
             // 3. 生成配置文件
             if let Some(openname) = &request.openname {
@@ -117,15 +125,21 @@ impl DownloadManager {
         request: &DownloadRequest,
     ) -> Result<PathBuf> {
         let client = reqwest::Client::new();
-        let response = client.get(&request.url).send().await
+        let response = client
+            .get(&request.url)
+            .send()
+            .await
             .map_err(|e| HoutError::NetworkError(e.to_string()))?;
 
         if !response.status().is_success() {
-            return Err(HoutError::NetworkError(format!("HTTP {}", response.status())));
+            return Err(HoutError::NetworkError(format!(
+                "HTTP {}",
+                response.status()
+            )));
         }
 
         let total_size = response.content_length().unwrap_or(0);
-        
+
         // 获取应用程序下载目录
         let app_downloads_dir = Self::get_app_downloads_dir()?;
 
@@ -137,14 +151,16 @@ impl DownloadManager {
         // 确保下载目录存在
         if let Some(parent) = file_path.parent() {
             println!("📁 创建下载目录: {}", parent.display());
-            fs::create_dir_all(parent)
-                .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+            fs::create_dir_all(parent).map_err(|e| HoutError::IoError {
+                message: e.to_string(),
+            })?;
         }
 
         println!("📁 创建下载文件: {}", file_path.display());
-        let mut file = fs::File::create(&file_path)
-            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
-        
+        let mut file = fs::File::create(&file_path).map_err(|e| HoutError::IoError {
+            message: e.to_string(),
+        })?;
+
         let mut downloaded = 0u64;
         let mut stream = response.bytes_stream();
         let start_time = std::time::Instant::now();
@@ -165,16 +181,21 @@ impl DownloadManager {
 
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.map_err(|e| HoutError::NetworkError(e.to_string()))?;
-            file.write_all(&chunk)
-                .map_err(|e| HoutError::IoError { message: e.to_string() })?;
-            
+            file.write_all(&chunk).map_err(|e| HoutError::IoError {
+                message: e.to_string(),
+            })?;
+
             downloaded += chunk.len() as u64;
             let elapsed = start_time.elapsed().as_secs_f64();
-            let speed = if elapsed > 0.0 { downloaded as f64 / elapsed } else { 0.0 };
-            let percentage = if total_size > 0 { 
-                (downloaded as f64 / total_size as f64) * 100.0 
-            } else { 
-                0.0 
+            let speed = if elapsed > 0.0 {
+                downloaded as f64 / elapsed
+            } else {
+                0.0
+            };
+            let percentage = if total_size > 0 {
+                (downloaded as f64 / total_size as f64) * 100.0
+            } else {
+                0.0
             };
 
             // 每下载一定量数据发送一次进度更新
@@ -230,8 +251,9 @@ impl DownloadManager {
         request: &DownloadRequest,
     ) -> Result<PathBuf> {
         let extract_dir = archive_path.parent().unwrap().join(&request.software_name);
-        fs::create_dir_all(&extract_dir)
-            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+        fs::create_dir_all(&extract_dir).map_err(|e| HoutError::IoError {
+            message: e.to_string(),
+        })?;
 
         // 发送解压开始事件
         let progress = DownloadProgress {
@@ -247,7 +269,8 @@ impl DownloadManager {
         };
         let _ = app_handle.emit("download-progress", &progress);
 
-        let extension = archive_path.extension()
+        let extension = archive_path
+            .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("")
             .to_lowercase();
@@ -255,7 +278,12 @@ impl DownloadManager {
         match extension.as_str() {
             "zip" => self.extract_zip(archive_path, &extract_dir).await?,
             "7z" => self.extract_7z(archive_path, &extract_dir).await?,
-            _ => return Err(HoutError::UnsupportedFormat(format!("不支持的压缩格式: {}", extension))),
+            _ => {
+                return Err(HoutError::UnsupportedFormat(format!(
+                    "不支持的压缩格式: {}",
+                    extension
+                )))
+            }
         }
 
         // 发送解压完成事件
@@ -277,35 +305,40 @@ impl DownloadManager {
 
     /// 解压ZIP文件
     async fn extract_zip(&self, archive_path: &Path, extract_dir: &Path) -> Result<()> {
-        
-        let file = fs::File::open(archive_path)
-            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
-        let mut archive = zip::ZipArchive::new(file)
-            .map_err(|e| HoutError::ExtractionError(e.to_string()))?;
+        let file = fs::File::open(archive_path).map_err(|e| HoutError::IoError {
+            message: e.to_string(),
+        })?;
+        let mut archive =
+            zip::ZipArchive::new(file).map_err(|e| HoutError::ExtractionError(e.to_string()))?;
 
         for i in 0..archive.len() {
-            let mut file = archive.by_index(i)
+            let mut file = archive
+                .by_index(i)
                 .map_err(|e| HoutError::ExtractionError(e.to_string()))?;
-            
+
             let outpath = match file.enclosed_name() {
                 Some(path) => extract_dir.join(path),
                 None => continue,
             };
 
             if file.name().ends_with('/') {
-                fs::create_dir_all(&outpath)
-                    .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+                fs::create_dir_all(&outpath).map_err(|e| HoutError::IoError {
+                    message: e.to_string(),
+                })?;
             } else {
                 if let Some(p) = outpath.parent() {
                     if !p.exists() {
-                        fs::create_dir_all(p)
-                            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+                        fs::create_dir_all(p).map_err(|e| HoutError::IoError {
+                            message: e.to_string(),
+                        })?;
                     }
                 }
-                let mut outfile = fs::File::create(&outpath)
-                    .map_err(|e| HoutError::IoError { message: e.to_string() })?;
-                io::copy(&mut file, &mut outfile)
-                    .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+                let mut outfile = fs::File::create(&outpath).map_err(|e| HoutError::IoError {
+                    message: e.to_string(),
+                })?;
+                io::copy(&mut file, &mut outfile).map_err(|e| HoutError::IoError {
+                    message: e.to_string(),
+                })?;
             }
         }
 
@@ -334,8 +367,13 @@ impl DownloadManager {
             "created_by": "ADMT-By LACS"
         });
 
-        fs::write(&json_config_path, serde_json::to_string_pretty(&json_config).unwrap())
-            .map_err(|e| HoutError::IoError { message: e.to_string() })?;
+        fs::write(
+            &json_config_path,
+            serde_json::to_string_pretty(&json_config).unwrap(),
+        )
+        .map_err(|e| HoutError::IoError {
+            message: e.to_string(),
+        })?;
 
         Ok(())
     }
