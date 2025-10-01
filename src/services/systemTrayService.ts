@@ -40,6 +40,86 @@ export class SystemTrayService {
   private constructor() {}
 
   /**
+   * 清理可能存在的子进程/后台任务（容错动态导入）
+   */
+  private async cleanupChildProcesses(): Promise<void> {
+    // 尽量在退出前停止可能的外部工具与后台任务，所有错误均吞掉
+    try {
+      // 尝试停止屏幕镜像
+      try {
+        const mod = await import('../services/screenMirrorService');
+        const svc = (mod as any).screenMirrorService || (mod as any).default || mod;
+        if (svc?.stop && typeof svc.stop === 'function') {
+          await svc.stop();
+          console.log('🧹 已停止屏幕镜像服务');
+        }
+      } catch (_) {}
+
+      // 尝试停止 ADB/工具管理器
+      try {
+        const mod = await import('../services/adbToolsManager');
+        const mgr = (mod as any).adbToolsManager || (mod as any).default || mod;
+        // 尝试常见的停止方法名
+        const stopFns = ['stopAll', 'dispose', 'shutdown', 'stop'];
+        for (const fn of stopFns) {
+          if (mgr && typeof mgr[fn] === 'function') {
+            await mgr[fn]();
+            console.log(`🧹 已执行 adbToolsManager.${fn}()`);
+            break;
+          }
+        }
+      } catch (_) {}
+
+      // 可在此处按需加入更多需要停止的服务（如日志流、设备监控等）
+      // try { const mod = await import('../services/deviceService'); await mod.deviceService?.shutdown?.(); } catch (_) {}
+
+    } catch (err) {
+      console.warn('⚠️ 清理子进程时出现问题（已忽略）：', err);
+    }
+  }
+
+  /**
+   * 统一的优雅退出流程：销毁托盘 → 清理子进程 → 退出（插件优先，后端兜底）
+   */
+  private async performGracefulExit(exitCode: number = 0): Promise<void> {
+    console.log('🔄 执行优雅退出流程...');
+    // 1) 销毁托盘与事件
+    try {
+      await this.cleanup();
+    } catch (e) {
+      console.warn('⚠️ 清理托盘时出现问题（已忽略）：', e);
+    }
+
+    // 2) 清理子进程/后台任务
+    await this.cleanupChildProcesses();
+
+    // 3) 优先使用插件退出
+    try {
+      await exit(exitCode);
+      return;
+    } catch (pluginErr) {
+      console.warn('⚠️ 插件退出失败，尝试后端兜底：', pluginErr);
+    }
+
+    // 4) 后端兜底：force_exit 优先，其次兼容 exit_app，如均不可用则最终 window.close()
+    try {
+      try {
+        await invoke('force_exit', { exitCode });
+        return;
+      } catch (_) {
+        // 兼容旧命令名
+        await invoke('exit_app', { exitCode });
+        return;
+      }
+    } catch (backendErr) {
+      console.error('❌ 后端兜底退出失败：', backendErr);
+      if (typeof window !== 'undefined') {
+        window.close();
+      }
+    }
+  }
+
+  /**
    * 获取单例实例
    */
   static getInstance(): SystemTrayService {
@@ -128,10 +208,23 @@ export class SystemTrayService {
           await this.hideWindow();
           break;
         case 'exit':
-          await this.exitApplication();
+          await this.performGracefulExit(0);
           break;
-        default:
-          console.log(`未处理的托盘菜单点击: ${menuId}`);
+        default: {
+          // 兼容后端 custom-* 菜单ID（某些环境下“退出应用”会被映射为 custom-xxxx）
+          const id = String(menuId || '');
+          if (
+            id === 'custom-退出应用' ||
+            id === '退出应用' ||
+            id.toLowerCase() === 'exit' ||
+            id.startsWith('custom-')
+          ) {
+            await this.performGracefulExit(0);
+          } else {
+            console.log(`未处理的托盘菜单点击: ${menuId}`);
+          }
+          break;
+        }
       }
     } catch (error) {
       console.error('❌ 处理托盘菜单点击失败:', error);
@@ -201,27 +294,7 @@ export class SystemTrayService {
    * 退出应用
    */
   async exitApplication(): Promise<void> {
-    try {
-      console.log('🔄 正在退出应用...');
-      
-      // 清理托盘
-      await this.cleanup();
-      
-      // 使用 Tauri 的退出命令
-      await invoke('exit_app', { exitCode: 0 });
-    } catch (error) {
-      console.error('❌ 退出应用失败:', error);
-      try {
-        // 尝试使用插件退出
-        await exit(1);
-      } catch (fallbackError) {
-        console.error('❌ 强制退出也失败:', fallbackError);
-        // 最后的降级方案
-        if (typeof window !== 'undefined') {
-          window.close();
-        }
-      }
-    }
+    await this.performGracefulExit(0);
   }
 
   /**
