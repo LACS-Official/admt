@@ -211,7 +211,7 @@ const FileManagerPanel: React.FC = () => {
   const { deviceService } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
 
-  const [currentPath, setCurrentPath] = useState<string>('/sdcard');
+  const [currentPath, setCurrentPath] = useState<string>('/storage/emulated/0/');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -225,6 +225,7 @@ const FileManagerPanel: React.FC = () => {
     { label: '内部存储', path: '/storage/emulated/0' },
     { label: 'data', path: '/data' },
     { label: 'system', path: '/system' },
+    { label: 'Download', path: '/storage/emulated/0/Download' },
   ];
 
   const loadFiles = useCallback(async (path: string) => {
@@ -443,12 +444,23 @@ const FileManagerPanel: React.FC = () => {
   const handleDownloadFile = async (file: FileItem) => {
     if (!selectedDevice) return;
 
+    // 检查设备是否处于离线状态
+    console.log('单文件下载设备模式检查:', selectedDevice.mode, '设备信息:', selectedDevice);
+    if (selectedDevice.mode === 'offline') {
+      setStatusBarMessage({
+        type: "error",
+        message: "设备处于离线状态，无法进行文件导出。请确保设备已连接并处于正常模式。",
+      });
+      return;
+    }
+
     try {
       setStatusBarMessage({
         type: "info",
         message: `正在下载文件: ${file.name}...`,
       });
 
+      console.log('尝试拉取单个文件:', file.path, '设备状态:', selectedDevice.mode);
       const result = await deviceService.pullFile(selectedDevice.serial, file.path, file.name);
       if (result.success) {
         setStatusBarMessage({
@@ -462,6 +474,7 @@ const FileManagerPanel: React.FC = () => {
         });
       }
     } catch (error) {
+      console.error('单文件下载失败:', error, '设备状态:', selectedDevice.mode);
       setStatusBarMessage({
         type: "error",
         message: `文件下载失败: ${error}`,
@@ -472,6 +485,16 @@ const FileManagerPanel: React.FC = () => {
   const handleBatchDownload = async () => {
     if (!selectedDevice || selectedFiles.size === 0) return;
 
+    // 检查设备是否处于离线状态
+    console.log('设备模式检查:', selectedDevice.mode, '设备信息:', selectedDevice);
+    if (selectedDevice.mode === 'offline') {
+      setStatusBarMessage({
+        type: "error",
+        message: "设备处于离线状态，无法进行文件导出。请确保设备已连接并处于正常模式。",
+      });
+      return;
+    }
+
     const selectedFileItems = files.filter(f => selectedFiles.has(f.name));
     let successCount = 0;
     let failCount = 0;
@@ -479,6 +502,7 @@ const FileManagerPanel: React.FC = () => {
     for (const file of selectedFileItems) {
       if (file.type === 'file') {
         try {
+          console.log('尝试拉取文件:', file.path, '设备状态:', selectedDevice.mode);
           const result = await deviceService.pullFile(selectedDevice.serial, file.path, file.name);
           if (result.success) {
             successCount++;
@@ -486,6 +510,7 @@ const FileManagerPanel: React.FC = () => {
             failCount++;
           }
         } catch (error) {
+          console.error('文件拉取失败:', error, '设备状态:', selectedDevice.mode);
           failCount++;
         }
       }

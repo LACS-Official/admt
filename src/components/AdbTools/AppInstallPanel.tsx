@@ -1,9 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   makeStyles,
-  mergeClasses,
   Text,
-  Badge,
   Card,
   CardHeader,
   Button,
@@ -15,11 +13,6 @@ import {
 import {
   DocumentAdd24Regular,
   Apps24Regular,
-  CloudArrowUp24Regular,
-  FolderOpen24Regular,
-  CheckmarkCircle24Regular,
-  ErrorCircle24Regular,
-  Warning24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -36,50 +29,15 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "12px",
   },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 4px",
-  },
-  headerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  headerRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  tabContent: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    minHeight: 0,
-  },
-  gridLayout: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-    gap: "12px",
-    height: "100%",
-  },
   threeColumnLayout: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
     gap: "12px",
     height: "100%",
   },
-  fullLayout: {
-    height: "100%",
-  },
   card: {
     width: "100%",
     height: "fit-content",
-    /* 支持下拉*/
-    "--scrollbarWidth": "8px",
-    "scrollbar-width": "8px",
-    
   },
   content: {
     flex: 1,
@@ -88,119 +46,10 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "16px",
   },
-  toolbar: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  searchField: {
-    flex: 1,
-    minWidth: "200px",
-  },
-  tableContainer: {
-    flex: 1,
-    overflow: "auto",
-    border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "6px",
-  },
-  loadingContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "200px",
-  },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "200px",
-    gap: "12px",
-    color: "var(--colorNeutralForeground3)",
-  },
-  appIcon: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "4px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   pathInput: {
     display: "flex",
     gap: "8px",
     alignItems: "flex-end",
-  },
-  infoSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  infoGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
-  },
-  infoItem: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  permissionsList: {
-    maxHeight: "200px",
-    overflow: "auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  permissionItem: {
-    padding: "8px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "4px",
-    fontSize: "12px",
-  },
-  statusSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  statusItem: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "12px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "6px",
-  },
-  statusLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  statusDetails: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  connectionInfo: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
-  },
-  infoItemDetail: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    padding: "8px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "4px",
-  },
-  actions: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
   },
   installSection: {
     display: "flex",
@@ -209,26 +58,6 @@ const useStyles = makeStyles({
   },
   installButton: {
     alignSelf: "flex-start",
-  },
-  statusItemHistory: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    marginBottom: "8px",
-  },
-  dropZone: {
-    border: "2px dashed var(--colorNeutralStroke2)",
-    borderRadius: "8px",
-    padding: "24px",
-    textAlign: "center",
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground1Hover)",
-    },
-  },
-  dropZoneActive: {
-    backgroundColor: "var(--colorBrandBackground2)",
   },
   historySection: {
     display: "flex",
@@ -256,6 +85,9 @@ const useStyles = makeStyles({
     fontSize: "12px",
     color: "var(--colorNeutralForeground2)",
   },
+  selectButton: {
+    marginLeft: "8px",
+  },
 });
 
 interface InstallStatus {
@@ -281,10 +113,9 @@ const AppInstallPanel: React.FC = () => {
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
   const [installHistory, setInstallHistory] = useState<InstallStatus[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
 
-  // APK安装相关函数
-  const handleBrowseApk = useCallback(async () => {
+  // 使用文件选择器获取完整路径
+  const handleFileSelect = useCallback(async () => {
     try {
       const selected = await open({
         multiple: true,
@@ -302,6 +133,17 @@ const AppInstallPanel: React.FC = () => {
           setApkPath(selected);
           setApkPaths([selected]);
         }
+
+        // 显示完整的文件路径信息
+        const filePaths = Array.isArray(selected) ? selected : [selected];
+        const fileInfo = filePaths
+          .map(path => `${path.split(/[/\\]/).pop()} (${path})`)
+          .join(', ');
+        
+        setStatusBarMessage({
+          type: "info",
+          message: `已选择 ${filePaths.length} 个APK文件: ${fileInfo}`,
+        });
       }
     } catch (error) {
       setStatusBarMessage({
@@ -311,44 +153,7 @@ const AppInstallPanel: React.FC = () => {
     }
   }, [setStatusBarMessage]);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    const apkFile = files.find(file => file.name.toLowerCase().endsWith('.apk'));
-
-    if (apkFile) {
-      // 在Tauri中，拖拽的 File 可能包含本地路径: (apkFile as any).path
-      const anyFile = apkFile as unknown as { path?: string };
-      const fullPath = anyFile?.path || "";
-      if (fullPath) {
-        setApkPath(fullPath);
-        setApkPaths([fullPath]);
-      } else {
-        // 回退：无法获取路径时，使用文件选择器确保拿到真实路径
-        // 注意：异步调用不会阻塞此事件处理
-        void handleBrowseApk();
-      }
-    } else {
-      setStatusBarMessage({
-        type: "warning",
-        message: "请拖拽APK文件",
-      });
-    }
-  }, [setStatusBarMessage, handleBrowseApk]);
-
-  const handleInstallClick = () => {
+  const handleInstallClick = async () => {
     if (!selectedDevice) {
       setStatusBarMessage({
         type: "warning",
@@ -357,7 +162,10 @@ const AppInstallPanel: React.FC = () => {
       return;
     }
 
-    if (!apkPath && apkPaths.length === 0) {
+    // 确定要安装的文件路径
+    const pathsToInstall = apkPaths.length > 0 ? apkPaths : (apkPath ? [apkPath] : []);
+    
+    if (pathsToInstall.length === 0) {
       setStatusBarMessage({
         type: "warning",
         message: "请选择要安装的APK文件",
@@ -365,14 +173,51 @@ const AppInstallPanel: React.FC = () => {
       return;
     }
 
-    const pathsToInstall = apkPaths.length > 0 ? apkPaths : [apkPath];
+    try {
+      setIsInstalling(true);
+      
+      // 验证文件路径是否存在
+      const validPaths = pathsToInstall.filter(path => {
+        if (!path || path.trim() === '') {
+          console.warn('发现空文件路径，跳过');
+          return false;
+        }
+        return true;
+      });
 
-    if (pathsToInstall.length > 1) {
-      // 批量安装，直接执行
-      handleBatchInstall(pathsToInstall);
-    } else {
-      // 单个安装，直接执行而不显示确认对话框
-      confirmInstall();
+      if (validPaths.length === 0) {
+        setStatusBarMessage({
+          type: "error",
+          message: "没有有效的APK文件路径",
+        });
+        return;
+      }
+
+      // 显示安装信息（包含完整路径）
+      const fileInfo = validPaths
+        .map(path => path ? `${path.split(/[/\\]/).pop()} (${path})` : '未知文件')
+        .filter(info => info)
+        .join(', ');
+      setStatusBarMessage({
+        type: "info",
+        message: `开始安装 ${validPaths.length} 个APK文件: ${fileInfo}`,
+      });
+
+      if (validPaths.length > 1) {
+        await handleBatchInstall(validPaths);
+      } else {
+        setApkPath(validPaths[0]);
+        await confirmInstall();
+      }
+      
+    } catch (error) {
+      console.error('安装APK时出错:', error);
+      setStatusBarMessage({
+        type: "error",
+        message: `安装APK时出错: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    } finally {
+      setIsInstalling(false);
     }
   };
 
@@ -412,7 +257,7 @@ const AppInstallPanel: React.FC = () => {
 
     setIsInstalling(true);
 
-    const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
+    const fileName = apkPath ? apkPath.split(/[/\\]/).pop() || "unknown.apk" : "unknown.apk";
     const newStatus: InstallStatus = {
       fileName,
       status: "installing",
@@ -488,17 +333,6 @@ const AppInstallPanel: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: InstallStatus["status"]) => {
-    switch (status) {
-      case "installing":
-        return <Spinner size="small" />;
-      case "success":
-        return <CheckmarkCircle24Regular style={{ color: "var(--colorPaletteGreenForeground1)" }} />;
-      case "failed":
-        return <ErrorCircle24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />;
-    }
-  };
-
   const renderContent = () => {
     return (
       <div className={styles.threeColumnLayout}>
@@ -512,18 +346,6 @@ const AppInstallPanel: React.FC = () => {
           
           <div className={styles.content}>
             <div className={styles.installSection}>
-              {/* 拖拽区域 */}
-              <div
-                className={mergeClasses(styles.dropZone, isDragOver && styles.dropZoneActive)}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <CloudArrowUp24Regular style={{ fontSize: "32px", color: "var(--colorBrandForeground1)" }} />
-                <Text weight="semibold">拖拽APK文件到此处</Text>
-
-              </div>
-
               <div className={styles.pathInput}>
                 <Field label="APK文件路径:" style={{ flex: 1 }}>
                   <Input
@@ -535,9 +357,9 @@ const AppInstallPanel: React.FC = () => {
                 </Field>
                 <Button
                   appearance="secondary"
-                  icon={<FolderOpen24Regular />}
-                  onClick={handleBrowseApk}
+                  onClick={handleFileSelect}
                   disabled={isInstalling}
+                  className={styles.selectButton}
                 >
                   选择文件
                 </Button>
@@ -557,7 +379,7 @@ const AppInstallPanel: React.FC = () => {
                 disabled={!selectedDevice || (apkPaths.length === 0 && !apkPath) || isInstalling}
                 className={styles.installButton}
               >
-                {isInstalling ? "安装中..." : "开始安装"}
+                {isInstalling ? "安装中..." : `开始安装 (${apkPaths.length || (apkPath ? 1 : 0)}个文件)`}
               </Button>
             </div>
 
@@ -576,14 +398,7 @@ const AppInstallPanel: React.FC = () => {
         open={errorDialogOpen}
         errorInfo={errorInfo}
         onClose={() => setErrorDialogOpen(false)}
-        onRetry={() => {
-          // 实现重试逻辑
-          setErrorDialogOpen(false);
-        }}
-        showDetails={true}
       />
-
-
     </div>
   );
 };

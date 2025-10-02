@@ -1042,6 +1042,15 @@ const SystemInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles
         <Text>{(device.properties as any)?.locale || "未知"}</Text>
       </div>
     </div>
+    <div className={styles.infoItem}>
+      <Text className={styles.infoLabel}>MIUI版本</Text>
+      <div
+        className={styles.infoValue}
+        onClick={() => onCopyValue(device.properties?.miuiVersion || "未知", "MIUI版本")}
+      >
+        <Text>{device.properties?.miuiVersion || "未知"}</Text>
+      </div>
+    </div>
   </div>
 );
 

@@ -39,6 +39,7 @@ export interface DeviceProperties {
   buildDate?: string;        // 构建日期
   buildUser?: string;        // 构建用户
   buildHost?: string;        // 构建主机
+  miuiVersion?: string;      // MIUI版本
 
   // 硬件信息
   cpuAbi?: string;          // CPU架构
