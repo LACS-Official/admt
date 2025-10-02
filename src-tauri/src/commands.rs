@@ -93,7 +93,7 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
 pub async fn get_device_info(serial: String) -> Result<DeviceInfo> {
     // 首先验证设备是否存在
     let devices = scan_devices().await?;
-    let device = devices
+    let mut device = devices
         .into_iter()
         .find(|d| d.serial == serial)
         .ok_or_else(|| HoutError::DeviceNotFound {
@@ -102,6 +102,16 @@ pub async fn get_device_info(serial: String) -> Result<DeviceInfo> {
 
     if device.mode == DeviceMode::Unauthorized {
         return Err(HoutError::DeviceUnauthorized { serial });
+    }
+
+    // 获取设备属性并更新设备信息
+    match get_device_properties_batch(&serial).await {
+        Ok(properties) => {
+            device.properties = Some(properties);
+        }
+        Err(e) => {
+            log::warn!("Failed to get device properties for {}: {}", serial, e);
+        }
     }
 
     Ok(device)
@@ -146,6 +156,7 @@ async fn get_device_properties_batch(serial: &str) -> Result<DeviceProperties> {
                 "ro.build.date" => properties.build_date = Some(value),
                 "ro.build.user" => properties.build_user = Some(value),
                 "ro.build.host" => properties.build_host = Some(value),
+                "ro.miui.ui.version.name" => properties.miui_version = Some(value),
 
                 // 硬件信息
                 "ro.product.cpu.abi" => properties.cpu_abi = Some(value),

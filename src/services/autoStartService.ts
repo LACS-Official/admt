@@ -14,8 +14,8 @@ class AutoStartService {
    * 初始化自启动服务
    * @param appName 应用名称
    */
-  async initialize(appName: string): Promise<void> {
-    this.appName = appName;
+  async initialize(appName?: string): Promise<void> {
+    this.appName = appName ?? '玩机管家';
     this.initialized = true;
   }
 
@@ -24,6 +24,15 @@ class AutoStartService {
    */
   isReady(): boolean {
     return this.initialized && this.appName !== null;
+  }
+
+  /**
+   * 懒初始化：外部未显式初始化时自动初始化，避免调用顺序问题
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (!this.isReady()) {
+      await this.initialize(this.appName ?? '玩机管家');
+    }
   }
 
   /**
@@ -42,10 +51,7 @@ class AutoStartService {
    * 获取自启动状态
    */
   async getAutoStartStatus(): Promise<{ isEnabled: boolean }> {
-    if (!this.isReady()) {
-      throw new Error('自启动服务未初始化');
-    }
-
+    await this.ensureInitialized();
     const enabled = await isEnabled();
     return { isEnabled: enabled };
   }
@@ -54,10 +60,7 @@ class AutoStartService {
    * 启用自启动
    */
   async enableAutoStart(): Promise<boolean> {
-    if (!this.isReady()) {
-      throw new Error('自启动服务未初始化');
-    }
-
+    await this.ensureInitialized();
     try {
       await enable();
       return true;
@@ -71,10 +74,7 @@ class AutoStartService {
    * 禁用自启动
    */
   async disableAutoStart(): Promise<boolean> {
-    if (!this.isReady()) {
-      throw new Error('自启动服务未初始化');
-    }
-
+    await this.ensureInitialized();
     try {
       await disable();
       return true;
@@ -88,10 +88,7 @@ class AutoStartService {
    * 切换自启动状态
    */
   async toggleAutoStart(): Promise<boolean> {
-    if (!this.isReady()) {
-      throw new Error('自启动服务未初始化');
-    }
-
+    await this.ensureInitialized();
     const currentStatus = await this.getAutoStartStatus();
     if (currentStatus.isEnabled) {
       return await this.disableAutoStart();
@@ -112,12 +109,9 @@ class AutoStartService {
    * 验证自启动设置
    */
   async validateAutoStart(): Promise<{ isValid: boolean; message?: string }> {
-    if (!this.isReady()) {
-      return { isValid: false, message: '自启动服务未初始化' };
-    }
-
+    await this.ensureInitialized();
     try {
-      const status = await this.getAutoStartStatus();
+      await this.getAutoStartStatus();
       return { isValid: true };
     } catch (error) {
       return { isValid: false, message: `自启动验证失败: ${error}` };
@@ -128,10 +122,7 @@ class AutoStartService {
    * 修复自启动
    */
   async repairAutoStart(): Promise<boolean> {
-    if (!this.isReady()) {
-      throw new Error('自启动服务未初始化');
-    }
-
+    await this.ensureInitialized();
     try {
       // 先禁用再启用，可能修复一些权限问题
       await disable();
@@ -147,10 +138,7 @@ class AutoStartService {
    * 获取自启动配置
    */
   async getAutoStartConfig(): Promise<any> {
-    if (!this.isReady()) {
-      throw new Error('自启动服务未初始化');
-    }
-
+    await this.ensureInitialized();
     return {
       appName: this.appName,
       status: await this.getAutoStartStatus(),

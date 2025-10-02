@@ -66,6 +66,9 @@ pub struct DeviceProperties {
     pub build_date: Option<String>,      // ro.build.date
     pub build_user: Option<String>,      // ro.build.user
     pub build_host: Option<String>,      // ro.build.host
+    pub miui_version: Option<String>,    // ro.mi.ui.version.name
+
+
 
     // 硬件信息
     pub cpu_abi: Option<String>,           // ro.product.cpu.abi
