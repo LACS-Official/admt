@@ -150,7 +150,7 @@ const HomePage: React.FC = () => {
     selectedDevice,
     isScanning
   } = useDeviceStore();
-  const { addNotification } = useAppStore();
+  const { setStatusBarMessage } = useAppStore();
 
   // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
 
@@ -159,9 +159,8 @@ const HomePage: React.FC = () => {
   // 手动刷新设备扫描
   const handleManualRefresh = () => {
     // 触发设备扫描刷新
-    addNotification({
+    setStatusBarMessage({
       type: "info",
-      title: "设备扫描",
       message: "正在刷新设备列表...",
     });
   };
@@ -201,9 +200,8 @@ const HomePage: React.FC = () => {
                           }}
                           onCopyInfo={() => {
                             // 处理复制信息的逻辑
-                            addNotification({
+                            setStatusBarMessage({
                               type: "success",
-                              title: "复制成功",
                               message: "设备信息已复制到剪贴板",
                             });
                           }}

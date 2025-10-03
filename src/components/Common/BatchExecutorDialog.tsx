@@ -159,7 +159,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
   onClose,
 }) => {
   const styles = useStyles();
-  const { addNotification } = useAppStore();
+  const { setStatusBarMessage } = useAppStore();
   const [output, setOutput] = useState<string>('');
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
@@ -403,11 +403,9 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
           const flashWarning = '[提示] 检测到刷机操作，设备将在执行过程中断开连接，这是正常现象。刷机完成后请等待设备重启并重新连接。\n\n';
           appendOutput(flashWarning, 'info');
           
-          addNotification({
+          setStatusBarMessage({
             type: "warning",
-            title: "刷机提示",
             message: "检测到刷机操作，设备将在执行过程中断开连接，这是正常现象。请耐心等待刷机完成并重新连接设备。",
-            duration: 10000
           });
         }
 
@@ -474,7 +472,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
     };
 
     executeBatchFile();
-  }, [open, batchFileName, workingDirectory, addNotification, appendOutput]);
+  }, [open, batchFileName, workingDirectory, setStatusBarMessage, appendOutput]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -520,11 +518,9 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
     }
     
     // 添加停止通知
-    addNotification({
+    setStatusBarMessage({
       type: "warning",
-      title: "脚本已停止",
       message: "批处理脚本执行已被用户中断",
-      duration: 3000
     });
     
     setOutput('');
@@ -540,18 +536,14 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
       // 移除 ANSI 转义序列，只复制纯文本
       const plainText = output.replace(/\x1b\[\d+m/g, '');
       await navigator.clipboard.writeText(plainText);
-      addNotification({
+      setStatusBarMessage({
         type: "success",
-        title: "复制成功",
         message: "输出内容已复制到剪贴板",
-        duration: 3000
       });
     } catch (error) {
-      addNotification({
+      setStatusBarMessage({
         type: "error",
-        title: "复制失败",
         message: "无法复制到剪贴板",
-        duration: 3000
       });
     }
   };
@@ -559,11 +551,9 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
   const handleSaveLog = async () => {
     if (!logFileName.current) return;
     
-    addNotification({
+    setStatusBarMessage({
       type: "info",
-      title: "日志已保存",
       message: `日志文件保存在: ${logFileName.current}`,
-      duration: 5000
     });
   };
 
