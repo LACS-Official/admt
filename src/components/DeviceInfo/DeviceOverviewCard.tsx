@@ -7,27 +7,16 @@ import {
   Button,
   ProgressBar,
   useToastController,
-  Toast,
-  ToastTitle,
   Toaster,
   Spinner,
   Tab,
   TabList,
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogBody,
-  DialogContent,
-  DialogActions,
-  Checkbox,
 } from "@fluentui/react-components";
 import {
   Battery024Regular,
   Storage24Regular,
   DesktopPulse24Regular,
   ArrowClockwise24Regular,
-  Copy24Regular,
-  Edit24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { deviceService } from "../../services/deviceService";

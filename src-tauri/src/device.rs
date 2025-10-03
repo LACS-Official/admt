@@ -143,7 +143,6 @@ pub struct FileTransferProgress {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstalledApp {
     pub package_name: String,
-    pub app_name: Option<String>,
     pub version_name: Option<String>,
     pub version_code: Option<String>,
     pub install_location: Option<String>,
@@ -159,7 +158,6 @@ pub struct InstalledApp {
 pub struct ApkInfo {
     pub file_path: String,
     pub package_name: Option<String>,
-    pub app_name: Option<String>,
     pub version_name: Option<String>,
     pub version_code: Option<String>,
     pub min_sdk_version: Option<String>,

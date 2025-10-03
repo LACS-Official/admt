@@ -251,6 +251,71 @@ export class DeviceService {
     }
   }
 
+  async freezeApp(serial: string, packageName: string): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("freeze_app", {
+        serial,
+        packageName,
+      });
+      return result;
+    } catch (error) {
+      console.error("Failed to freeze app:", error);
+      throw error;
+    }
+  }
+
+  async unfreezeApp(serial: string, packageName: string): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("unfreeze_app", {
+        serial,
+        packageName,
+      });
+      return result;
+    } catch (error) {
+      console.error("Failed to unfreeze app:", error);
+      throw error;
+    }
+  }
+
+  async clearAppData(serial: string, packageName: string): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("clear_app_data", {
+        serial,
+        packageName,
+      });
+      return result;
+    } catch (error) {
+      console.error("Failed to clear app data:", error);
+      throw error;
+    }
+  }
+
+  async exportApk(serial: string, packageName: string, outputPath: string): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("export_apk", {
+        serial,
+        packageName,
+        outputPath,
+      });
+      return result;
+    } catch (error) {
+      console.error("Failed to export APK:", error);
+      throw error;
+    }
+  }
+
+  async getFrozenApps(serial: string): Promise<InstalledApp[]> {
+    try {
+      const apps = await invoke<InstalledApp[]>("get_frozen_apps", {
+        serial,
+      });
+      return apps;
+    } catch (error) {
+      console.error("Failed to get frozen apps:", error);
+      throw error;
+    }
+  }
+
   async checkFastbootAvailability(): Promise<CommandResult> {
     try {
       const result = await invoke<CommandResult>("check_fastboot_availability");

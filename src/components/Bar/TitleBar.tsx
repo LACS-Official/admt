@@ -126,7 +126,6 @@ const TitleBar: React.FC = () => {
           window.isAlwaysOnTop()
         ]);
         
-        console.log('窗口状态检查:', { maximized, alwaysOnTop });
         setIsMaximized(maximized);
         setIsAlwaysOnTop(alwaysOnTop);
       } catch (error) {

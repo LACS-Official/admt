@@ -27,9 +27,10 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    padding: "24px",
+    padding: "18px",
     gap: "24px",
     backgroundColor: "var(--colorNeutralBackground2)",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   header: {
     display: "flex",
@@ -61,6 +62,7 @@ const useStyles = makeStyles({
     gap: "16px",
     flex: 1,
     overflow: "hidden",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   tabContent: {
     flex: 1,
@@ -76,6 +78,53 @@ const useStyles = makeStyles({
     gap: "16px",
     textAlign: "center",
     color: "var(--colorNeutralForeground2)",
+  },
+  headerTabList: {
+    flex: "1 1 auto",
+    maxHeight: "45px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    borderRadius: "6px",
+    padding: "4px 8px",
+    //居中显示
+    display: "flex",
+    alignItems: "center",
+    "& .fui-TabList": {
+      minHeight: "32px",
+      backgroundColor: "transparent",
+    },
+    "& .fui-Tab": {
+      fontSize: "12px",
+      padding: "6px 12px",
+      minHeight: "28px",
+      borderRadius: "6px",
+      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      border: "1px solid transparent",
+      fontWeight: 500,
+      color: "var(--colorNeutralForeground2)",
+      margin: "0 4px",
+      
+      "&:hover": {
+        backgroundColor: "var(--colorNeutralBackground2)",
+        color: "var(--colorNeutralForeground1)",
+        transform: "translateY(-1px)",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+      },
+      
+      "&[aria-selected='true']": {
+        backgroundColor: "var(--colorBrandBackground2)",
+        color: "var(--colorBrandForeground1)",
+        border: "1px solid var(--colorBrandStroke2)",
+        fontWeight: 600,
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+      },
+    },
+    
+    "@media (max-width: 768px)": {
+      "& .fui-Tab": {
+        fontSize: "11px",
+        padding: "4px 8px",
+      },
+    },
   },
 });
 
@@ -203,6 +252,7 @@ const AdbZonePanel: React.FC = () => {
             <TabList
               selectedValue={currentView}
               onTabSelect={(_, data) => setCurrentView(data.value as AdbZoneView)}
+              className={styles.headerTabList}
             >
               {tabs.map((tab) => (
                 <Tab

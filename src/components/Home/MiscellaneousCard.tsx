@@ -71,22 +71,22 @@ const useStyles = makeStyles({
   },
   functionItem: {
     display: "flex",
-    marginTop:"5px",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "4px 2px", // 调整内边距以适应3x3网格
-    borderRadius: "6px", // 稍微增加圆角
-    border: `1px solid ${tokens.colorNeutralStroke3}`,
-    backgroundColor: tokens.colorNeutralBackground2,
+    padding: "6px 4px",
+    border: "1px solid var(--colorNeutralStroke3)",
+    borderRadius: "6px",
+    backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.2s ease",
     cursor: "pointer",
-    minHeight: "62px", // 增加最小高度以适应3x3网格
+    minHeight: "40px",
     textAlign: "center",
-    position: "relative", // 添加相对定位以支持绝对定位的徽章
+    minWidth: 0,
+    position: "relative",
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground2Hover,
-      transform: "translateY(-1px)", // 添加轻微的悬停效果
+      backgroundColor: "var(--colorNeutralBackground2Hover)",
+      transform: "translateY(-1px)",
       boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
     },
   },
@@ -97,28 +97,25 @@ const useStyles = makeStyles({
     gap: "1px", // 减少间距
     flex: 1,
   },
-  functionIcon: {
-    color: tokens.colorBrandForeground1,
-    fontSize: "14px", // 增大图标以适应3x3网格
-    marginBottom: "2px", // 添加底部间距
-  },
   functionText: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "1px", // 减少间距
+    fontSize: "12px",
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: "1.2",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
     width: "100%",
   },
   functionTitle: {
-    fontSize: "10px", // 稍微增大字体以适应3x3网格
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
+    fontSize: "12px",
+    fontWeight: "600",
     textAlign: "center",
-    lineHeight: "1.1",
-    whiteSpace: "nowrap", // 防止换行
+    lineHeight: "1.2",
+    whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    width: "100%", // 占据全宽
+    width: "100%",
   },
   functionDescription: {
     display: "none", // 隐藏描述以节省空间
@@ -163,8 +160,6 @@ const useStyles = makeStyles({
 interface MiscFunction {
   id: string;
   title: string;
-  description: string;
-  icon: React.ReactElement;
   isRisky: boolean;
   isDisabled?: boolean; // 新增禁用状态
   action: () => Promise<void>;
@@ -232,6 +227,21 @@ const MiscellaneousCard: React.FC = () => {
     );
   };
 
+  const handleFinishAdb5037 = async () => {
+    setStatusBarMessage({
+      type: "info",
+      message: "正在结束ADB-5037端口...",
+      });
+    await executeCommand(
+      "finish-adb5037",
+      () => invoke("finish_adb5037"),
+      "结束ADB-5037端口"
+    );
+  };
+
+  
+
+
   const handleRestartAdb = async () => {
     setStatusBarMessage({
       type: "info",
@@ -289,38 +299,54 @@ const MiscellaneousCard: React.FC = () => {
   };
 
 
+  const handleFinishAdb = async () => {
+    setStatusBarMessage({
+      type: "info",
+      message: "正在结束ADB服务...",
+      });
+    await executeCommand(
+      "finish-adb",
+      () => invoke("finish_adb_service"),
+      "结束ADB服务"
+    );
+  };
+
 
 
   const miscFunctions: MiscFunction[] = [
     {
       id: "restart-adb",
       title: "重启ADB服务",
-      description: "重新启动ADB服务以恢复连接",
-      icon: <ArrowClockwise24Regular />,
       isRisky: false,
       action: handleRestartAdb,
     },
     {
+      id:"finish-adb",
+      title: "结束ADB服务",
+      isRisky: false,
+      action: handleFinishAdb,
+    },
+    {
+      id: "finish-adb5037",
+      title: "结束ADB-5037端口",
+      isRisky: true,
+      action: handleFinishAdb5037,
+    },
+    {
       id: "install-driver",
       title: "安装设备驱动",
-      description: "自动安装Android设备驱动程序",
-      icon: <Shield24Regular />,
       isRisky: true,
       action: handleInstallDriver,
     },
     {
       id: "fix-usb3",
       title: "USB 3.0修复",
-      description: "修复USB 3.0连接问题，确保设备正常识别",
-      icon: <Wrench24Regular />,
       isRisky: true,
       action: handleFixUsb3,
     },
     {
       id: "open-device-manager",
       title: "打开设备管理器",
-      description: "快速启动Windows设备管理器",
-      icon: <Desktop24Regular />,
       isRisky: false,
       action: handleOpenDeviceManager,
     },
@@ -366,17 +392,8 @@ const MiscellaneousCard: React.FC = () => {
               className={getItemClassName(func)}
               onClick={() => handleFunctionClick(func)}
             >
-              <div className={styles.functionInfo}>
-                <div className={styles.functionIcon}>
-                  {executingFunction === func.id ? (
-                    <Spinner size="tiny" />
-                  ) : (
-                    func.icon
-                  )}
-                </div>
-                <div className={styles.functionText}>
-                  <Text className={styles.functionTitle}>{func.title}</Text>
-                </div>
+              <div className={styles.functionText}>
+                <Text className={styles.functionTitle}>{func.title}</Text>
               </div>
             </div>
           ))}
