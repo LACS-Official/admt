@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Error, Debug, Serialize, Deserialize)]
-pub enum HoutError {
+pub enum AdmtError {
     #[error("ADB command failed: {message}")]
     AdbCommandFailed { message: String },
 
@@ -95,33 +95,30 @@ pub enum HoutError {
 
     #[error("Invalid input: {message}")]
     InvalidInput { message: String },
-
-    #[error("Download cancelled")]
-    DownloadCancelled,
 }
 
-impl From<std::io::Error> for HoutError {
+impl From<std::io::Error> for AdmtError {
     fn from(err: std::io::Error) -> Self {
-        HoutError::IoError {
+        AdmtError::IoError {
             message: err.to_string(),
         }
     }
 }
 
-impl From<serde_json::Error> for HoutError {
+impl From<serde_json::Error> for AdmtError {
     fn from(err: serde_json::Error) -> Self {
-        HoutError::ParseError {
+        AdmtError::ParseError {
             message: err.to_string(),
         }
     }
 }
 
-impl From<anyhow::Error> for HoutError {
+impl From<anyhow::Error> for AdmtError {
     fn from(err: anyhow::Error) -> Self {
-        HoutError::Unknown {
+        AdmtError::Unknown {
             message: err.to_string(),
         }
     }
 }
 
-pub type Result<T> = std::result::Result<T, HoutError>;
+pub type Result<T> = std::result::Result<T, AdmtError>;
