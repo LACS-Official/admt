@@ -73,6 +73,26 @@ pub async fn uninstall_app(
     utils_execute_adb_command(&args, Some(60)).await
 }
 
+/// 安装APK文件
+#[tauri::command]
+pub async fn install_apk(serial: String, apk_path: String, replace: bool) -> Result<CommandResult> {
+    let device = get_device_info(serial.clone()).await?;
+
+    if !device.is_adb_available() {
+        return Err(AdmtError::InvalidDeviceMode {
+            mode: format!("{:?}", device.mode),
+        });
+    }
+
+    let mut args = vec!["-s", &serial, "install"];
+    if replace {
+        args.push("-r");
+    }
+    args.push(&apk_path);
+
+    utils_execute_adb_command(&args, Some(120)).await
+}
+
 /// 获取APK文件信息
 #[tauri::command]
 pub async fn get_apk_info(apk_path: String) -> Result<ApkInfo> {

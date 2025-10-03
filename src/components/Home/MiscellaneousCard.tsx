@@ -311,6 +311,13 @@ const MiscellaneousCard: React.FC = () => {
     );
   };
 
+  const handleOpenTaskManager = async () => {
+    await executeCommand(
+      "open-task-manager",
+      () => invoke("open_task_manager"),
+      "打开任务管理器"
+    );
+  };
 
 
   const miscFunctions: MiscFunction[] = [
@@ -326,12 +333,12 @@ const MiscellaneousCard: React.FC = () => {
       isRisky: false,
       action: handleFinishAdb,
     },
-    {
-      id: "finish-adb5037",
-      title: "结束ADB-5037端口",
-      isRisky: true,
-      action: handleFinishAdb5037,
-    },
+    // {
+    //   id: "finish-adb5037",
+    //   title: "结束ADB-5037端口",
+    //   isRisky: true,
+    //   action: handleFinishAdb5037,
+    // },
     {
       id: "install-driver",
       title: "安装设备驱动",
@@ -349,7 +356,12 @@ const MiscellaneousCard: React.FC = () => {
       title: "打开设备管理器",
       isRisky: false,
       action: handleOpenDeviceManager,
-    },
+    },{
+      id: "open-task-manager",
+      title: "打开任务管理器",
+      isRisky: true,
+      action: handleOpenTaskManager,
+    }
     
   ];
 

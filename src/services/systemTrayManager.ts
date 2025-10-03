@@ -69,9 +69,10 @@ class SystemTrayManager implements ISystemTrayManager {
       const traySupported = await systemTrayService.isSystemTraySupported();
       
       if (traySupported) {
-        if (config.systemTrayEnabled && !systemTrayService.isReady()) {
+        if (config.systemTrayEnabled && !systemTrayService.isReady() && this.status !== SystemTrayStatus.INITIALIZING) {
           // 如果启用了系统托盘但未初始化，则初始化
           logService.info('配置变化触发托盘初始化', 'SystemTrayManager');
+          this.status = SystemTrayStatus.INITIALIZING;
           await systemTrayService.initialize();
           await systemTrayService.setupWindowCloseHandler(config.minimizeToTrayOnClose);
           this.status = SystemTrayStatus.READY;

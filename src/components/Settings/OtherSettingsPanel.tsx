@@ -20,6 +20,7 @@ import {
 } from "@fluentui/react-icons";
 import { useAppStore } from '../../stores/appStore';
 import { systemTrayService } from '../../services/systemTrayService';
+import { systemTrayManager } from '../../services/systemTrayManager';
 import { autoStartService } from '../../services/autoStartService';
 import { enable, isEnabled, disable } from '@tauri-apps/plugin-autostart';
 // when using `"withGlobalTauri": true`, you may use
@@ -218,27 +219,22 @@ const OtherSettingsPanel: React.FC = () => {
       setTrayStatus(null);
 
       if (checked) {
-        // 启用系统托盘
-        await systemTrayService.initialize({
-          tooltip: '玩机管家',
-          menuItems: [
-            { id: 'show', label: '显示窗口' },
-            { id: 'separator1', label: '-' },
-            { id: 'exit', label: '退出应用' }
-          ]
+        // 启用系统托盘 - 使用 SystemTrayManager 确保单例模式
+        await systemTrayManager.initialize({
+          systemTrayEnabled: true,
+          minimizeToTrayOnClose: true
         });
-        
-        // 设置窗口关闭时最小化到托盘
-        await systemTrayService.setupWindowCloseHandler(true);
         
         setTrayStatus({
           type: 'success',
           message: '系统托盘已启用，关闭窗口时将最小化到托盘'
         });
       } else {
-        // 禁用系统托盘
-        await systemTrayService.setupWindowCloseHandler(false);
-        await systemTrayService.cleanup();
+        // 禁用系统托盘 - 使用 SystemTrayManager 确保一致性
+        await systemTrayManager.updateConfig({
+          systemTrayEnabled: false,
+          minimizeToTrayOnClose: false
+        });
         
         setTrayStatus({
           type: 'success',

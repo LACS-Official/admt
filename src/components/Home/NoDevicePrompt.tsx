@@ -352,7 +352,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
             </Text>
             <Text className={styles.troubleshootingItem}>检查USB接口是否正常工作</Text>
             <Text className={styles.troubleshootingItem}>检查设备尾插是否有损坏</Text>
-            <Text className={styles.troubleshootingItem}>确保已安装正确的USB驱动</Text>
+            <Text className={styles.troubleshootingItem}>确保已安装对应的驱动</Text>
             <Text className={styles.troubleshootingItem}>检查自动检测设备开关是否开启</Text>
           </div>
 
