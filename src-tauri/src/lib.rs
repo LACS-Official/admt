@@ -1,5 +1,7 @@
 mod activation;
 mod adb_commands;
+mod app_management_commands;
+mod download_commands;
 mod cache;
 mod commands;
 mod device;
@@ -10,9 +12,11 @@ mod system_features;
 mod utils;
 mod version;
 
-use activation::check_activation_expiry;
+use activation::{check_activation_expiry, validate_activation_code_format, activate_application, check_activation_status, validate_local_activation_data, get_device_fingerprint, get_app_config, save_app_config, get_detailed_device_fingerprint};
 use cache::cache_cleanup_task;
 use commands::*;
+use app_management_commands::{install_apk, get_installed_apps, uninstall_app, get_apk_info, batch_install_apks, batch_uninstall_apps};
+use download_commands::{download_apk};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -55,11 +59,6 @@ pub fn run() {
             check_device_connection,
             get_device_connection_info,
             download_apk,
-            get_download_size,
-            download_file,
-            cancel_download,
-            get_downloads_directory,
-            cleanup_downloads,
             check_screen_mirror_support,
             diagnose_scrcpy,
             start_screen_mirror,

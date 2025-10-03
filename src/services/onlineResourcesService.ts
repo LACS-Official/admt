@@ -25,6 +25,9 @@ class OnlineResourcesService {
   private readonly STORAGE_KEY = 'download_tasks';
   private lastDownloadTime: number = 0;
   private readonly DOWNLOAD_COOLDOWN = 60 * 1000; // 1分钟冷却时间
+  private activeDownloads: Map<string, number> = new Map(); // 跟踪活跃下载任务的时间戳
+  private readonly MAX_ACTIVE_DOWNLOADS = 2; // 最大活跃下载数
+  private readonly ACTIVE_DOWNLOAD_WINDOW = 60 * 1000; // 1分钟窗口内
 
   constructor() {
     this.config = {
@@ -219,28 +222,19 @@ class OnlineResourcesService {
    * 检查是否可以开始新的下载
    */
   canStartDownload(): { canDownload: boolean; reason?: string; remainingTime?: number } {
-    // 检查是否有正在下载的任务
-    const activeDownloads = Array.from(this.downloadTasks.values()).filter(
-      task => task.status === 'downloading' || task.status === 'extracting'
-    );
-
-    if (activeDownloads.length > 0) {
-      return {
-        canDownload: false,
-        reason: '已有下载任务正在进行中，请等待当前任务完成'
-      };
+    // 清理过期的活跃下载记录
+    const now = Date.now();
+    for (const [taskId, timestamp] of this.activeDownloads.entries()) {
+      if (now - timestamp > this.ACTIVE_DOWNLOAD_WINDOW) {
+        this.activeDownloads.delete(taskId);
+      }
     }
 
-    // 检查下载冷却时间
-    const now = Date.now();
-    const timeSinceLastDownload = now - this.lastDownloadTime;
-
-    if (this.lastDownloadTime > 0 && timeSinceLastDownload < this.DOWNLOAD_COOLDOWN) {
-      const remainingTime = Math.ceil((this.DOWNLOAD_COOLDOWN - timeSinceLastDownload) / 1000);
+    // 检查活跃下载数量
+    if (this.activeDownloads.size >= this.MAX_ACTIVE_DOWNLOADS) {
       return {
         canDownload: false,
-        reason: `下载冷却中，请等待 ${remainingTime} 秒后再试`,
-        remainingTime
+        reason: `同时最多只能下载 ${this.MAX_ACTIVE_DOWNLOADS} 个文件，请等待正在下载的任务完成`
       };
     }
 
@@ -279,6 +273,9 @@ class OnlineResourcesService {
 
       taskId = `download_${software.id}_${Date.now()}`;
       
+      // 记录活跃下载
+      this.activeDownloads.set(taskId, Date.now());
+
       // 获取默认下载目录
       const { invoke } = await import('@tauri-apps/api/core');
       const downloadDir = await invoke('get_default_download_directory') as string;
@@ -328,7 +325,7 @@ class OnlineResourcesService {
         this.downloadTasks.set(taskId, currentTask);
         this.persistTasks();
 
-        // 记录下载完成时间，用于冷却计算
+        // 记录下载完成时间，但不再用于冷却计算
         this.lastDownloadTime = Date.now();
       }
 
@@ -568,22 +565,24 @@ class OnlineResourcesService {
    */
   async cancelDownload(taskId: string): Promise<void> {
     const task = this.downloadTasks.get(taskId);
-    if (task && task.status === 'downloading') {
+    if (task && (task.status === 'downloading' || task.status === 'paused' || task.status === 'extracting')) {
       try {
+        // 调用Tauri后端取消下载或解压
         const { invoke } = await import('@tauri-apps/api/core');
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-
-        const window = getCurrentWindow();
-        await invoke('cancel_download', { taskId, window });
-
-        task.status = 'cancelled';
-        task.endTime = new Date();
-        this.downloadTasks.set(taskId, task);
-
-        console.log('🚫 下载已取消:', task.fileName);
+        await invoke('cancel_download_or_extract', { taskId });
+        console.log('❌ 下载/解压已取消:', task.fileName);
       } catch (error) {
-        console.error('❌ 取消下载失败:', error);
+        console.error('调用取消命令失败:', error);
       }
+      
+      // 更新任务状态
+      task.status = 'cancelled';
+      task.endTime = new Date();
+      this.downloadTasks.set(task.id, task);
+      this.persistTasks();
+      
+      // 从活跃下载中移除
+      this.activeDownloads.delete(taskId);
     }
   }
 
@@ -611,6 +610,7 @@ class OnlineResourcesService {
     return {
       total: tasks.length,
       downloading: tasks.filter(t => t.status === 'downloading').length,
+      extracting: tasks.filter(t => t.status === 'extracting').length,
       completed: tasks.filter(t => t.status === 'completed').length,
       failed: tasks.filter(t => t.status === 'failed').length,
       cancelled: tasks.filter(t => t.status === 'cancelled').length,
