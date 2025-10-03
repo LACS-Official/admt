@@ -630,14 +630,17 @@ const MainContent: React.FC = () => {
     trackMainContentEntry();
   }, []); // 空依赖数组，确保只在组件挂载时执行一次
 
-  // 系统托盘初始化 - 单例模式管理
+  // 系统托盘初始化 - 单例模式管理，确保只在应用启动时初始化一次
   useEffect(() => {
     const initializeSystemTray = async () => {
       try {
-        await systemTrayManager.initialize({
-          systemTrayEnabled: config.systemTrayEnabled,
-          minimizeToTrayOnClose: config.minimizeToTrayOnClose
-        });
+        // 检查是否已经初始化，避免重复初始化
+        if (!systemTrayManager.isReady() && !systemTrayManager.isInitializingNow()) {
+          await systemTrayManager.initialize({
+            systemTrayEnabled: config.systemTrayEnabled,
+            minimizeToTrayOnClose: config.minimizeToTrayOnClose
+          });
+        }
       } catch (error) {
         console.error('系统托盘初始化失败:', error);
       }
@@ -647,9 +650,8 @@ const MainContent: React.FC = () => {
 
     // 清理函数
     return () => {
-      systemTrayManager.cleanup().catch(error => {
-        console.error('系统托盘清理失败:', error);
-      });
+      // 注意：这里不清理托盘，因为托盘应该在应用生命周期内保持存在
+      // 只有在应用退出时才需要清理托盘
     };
   }, []); // 只在组件挂载时执行一次
 

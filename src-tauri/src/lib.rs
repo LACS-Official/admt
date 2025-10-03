@@ -7,17 +7,22 @@ mod core;
 mod device;
 mod download_manager;
 mod error;
+mod sys;
 mod system_features;
 mod utils;
 mod version;
 
 use activation::check_activation_expiry;
 use adb::app::app_management::*;
+use adb::command::adb_system_controler::{restart_adb_service, fix_usb3_connection};
+use adb::command::adb_command_runer::{run_usb_fix_script, execute_batch_file, execute_batch_file_stream, finish_adb_service, finish_adb5037};
+use adb::device::device_reboot::reboot_device;
 use adb::file::file::{push_file, pull_file, list_device_files};
 use adb::scrcpy::screen_mirror::{check_screen_mirror_support, diagnose_scrcpy, start_screen_mirror, stop_screen_mirror};
 use cache::cache_cleanup_task;
 use commands::*;
 use core::log::*;
+use sys::sys_tool_opener::{open_device_manager, open_task_manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -111,12 +116,14 @@ pub fn run() {
             core::log::verify_tools_integrity,
             // 杂项控制功能命令
             restart_adb_service,
-            install_device_driver,
             fix_usb3_connection,
             run_usb_fix_script,
             execute_batch_file,
             execute_batch_file_stream,
+            finish_adb_service,
+            finish_adb5037,
             open_device_manager,
+            open_task_manager,
             restart_application,
             get_detailed_device_fingerprint,
             // 系统功能

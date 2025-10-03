@@ -138,6 +138,9 @@ export class SystemTrayService {
       if (this.isInitialized) {
         console.log('🔄 检测到托盘已存在，先清理旧托盘...');
         await this.cleanup();
+        
+        // 添加延迟确保清理完成
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       const defaultConfig: TrayConfig = {
