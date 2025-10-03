@@ -126,7 +126,7 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
   onError 
 }) => {
   const styles = useStyles();
-  const { addNotification } = useAppStore();
+  const { setStatusBarMessage } = useAppStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -254,11 +254,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       setShowEnterButton(true);
       setStatusMessage('当前已是最新版本，正在进入应用...');
       
-      addNotification({
+      setStatusBarMessage({
         type: "success",
-        title: "版本检查",
         message: "当前已是最新版本，正在进入应用",
-        duration: 2000,
       });
 
       // 延迟0.5秒后自动进入应用
@@ -341,11 +339,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         setStatusMessage('当前已是最新版本，正在进入应用...');
         
         // 添加通知
-        addNotification({
+        setStatusBarMessage({
           type: "success",
-          title: "版本检查",
           message: "当前已是最新版本，正在进入应用",
-          duration: 2000,
         });
 
         // 在开发环境下显示版本检测详情
@@ -368,11 +364,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
         setShowVersionChecker(true);
         
         // 添加通知
-        addNotification({
+        setStatusBarMessage({
           type: "warning",
-          title: "版本更新",
           message: "发现新版本，请立即更新",
-          duration: 5000,
         });
       }
 
@@ -424,11 +418,9 @@ const UnifiedLoadingVersionChecker: React.FC<UnifiedLoadingVersionCheckerProps> 
       setIsLoading(false);
       
       // 添加错误通知
-      addNotification({
+      setStatusBarMessage({
         type: "error",
-        title: "检查失败",
         message: "版本检查失败，请重试或检查网络连接",
-        duration: 5000,
       });
       
       // 采用降级处理，允许用户继续使用应用

@@ -742,7 +742,7 @@ export class DeviceService {
 
 // React Hook for device service
 export const useDeviceService = () => {
-  const { setLoading, addNotification, config } = useAppStore();
+  const { setLoading, setStatusBarMessage, config } = useAppStore();
   const scanningRef = useRef(false);
 
   const startScanning = useCallback(() => {
@@ -756,12 +756,11 @@ export const useDeviceService = () => {
     deviceService.startScanning(config.scanInterval);
 
     // 显示启动扫描通知
-    addNotification({
+    setStatusBarMessage({
       type: "info",
-      title: "设备扫描",
       message: `开始扫描连接的设备（间隔：${config.scanInterval}ms）`,
     });
-  }, [addNotification, config.scanInterval]);
+  }, [setStatusBarMessage, config.scanInterval]);
 
   const stopScanning = useCallback(() => {
     if (!scanningRef.current) {
@@ -779,19 +778,17 @@ export const useDeviceService = () => {
       const properties = await deviceService.getDeviceProperties(serial);
       useDeviceStore.getState().updateDevice(serial, { properties });
       
-      addNotification({
+      setStatusBarMessage({
         type: "success",
-        title: "设备信息",
         message: "设备信息已更新",
       });
     } catch (error) {
-      addNotification({
+      setStatusBarMessage({
         type: "error",
-        title: "设备信息",
         message: `获取设备信息失败: ${error}`,
       });
     }
-  }, [addNotification]);
+  }, [setStatusBarMessage]);
 
   useEffect(() => {
     return () => {
