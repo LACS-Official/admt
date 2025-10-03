@@ -1,4 +1,4 @@
-use crate::error::{HoutError, Result};
+use crate::error::{AdmtError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -96,13 +96,13 @@ fn resolve_adb_tools_paths(_app_handle: &tauri::AppHandle) -> Result<(PathBuf, P
 
     // 检查路径是否有效
     if adb_path.to_string_lossy().contains("INVALID_") {
-        return Err(HoutError::PathResolution(
+        return Err(AdmtError::PathResolution(
             "ADB可执行文件路径无效".to_string(),
         ));
     }
 
     if fastboot_path.to_string_lossy().contains("INVALID_") {
-        return Err(HoutError::PathResolution(
+        return Err(AdmtError::PathResolution(
             "Fastboot可执行文件路径无效".to_string(),
         ));
     }
@@ -115,10 +115,10 @@ fn get_adb_version(adb_path: &Path) -> Result<String> {
     let output = Command::new(adb_path)
         .arg("version")
         .output()
-        .map_err(|e| HoutError::Command(format!("执行ADB version命令失败: {}", e)))?;
+        .map_err(|e| AdmtError::Command(format!("执行ADB version命令失败: {}", e)))?;
 
     if !output.status.success() {
-        return Err(HoutError::Command("ADB version命令执行失败".to_string()));
+        return Err(AdmtError::Command("ADB version命令执行失败".to_string()));
     }
 
     let version_output = String::from_utf8_lossy(&output.stdout);
@@ -200,7 +200,7 @@ pub async fn execute_adb_command_with_path(
 
     // 验证ADB路径是否存在
     if !adb_path.exists() {
-        return Err(HoutError::Command(format!(
+        return Err(AdmtError::Command(format!(
             "ADB可执行文件不存在: {}",
             adb_path.display()
         )));
@@ -246,8 +246,8 @@ pub async fn execute_adb_command_with_path(
     // 使用tokio执行命令
     let output = tokio::time::timeout(timeout_duration, cmd.output())
         .await
-        .map_err(|_| HoutError::Command("命令执行超时".to_string()))?
-        .map_err(|e| HoutError::Command(format!("ADB命令执行失败: {}", e)))?;
+        .map_err(|_| AdmtError::Command("命令执行超时".to_string()))?
+        .map_err(|e| AdmtError::Command(format!("ADB命令执行失败: {}", e)))?;
 
     let success = output.status.success();
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -285,7 +285,7 @@ pub async fn execute_fastboot_command_with_path(
 
     // 验证Fastboot路径是否存在
     if !fastboot_path.exists() {
-        return Err(HoutError::Command(format!(
+        return Err(AdmtError::Command(format!(
             "Fastboot可执行文件不存在: {}",
             fastboot_path.display()
         )));
@@ -344,8 +344,8 @@ pub async fn execute_fastboot_command_with_path(
     // 使用tokio执行命令
     let output = tokio::time::timeout(timeout_duration, cmd.output())
         .await
-        .map_err(|_| HoutError::Command("命令执行超时".to_string()))?
-        .map_err(|e| HoutError::Command(format!("Fastboot命令执行失败: {}", e)))?;
+        .map_err(|_| AdmtError::Command("命令执行超时".to_string()))?
+        .map_err(|e| AdmtError::Command(format!("Fastboot命令执行失败: {}", e)))?;
 
     let success = output.status.success();
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -373,7 +373,7 @@ pub async fn execute_fastboot_command_with_path(
 
 #[cfg(test)]
 mod tests {
-    // 只导入测试需要的特定函
+    
 
     #[test]
     fn test_parse_adb_version() {

@@ -5,21 +5,11 @@ import {
   Badge,
   Button,
   Spinner,
-  Dialog,
-  DialogTrigger,
-  DialogSurface,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogBody,
 } from "@fluentui/react-components";
 import {
   Desktop24Regular,
-  Play24Regular,
   Stop24Regular,
-  Settings24Regular,
   Phone24Regular,
-  Bug24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
@@ -28,7 +18,6 @@ import ScreenMirrorService from "../../services/screenMirrorService";
 import DeviceSelectionCard from "./DeviceSelectionCard";
 import MirrorDisplayCard from "./MirrorDisplayCard";
 import SettingsCard from "./SettingsCard";
-import ScrcpyDiagnosticPanel from "../Debug/ScrcpyDiagnosticPanel";
 
 const useStyles = makeStyles({
   container: {
@@ -244,30 +233,6 @@ const ScreenMirrorPanel: React.FC = () => {
         </div>
         
         <div className={styles.headerRight}>
-          <Dialog>
-            <DialogTrigger disableButtonEnhancement>
-              <Button
-                appearance="subtle"
-                icon={<Bug24Regular />}
-                size="small"
-              >
-                诊断
-              </Button>
-            </DialogTrigger>
-            <DialogSurface style={{ width: "800px", height: "600px" }}>
-              <DialogBody>
-                <DialogTitle>scrcpy 诊断工具</DialogTitle>
-                <DialogContent style={{ height: "500px", overflow: "auto" }}>
-                  <ScrcpyDiagnosticPanel />
-                </DialogContent>
-                <DialogActions>
-                  <DialogTrigger disableButtonEnhancement>
-                    <Button appearance="secondary">关闭</Button>
-                  </DialogTrigger>
-                </DialogActions>
-              </DialogBody>
-            </DialogSurface>
-          </Dialog>
           
           {isStreaming() && (
             <Button

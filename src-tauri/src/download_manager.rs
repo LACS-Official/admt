@@ -1,4 +1,4 @@
-use crate::error::{HoutError, Result};
+use crate::error::{AdmtError, Result};
 use futures_util::StreamExt;
 use reqwest;
 use serde::{Deserialize, Serialize};
@@ -129,10 +129,10 @@ impl DownloadManager {
             .get(&request.url)
             .send()
             .await
-            .map_err(|e| HoutError::NetworkError(e.to_string()))?;
+            .map_err(|e| AdmtError::NetworkError(e.to_string()))?;
 
         if !response.status().is_success() {
-            return Err(HoutError::NetworkError(format!(
+            return Err(AdmtError::NetworkError(format!(
                 "HTTP {}",
                 response.status()
             )));
@@ -151,13 +151,13 @@ impl DownloadManager {
         // 确保下载目录存在
         if let Some(parent) = file_path.parent() {
             println!("📁 创建下载目录: {}", parent.display());
-            fs::create_dir_all(parent).map_err(|e| HoutError::IoError {
+            fs::create_dir_all(parent).map_err(|e| AdmtError::IoError {
                 message: e.to_string(),
             })?;
         }
 
         println!("📁 创建下载文件: {}", file_path.display());
-        let mut file = fs::File::create(&file_path).map_err(|e| HoutError::IoError {
+        let mut file = fs::File::create(&file_path).map_err(|e| AdmtError::IoError {
             message: e.to_string(),
         })?;
 
@@ -180,8 +180,8 @@ impl DownloadManager {
         let _ = app_handle.emit("download-progress", &progress);
 
         while let Some(chunk) = stream.next().await {
-            let chunk = chunk.map_err(|e| HoutError::NetworkError(e.to_string()))?;
-            file.write_all(&chunk).map_err(|e| HoutError::IoError {
+            let chunk = chunk.map_err(|e| AdmtError::NetworkError(e.to_string()))?;
+            file.write_all(&chunk).map_err(|e| AdmtError::IoError {
                 message: e.to_string(),
             })?;
 
@@ -251,7 +251,7 @@ impl DownloadManager {
         request: &DownloadRequest,
     ) -> Result<PathBuf> {
         let extract_dir = archive_path.parent().unwrap().join(&request.software_name);
-        fs::create_dir_all(&extract_dir).map_err(|e| HoutError::IoError {
+        fs::create_dir_all(&extract_dir).map_err(|e| AdmtError::IoError {
             message: e.to_string(),
         })?;
 
@@ -279,7 +279,7 @@ impl DownloadManager {
             "zip" => self.extract_zip(archive_path, &extract_dir).await?,
             "7z" => self.extract_7z(archive_path, &extract_dir).await?,
             _ => {
-                return Err(HoutError::UnsupportedFormat(format!(
+                return Err(AdmtError::UnsupportedFormat(format!(
                     "不支持的压缩格式: {}",
                     extension
                 )))
@@ -305,16 +305,16 @@ impl DownloadManager {
 
     /// 解压ZIP文件
     async fn extract_zip(&self, archive_path: &Path, extract_dir: &Path) -> Result<()> {
-        let file = fs::File::open(archive_path).map_err(|e| HoutError::IoError {
+        let file = fs::File::open(archive_path).map_err(|e| AdmtError::IoError {
             message: e.to_string(),
         })?;
         let mut archive =
-            zip::ZipArchive::new(file).map_err(|e| HoutError::ExtractionError(e.to_string()))?;
+            zip::ZipArchive::new(file).map_err(|e| AdmtError::ExtractionError(e.to_string()))?;
 
         for i in 0..archive.len() {
             let mut file = archive
                 .by_index(i)
-                .map_err(|e| HoutError::ExtractionError(e.to_string()))?;
+                .map_err(|e| AdmtError::ExtractionError(e.to_string()))?;
 
             let outpath = match file.enclosed_name() {
                 Some(path) => extract_dir.join(path),
@@ -322,21 +322,21 @@ impl DownloadManager {
             };
 
             if file.name().ends_with('/') {
-                fs::create_dir_all(&outpath).map_err(|e| HoutError::IoError {
+                fs::create_dir_all(&outpath).map_err(|e| AdmtError::IoError {
                     message: e.to_string(),
                 })?;
             } else {
                 if let Some(p) = outpath.parent() {
                     if !p.exists() {
-                        fs::create_dir_all(p).map_err(|e| HoutError::IoError {
+                        fs::create_dir_all(p).map_err(|e| AdmtError::IoError {
                             message: e.to_string(),
                         })?;
                     }
                 }
-                let mut outfile = fs::File::create(&outpath).map_err(|e| HoutError::IoError {
+                let mut outfile = fs::File::create(&outpath).map_err(|e| AdmtError::IoError {
                     message: e.to_string(),
                 })?;
-                io::copy(&mut file, &mut outfile).map_err(|e| HoutError::IoError {
+                io::copy(&mut file, &mut outfile).map_err(|e| AdmtError::IoError {
                     message: e.to_string(),
                 })?;
             }
@@ -351,7 +351,7 @@ impl DownloadManager {
 
         // 使用sevenz_rust的decompress_file函数进行解压
         sevenz_rust::decompress_file(archive_path, extract_dir)
-            .map_err(|e| HoutError::ExtractionError(format!("7z文件解压失败: {}", e)))?;
+            .map_err(|e| AdmtError::ExtractionError(format!("7z文件解压失败: {}", e)))?;
 
         println!("✅ 7z文件解压完成");
         Ok(())
@@ -371,7 +371,7 @@ impl DownloadManager {
             &json_config_path,
             serde_json::to_string_pretty(&json_config).unwrap(),
         )
-        .map_err(|e| HoutError::IoError {
+        .map_err(|e| AdmtError::IoError {
             message: e.to_string(),
         })?;
 

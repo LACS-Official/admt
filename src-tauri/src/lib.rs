@@ -1,22 +1,23 @@
 mod activation;
+mod adb;
 mod adb_commands;
-mod app_management_commands;
-mod download_commands;
 mod cache;
 mod commands;
+mod core;
 mod device;
 mod download_manager;
 mod error;
-mod screen_mirror;
 mod system_features;
 mod utils;
 mod version;
 
-use activation::{check_activation_expiry, validate_activation_code_format, activate_application, check_activation_status, validate_local_activation_data, get_device_fingerprint, get_app_config, save_app_config, get_detailed_device_fingerprint};
+use activation::check_activation_expiry;
+use adb::app::app_management::*;
+use adb::file::file::{push_file, pull_file, list_device_files};
+use adb::scrcpy::screen_mirror::{check_screen_mirror_support, diagnose_scrcpy, start_screen_mirror, stop_screen_mirror};
 use cache::cache_cleanup_task;
 use commands::*;
-use app_management_commands::{install_apk, get_installed_apps, uninstall_app, get_apk_info, batch_install_apks, batch_uninstall_apps};
-use download_commands::{download_apk};
+use core::log::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -32,7 +33,6 @@ pub fn run() {
             version::get_app_info,
             version::check_for_updates,
             scan_devices,
-            get_device_info,
             execute_adb_command,
             execute_adb_command_with_path,
             execute_fastboot_command_with_path,
@@ -59,6 +59,11 @@ pub fn run() {
             check_device_connection,
             get_device_connection_info,
             download_apk,
+            get_download_size,
+            download_file,
+            cancel_download,
+            get_downloads_directory,
+            cleanup_downloads,
             check_screen_mirror_support,
             diagnose_scrcpy,
             start_screen_mirror,
@@ -100,10 +105,10 @@ pub fn run() {
             cleanup_expired_logs,
             write_logs_to_file,
             clear_all_logs,
-            get_log_file_info,
+            core::log::get_log_file_info,
             // 工具路径监控命令
-            get_tool_paths_status,
-            verify_tools_integrity,
+            core::log::get_tool_paths_status,
+            core::log::verify_tools_integrity,
             // 杂项控制功能命令
             restart_adb_service,
             install_device_driver,
@@ -134,18 +139,9 @@ pub fn run() {
             system_features::validate_auto_start,
             exit_app
         ])
-        .setup(|app| {
-            // 只在调试模式下初始化日志插件
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Debug)
-                        .build(),
-                )?;
-            }
-
+        .setup(|_app| {
             // 初始化应用状态
-            println!("HOUT Tauri application starting...");
+            println!("ADMT Tauri application starting...");
 
             // 启动缓存清理任务（在应用启动后）
             tauri::async_runtime::spawn(async move {

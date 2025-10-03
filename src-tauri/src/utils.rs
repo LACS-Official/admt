@@ -1,5 +1,5 @@
 use crate::cache::{get_cached_adb_path, get_cached_fastboot_path, record_path_cache_hit};
-use crate::error::{HoutError, Result};
+use crate::error::{AdmtError, Result};
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::time::Duration;
@@ -135,7 +135,7 @@ pub async fn execute_command(
         } else {
             "Fastboot"
         };
-        return Err(HoutError::IoError {
+        return Err(AdmtError::IoError {
             message: format!(
                 "{} executable not found in tools directory. Please ensure {}.exe is placed in src-tauri/tools/adb/",
                 tool_name,
@@ -146,7 +146,7 @@ pub async fn execute_command(
 
     // 检查程序文件是否存在
     if !program.exists() {
-        return Err(HoutError::IoError {
+        return Err(AdmtError::IoError {
             message: format!(
                 "Program not found: {}. Please ensure the executable is placed in src-tauri/tools/adb/",
                 program.display()
@@ -221,12 +221,12 @@ pub async fn execute_command(
             };
 
             log::error!("命令执行IO错误: {}", error_msg);
-            Err(HoutError::IoError { message: error_msg })
+            Err(AdmtError::IoError { message: error_msg })
         }
         Err(_) => {
             let timeout_error = format!("命令执行超时: {} {}", program.display(), args.join(" "));
             log::error!("{}", timeout_error);
-            Err(HoutError::CommandTimeout {
+            Err(AdmtError::CommandTimeout {
                 command: format!("{} {}", program.display(), args.join(" ")),
             })
         }
