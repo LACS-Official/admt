@@ -373,7 +373,7 @@ pub async fn execute_fastboot_command_with_path(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // 只导入测试需要的特定函
 
     #[test]
     fn test_parse_adb_version() {

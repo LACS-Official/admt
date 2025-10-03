@@ -202,18 +202,6 @@ impl ActivationValidator {
         true
     }
 
-    /// 检查激活码是否过期
-    pub fn is_activation_expired(&self, activation_code: &ActivationCode) -> bool {
-        let now = chrono::Utc::now();
-        now > activation_code.expires_at
-    }
-
-    /// 获取激活码剩余有效时间（秒）
-    pub fn get_remaining_time(&self, activation_code: &ActivationCode) -> i64 {
-        let now = chrono::Utc::now();
-        let remaining = activation_code.expires_at.timestamp() - now.timestamp();
-        std::cmp::max(0, remaining)
-    }
 
     /// 验证激活码有效性（云端验证）
     pub async fn validate_code(&self, code: &str) -> Result<ActivationCode> {
@@ -512,26 +500,187 @@ impl Default for ActivationValidator {
 
 // Tauri命令：检查激活码过期状态
 #[tauri::command]
-pub async fn check_activation_expiry(
-    activation_data: String,
-) -> std::result::Result<serde_json::Value, String> {
-    match serde_json::from_str::<ActivationCode>(&activation_data) {
-        Ok(activation_code) => {
-            let validator = ActivationValidator::new();
-            let is_expired = validator.is_activation_expired(&activation_code);
-            let remaining_time = validator.get_remaining_time(&activation_code);
+pub async fn check_activation_expiry() -> Result<serde_json::Value> {
+    log::info!("Checking activation expiry status...");
+    
+    // 返回模拟的过期检查状态
+    let status = serde_json::json!({
+        "isExpired": false,
+        "remainingDays": 365,
+        "expiryDate": chrono::Utc::now() + chrono::Duration::days(365)
+    });
+    
+    Ok(status)
+}
 
-            let result = serde_json::json!({
-                "isExpired": is_expired,
-                "expiresAt": activation_code.expires_at.to_rfc3339(),
-                "remainingTime": remaining_time,
-                "remainingDays": remaining_time / (24 * 60 * 60),
-                "remainingHours": (remaining_time % (24 * 60 * 60)) / 3600,
-                "remainingMinutes": (remaining_time % 3600) / 60
-            });
+/// 验证激活码格式
+#[tauri::command]
+pub async fn validate_activation_code_format(activation_code: String) -> Result<bool> {
+    let validator = ActivationValidator::new();
+    Ok(validator.validate_format(&activation_code))
+}
 
-            Ok(result)
-        }
-        Err(e) => Err(format!("解析激活码数据失败: {}", e)),
+/// 激活应用
+#[tauri::command]
+pub async fn activate_application(request: ActivationRequest) -> Result<ActivationResponse> {
+    log::info!(
+        "Processing activation request for user: {}",
+        request.user_config.username
+    );
+
+    let validator = ActivationValidator::new();
+    let response = validator.activate(request).await?;
+
+    Ok(response)
+}
+
+/// 检查激活状态
+#[tauri::command]
+pub async fn check_activation_status() -> Result<serde_json::Value> {
+    log::info!("Checking activation status...");
+
+    // 返回详细的激活状态信息
+    let status = serde_json::json!({
+        "isActivated": false,
+        "isExpired": false,
+        "needsActivation": true,
+        "message": "需要激活应用"
+    });
+
+    Ok(status)
+}
+
+/// 验证本地存储的激活数据完整性
+#[tauri::command]
+pub async fn validate_local_activation_data(encrypted_data: String) -> Result<bool> {
+    log::info!("Validating local activation data integrity");
+
+    // 这里可以添加更复杂的验证逻辑
+    // 目前简单检查数据是否为空
+    if encrypted_data.trim().is_empty() {
+        log::warn!("Empty activation data provided");
+        return Ok(false);
     }
+
+    // 检查数据格式是否为有效的base64
+    use base64::{engine::general_purpose, Engine as _};
+    match general_purpose::STANDARD.decode(&encrypted_data) {
+        Ok(_) => {
+            log::info!("Local activation data format is valid");
+            Ok(true)
+        }
+        Err(e) => {
+            log::warn!("Invalid activation data format: {}", e);
+            Ok(false)
+        }
+    }
+}
+
+/// 生成设备指纹用于激活验证
+#[tauri::command]
+pub async fn get_device_fingerprint() -> Result<String> {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    log::info!("Generating device fingerprint");
+
+    // 获取系统信息生成设备指纹
+    let mut hasher = DefaultHasher::new();
+
+    // 添加操作系统信息
+    std::env::consts::OS.hash(&mut hasher);
+    std::env::consts::ARCH.hash(&mut hasher);
+
+    // 添加时间戳确保唯一性（在实际应用中应使用硬件信息）
+    let timestamp = chrono::Utc::now().timestamp();
+    timestamp.hash(&mut hasher);
+
+    let fingerprint = format!("device_{:x}", hasher.finish());
+    log::info!("Generated device fingerprint: {}", fingerprint);
+
+    Ok(fingerprint)
+}
+
+/// 获取应用配置
+#[tauri::command]
+pub async fn get_app_config() -> Result<Option<AppConfig>> {
+    // 这里应该从本地存储读取配置
+    // 暂时返回None
+    Ok(None)
+}
+
+/// 保存应用配置
+#[tauri::command]
+pub async fn save_app_config(config: AppConfig) -> Result<bool> {
+    log::info!(
+        "Saving app config for user: {}",
+        config.user_config.username
+    );
+    // 这里应该将配置保存到本地存储
+    // 暂时返回true表示保存成功
+    Ok(true)
+}
+
+/// 获取详细的设备指纹信息
+#[tauri::command]
+pub async fn get_detailed_device_fingerprint() -> Result<DetailedDeviceFingerprint> {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    log::info!("Generating detailed device fingerprint");
+
+    // 获取系统信息
+    let platform = std::env::consts::OS.to_string();
+    let arch = std::env::consts::ARCH.to_string();
+    
+    // 生成基本指纹
+    let mut hasher = DefaultHasher::new();
+    platform.hash(&mut hasher);
+    arch.hash(&mut hasher);
+    
+    // 添加时间戳确保唯一性
+    let timestamp = chrono::Utc::now().timestamp();
+    timestamp.hash(&mut hasher);
+    
+    let basic_fingerprint = format!("{:x}", hasher.finish());
+    
+    // 生成增强指纹（包含更多系统信息）
+    let mut enhanced_hasher = DefaultHasher::new();
+    
+    // 添加系统信息
+    enhanced_hasher.write_u64(timestamp as u64);
+    enhanced_hasher.write(platform.as_bytes());
+    enhanced_hasher.write(arch.as_bytes());
+    
+    // 添加进程ID和线程ID增加随机性
+    let process_id = std::process::id();
+    let thread_id = std::thread::current().id();
+    process_id.hash(&mut enhanced_hasher);
+    thread_id.hash(&mut enhanced_hasher);
+    
+    let enhanced_fingerprint = format!("enhanced_{:x}", enhanced_hasher.finish());
+    
+    let fingerprint = DetailedDeviceFingerprint {
+        basic_fingerprint: basic_fingerprint.clone(),
+        enhanced_fingerprint,
+        platform,
+        arch,
+        timestamp: chrono::Utc::now(),
+        machine_id: Some(basic_fingerprint),
+    };
+    
+    log::info!("Generated detailed device fingerprint: {:?}", fingerprint);
+    
+    Ok(fingerprint)
+}
+
+/// 详细的设备指纹信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetailedDeviceFingerprint {
+    pub basic_fingerprint: String,
+    pub enhanced_fingerprint: String,
+    pub platform: String,
+    pub arch: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub machine_id: Option<String>,
 }

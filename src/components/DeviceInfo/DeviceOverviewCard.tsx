@@ -392,20 +392,6 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
   const [memoryStorageInfo, setMemoryStorageInfo] = useState<MemoryStorageInfo | null>(null);
   const [isLoadingMemoryStorage, setIsLoadingMemoryStorage] = useState(false);
   const [selectedTab, setSelectedTab] = useState("basic");
-  // 添加替换功能相关状态
-  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
-  const [, setCurrentReplaceItem] = useState<string | null>(null);
-  const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({
-    deviceName: true,
-    brand: true,
-    model: true,
-    serial: true,
-    androidVersion: true,
-    sdkVersion: true,
-    deviceCode: true,      // 设备代号
-    buildTime: true,       // 编译时间
-    boardId: true,        // 主板ID
-  });
 
   // 获取内存和存储信息
   const fetchMemoryStorageInfo = async () => {
@@ -432,68 +418,9 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
 
   // 处理打开替换对话框
 
-  // 处理关闭替换对话框
-  const handleCloseReplaceDialog = () => {
-    setReplaceDialogOpen(false);
-    setCurrentReplaceItem(null);
-  };
 
-  // 处理选择项变化
-  const handleItemToggle = (itemId: string) => {
-    useAppStore();
-    setSelectedItems(prev => {
-      // 计算当前选中的数量
-      const currentSelectedCount = Object.values(prev).filter(Boolean).length;
-      const isCurrentlySelected = prev[itemId];
 
-      // 如果要取消选中，检查是否会低于最小值（1个）
-      if (isCurrentlySelected && currentSelectedCount <= 1) {
-        dispatchToast(
-          <Toast>
-            <ToastTitle>提示</ToastTitle>
-            至少需要保留1个显示项
-          </Toast>,
-          { intent: "warning", timeout: 2000 }
-        );
-        return prev;
-      }
 
-      // 如果要选中，检查是否会超过最大值（9个）
-      if (!isCurrentlySelected && currentSelectedCount >= 9) {
-        dispatchToast(
-          <Toast>
-            <ToastTitle>提示</ToastTitle>
-            最多只能选择9个显示项
-          </Toast>,
-          { intent: "warning", timeout: 2000 }
-        );
-        return prev;
-      }
-
-      // 更新选中状态
-      return {
-        ...prev,
-        [itemId]: !prev[itemId]
-      };
-    });
-  };
-
-  // 处理确认替换
-  const handleConfirmReplace = () => {
-    // 保存当前选中状态并关闭弹窗
-    onCustomize(); // 通知父组件保存更改
-    setReplaceDialogOpen(false);
-    setCurrentReplaceItem(null);
-    
-    // 显示保存成功提示
-    dispatchToast(
-      <Toast>
-        <ToastTitle>保存成功</ToastTitle>
-        信息面板已更新
-      </Toast>,
-      { intent: "success", timeout: 2000 }
-    );
-  };
 
   // 复制文本到剪贴板的函数
   const handleCopyValue = async (value: string, label: string) => {
@@ -502,17 +429,14 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
         setStatusBarMessage({
           type: "info",
           message: `已复制 ${label} 到剪贴板`,
-          icon: <Copy24Regular />,
           duration: 1000,
         });
     } catch (error) {
-      dispatchToast(
-        <Toast>
-          <ToastTitle>复制失败</ToastTitle>
-          无法访问剪贴板
-        </Toast>,
-        { intent: "error", timeout: 2000 }
-      );
+      setStatusBarMessage({
+        type: "error",
+        message: `复制 ${label} 失败`,
+        duration: 2000,
+      });
     }
   };
 
@@ -542,15 +466,6 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                     className={styles.headerRefreshButton}
                   />
                 )}
-                {/* 自定义信息面板 */}
-                <Button
-                  appearance="subtle"
-                  size="small"
-                  icon={<Edit24Regular />}
-                  onClick={() => setReplaceDialogOpen(true)}
-                  title="自定义信息面板"
-                  className={styles.headerRefreshButton}
-                />
               </div>
             </div>
 
@@ -688,74 +603,6 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
         </div>
       </Card>
 
-      {/* 自定义替换弹窗 */}
-      <Dialog open={replaceDialogOpen} onOpenChange={(_, data) => {
-        if (!data.open) {
-          handleCloseReplaceDialog();
-        }
-      }}>
-        <DialogSurface>
-          <DialogBody>
-            <DialogTitle>自定义信息面板显示项（正在开发中）</DialogTitle>
-            <DialogContent>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} className={styles.noSelect}>
-                <div style={{ marginBottom: '8px', color: 'var(--colorNeutralForeground2)' }}>
-                  已选择 {Object.values(selectedItems).filter(Boolean).length}/9 项
-                </div>
-                <Checkbox
-                  label="设备名称"
-                  checked={selectedItems.deviceName}
-                  onChange={() => handleItemToggle('deviceName')}
-                />
-                <Checkbox
-                  label="品牌"
-                  checked={selectedItems.brand}
-                  onChange={() => handleItemToggle('brand')}
-                />
-                <Checkbox
-                  label="型号"
-                  checked={selectedItems.model}
-                  onChange={() => handleItemToggle('model')}
-                />
-                <Checkbox
-                  label="序列号"
-                  checked={selectedItems.serial}
-                  onChange={() => handleItemToggle('serial')}
-                />
-                <Checkbox
-                  label="Android版本"
-                  checked={selectedItems.androidVersion}
-                  onChange={() => handleItemToggle('androidVersion')}
-                />
-                <Checkbox
-                  label="SDK版本"
-                  checked={selectedItems.sdkVersion}
-                  onChange={() => handleItemToggle('sdkVersion')}
-                />
-                <Checkbox
-                  label="设备代号"
-                  checked={selectedItems.deviceCode}
-                  onChange={() => handleItemToggle('deviceCode')}
-                />
-                <Checkbox
-                  label="编译时间"
-                  checked={selectedItems.buildTime}
-                  onChange={() => handleItemToggle('buildTime')}
-                />
-                <Checkbox
-                  label="主板ID"
-                  checked={selectedItems.boardId}
-                  onChange={() => handleItemToggle('boardId')}
-                />
-              </div>
-            </DialogContent>
-            <DialogActions>
-              <Button appearance="secondary" onClick={handleCloseReplaceDialog}>取消</Button>
-              <Button appearance="primary" onClick={handleConfirmReplace}>确定</Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
     </>
   );
 };

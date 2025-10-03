@@ -352,6 +352,10 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
             <div className={styles.statLabel}>下载中</div>
           </div>
           <div className={styles.statItem}>
+            <div className={styles.statNumber}>{stats.extracting}</div>
+            <div className={styles.statLabel}>提取中</div>
+          </div>
+          <div className={styles.statItem}>
             <div className={styles.statNumber}>{stats.completed}</div>
             <div className={styles.statLabel}>已完成</div>
           </div>
@@ -378,6 +382,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
         >
           <Option value="all">全部</Option>
           <Option value="downloading">下载中</Option>
+          <Option value="extracting">提取中</Option>
           <Option value="paused">已暂停</Option>
           <Option value="completed">已完成</Option>
           <Option value="failed">失败</Option>
@@ -514,7 +519,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
 
       {/* 进度信息 */}
       <div className={styles.taskProgress}>
-        {(task.status === 'downloading' || task.status === 'paused') ? (
+        {(task.status === 'downloading' || task.status === 'paused' || task.status === 'extracting') ? (
           <>
             <ProgressBar
               value={task.progress / 100}
@@ -565,7 +570,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
           <Button size="small" appearance="subtle" icon={<Play24Regular />} onClick={handleResume} />
         )}
 
-        {(task.status === 'downloading' || task.status === 'paused') && (
+        {(task.status === 'downloading' || task.status === 'paused' || task.status === 'extracting') && (
           <Button size="small" appearance="subtle" icon={<Dismiss24Regular />} onClick={handleCancel} />
         )}
 

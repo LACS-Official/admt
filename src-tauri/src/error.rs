@@ -95,6 +95,9 @@ pub enum HoutError {
 
     #[error("Invalid input: {message}")]
     InvalidInput { message: String },
+
+    #[error("Download cancelled")]
+    DownloadCancelled,
 }
 
 impl From<std::io::Error> for HoutError {
