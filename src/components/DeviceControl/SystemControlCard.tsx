@@ -6,15 +6,6 @@ import {
   Text,
   Button,
   Spinner,
-  Dialog,
-  DialogTrigger,
-  DialogSurface,
-  DialogTitle,
-  DialogContent,
-  DialogBody,
-  DialogActions,
-  Field,
-  Input,
 } from "@fluentui/react-components";
 import {
   Settings24Regular,
@@ -25,25 +16,23 @@ import {
   ArrowLeft24Regular,
   Apps24Regular,
   WrenchScrewdriver24Regular,
-  Phone24Regular,
+
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
-import { useAppStore } from "../../stores/appStore";
+import { useAppStore } from '@/stores/appStore';
+
 
 const useStyles = makeStyles({
   card: {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    minHeight: "200px",
   },
   content: {
     flex: 1,
-    padding: "16px",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
   },
   commandGrid: {
     display: "grid",
@@ -57,7 +46,6 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     gap: "8px",
-    padding: "12px",
     borderRadius: "6px",
   },
   commandIcon: {
@@ -80,14 +68,14 @@ interface SystemControlCardProps {
 const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
   const styles = useStyles();
   const { deviceService } = useDeviceService();
-  const { addNotification } = useAppStore();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
+    const { setStatusBarMessage } = useAppStore();
+  
 
   const executeCommand = async (commandId: string, command: string[], description: string) => {
     if (!device.connected) {
-      addNotification({
+      setStatusBarMessage({
         type: "error",
-        title: "设备未连接",
         message: "请确保设备已连接并启用USB调试",
       });
       return;
@@ -97,22 +85,20 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
     try {
       const result = await deviceService.executeAdbCommand(device.serial, command[0], command.slice(1));
       if (result.success) {
-        addNotification({
+        setStatusBarMessage({
           type: "success",
-          title: "命令执行成功",
           message: description,
         });
       } else {
-        addNotification({
+        setStatusBarMessage({
           type: "error",
-          title: "命令执行失败",
           message: result.error || "未知错误",
         });
       }
     } catch (error) {
-      addNotification({
+      setStatusBarMessage({
         type: "error",
-        title: "执行失败",
+
         message: `${description}失败: ${error}`,
       });
     } finally {
@@ -180,8 +166,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
     <Card className={styles.card}>
       <CardHeader
         image={<Settings24Regular />}
-        header={<Text weight="semibold">系统控制</Text>}
-        description={<Text size={200}>常用系统控制命令</Text>}
+        header={<Text weight="semibold">按键模拟</Text>}
       />
       
       <div className={styles.content}>

@@ -20,12 +20,10 @@ import {
   MenuPopover,
   MenuList,
   MenuItem,
-  Field,
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbDivider,
   Checkbox,
-  Badge,
   Dropdown,
   Option,
 } from "@fluentui/react-components";
@@ -34,11 +32,8 @@ import {
   Document24Regular,
   ArrowUp24Regular,
   Home24Regular,
-  ArrowClockwise24Regular,
-  FolderAdd24Regular,
   ArrowUpload24Regular,
   ArrowDownload24Regular,
-  Delete24Regular,
   MoreHorizontal24Regular,
   Copy24Regular,
   ChevronRight24Regular,
@@ -54,7 +49,6 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     gap: "12px",
-    padding: "16px",
   },
   card: {
     height: "100%",
@@ -498,6 +492,12 @@ const FileManagerPanel: React.FC = () => {
     const selectedFileItems = files.filter(f => selectedFiles.has(f.name));
     let successCount = 0;
     let failCount = 0;
+
+    // 添加下载开始的通知
+    setStatusBarMessage({
+      type: "info",
+      message: `正在下载 ${selectedFiles.size} 个文件，请稍候...`,
+    });
 
     for (const file of selectedFileItems) {
       if (file.type === 'file') {

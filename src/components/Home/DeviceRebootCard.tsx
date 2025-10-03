@@ -97,12 +97,6 @@ const useStyles = makeStyles({
     height: "100%",
     position: "relative",
   },
-  rebootOptionIcon: {
-    fontSize: "16px",
-    color: "var(--colorBrandForeground1)",
-    flexShrink: 0,
-    position: "absolute",
-  },
   rebootOptionTitle: {
     fontSize: "12px",
     fontWeight: "600",
@@ -181,10 +175,10 @@ const DeviceRebootCard: React.FC = () => {
       warning: true,  
     },
     {
-      id: "9008",
+      id: "edl",
       label: "高通深刷 9008",
       description: "重启到9008模式",
-      command: "9008", 
+      command: "edl", 
       warning: true,
     },
     {
@@ -195,6 +189,20 @@ const DeviceRebootCard: React.FC = () => {
       warning: true,
     },
   ];
+
+  // 判断设备是否处于fastboot模式
+  const isDeviceInFastbootMode = () => {
+    return selectedDevice?.mode === "fastboot" || selectedDevice?.mode === "fastbootd";
+  };
+
+  // 获取可用的重启选项列表
+  const getAvailableRebootOptions = () => {
+    if (isDeviceInFastbootMode()) {
+      // 在fastboot模式下，过滤掉关机模式
+      return rebootOptions.filter(option => option.id !== "poweroff");
+    }
+    return rebootOptions;
+  };
 
   // 清理确认状态的函数
   const clearPendingReboot = () => {
@@ -375,7 +383,7 @@ const DeviceRebootCard: React.FC = () => {
       <div className={styles.content}>
         {/* 重启选项列表 */}
         <div className={styles.rebootOptions}>
-          {rebootOptions.map((option) => (
+          {getAvailableRebootOptions().map((option) => (
             <div
               key={option.id}
               className={mergeClasses(

@@ -99,7 +99,6 @@ export interface CommandResult {
 
 export interface InstalledApp {
   packageName: string;
-  appName?: string;
   versionName?: string;
   versionCode?: string;
   installLocation?: string;

@@ -13,26 +13,9 @@ import {
   Field,
   Input,
   Button,
-  Spinner,
-  Checkbox,
-  Select,
-  Option,
-  Divider,
-  Tag,
-  TagGroup,
-  TagGroupProps,
-  TagProps,
-  Tooltip,
-  Overflow,
-  OverflowItem,
-  Menu,
-  MenuTrigger,
-  MenuPopover,
-  MenuList,
-  MenuItem,
+
 } from "@fluentui/react-components";
 import {
-  Code24Regular,
   Play24Regular,
   Delete24Regular,
   Copy24Regular,
@@ -43,7 +26,6 @@ import { useDeviceService } from "../../services/deviceService";
 
 const useStyles = makeStyles({
   container: {
-    padding: "16px",
     height: "100%",
     overflow: "auto",
   },

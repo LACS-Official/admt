@@ -21,7 +21,6 @@ import SettingsCard from "./SettingsCard";
 
 const useStyles = makeStyles({
   container: {
-    padding: "16px",
     height: "100%",
     overflow: "auto",
   },
@@ -213,24 +212,7 @@ const ScreenMirrorPanel: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Desktop24Regular />
-          <Text size={500} weight="semibold">安卓投屏</Text>
-          {currentSession && (
-            <>
-              <Badge appearance="filled" color="success">
-                {currentSession.deviceSerial}
-              </Badge>
-              <Badge 
-                appearance="filled" 
-                color={getStatusColor(currentStatus)}
-                className={styles.statusBadge}
-              >
-                {getStatusText(currentStatus)}
-              </Badge>
-            </>
-          )}
-        </div>
+
         
         <div className={styles.headerRight}>
           

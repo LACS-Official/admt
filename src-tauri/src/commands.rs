@@ -202,8 +202,12 @@ pub async fn reboot_device(serial: String, mode: String) -> Result<CommandResult
 
     if device.is_adb_available() {
         utils_execute_adb_command(&reboot_args, Some(10)).await
-    } else if device.is_fastboot_available() && mode == "system" {
-        execute_fastboot_command(&["-s", &serial, "reboot"], Some(10)).await
+    } else if device.is_fastboot_available() && (mode == "system" || mode == "edl") {
+        if mode == "edl" {
+            execute_fastboot_command(&["-s", &serial, "oem", "edl"], Some(10)).await
+        } else {
+            execute_fastboot_command(&["-s", &serial, "reboot"], Some(10)).await
+        }
     } else {
         Err(AdmtError::InvalidDeviceMode {
             mode: format!("{:?}", device.mode),

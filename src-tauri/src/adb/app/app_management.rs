@@ -94,7 +94,6 @@ pub async fn get_apk_info(apk_path: String) -> Result<ApkInfo> {
     let mut apk_info = ApkInfo {
         file_path: apk_path.clone(),
         package_name: None,
-        app_name: None,
         version_name: None,
         version_code: None,
         min_sdk_version: None,
@@ -307,7 +306,6 @@ async fn parse_package_line(line: &str, serial: &str) -> Option<InstalledApp> {
     // 获取应用详细信息
     let mut app = InstalledApp {
         package_name: package_name.clone(),
-        app_name: None,
         version_name: None,
         version_code: None,
         install_location: Some(apk_path.to_string()),
@@ -350,7 +348,7 @@ fn parse_package_dump(output: &str, app: &mut InstalledApp) {
                         // 移除可能的引号
                         let label = label.trim_matches('"');
                         if !label.is_empty() {
-                            app.app_name = Some(label.to_string());
+
                         }
                     }
                 } else if part.starts_with("enabled=") {
@@ -430,11 +428,7 @@ fn parse_aapt_output(output: &str, apk_info: &mut ApkInfo) {
                     apk_info.features.push(feat.to_string());
                 }
             }
-        } else if line.starts_with("application-label:") {
-            // 解析应用标签
-            if let Some(label) = line.split(':').nth(1) {
-                apk_info.app_name = Some(label.trim().to_string());
-            }
+        
         } else if line.starts_with("application-debuggable") {
             // 检查是否可调试
             apk_info.is_debuggable = true;
