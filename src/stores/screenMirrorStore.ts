@@ -10,8 +10,8 @@ import {
 } from '../types/screenMirror';
 
 interface ScreenMirrorState {
-  // 当前活动的投屏会话
-  currentSession: ScreenMirrorSession | null;
+  // 所有活动的投屏会话（支持多设备同时投屏）
+  activeSessions: ScreenMirrorSession[];
   
   // 所有投屏会话历史
   sessions: ScreenMirrorSession[];
@@ -19,7 +19,7 @@ interface ScreenMirrorState {
   // 支持投屏的设备列表
   supportedDevices: ScreenMirrorDevice[];
   
-  // 当前选中的设备
+  // 当前选中的设备（用于UI显示）
   selectedDevice: ScreenMirrorDevice | null;
   
   // 投屏配置
@@ -42,8 +42,17 @@ interface ScreenMirrorState {
 }
 
 interface ScreenMirrorActions {
-  // 设置当前会话
-  setCurrentSession: (session: ScreenMirrorSession | null) => void;
+  // 添加活动会话
+  addActiveSession: (session: ScreenMirrorSession) => void;
+  
+  // 移除活动会话
+  removeActiveSession: (sessionId: string) => void;
+  
+  // 更新活动会话
+  updateActiveSession: (sessionId: string, updates: Partial<ScreenMirrorSession>) => void;
+  
+  // 获取指定设备的活动会话
+  getActiveSessionByDevice: (deviceSerial: string) => ScreenMirrorSession | null;
   
   // 添加会话到历史
   addSession: (session: ScreenMirrorSession) => void;
@@ -84,19 +93,25 @@ interface ScreenMirrorActions {
   // 清理会话历史
   clearSessionHistory: () => void;
   
-  // 获取当前会话状态
-  getCurrentStatus: () => ScreenMirrorStatus;
+  // 获取指定设备的状态
+  getDeviceStatus: (deviceSerial: string) => ScreenMirrorStatus;
   
-  // 检查是否可以开始投屏
-  canStartMirroring: () => boolean;
+  // 检查设备是否可以开始投屏
+  canStartMirroring: (deviceSerial: string) => boolean;
   
-  // 检查是否正在投屏
-  isStreaming: () => boolean;
+  // 检查设备是否正在投屏
+  isDeviceStreaming: (deviceSerial: string) => boolean;
+  
+  // 检查是否有任何设备正在投屏
+  isAnyDeviceStreaming: () => boolean;
+  
+  // 处理投屏进程终止
+  handleProcessTerminated: (sessionId: string) => void;
 }
 
 export const useScreenMirrorStore = create<ScreenMirrorState & ScreenMirrorActions>((set, get) => ({
   // 初始状态
-  currentSession: null,
+  activeSessions: [],
   sessions: [],
   supportedDevices: [],
   selectedDevice: null,
@@ -108,16 +123,30 @@ export const useScreenMirrorStore = create<ScreenMirrorState & ScreenMirrorActio
   isFullscreen: false,
 
   // Actions
-  setCurrentSession: (session) => set({ currentSession: session }),
+  addActiveSession: (session) => set((state) => ({
+    activeSessions: [...state.activeSessions, session]
+  })),
+
+  removeActiveSession: (sessionId) => set((state) => ({
+    activeSessions: state.activeSessions.filter(session => session.id !== sessionId)
+  })),
+
+  updateActiveSession: (sessionId, updates) => set((state) => ({
+    activeSessions: state.activeSessions.map(session =>
+      session.id === sessionId ? { ...session, ...updates } : session
+    )
+  })),
+
+  getActiveSessionByDevice: (deviceSerial) => {
+    const { activeSessions } = get();
+    return activeSessions.find(session => session.deviceSerial === deviceSerial) || null;
+  },
 
   addSession: (session) => set((state) => ({
     sessions: [...state.sessions, session]
   })),
 
   updateSession: (sessionId, updates) => set((state) => ({
-    currentSession: state.currentSession?.id === sessionId 
-      ? { ...state.currentSession, ...updates }
-      : state.currentSession,
     sessions: state.sessions.map(session =>
       session.id === sessionId ? { ...session, ...updates } : session
     )
@@ -158,20 +187,39 @@ export const useScreenMirrorStore = create<ScreenMirrorState & ScreenMirrorActio
 
   clearSessionHistory: () => set({ sessions: [] }),
 
-  getCurrentStatus: () => {
-    const { currentSession } = get();
-    return currentSession?.status || 'disconnected';
+  getDeviceStatus: (deviceSerial) => {
+    const session = get().getActiveSessionByDevice(deviceSerial);
+    return session?.status || 'disconnected';
   },
 
-  canStartMirroring: () => {
-    const { selectedDevice, currentSession } = get();
-    return selectedDevice !== null && 
-           selectedDevice.isSupported && 
-           (!currentSession || currentSession.status === 'disconnected');
+  canStartMirroring: (deviceSerial) => {
+    const { activeSessions } = get();
+    // 检查设备是否已经有正在投屏的会话
+    const existingSession = activeSessions.find(session => session.deviceSerial === deviceSerial && session.status === 'streaming');
+    return !existingSession;
   },
 
-  isStreaming: () => {
-    const { currentSession } = get();
-    return currentSession?.status === 'streaming';
-  }
+  isDeviceStreaming: (deviceSerial) => {
+    const status = get().getDeviceStatus(deviceSerial);
+    return status === 'streaming';
+  },
+
+  isAnyDeviceStreaming: () => {
+    const { activeSessions } = get();
+    return activeSessions.some(session => session.status === 'streaming');
+  },
+
+  handleProcessTerminated: (sessionId) => set((state) => {
+    // 更新会话状态为已断开
+    const updatedSessions = state.activeSessions.map(session =>
+      session.id === sessionId ? { ...session, status: 'disconnected' as const } : session
+    );
+    
+    // 从活动会话中移除
+    const filteredSessions = updatedSessions.filter(session => session.id !== sessionId);
+    
+    return {
+      activeSessions: filteredSessions
+    };
+  })
 }));

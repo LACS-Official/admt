@@ -21,10 +21,12 @@ use adb::device::device_reboot::reboot_device;
 use adb::file::file::{push_file, pull_file, list_device_files};
 use adb::scrcpy::screen_mirror::{check_screen_mirror_support, diagnose_scrcpy, start_screen_mirror, stop_screen_mirror};
 use cache::cache_cleanup_task;
-use commands::{scan_devices, execute_adb_command_with_path, get_adb_tools_info, verify_adb_tools_integrity, get_device_properties, check_adb_availability, check_fastboot_availability, fastboot_flash_image, diagnose_adb_fastboot_paths, get_device_performance_info, get_device_memory_storage_info, check_device_connection, get_device_connection_info, download_apk, get_download_size, download_file, cancel_download, get_downloads_directory, cleanup_downloads, validate_activation_code_format, activate_application, check_activation_status, validate_local_activation_data, get_device_fingerprint, get_app_config, save_app_config, get_security_config, validate_security_config, get_platform_info, get_system_arch, open_devtools, is_debug_mode, set_window_always_on_top, get_window_always_on_top, get_app_environment, download_and_extract_software, get_default_download_directory, open_folder, check_file_exists, delete_file, read_json_file, execute_script_in_new_window, get_cache_stats, clear_all_cache, invalidate_device_cache, get_detailed_device_fingerprint, exit_app};
+use commands::{scan_devices, execute_adb_command_with_path, get_adb_tools_info, verify_adb_tools_integrity, get_device_properties, check_adb_availability, check_fastboot_availability, fastboot_flash_image, diagnose_adb_fastboot_paths, get_device_performance_info, get_device_memory_storage_info, check_device_connection, get_device_connection_info, download_apk, get_download_size, download_file, cancel_download, get_downloads_directory, cleanup_downloads, validate_activation_code_format, activate_application, check_activation_status, validate_local_activation_data, get_device_fingerprint, get_app_config, save_app_config, get_security_config, validate_security_config, get_platform_info, get_system_arch, open_devtools, is_debug_mode, set_window_always_on_top, get_window_always_on_top, get_app_environment, download_and_extract_software, get_default_download_directory, open_folder, check_file_exists, delete_file, read_json_file, execute_script_in_new_window, get_cache_stats, clear_all_cache, invalidate_device_cache, get_detailed_device_fingerprint, exit_app, terminate_process, check_process_alive};
 use fastboot::command::fastboot_command_runner::{execute_fastboot_command, execute_fastboot_command_with_path};
 use core::log::*;
 use sys::sys_tool_opener::{open_device_manager, open_task_manager};
+use tauri::Manager;
+use tauri_plugin_dialog::DialogExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -35,6 +37,25 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            // 当第二个实例启动时，显示提示信息
+            println!("检测到第二个实例尝试启动");
+            
+            // 获取主窗口
+            if let Some(window) = app.get_webview_window("main") {
+                // 将主窗口置于前台
+                let _ = window.show();
+                let _ = window.set_focus();
+                
+                // 显示提示对话框
+                tauri::async_runtime::spawn(async move {
+                    let _ = window.dialog()
+                        .message("玩机管家已经在运行中，无需重新打开。")
+                        .title("提示")
+                        .show(|_| {});
+                });
+            }
+        }))
         .invoke_handler(tauri::generate_handler![
             version::get_app_version,
             version::get_app_info,
@@ -48,6 +69,8 @@ pub fn run() {
             verify_adb_tools_integrity,
             reboot_device,
             install_apk,
+            get_current_app,
+            get_frozen_apps,
             push_file,
             pull_file,
             list_device_files,
@@ -145,7 +168,9 @@ pub fn run() {
             system_features::is_auto_start_supported,
             system_features::get_auto_start_config,
             system_features::validate_auto_start,
-            exit_app
+            exit_app,
+            terminate_process,
+            check_process_alive
         ])
         .setup(|_app| {
             // 初始化应用状态

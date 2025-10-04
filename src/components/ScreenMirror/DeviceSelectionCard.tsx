@@ -11,6 +11,7 @@ import {
 import {
   Phone24Regular,
   CheckmarkCircle24Regular,
+  Stop24Filled,
 } from "@fluentui/react-icons";
 import { ScreenMirrorDevice } from "../../types/screenMirror";
 
@@ -41,6 +42,13 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorBrandBackground2)",
     "&:hover": {
       backgroundColor: "var(--colorBrandBackground2Hover)",
+    },
+  },
+  streamingDevice: {
+    border: "1px solid var(--colorPaletteRedBorder1)",
+    "&:hover": {
+      backgroundColor: "var(--colorPaletteRedBackground1)",
+      border: "1px solid var(--colorPaletteRedBorder2)",
     },
   },
   deviceInfo: {
@@ -82,27 +90,47 @@ const useStyles = makeStyles({
     gap: "8px",
     padding: "16px",
   },
+  streamingIndicator: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    color: "var(--colorPaletteRedForeground1)",
+  },
 });
 
 interface DeviceSelectionCardProps {
   devices: ScreenMirrorDevice[];
   selectedDevice: ScreenMirrorDevice | null;
   onSelectDevice: (device: ScreenMirrorDevice | null) => void;
+  onDeviceAction: (device: ScreenMirrorDevice) => void;
   isLoading: boolean;
+  streamingDevices: string[]; // 设备序列号数组
 }
 
 const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
   devices,
   selectedDevice,
   onSelectDevice,
+  onDeviceAction,
   isLoading,
+  streamingDevices,
 }) => {
   const styles = useStyles();
 
   const handleDeviceClick = (device: ScreenMirrorDevice) => {
-    if (device.isSupported) {
-      onSelectDevice(selectedDevice?.serial === device.serial ? null : device);
+    // 如果设备正在投屏，则停止投屏
+    if (isDeviceStreaming(device.serial)) {
+      onDeviceAction(device);
+      return;
     }
+    
+    // 否则选择设备
+    onSelectDevice(selectedDevice?.serial === device.serial ? null : device);
+  };
+
+  const handleStreamingDeviceClick = (device: ScreenMirrorDevice) => {
+    // 专门处理投屏中设备的点击事件
+    onDeviceAction(device);
   };
 
   const formatResolution = (resolution?: string) => {
@@ -113,6 +141,10 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
   const formatDensity = (density?: number) => {
     if (!density) return "";
     return `${density}dpi`;
+  };
+
+  const isDeviceStreaming = (deviceSerial: string) => {
+    return streamingDevices.includes(deviceSerial);
   };
 
   return (
@@ -130,9 +162,9 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
       ) : devices.length === 0 ? (
         <div className={styles.noDevices}>
           <Phone24Regular style={{ fontSize: "32px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={300}>没有支持投屏的设备</Text>
+          <Text size={300}>没有可用的设备</Text>
           <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备运行 Android 5.0 或更高版本
+            请确保设备已连接并启用 USB 调试模式
           </Text>
         </div>
       ) : (
@@ -142,12 +174,9 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
               key={device.serial}
               className={mergeClasses(
                 styles.deviceItem,
-                selectedDevice?.serial === device.serial && styles.selectedDevice
               )}
-              onClick={() => handleDeviceClick(device)}
-              style={{
-                opacity: device.isSupported ? 1 : 0.6,
-                cursor: device.isSupported ? "pointer" : "not-allowed",
+              onClick={() => {
+                  handleDeviceClick(device);
               }}
             >
               <div className={styles.deviceInfo}>
@@ -174,32 +203,6 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
                 </div>
               </div>
               
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                {device.isSupported ? (
-                  <>
-                    <Badge 
-                      appearance="filled" 
-                      color="success" 
-                      size="small"
-                      className={styles.supportBadge}
-                    >
-                      支持
-                    </Badge>
-                    {selectedDevice?.serial === device.serial && (
-                      <CheckmarkCircle24Regular style={{ color: "var(--colorBrandForeground1)" }} />
-                    )}
-                  </>
-                ) : (
-                  <Badge 
-                    appearance="filled" 
-                    color="danger" 
-                    size="small"
-                    className={styles.supportBadge}
-                  >
-                    不支持
-                  </Badge>
-                )}
-              </div>
             </div>
           ))}
         </div>

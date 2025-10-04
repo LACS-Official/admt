@@ -1099,6 +1099,112 @@ pub async fn cancel_download(task_id: String, window: tauri::Window) -> Result<(
     Ok(())
 }
 
+/// 终止进程
+#[tauri::command]
+pub async fn terminate_process(process_id: u32) -> Result<bool> {
+    log::info!("Terminating process with ID: {}", process_id);
+
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        
+        let mut cmd = Command::new("taskkill");
+        cmd.args(&["/F", "/PID", &process_id.to_string()]);
+        
+        match cmd.output() {
+            Ok(output) => {
+                let success = output.status.success();
+                if success {
+                    log::info!("Successfully terminated process with ID: {}", process_id);
+                } else {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    log::error!("Failed to terminate process with ID: {}: {}", process_id, stderr);
+                }
+                Ok(success)
+            }
+            Err(e) => {
+                log::error!("Failed to execute taskkill command for process ID {}: {}", process_id, e);
+                Ok(false)
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        use std::process::Command;
+        
+        let mut cmd = Command::new("kill");
+        cmd.arg("-9");
+        cmd.arg(process_id.to_string());
+        
+        match cmd.output() {
+            Ok(output) => {
+                let success = output.status.success();
+                if success {
+                    log::info!("Successfully terminated process with ID: {}", process_id);
+                } else {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    log::error!("Failed to terminate process with ID: {}: {}", process_id, stderr);
+                }
+                Ok(success)
+            }
+            Err(e) => {
+                log::error!("Failed to execute kill command for process ID {}: {}", process_id, e);
+                Ok(false)
+            }
+        }
+    }
+}
+
+/// 检查进程是否存活
+#[tauri::command]
+pub async fn check_process_alive(process_id: u32) -> Result<bool> {
+    log::debug!("Checking if process with ID: {} is alive", process_id);
+
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        
+        let mut cmd = Command::new("tasklist");
+        cmd.args(&["/FI", &format!("PID eq {}", process_id), "/FO", "CSV", "/NH"]);
+        
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let is_alive = stdout.contains(&process_id.to_string());
+                log::debug!("Process with ID: {} is alive: {}", process_id, is_alive);
+                Ok(is_alive)
+            }
+            Err(e) => {
+                log::error!("Failed to check process status for ID {}: {}", process_id, e);
+                Ok(false)
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        use std::process::Command;
+        
+        let mut cmd = Command::new("ps");
+        cmd.arg("-p");
+        cmd.arg(process_id.to_string());
+        
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let is_alive = stdout.contains(&process_id.to_string());
+                log::debug!("Process with ID: {} is alive: {}", process_id, is_alive);
+                Ok(is_alive)
+            }
+            Err(e) => {
+                log::error!("Failed to check process status for ID {}: {}", process_id, e);
+                Ok(false)
+            }
+        }
+    }
+}
+
 /// 获取下载目录路径
 #[tauri::command]
 pub async fn get_downloads_directory() -> Result<String> {
