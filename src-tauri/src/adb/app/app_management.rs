@@ -401,6 +401,254 @@ fn parse_package_dump(output: &str, app: &mut InstalledApp) {
     }
 }
 
+/// 获取已冻结（被禁用）的应用列表
+#[tauri::command]
+pub async fn get_frozen_apps(serial: String) -> Result<Vec<InstalledApp>> {
+    let device = get_device_info(serial.clone()).await?;
+
+    if !device.is_adb_available() {
+        return Err(AdmtError::InvalidDeviceMode {
+            mode: format!("{:?}", device.mode),
+        });
+    }
+
+    // 尝试使用多种方法获取已冻结应用列表
+    let mut result;
+    
+    // 方法1: 使用 pm list packages -d (标准方法)
+    result = utils_execute_adb_command(&["-s", &serial, "shell", "pm list packages -d"], Some(30)).await?;
+    
+    // 如果方法1失败，尝试方法2: 使用 pm list packages | grep disabled
+    if !result.success || result.output.is_empty() {
+        result = utils_execute_adb_command(&["-s", &serial, "shell", "pm list packages | grep disabled"], Some(30)).await?;
+    }
+    
+    // 如果方法2也失败，尝试方法3: 直接查询所有应用然后检查状态
+    if !result.success || result.output.is_empty() {
+        // 先获取所有应用列表
+        let all_apps_result = utils_execute_adb_command(&["-s", &serial, "shell", "pm list packages"], Some(30)).await?;
+        
+        if all_apps_result.success && !all_apps_result.output.is_empty() {
+            let all_packages: Vec<String> = all_apps_result.output
+                .lines()
+                .map(|l| l.trim())
+                .filter(|l| l.starts_with("package:"))
+                .map(|l| l.replace("package:", ""))
+                .filter(|l| !l.is_empty())
+                .collect();
+            
+            // 检查每个应用的状态
+            let mut disabled_packages = Vec::new();
+            for pkg in all_packages {
+                match utils_execute_adb_command(
+                    &["-s", &serial, "shell", &format!("dumpsys package {} | grep \"enabled=\"", pkg)],
+                    Some(10),
+                )
+                .await
+                {
+                    Ok(status_result) => {
+                        if status_result.success && status_result.output.contains("enabled=false") {
+                            disabled_packages.push(pkg);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("检查应用 {} 状态失败: {}", pkg, e);
+                    }
+                }
+            }
+            
+            // 构造模拟的 pm list packages -d 输出
+            result = CommandResult {
+                success: true,
+                output: disabled_packages.iter().map(|pkg| format!("package:{}", pkg)).collect::<Vec<_>>().join("\n"),
+                error: None,
+                exit_code: Some(0),
+            };
+        }
+    }
+    
+    if result.success && !result.output.is_empty() {
+        let packages: Vec<String> = result.output
+            .lines()
+            .map(|l| l.trim())
+            .filter(|l| l.starts_with("package:"))
+            .map(|l| l.replace("package:", ""))
+            .filter(|l| !l.is_empty())
+            .collect();
+        
+        let mut apps = Vec::new();
+        
+        for package_name in packages {
+            // 获取应用详细信息
+            match utils_execute_adb_command(
+                &["-s", &serial, "shell", "pm", "dump", &package_name],
+                Some(10),
+            )
+            .await
+            {
+                Ok(dump_result) => {
+                    if dump_result.success {
+                        let mut app = InstalledApp {
+                            package_name: package_name.clone(),
+                            version_name: None,
+                            version_code: None,
+                            install_location: None,
+                            is_system_app: false,
+                            is_enabled: false, // 已冻结应用肯定是禁用的
+                            apk_path: None,
+                            install_time: None,
+                            update_time: None,
+                            permissions: Vec::new(),
+                        };
+                        
+                        parse_package_dump(&dump_result.output, &mut app);
+                        apps.push(app);
+                    } else {
+                        // 如果无法获取详细信息，创建基本应用对象
+                        apps.push(InstalledApp {
+                            package_name,
+                            version_name: None,
+                            version_code: None,
+                            install_location: None,
+                            is_system_app: false,
+                            is_enabled: false,
+                            apk_path: None,
+                            install_time: None,
+                            update_time: None,
+                            permissions: Vec::new(),
+                        });
+                    }
+                }
+                Err(_) => {
+                    // 如果无法获取详细信息，创建基本应用对象
+                    apps.push(InstalledApp {
+                        package_name,
+                        version_name: None,
+                        version_code: None,
+                        install_location: None,
+                        is_system_app: false,
+                        is_enabled: false,
+                        apk_path: None,
+                        install_time: None,
+                        update_time: None,
+                        permissions: Vec::new(),
+                    });
+                }
+            }
+        }
+        
+        Ok(apps)
+    } else {
+        Err(AdmtError::CommandFailed {
+            command: "pm list packages -d".to_string(),
+            error: result.error.unwrap_or_default(),
+        })
+    }
+}
+
+/// 获取当前前台应用
+#[tauri::command]
+pub async fn get_current_app(serial: String) -> Result<Option<InstalledApp>> {
+    let device = get_device_info(serial.clone()).await?;
+
+    if !device.is_adb_available() {
+        return Err(AdmtError::InvalidDeviceMode {
+            mode: format!("{:?}", device.mode),
+        });
+    }
+
+    // 获取当前前台应用包名
+    let activity_result = utils_execute_adb_command(
+        &["-s", &serial, "shell", "dumpsys activity activities"],
+        Some(30),
+    )
+    .await?;
+
+    if !activity_result.success || activity_result.output.is_empty() {
+        return Err(AdmtError::CommandFailed {
+            command: "dumpsys activity activities".to_string(),
+            error: activity_result.error.unwrap_or_default(),
+        });
+    }
+
+    let lines: Vec<&str> = activity_result.output.lines().collect();
+    // 查找包含 ResumedActivity 的行
+    let resumed = lines.iter().find(|l| l.contains("ResumedActivity") || l.contains("mResumedActivity"));
+    
+    if resumed.is_none() {
+        return Ok(None);
+    }
+
+    // 解析形如 com.example/.MainActivity 或 com.example/com.example.MainActivity
+    let package_name = if let Some(matched) = resumed.unwrap().find(" ") {
+        let after_space = &resumed.unwrap()[matched + 1..];
+        if let Some(slash_pos) = after_space.find('/') {
+            after_space[..slash_pos].to_string()
+        } else {
+            return Ok(None);
+        }
+    } else {
+        return Ok(None);
+    };
+
+    // 获取应用详细信息
+    match utils_execute_adb_command(
+        &["-s", &serial, "shell", "pm", "dump", &package_name],
+        Some(10),
+    )
+    .await
+    {
+        Ok(dump_result) => {
+            if dump_result.success {
+                let mut app = InstalledApp {
+                    package_name: package_name.clone(),
+                    version_name: None,
+                    version_code: None,
+                    install_location: None,
+                    is_system_app: false,
+                    is_enabled: true, // 当前运行的应用肯定是启用的
+                    apk_path: None,
+                    install_time: None,
+                    update_time: None,
+                    permissions: Vec::new(),
+                };
+                
+                parse_package_dump(&dump_result.output, &mut app);
+                Ok(Some(app))
+            } else {
+                // 如果无法获取详细信息，创建基本应用对象
+                Ok(Some(InstalledApp {
+                    package_name,
+                    version_name: None,
+                    version_code: None,
+                    install_location: None,
+                    is_system_app: false,
+                    is_enabled: true,
+                    apk_path: None,
+                    install_time: None,
+                    update_time: None,
+                    permissions: Vec::new(),
+                }))
+            }
+        }
+        Err(_) => {
+            // 如果无法获取详细信息，创建基本应用对象
+            Ok(Some(InstalledApp {
+                package_name,
+                version_name: None,
+                version_code: None,
+                install_location: None,
+                is_system_app: false,
+                is_enabled: true,
+                apk_path: None,
+                install_time: None,
+                update_time: None,
+                permissions: Vec::new(),
+            }))
+        }
+    }
+}
+
 /// 解析AAPT输出
 fn parse_aapt_output(output: &str, apk_info: &mut ApkInfo) {
     for line in output.lines() {

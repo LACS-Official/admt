@@ -2,10 +2,9 @@ use crate::adb::device::device_info::get_device_info;
 use crate::device::CommandResult;
 use crate::error::{AdmtError, Result};
 use crate::utils::{
-    execute_adb_command as utils_execute_adb_command, execute_fastboot_command,
+        execute_adb_command as utils_execute_adb_command, execute_fastboot_command,
 };
 
-/// 重启设备到指定模式
 #[tauri::command]
 pub async fn reboot_device(serial: String, mode: String) -> Result<CommandResult> {
     let device = get_device_info(serial.clone()).await?;

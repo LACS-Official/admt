@@ -21,10 +21,17 @@ pub struct ScreenMirrorDevice {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ScreenMirrorConfig {
     pub quality: ScreenMirrorQuality,
+    #[serde(rename = "showTouches")]
     pub show_touches: bool,
+    #[serde(rename = "stayAwake")]
     pub stay_awake: bool,
+    #[serde(rename = "turnScreenOff")]
     pub turn_screen_off: bool,
+    #[serde(rename = "recordScreen")]
+    pub record_screen: bool,
+    #[serde(rename = "controlEnabled")]
     pub control_enabled: bool,
+    #[serde(rename = "audioEnabled")]
     pub audio_enabled: bool,
 }
 
@@ -228,68 +235,19 @@ pub async fn check_screen_mirror_support(device_serial: String) -> Result<Screen
     let output = run_adb_command(&["-s", &device_serial, "shell", "getprop", "ro.product.brand"]).await?;
     device.name = format!("{} {}", output.trim(), device.model);
 
-    // 获取屏幕分辨率
-    let output = run_adb_command(&[
-        "-s",
-        &device_serial,
-        "shell",
-        "wm",
-        "size",
-    ]).await?;
-    device.resolution = output
-        .lines()
-        .next()
-        .unwrap_or("")
-        .split(":")
-        .nth(1)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-
-    // 获取屏幕密度
-    let output = run_adb_command(&[
-        "-s",
-        &device_serial,
-        "shell",
-        "wm",
-        "density",
-    ]).await?;
-    device.density = output
-        .lines()
-        .next()
-        .unwrap_or("")
-        .split(":")
-        .nth(1)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-
-    // 获取屏幕方向
-    let output = run_adb_command(&[
-        "-s",
-        &device_serial,
-        "shell",
-        "dumpsys",
-        "input",
-    ]).await?;
+    // 简化检测 - 只检查基本连接和名称，默认所有设备都支持投屏
+    device.is_supported = !device.model.is_empty();
     
-    // 解析方向信息
-    for line in output.lines() {
-        if line.contains("SurfaceOrientation") {
-            device.orientation = line
-                .split(":")
-                .nth(1)
-                .unwrap_or("0")
-                .trim()
-                .to_string();
-            break;
-        }
-    }
+    // 设置默认分辨率
+    device.resolution = "1920x1080".to_string();
+    
+    // 设置默认密度
+    device.density = "480".to_string();
+    
+    // 设置默认方向
+    device.orientation = "0".to_string();
 
-    // 检查是否支持屏幕镜像（简化检查）
-    device.is_supported = !device.resolution.is_empty() && !device.model.is_empty();
-
-    // 添加支持的编解码器（简化）
+    // 添加支持的编解码器
     device.supported_codecs = vec!["h264".to_string(), "h265".to_string()];
 
     log::info!("Device screen mirror support check completed: {:?}", device);
@@ -363,6 +321,10 @@ pub async fn start_screen_mirror(
     // 添加其他选项
     if config.show_touches {
         args.push("--show-touches".to_string());
+    }
+
+    if config.record_screen {
+        args.push("--record".to_string());
     }
 
     if config.stay_awake {
@@ -442,6 +404,12 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
         log::info!("Set working directory to: {}", parent_dir.display());
     }
 
+    // 设置工作目录为scrcpy所在目录，确保可以找到依赖文件
+    if let Some(parent_dir) = scrcpy_file.parent() {
+        cmd.current_dir(parent_dir);
+        log::info!("Set working directory to: {}", parent_dir.display());
+    }
+
     // 在Windows上隐藏命令行窗口
     #[cfg(windows)]
     {
@@ -486,14 +454,15 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
 pub async fn stop_screen_mirror(session_id: String) -> Result<bool> {
     log::info!("Stopping screen mirror session: {}", session_id);
 
-    // 这里应该从会话管理器中获取会话信息
-    // 暂时返回成功，实际实现需要进程管理
-
     // TODO: 实现进程终止逻辑
     // 1. 根据session_id查找对应的进程ID
     // 2. 终止scrcpy进程
     // 3. 清理资源
-
+    
+    // 暂时返回成功，实际实现需要进程管理
+    // 注意：这里需要实现会话管理器来跟踪会话和进程ID的映射关系
+    log::warn!("stop_screen_mirror called but session management is not fully implemented");
+    
     Ok(true)
 }
 

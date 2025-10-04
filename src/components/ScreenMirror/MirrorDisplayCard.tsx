@@ -16,6 +16,7 @@ import {
   Screenshot24Regular,
   PhoneDesktop24Regular,
   Info24Regular,
+  Stop24Regular,
 } from "@fluentui/react-icons";
 import { ScreenMirrorSession } from "../../types/screenMirror";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
@@ -145,9 +146,10 @@ const useStyles = makeStyles({
 
 interface MirrorDisplayCardProps {
   session: ScreenMirrorSession;
+  onStopMirror?: () => void;
 }
 
-const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session }) => {
+const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMirror }) => {
   const styles = useStyles();
   const [isRecording, setIsRecording] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -325,6 +327,16 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session }) => {
           >
             {isRecording ? '停止录制' : '开始录制'}
           </Button>
+          
+          {onStopMirror && (
+            <Button
+              appearance="subtle"
+              icon={<Stop24Regular />}
+              onClick={onStopMirror}
+            >
+              停止投屏
+            </Button>
+          )}
           
           {!isFullscreen && (
             <Button

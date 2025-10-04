@@ -150,7 +150,7 @@ const AdbZonePanel: React.FC = () => {
     },
     {
       id: "screen-mirror" as AdbZoneView,
-      label: "屏幕共享",
+      label: "设备投屏",
       icon: <Settings24Regular />,
     },
     {

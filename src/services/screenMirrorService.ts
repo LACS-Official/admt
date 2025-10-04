@@ -6,6 +6,7 @@ import {
   ScreenMirrorStats,
   ScreenMirrorControlEvent 
 } from "../types/screenMirror";
+import { ScreenMirrorProcessMonitor } from "./screenMirrorProcessMonitor";
 
 /**
  * 投屏服务 - 处理与后端的投屏相关通信
@@ -46,12 +47,35 @@ export class ScreenMirrorService {
   /**
    * 开始投屏
    */
-  static async startMirror(deviceSerial: string, config: ScreenMirrorConfig): Promise<ScreenMirrorSession> {
+  static async startMirror(
+    deviceSerial: string, 
+    config: ScreenMirrorConfig,
+    onProcessTerminated?: (sessionId: string) => void
+  ): Promise<ScreenMirrorSession> {
     try {
       const session = await invoke<ScreenMirrorSession>("start_screen_mirror", {
         deviceSerial,
         config,
       });
+
+      // 获取进程监控实例
+      const processMonitor = ScreenMirrorProcessMonitor.getInstance();
+      
+      // 注册会话并开始进程监控
+      // 注意：这里假设后端返回的session中包含processId字段
+      // 如果后端没有返回，需要通过其他方式获取进程ID
+      if (session.processId) {
+        await processMonitor.registerSession(
+          session.id, 
+          session.processId, 
+          (isAlive) => {
+            if (!isAlive && onProcessTerminated) {
+              onProcessTerminated(session.id);
+            }
+          }
+        );
+      }
+
       return session;
     } catch (error) {
       console.error(`Failed to start screen mirror for ${deviceSerial}:`, error);
@@ -64,9 +88,25 @@ export class ScreenMirrorService {
    */
   static async stopMirror(sessionId: string): Promise<boolean> {
     try {
+      // 获取进程监控实例
+      const processMonitor = ScreenMirrorProcessMonitor.getInstance();
+      
+      // 首先尝试通过进程监控终止进程
+      if (processMonitor.isMonitoring(sessionId)) {
+        const terminated = await processMonitor.terminateProcess(sessionId);
+        if (terminated) {
+          return true;
+        }
+      }
+      
+      // 如果进程监控方式失败，回退到原来的方式
       const result = await invoke<boolean>("stop_screen_mirror", {
         sessionId,
       });
+      
+      // 确保停止监控
+      processMonitor.unregisterSession(sessionId);
+      
       return result;
     } catch (error) {
       console.error(`Failed to stop screen mirror session ${sessionId}:`, error);

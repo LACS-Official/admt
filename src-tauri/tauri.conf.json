@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "玩机管家",
         "width": 1024,
         "height": 720,
