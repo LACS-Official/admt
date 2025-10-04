@@ -5,6 +5,7 @@ export interface DeviceInfo {
   connected: boolean;
   lastSeen?: Date;
   boardSerialNumber?: string;
+  fastbootVariables?: Record<string, string>; // Fastboot模式下的设备变量
 }
 
 export type DeviceMode = 

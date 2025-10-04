@@ -22,6 +22,8 @@ import { DeviceInfo } from "../../types/device";
 import { deviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
+import { FastbootStorageInfoPanel } from "./FastbootStorageInfoPanel";
+import { DeviceInfoItem } from "./DeviceInfoItem";
 
 // 定义信息面板组件的props类型
 interface InfoPanelProps {
@@ -80,12 +82,16 @@ const useStyles = makeStyles({
     borderRadius: "12px",
     boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04)",
     backgroundColor: "var(--colorNeutralBackground1)",
-    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     position: "relative",
     overflow: "hidden",
     ":hover": {
       boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
     },
+  },
+  expandedCard: {
+    height: "80vh", // 使用视口高度的90%
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   header: {
     display: "flex",
@@ -112,6 +118,15 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "10px",
     minWidth: 0,
+  },
+  // fastboot 模式下的设备信息行，确保标题、刷新按钮和标签页在同一行
+  fastbootDeviceInfoRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    minWidth: 0,
+    flexWrap: "nowrap", // 防止换行
+    justifyContent: "space-between", // 元素之间均匀分布
   },
   // 左半部分第二行：标签页和刷新按钮
   controlsRow: {
@@ -381,6 +396,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
   const [memoryStorageInfo, setMemoryStorageInfo] = useState<MemoryStorageInfo | null>(null);
   const [isLoadingMemoryStorage, setIsLoadingMemoryStorage] = useState(false);
   const [selectedTab, setSelectedTab] = useState("basic");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // 获取内存和存储信息
   const fetchMemoryStorageInfo = async () => {
@@ -410,7 +426,17 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
     if (device.mode === "fastboot" && selectedTab !== "basic") {
       setSelectedTab("basic");
     }
-  }, [device.mode, selectedTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [device.mode]);
+
+  // 监听标签页变化，在fastboot模式下选择分区信息tab时展开面板
+  useEffect(() => {
+    if (device.mode === "fastboot") {
+      setIsExpanded(selectedTab === "fastboot-storage");
+    } else {
+      setIsExpanded(false);
+    }
+  }, [selectedTab, device.mode]);
 
   // 复制文本到剪贴板的函数
   const handleCopyValue = async (value: string, label: string) => {
@@ -435,135 +461,200 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
   return (
     <>
       <Toaster />
-      <Card className={styles.card}>
+      <Card className={mergeClasses(styles.card, isExpanded && styles.expandedCard)}>
         {/* 卡片头部 */}
         <div className={mergeClasses(styles.header, styles.noSelect)}>
           {/* 左半部分：设备信息、标签页、刷新按钮 */}
           <div className={styles.headerLeft}>
-            {/* 第一行：信息面板标题 */}
-            <div className={styles.deviceInfoRow}>
-              <div className={styles.title}>设备信息面板</div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {/* 刷新按钮 */}
-                {device.connected && (
-                  <Button
-                    appearance="subtle"
-                    size="small"
-                    icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
-                    onClick={fetchMemoryStorageInfo}
-                    disabled={isLoadingMemoryStorage}
-                    title="刷新内存和存储信息"
-                    className={styles.headerRefreshButton}
-                  />
-                )}
-              </div>
-            </div>
+            {/* fastboot 模式下，标题、刷新按钮和标签页在同一行 */}
+            {device.mode === "fastboot" ? (
+              <div className={styles.fastbootDeviceInfoRow}>
+                <div className={styles.title}>设备信息面板</div>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {/* 刷新按钮 */}
+                  {device.connected && (
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
+                      onClick={fetchMemoryStorageInfo}
+                      disabled={isLoadingMemoryStorage}
+                      title="刷新内存和存储信息"
+                      className={styles.headerRefreshButton}
+                    />
+                  )}
+                </div>
+                {/* fastboot 模式下的标签页 */}
+                <TabList
+                  selectedValue={selectedTab}
+                  onTabSelect={(_, data) => setSelectedTab(data.value as string)}
+                  className={styles.headerTabList}
+                >
+                  <Tab value="basic">基本信息</Tab>
+                  <Tab value="fastboot-security">安全状态</Tab>
+                  <Tab value="fastboot-partition">A/B分区</Tab>
+                  <Tab value="fastboot-hardware">硬件状态</Tab>
+                  <Tab value="fastboot-storage">分区信息</Tab>
 
-            {/* 第二行：标签页 */}
-            <div className={styles.controlsRow}>
-              <TabList
-                selectedValue={selectedTab}
-                onTabSelect={(_, data) => setSelectedTab(data.value as string)}
-                className={styles.headerTabList}
-              >
-                <Tab value="basic">基本信息</Tab>
-                {/* 只在非 fastboot 模式下显示其他标签页 */}
-                {device.mode !== "fastboot" && (
-                  <>
+                </TabList>
+              </div>
+            ) : (
+              <>
+                {/* 第一行：信息面板标题 */}
+                <div className={styles.deviceInfoRow}>
+                  <div className={styles.title}>设备信息面板</div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {/* 刷新按钮 */}
+                    {device.connected && (
+                      <Button
+                        appearance="subtle"
+                        size="small"
+                        icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
+                        onClick={fetchMemoryStorageInfo}
+                        disabled={isLoadingMemoryStorage}
+                        title="刷新内存和存储信息"
+                        className={styles.headerRefreshButton}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* 第二行：标签页 */}
+                <div className={styles.controlsRow}>
+                  <TabList
+                    selectedValue={selectedTab}
+                    onTabSelect={(_, data) => setSelectedTab(data.value as string)}
+                    className={styles.headerTabList}
+                  >
+                    <Tab value="basic">基本信息</Tab>
                     <Tab value="hardware">硬件信息</Tab>
                     <Tab value="system">系统信息</Tab>
                     <Tab value="security">安全信息</Tab>
                     <Tab value="network">网络信息</Tab>
-                  </>
-                )}
-              </TabList>
-            </div>
+                  </TabList>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* 右半部分：进度条区域 */}
-          <div className={styles.headerRight}>
-            {/* 进度条区域 - 右上角两行布局 */}
-            <div className={styles.progressSection}>
-              {/* 第一行 */}
-              <div className={styles.progressItem}>
-                <div className={styles.progressHeader}>
-                  <div className={styles.progressLabel}>
-                    <Battery024Regular />
-                    <Text>电池</Text>
+          {/* 右半部分：进度条区域 - 非 fastboot 模式下显示 */}
+          {device.mode !== "fastboot" && (
+            <div className={styles.headerRight}>
+              {/* 进度条区域 - 右上角两行布局 */}
+              <div className={styles.progressSection}>
+                {/* 第一行 */}
+                <div className={styles.progressItem}>
+                  <div className={styles.progressHeader}>
+                    <div className={styles.progressLabel}>
+                      <Battery024Regular />
+                      <Text>电池</Text>
+                    </div>
+                    <Text className={styles.progressValue}>{device.properties?.batteryLevel || 0}%</Text>
                   </div>
-                  <Text className={styles.progressValue}>{device.properties?.batteryLevel || 0}%</Text>
+                  <ProgressBar 
+                    value={(device.properties?.batteryLevel || 0) / 100} 
+                    color={getBatteryColor(device.properties?.batteryLevel)}
+                    thickness="medium"
+                  />
                 </div>
-                <ProgressBar 
-                  value={(device.properties?.batteryLevel || 0) / 100} 
-                  color={getBatteryColor(device.properties?.batteryLevel)}
-                  thickness="medium"
-                />
-              </div>
-              
-              <div className={styles.progressItem}>
-                <div className={styles.progressHeader}>
-                  <div className={styles.progressLabel}>
-                    <DesktopPulse24Regular />
-                    <Text>温度</Text>
+                
+                <div className={styles.progressItem}>
+                  <div className={styles.progressHeader}>
+                    <div className={styles.progressLabel}>
+                      <DesktopPulse24Regular />
+                      <Text>温度</Text>
+                    </div>
+                    <Text className={styles.progressValue}>
+                      {getTemperatureInfo(memoryStorageInfo).temperature !== null ?
+                        `${getTemperatureInfo(memoryStorageInfo).temperature?.toFixed(1)}°C` :
+                        getTemperatureInfo(memoryStorageInfo).status}
+                    </Text>
                   </div>
-                  <Text className={styles.progressValue}>
-                    {getTemperatureInfo(memoryStorageInfo).temperature !== null ?
-                      `${getTemperatureInfo(memoryStorageInfo).temperature?.toFixed(1)}°C` :
-                      getTemperatureInfo(memoryStorageInfo).status}
-                  </Text>
+                  <ProgressBar
+                    value={(getTemperatureInfo(memoryStorageInfo).temperaturePercent || 0) / 100}
+                    color={getTemperatureInfo(memoryStorageInfo).temperature ?
+                      getTemperatureColor(getTemperatureInfo(memoryStorageInfo).temperature!) : "success"}
+                    thickness="medium"
+                  />
                 </div>
-                <ProgressBar
-                  value={(getTemperatureInfo(memoryStorageInfo).temperaturePercent || 0) / 100}
-                  color={getTemperatureInfo(memoryStorageInfo).temperature ?
-                    getTemperatureColor(getTemperatureInfo(memoryStorageInfo).temperature!) : "success"}
-                  thickness="medium"
-                />
-              </div>
 
-              {/* 第二行 */}
-              <div className={styles.progressItem}>
-                <div className={styles.progressHeader}>
-                  <div className={styles.progressLabel}>
-                    <Storage24Regular />
-                    <Text>存储</Text>
+                {/* 第二行 */}
+                <div className={styles.progressItem}>
+                  <div className={styles.progressHeader}>
+                    <div className={styles.progressLabel}>
+                      <Storage24Regular />
+                      <Text>存储</Text>
+                    </div>
+                    <Text className={styles.progressValue}>{getStorageInfo(memoryStorageInfo).used}%</Text>
                   </div>
-                  <Text className={styles.progressValue}>{getStorageInfo(memoryStorageInfo).used}%</Text>
+                  <ProgressBar
+                    value={getStorageInfo(memoryStorageInfo).used / 100}
+                    color={getStorageColor(getStorageInfo(memoryStorageInfo).used)}
+                    thickness="medium"
+                  />
                 </div>
-                <ProgressBar
-                  value={getStorageInfo(memoryStorageInfo).used / 100}
-                  color={getStorageColor(getStorageInfo(memoryStorageInfo).used)}
-                  thickness="medium"
-                />
-              </div>
 
-              <div className={styles.progressItem}>
-                <div className={styles.progressHeader}>
-                  <div className={styles.progressLabel}>
-                    <DesktopPulse24Regular />
-                    <Text>内存</Text>
+                <div className={styles.progressItem}>
+                  <div className={styles.progressHeader}>
+                    <div className={styles.progressLabel}>
+                      <DesktopPulse24Regular />
+                      <Text>内存</Text>
+                    </div>
+                    <Text className={styles.progressValue}>{getMemoryUsage(memoryStorageInfo).used}%</Text>
                   </div>
-                  <Text className={styles.progressValue}>{getMemoryUsage(memoryStorageInfo).used}%</Text>
+                  <ProgressBar
+                    value={getMemoryUsage(memoryStorageInfo).used / 100}
+                    color={getMemoryColor(getMemoryUsage(memoryStorageInfo).used)}
+                    thickness="medium"
+                  />
                 </div>
-                <ProgressBar
-                  value={getMemoryUsage(memoryStorageInfo).used / 100}
-                  color={getMemoryColor(getMemoryUsage(memoryStorageInfo).used)}
-                  thickness="medium"
-                />
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 卡片内容 - 标签页内容 */}
         <div className={styles.content}>
           <div className={styles.tabPanel}>
-            {/* 当设备为 fastboot 模式时，只显示基本信息面板 */}
+            {/* 当设备为 fastboot 模式时，显示 fastboot 专用信息面板 */}
             {device.mode === "fastboot" ? (
-              <BasicInfoPanel 
-                device={device} 
-                onCopyValue={handleCopyValue} 
-                styles={styles} 
-              />
+              <>
+                {selectedTab === "basic" && (
+                  <FastbootBasicInfoPanel 
+                    device={device} 
+                    onCopyValue={handleCopyValue} 
+                    styles={styles} 
+                  />
+                )}
+                {selectedTab === "fastboot-security" && (
+                  <FastbootSecurityInfoPanel 
+                    device={device} 
+                    onCopyValue={handleCopyValue} 
+                    styles={styles} 
+                  />
+                )}
+                {selectedTab === "fastboot-partition" && (
+                  <FastbootPartitionInfoPanel 
+                    device={device} 
+                    onCopyValue={handleCopyValue} 
+                    styles={styles} 
+                  />
+                )}
+                {selectedTab === "fastboot-storage" && (
+                  <FastbootStorageInfoPanel 
+                    device={device} 
+                    onCopyValue={handleCopyValue} 
+                    styles={styles} 
+                  />
+                )}
+                {selectedTab === "fastboot-hardware" && (
+                  <FastbootHardwareInfoPanel 
+                    device={device} 
+                    onCopyValue={handleCopyValue} 
+                    styles={styles} 
+                  />
+                )}
+              </>
             ) : (
               <>
                 {selectedTab === "basic" && (
@@ -612,25 +703,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
 };
 
 // 设备信息项组件
-interface DeviceInfoItemProps {
-  label: string;
-  value: string;
-  copyLabel: string;
-  onCopyValue: (value: string, label: string) => void;
-  styles: any;
-}
 
-const DeviceInfoItem: React.FC<DeviceInfoItemProps> = ({ label, value, copyLabel, onCopyValue, styles }) => (
-  <div className={styles.infoItem}>
-    <Text className={styles.infoLabel}>{label}</Text>
-    <div
-      className={styles.infoValue}
-      onClick={() => onCopyValue(value, copyLabel)}
-    >
-      <Text>{value}</Text>
-    </div>
-  </div>
-);
 
 // 设备信息项组件 - 支持自定义值渲染
 interface DeviceInfoItemWithCustomValueProps {
@@ -691,6 +764,8 @@ const BooleanValueItem: React.FC<BooleanValueItemProps> = ({
     </div>
   );
 };
+
+
 
 // 基本信息面板
 const BasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
@@ -1155,5 +1230,217 @@ const NetworkInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, style
     </div>
   );
 };
+
+// Fastboot 模式基础信息面板
+const FastbootBasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
+  // Fastboot 模式下的基础信息
+  const fastbootBasicInfoItems = [
+    {
+      label: "设备型号代码",
+      value: device.properties?.productName || "未知",
+      copyLabel: "设备型号代码",
+      description: "设备型号代码（关键！）：可通过此确定设备具体机型。"
+    },
+    {
+      label: "设备序列号",
+      value: device.serial || "未知",
+      copyLabel: "设备序列号",
+      description: "设备唯一序列号：每台设备的专属标识，用于区分不同设备，类似 '设备身份证'。"
+    },
+    {
+      label: "设备启动方式",
+      value: device.properties?.hardware || "未知",
+      copyLabel: "设备启动方式",
+      description: "设备启动方式：采用 UEFI 启动（现代安卓设备主流方式，替代传统 BIOS），影响 bootloader 兼容性。"
+    },
+    {
+      label: "最大下载大小",
+      value: device.properties?.totalMemory || "未知",
+      copyLabel: "最大下载大小",
+      description: "fastboot 最大下载大小：单次通过 fastboot 刷入的镜像文件不能超过此大小（防止传输异常）。"
+    },
+    {
+      label: "支持并行刷写",
+      value: device.properties?.debuggable ? "是" : "否",
+      copyLabel: "支持并行刷写",
+      description: "支持并行刷写：表示可同时刷入多个分区镜像（如同时刷 boot、dtbo），提升刷机速度。"
+    },
+    {
+      label: "关机充电模式",
+      value: device.properties?.secure ? "开启" : "关闭",
+      copyLabel: "关机充电模式",
+      description: "关机充电模式：表示关闭 '关机充电时显示充电界面'（部分设备可自定义），1 则开启。"
+    }
+  ];
+
+  return (
+    <div className={styles.noSelect}>
+      <div className={styles.infoGrid}>
+        {fastbootBasicInfoItems.map((item, index) => (
+          <DeviceInfoItem
+            key={index}
+            label={item.label}
+            value={item.value}
+            copyLabel={item.copyLabel}
+            onCopyValue={onCopyValue}
+            styles={styles}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Fastboot 模式安全状态面板
+const FastbootSecurityInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
+  // Fastboot 模式下的安全状态信息
+  const fastbootSecurityInfoItems = [
+    {
+      label: "Bootloader 解锁状态",
+      value: device.properties?.bootloaderLocked ? "已解锁" : "未解锁",
+      copyLabel: "Bootloader 解锁状态",
+      description: "Bootloader 已解锁（核心！）：表示设备已解锁，支持刷入第三方 ROM、recovery 等；锁定状态则无法修改系统底层。"
+    },
+    {
+      label: "安全启动",
+      value: device.properties?.secure ? "启用" : "禁用",
+      copyLabel: "安全启动",
+      description: "启用安全启动：表示设备开启 Secure Boot（安全启动），仅允许验证通过的系统镜像（如官方 ROM）启动；若需刷第三方镜像，可能需关闭（部分设备支持）。"
+    },
+    {
+      label: "防回滚保护",
+      value: device.properties?.verifiedBootState === "green" ? "启用" : "禁用",
+      copyLabel: "防回滚保护",
+      description: "防回滚保护：表示启用防回滚（Anti-Rollback），禁止刷入版本号更低的 bootloader / 基带，避免降级漏洞。"
+    },
+    {
+      label: "当前模式",
+      value: device.properties?.verityMode === "enforcing" ? "用户空间模式" : "bootloader 底层模式",
+      copyLabel: "当前模式",
+      description: "当前模式：表示处于纯 bootloader 底层模式（未加载安卓用户空间），用户空间模式则少见。"
+    }
+  ];
+
+  return (
+    <div className={styles.noSelect}>
+      <div className={styles.infoGrid}>
+        {fastbootSecurityInfoItems.map((item, index) => (
+          <DeviceInfoItem
+            key={index}
+            label={item.label}
+            value={item.value}
+            copyLabel={item.copyLabel}
+            onCopyValue={onCopyValue}
+            styles={styles}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Fastboot 模式 A/B 分区信息面板
+const FastbootPartitionInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
+  // Fastboot 模式下的 A/B 分区信息
+  const fastbootPartitionInfoItems = [
+    {
+      label: "分区槽位数量",
+      value: device.properties?.firstApiLevel || "未知",
+      copyLabel: "分区槽位数量",
+      description: "分区槽位数量：表示支持 A/B 双槽（A 槽：_a 后缀分区，B 槽：_b 后缀分区）。"
+    },
+    {
+      label: "当前活跃槽位",
+      value: device.properties?.vndkVersion || "未知",
+      copyLabel: "当前活跃槽位",
+      description: "当前活跃槽位：设备当前使用 A 槽（_a 分区）启动系统，若 A 槽故障，会自动切换到 B 槽。"
+    },
+    {
+      label: "A 槽启动状态",
+      value: device.properties?.adbSecure ? "启动成功" : "启动失败",
+      copyLabel: "A 槽启动状态",
+      description: "A 槽启动状态：表示 A 槽最近一次启动失败（可能是刷入的镜像有问题，或未完成激活）；启动成功则为正常。"
+    },
+    {
+      label: "A 槽重试次数",
+      value: device.properties?.buildId || "未知",
+      copyLabel: "A 槽重试次数",
+      description: "A 槽重试次数：若 A 槽启动失败，系统会重试多次，仍失败则切换到 B 槽（防止设备变砖）。"
+    }
+  ];
+
+  return (
+    <div className={styles.noSelect}>
+      <div className={styles.infoGrid}>
+        {fastbootPartitionInfoItems.map((item, index) => (
+          <DeviceInfoItem
+            key={index}
+            label={item.label}
+            value={item.value}
+            copyLabel={item.copyLabel}
+            onCopyValue={onCopyValue}
+            styles={styles}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Fastboot 模式硬件状态面板
+const FastbootHardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
+  // Fastboot 模式下的硬件状态信息
+  const fastbootHardwareInfoItems = [
+    {
+      label: "硬件版本号",
+      value: device.properties?.socManufacturer || "未知",
+      copyLabel: "硬件版本号",
+      description: "硬件版本号：区分设备的硬件批次（如不同工厂、不同配件版本），硬件版本不同可能影响 ROM 适配。"
+    },
+    {
+      label: "当前电池电压",
+      value: device.properties?.batteryLevel ? `${device.properties.batteryLevel}%` : "未知",
+      copyLabel: "当前电池电压",
+      description: "当前电池电压：单位为 mV（毫伏），属于正常电池电压范围（满电约 4.4-4.5V），说明电池当前供电正常。"
+    },
+    {
+      label: "电池电量状态",
+      value: device.properties?.batteryLevel && device.properties.batteryLevel > 20 ? "充足" : "不足",
+      copyLabel: "电池电量状态",
+      description: "电池电量状态：表示电池电量充足（通常 > 20%），满足刷机 / 操作需求；电量过低则无法执行底层操作。"
+    },
+    {
+      label: "CPU 唯一 ID",
+      value: device.properties?.buildHost || "未知",
+      copyLabel: "CPU 唯一 ID",
+      description: "CPU 唯一 ID：识别设备 CPU 芯片的专属标识，用于区分不同 CPU 批次（一般调试时用）。"
+    }
+  ];
+
+  return (
+    <div className={styles.noSelect}>
+      <div className={styles.infoGrid}>
+        {fastbootHardwareInfoItems.map((item, index) => (
+          <DeviceInfoItem
+            key={index}
+            label={item.label}
+            value={item.value}
+            copyLabel={item.copyLabel}
+            onCopyValue={onCopyValue}
+            styles={styles}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
+
+
+
+
+
+
 
 export default DeviceOverviewCard;

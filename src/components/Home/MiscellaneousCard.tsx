@@ -17,10 +17,6 @@ import {
 import {
   Wrench24Regular,
   Warning24Regular,
-  Desktop24Regular,
-  ArrowClockwise24Regular,
-  Stop24Regular,
-  Shield24Regular,
   Info24Regular,
 } from "@fluentui/react-icons";
 

@@ -81,8 +81,6 @@ const useStyles = makeStyles({
   },
   // 设备功能区域 - 新的上下两行布局结构
   deviceSection: {
-    height: "100%",
-    minHeight: "720px",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
@@ -100,8 +98,7 @@ const useStyles = makeStyles({
     flex: "0 0 50%", // 固定占据60%的高度
     display: "flex",
     flexDirection: "column",
-    minHeight: "400px",
-    maxHeight: "60%", // 最大高度限制调整为60%
+
   },
   deviceInfoCard: {
     height: "100%",
