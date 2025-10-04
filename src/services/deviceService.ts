@@ -366,6 +366,44 @@ export class DeviceService {
     }
   }
 
+  async getFastbootPartitions(serial: string): Promise<CommandResult> {
+    return await adbToolsManager.executeWithFallback(async () => {
+      try {
+        console.log(`[DeviceService] 获取 fastboot 分区信息: ${serial}`);
+        const result = await invoke<CommandResult>("execute_fastboot_command", {
+          serial,
+          command: "oem",
+          args: ["partition", "list"],
+          timeout: 30000, // 分区列表可能需要较长时间
+        });
+        console.log(`[DeviceService] fastboot 分区信息获取结果:`, result);
+        return result;
+      } catch (error) {
+        console.error("[DeviceService] 获取 fastboot 分区信息失败:", error);
+        throw error;
+      }
+    });
+  }
+
+  async getFastbootVariables(serial: string): Promise<CommandResult> {
+    return await adbToolsManager.executeWithFallback(async () => {
+      try {
+        console.log(`[DeviceService] 获取 fastboot 变量信息: ${serial}`);
+        const result = await invoke<CommandResult>("execute_fastboot_command", {
+          serial,
+          command: "getvar",
+          args: ["all"],
+          timeout: 30000, // 变量列表可能需要较长时间
+        });
+        console.log(`[DeviceService] fastboot 变量信息获取结果:`, result);
+        return result;
+      } catch (error) {
+        console.error("[DeviceService] 获取 fastboot 变量信息失败:", error);
+        throw error;
+      }
+    });
+  }
+
   async checkDeviceConnection(serial: string): Promise<CommandResult> {
     try {
       const result = await invoke<CommandResult>("check_device_connection", {
