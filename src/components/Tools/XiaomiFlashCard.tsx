@@ -346,9 +346,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
         return <Badge appearance="outline" color="success" icon={<CheckmarkCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>成功</Badge>;
       case "error":
         return <Badge appearance="outline" color="danger" icon={<ErrorCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>失败</Badge>;
-      default:
-        return <Badge appearance="outline" style={{ display: 'flex', flexDirection: 'row' }}>就绪</Badge>;
-    }
+        }
   };
 
   const formatFileSize = (bytes: number) => {

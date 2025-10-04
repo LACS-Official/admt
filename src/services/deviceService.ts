@@ -326,6 +326,32 @@ export class DeviceService {
     }
   }
 
+  async executeFastbootCommand(
+    serial: string,
+    command: string,
+    args: string[] = [],
+    timeout?: number
+  ): Promise<CommandResult> {
+    console.log(`[DeviceService] executeFastbootCommand called with:`, { serial, command, args, timeout });
+    
+    return await adbToolsManager.executeWithFallback(async () => {
+      try {
+        console.log(`[DeviceService] 调用Tauri命令: execute_fastboot_command`);
+        const result = await invoke<CommandResult>("execute_fastboot_command", {
+          serial,
+          command,
+          args,
+          timeout,
+        });
+        console.log(`[DeviceService] Tauri命令返回结果:`, result);
+        return result;
+      } catch (error) {
+        console.error("[DeviceService] Failed to execute Fastboot command:", error);
+        throw error;
+      }
+    });
+  }
+
   async fastbootFlashImage(serial: string, imagePath: string, partition: string): Promise<CommandResult> {
     try {
       const result = await invoke<CommandResult>("fastboot_flash_image", {

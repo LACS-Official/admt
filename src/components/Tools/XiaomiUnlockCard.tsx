@@ -298,22 +298,15 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   return (
     <>
       <Card className={styles.card}>
-        <CardHeader
-          image={<div className={styles.xiaomiIcon}>📱</div>}
-          header={<Text weight="semibold">小米解锁工具</Text>}
-          description={<Text size={200}>专为小米设备设计的解锁工具集</Text>}
-        />
         
         <div className={styles.content}>
-          {/* 设备品牌状态 */}
-          <div className={styles.statusSection}>
-            <Shield24Regular />
-            <div style={{ flex: 1 }}>
-              <Text size={300} weight="semibold">设备品牌</Text>
-              <br />
-            </div>
+          {/* 危险操作警告 */}
+          <div className={styles.warningSection}>
+            <Warning24Regular className={styles.warningIcon} />
+            <Text size={200}>
+              ⚠️ 解锁操作具有风险，可能导致设备变砖或保修失效，请谨慎操作
+            </Text>
           </div>
-
           {/* 工具列表 */}
           <div className={styles.toolsGrid}>
             {xiaomiTools.map((tool) => (
@@ -340,13 +333,7 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
             ))}
           </div>
 
-          {/* 危险操作警告 */}
-          <div className={styles.warningSection}>
-            <Warning24Regular className={styles.warningIcon} />
-            <Text size={200}>
-              ⚠️ 解锁操作具有风险，可能导致设备变砖或保修失效，请谨慎操作
-            </Text>
-          </div>
+
         </div>
       </Card>
 

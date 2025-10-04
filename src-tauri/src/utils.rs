@@ -117,8 +117,35 @@ pub async fn execute_fastboot_command(
     timeout_secs: Option<u64>,
 ) -> Result<crate::device::CommandResult> {
     let fastboot_path = get_cached_fastboot_path();
+    log::info!("[utils] execute_fastboot_command called with args: {:?}, timeout: {:?}, fastboot_path: {}", args, timeout_secs, fastboot_path.display());
     record_path_cache_hit().await;
-    execute_command(fastboot_path, args, timeout_secs).await
+    let result = execute_command(fastboot_path, args, timeout_secs).await;
+    
+    // 特殊处理fastboot命令的输出 - fastboot通常将输出放在stderr中
+    let result = match result {
+        Ok(mut cmd_result) => {
+            // 如果stdout为空但stderr有内容，且命令成功执行，则将stderr内容作为输出
+            if cmd_result.success && cmd_result.output.is_empty() {
+                if let Some(stderr_content) = &cmd_result.error {
+                    cmd_result.output = stderr_content.clone();
+                    cmd_result.error = None;
+                    log::info!("[utils] Fastboot output moved from stderr to stdout: {}", cmd_result.output);
+                }
+            }
+            log::info!("[utils] execute_fastboot_command final result: success={}, output_len={}, error={:?}, exit_code={:?}", 
+                      cmd_result.success,
+                      cmd_result.output.len(),
+                      cmd_result.error,
+                      cmd_result.exit_code);
+            Ok(cmd_result)
+        }
+        Err(e) => {
+            log::error!("[utils] execute_fastboot_command error: {}", e);
+            Err(e)
+        }
+    };
+    
+    result
 }
 
 /// 执行通用命令

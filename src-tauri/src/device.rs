@@ -48,7 +48,7 @@ impl DeviceMode {
 pub struct DeviceProperties {
     // 设备基本信息
     pub market_name: Option<String>,   // ro.product.marketname
-    pub product_name: Option<String>,  // ro.product.name
+    pub product_name: Option<String>,  // ro.product.name 或 fastboot getvar product
     pub brand: Option<String>,         // ro.product.brand
     pub model: Option<String>,         // ro.product.model
     pub device_name: Option<String>,   // ro.product.device

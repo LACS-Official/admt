@@ -1,5 +1,6 @@
 use crate::device::CommandResult;
 use crate::error::{AdmtError, Result};
+use crate::utils::execute_adb_command as utils_execute_adb_command;
 use std::process::{Command, Stdio};
 use tauri::Emitter;
 
@@ -212,6 +213,31 @@ pub async fn execute_batch_file(
             exit_code: Some(1),
         })
     }
+}
+
+/// 执行ADB命令
+#[tauri::command]
+pub async fn execute_adb_command(
+    serial: String,
+    command: String,
+    args: Vec<String>,
+    timeout: Option<u64>,
+) -> Result<CommandResult> {
+    let mut cmd_args = vec!["-s", &serial];
+    cmd_args.push(&command);
+
+    let string_args: Vec<String> = args
+        .iter()
+        .map(|s| s.as_str())
+        .collect::<Vec<&str>>()
+        .join(" ")
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect();
+    let str_args: Vec<&str> = string_args.iter().map(|s| s.as_str()).collect();
+    cmd_args.extend(str_args);
+
+    utils_execute_adb_command(&cmd_args, timeout).await
 }
 
 /// 结束ADB服务

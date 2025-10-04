@@ -1,6 +1,6 @@
 /*
-AdbToolsPanel.tsx
-这是 ADB 工具面板组件
+FastbootCommandCard.tsx
+这是 Fastboot 命令面板组件
 */
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
@@ -175,26 +175,25 @@ const categorizedQuickCommands = [
   {
     category: "设备信息",
     commands: [
-      { label: "获取设备信息", command: "shell getprop" },
-      { label: "查看电池信息", command: "shell dumpsys battery" },
-      { label: "查看内存信息", command: "shell cat /proc/meminfo" },
-      { label: "查看存储信息", command: "shell df" },
+      { label: "获取设备列表", command: "devices" },
+      { label: "获取所有变量", command: "getvar all" },
+      { label: "获取设备锁状态", command: "oem device-info" },
+      { label: "查看基带版本", command: "getvar version-baseband" },
     ]
   },
   {
-    category: "应用与进程",
+    category: "刷机操作",
     commands: [
-      { label: "查看已安装应用", command: "shell pm list packages" },
-      { label: "查看运行进程", command: "shell ps" },
-      { label: "查看系统日志", command: "logcat -d" },
+      { label: "擦除数据分区", command: "erase userdata" },
+      { label: "擦除缓存分区", command: "erase cache" },
+      { label: "格式化数据分区", command: "format userdata" },
     ]
   },
   {
-    category: "系统控制",
+    category: "解锁与引导",
     commands: [
-      { label: "重启到Recovery", command: "reboot recovery" },
-      { label: "重启到Fastboot", command: "reboot bootloader" },
-      { label: "重启到系统", command: "reboot" },
+      { label: "解锁Bootloader", command: "oem unlock" },
+      { label: "重新锁定Bootloader", command: "oem lock" },
     ]
   }
 ];
@@ -206,7 +205,7 @@ const getAllCommands = () => {
   );
 };
 
-const AdbToolsPanel: React.FC = () => {
+const FastbootCommandCard: React.FC = () => {
   const styles = useStyles();
   const { selectedDevice } = useDeviceStore();
   const { deviceService } = useDeviceService();
@@ -313,28 +312,42 @@ const AdbToolsPanel: React.FC = () => {
     setIsExecuting(true);
 
     try {
+      console.log(`[FastbootCommandCard] 执行命令: ${cmd}`);
+      console.log(`[FastbootCommandCard] 设备序列号: ${selectedDevice.serial}`);
+      
       const parts = cmd.trim().split(" ");
       const commandName = parts[0];
       const args = parts.slice(1);
 
-      const result = await deviceService.executeAdbCommand(
+      console.log(`[FastbootCommandCard] 解析命令 - 名称: ${commandName}, 参数:`, args);
+
+      const result = await deviceService.executeFastbootCommand(
         selectedDevice.serial,
         commandName,
         args,
         30
       );
 
+      console.log(`[FastbootCommandCard] 命令执行结果:`, result);
+
       const timestamp = new Date().toLocaleTimeString();
-      const newOutput = `[${timestamp}] $ adb -s ${selectedDevice.serial} ${cmd}\n`;
+      const newOutput = `[${timestamp}] $ fastboot -s ${selectedDevice.serial} ${cmd}\n`;
       
       if (result.success) {
-        setOutput(prev => prev + newOutput + result.output + "\n\n");
+        const outputText = newOutput + result.output + "\n\n";
+        console.log(`[FastbootCommandCard] 设置输出:`, outputText);
+        setOutput(outputText);
       } else {
-        setOutput(prev => prev + newOutput + `错误: ${result.error || "命令执行失败"}\n\n`);
+        const errorText = newOutput + `错误: ${result.error || "命令执行失败"}\n\n`;
+        console.log(`[FastbootCommandCard] 设置错误输出:`, errorText);
+        setOutput(errorText);
       }
     } catch (error) {
       const timestamp = new Date().toLocaleTimeString();
-      setOutput(prev => prev + `[${timestamp}] 错误: ${error}\n\n`);
+      const errorText = `[${timestamp}] 错误: ${error}\n\n`;
+      console.error(`[FastbootCommandCard] 捕获异常:`, error);
+      console.error(`[FastbootCommandCard] 设置错误输出:`, errorText);
+      setOutput(errorText);
     } finally {
       setIsExecuting(false);
     }
@@ -394,7 +407,7 @@ const AdbToolsPanel: React.FC = () => {
                     <Input
                       value={command}
                       onChange={(_, data) => setCommand(data.value)}
-                      placeholder="例如: shell getprop"
+                      placeholder="例如: flash recovery recovery.img"
                       disabled={!selectedDevice || isExecuting}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
@@ -478,7 +491,7 @@ const AdbToolsPanel: React.FC = () => {
                 <pre
                   ref={outputRef}
                   dangerouslySetInnerHTML={{
-                    __html: highlightedOutput || '<span style="color: #888">命令输出将显示在这里...</span>'
+                    __html: highlightedOutput || '<span style="color: #888">Fastboot命令输出将显示在这里...</span>'
                   }}
                 />
               </div>
@@ -548,4 +561,4 @@ const AdbToolsPanel: React.FC = () => {
   );
 };
 
-export default AdbToolsPanel;
+export default FastbootCommandCard;

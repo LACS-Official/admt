@@ -250,11 +250,6 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
   return (
     <>
       <Card className={styles.card}>
-        <CardHeader
-          image={<CloudArrowUp24Regular />}
-          header={<Text weight="semibold">镜像刷入工具</Text>}
-          description={<Text size={200}>刷入自定义镜像文件到指定分区</Text>}
-        />
         
         <div className={styles.content}>
           {/* 警告提示 */}

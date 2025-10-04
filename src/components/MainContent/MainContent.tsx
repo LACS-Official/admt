@@ -771,6 +771,35 @@ const MainContent: React.FC = () => {
 
     const deviceIcon = getDeviceIcon(selectedDevice.mode);
 
+    // 获取设备名称，对于fastboot模式，使用fastboot getvar product命令获取
+    const getDeviceName = () => {
+      // 对于fastboot模式，优先使用product_name
+      if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
+        return selectedDevice.properties?.productName || selectedDevice.serial;
+      }
+      // 对于其他模式，使用原有的逻辑
+      return selectedDevice.properties?.marketName ||
+             selectedDevice.properties?.model ||
+             selectedDevice.serial;
+    };
+
+    const getDeviceOptionText = (device: any) => {
+      if (device.mode === "fastboot" || device.mode === "fastbootd") {
+        // 对于fastboot模式，优先使用product_name，如果没有则使用serial
+        return `选择设备: ${device.properties?.productName || device.serial}`;
+      }
+      // 对于其他模式，使用原有的逻辑
+      return `选择设备: ${device.properties?.marketName || device.properties?.model || device.serial}`;
+    };
+    
+    const getDeviceCodeName = () => {
+      if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
+        // 对于fastboot模式，使用product_name作为设备代号
+        return selectedDevice.properties?.productName || selectedDevice.serial;
+      }
+      return selectedDevice.properties?.deviceName || "";
+    };
+
     return (
       <div className={styles.deviceInfo}>
         <div className={styles.deviceInfoContainer}>
@@ -789,26 +818,25 @@ const MainContent: React.FC = () => {
             <div className={styles.deviceTextInfo}>
               {/* 设备名称区域 */}
               <div className={styles.deviceNameSection}>
+                {/* 设备序列号 */}
                 <Text className={styles.deviceName}>
-                  {selectedDevice.properties?.marketName ||
-                   selectedDevice.properties?.model ||
-                   selectedDevice.serial}
+                  {getDeviceName()}
                 </Text>
+
+                {/* 设备代号 */}
                 {selectedDevice.properties?.deviceName && (
                   <Badge                     appearance="outline"
                     color="brand"
                     size="medium"
                     className={styles.compactBadge}
                   >
-                    {selectedDevice.properties.deviceName}
+                    {getDeviceCodeName()}
                   </Badge>
                 )}
               </div>
 
               {/* 状态信息区域 */}
               <div className={styles.deviceStatusSection}>
-
-
                 {/* 设备模式 */}
                 <div className={styles.statusBadgeRow}>
                   <Badge
@@ -836,7 +864,7 @@ const MainContent: React.FC = () => {
             >
               {connectedDevices.map((device) => (
                 <option key={device.serial} value={device.serial}>
-                  选择设备: {device.properties?.marketName || device.properties?.model || device.serial}
+                  {getDeviceOptionText(device)}
                 </option>
               ))}
             </select>
