@@ -88,6 +88,50 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
     Ok(devices)
 }
 
+/// 获取Fastboot设备属性
+async fn get_fastboot_device_properties(serial: &str) -> Result<DeviceProperties> {
+    log::info!("Getting properties for fastboot device: {}", serial);
+    
+    let mut properties = DeviceProperties::default();
+    
+    // 使用fastboot getvar product获取产品名称
+    match execute_fastboot_command(&["-s", serial, "getvar", "product"], Some(10)).await {
+        Ok(result) if result.success => {
+            // 解析输出，格式通常为: product: <product_name>
+            for line in result.output.lines() {
+                if line.starts_with("product:") {
+                    if let Some(product_name) = line.split(':').nth(1) {
+                        properties.product_name = Some(product_name.trim().to_string());
+                        log::info!("Got product name for fastboot device {}: {}", serial, product_name.trim());
+                        break;
+                    }
+                }
+            }
+        }
+        Ok(result) => {
+            log::warn!(
+                "Failed to get product name for fastboot device {}: success={}, output={}, error={:?}",
+                serial,
+                result.success,
+                result.output,
+                result.error
+            );
+        }
+        Err(e) => {
+            log::error!("Failed to execute fastboot getvar product for {}: {}", serial, e);
+        }
+    }
+    
+    // 可以添加更多fastboot属性的获取，例如：
+    // - fastboot getvar serialno
+    // - fastboot getvar version-bootloader
+    // - fastboot getvar version-baseband
+    // - fastboot getvar product-model
+    // - fastboot getvar manufacturer
+    
+    Ok(properties)
+}
+
 /// 获取设备属性（使用缓存）
 #[tauri::command]
 pub async fn get_device_properties(serial: String) -> Result<DeviceProperties> {
@@ -101,14 +145,21 @@ pub async fn get_device_properties(serial: String) -> Result<DeviceProperties> {
     // 验证设备存在且可访问
     let device = get_device_info(serial.clone()).await?;
 
-    if !device.is_adb_available() {
-        return Err(AdmtError::InvalidDeviceMode {
-            mode: format!("{:?}", device.mode),
-        });
-    }
-
-    // 使用批量获取方法
-    let properties = get_device_properties_batch(&serial).await?;
+    // 根据设备模式选择不同的属性获取方式
+    let properties = match device.mode {
+        DeviceMode::Fastboot | DeviceMode::Fastbootd => {
+            get_fastboot_device_properties(&serial).await?
+        }
+        _ => {
+            if !device.is_adb_available() {
+                return Err(AdmtError::InvalidDeviceMode {
+                    mode: format!("{:?}", device.mode),
+                });
+            }
+            // 使用批量获取方法
+            get_device_properties_batch(&serial).await?
+        }
+    };
 
     // 缓存设备属性
     cache_manager
@@ -159,31 +210,6 @@ pub async fn invalidate_device_cache(serial: String) -> Result<()> {
     cache_manager.invalidate_device(&serial).await;
     log::info!("Device cache invalidated for: {}", serial);
     Ok(())
-}
-
-/// 执行ADB命令
-#[tauri::command]
-pub async fn execute_adb_command(
-    serial: String,
-    command: String,
-    args: Vec<String>,
-    timeout: Option<u64>,
-) -> Result<CommandResult> {
-    let mut cmd_args = vec!["-s", &serial];
-    cmd_args.push(&command);
-
-    let string_args: Vec<String> = args
-        .iter()
-        .map(|s| s.as_str())
-        .collect::<Vec<&str>>()
-        .join(" ")
-        .split_whitespace()
-        .map(|s| s.to_string())
-        .collect();
-    let str_args: Vec<&str> = string_args.iter().map(|s| s.as_str()).collect();
-    cmd_args.extend(str_args);
-
-    utils_execute_adb_command(&cmd_args, timeout).await
 }
 
 /// 检查ADB可用性
@@ -387,21 +413,6 @@ pub async fn check_fastboot_availability() -> Result<CommandResult> {
     }
 }
 
-/// 专门扫描Fastboot设备（用于调试）
-#[tauri::command]
-pub async fn scan_fastboot_devices() -> Result<CommandResult> {
-    log::info!("Scanning fastboot devices for debugging...");
-    let result = execute_fastboot_command(&["devices"], Some(10)).await?;
-
-    log::info!(
-        "Fastboot devices result: success={}, output='{}', error={:?}",
-        result.success,
-        result.output,
-        result.error
-    );
-
-    Ok(result)
-}
 
 /// 使用 Fastboot 刷入镜像到指定分区
 #[tauri::command]
@@ -450,24 +461,8 @@ pub async fn execute_adb_command_with_path(
         .await
 }
 
-/// 使用指定Fastboot路径执行命令
-#[tauri::command]
-pub async fn execute_fastboot_command_with_path(
-    fastboot_path: String,
-    serial: String,
-    command: String,
-    args: Vec<String>,
-    timeout: Option<u64>,
-) -> Result<CommandResult> {
-    crate::adb_commands::execute_fastboot_command_with_path(
-        &fastboot_path,
-        &serial,
-        &command,
-        &args,
-        timeout,
-    )
-    .await
-}
+
+
 
 /// 获取设备性能信息
 #[tauri::command]
@@ -1274,104 +1269,6 @@ pub async fn save_app_config(config: AppConfig) -> Result<bool> {
 }
 
 
-
-
-// ==================== 杂项控制功能命令 ====================
-
-
-
-/// 重启应用
-#[tauri::command]
-pub async fn restart_application(app_handle: tauri::AppHandle) -> Result<CommandResult> {
-    log::info!("Restarting application");
-
-    // 获取当前可执行文件路径
-    let current_exe = std::env::current_exe().map_err(|e| {
-        log::error!("Failed to get current executable path: {}", e);
-        AdmtError::IoError {
-            message: format!("无法获取当前可执行文件路径: {}", e),
-        }
-    })?;
-
-    log::info!("Current executable path: {}", current_exe.display());
-
-    // 在Windows上，我们需要使用一个更可靠的重启方法
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        use std::process::Command;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-        // 创建一个批处理脚本来重启应用
-        let temp_dir = std::env::temp_dir();
-        let restart_script = temp_dir.join("hout_restart.bat");
-
-        let script_content = format!(
-            "@echo off\n\
-            timeout /t 2 /nobreak >nul\n\
-            start \"\" \"{}\"\n\
-            del \"%~f0\"\n",
-            current_exe.display()
-        );
-
-        match std::fs::write(&restart_script, script_content) {
-            Ok(_) => {
-                log::info!("Created restart script: {}", restart_script.display());
-
-                // 启动重启脚本
-                let mut cmd = Command::new("cmd");
-                cmd.args(&["/C", &restart_script.to_string_lossy()]);
-                cmd.creation_flags(CREATE_NO_WINDOW);
-
-                match cmd.spawn() {
-                    Ok(_) => {
-                        log::info!("Restart script launched successfully");
-
-                        // 延迟一小段时间让脚本启动
-                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-                        // 退出当前应用
-                        app_handle.exit(0);
-                        return Ok(CommandResult {
-                            success: true,
-                            output: "应用正在重启...".to_string(),
-                            error: None,
-                            exit_code: Some(0),
-                        });
-                    }
-                    Err(e) => {
-                        log::error!("Failed to launch restart script: {}", e);
-                        // 清理脚本文件
-                        let _ = std::fs::remove_file(&restart_script);
-
-                        // 尝试使用Tauri的内置重启功能作为备用
-                        log::info!("Falling back to Tauri restart method");
-                        app_handle.restart();
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("Failed to create restart script: {}", e);
-
-                // 尝试使用Tauri的内置重启功能作为备用
-                log::info!("Falling back to Tauri restart method");
-                app_handle.restart();
-            }
-        }
-    }
-
-    #[cfg(not(windows))]
-    {
-        // 非Windows系统使用Tauri的内置重启功能
-        app_handle.restart();
-        Ok(CommandResult {
-            success: true,
-            output: "应用正在重启...".to_string(),
-            error: None,
-            exit_code: Some(0),
-        })
-    }
-}
 
 // ==================== 安全配置相关命令 ====================
 

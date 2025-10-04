@@ -5,21 +5,24 @@ AdbToolsPanel.tsx
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   makeStyles,
-  shorthands,
-  mergeClasses,
   Text,
   Card,
-  CardHeader,
   Field,
   Input,
   Button,
-
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogBody,
+  DialogSurface,
+  DialogActions,
 } from "@fluentui/react-components";
 import {
   Play24Regular,
   Delete24Regular,
   Copy24Regular,
   Search24Regular,
+  ChevronDown24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -29,112 +32,62 @@ const useStyles = makeStyles({
     height: "100%",
     overflow: "auto",
   },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: "16px",
-  },
-  headerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  content: {
-    display: "flex",
-    gap: "16px",
-    height: "calc(100% - 80px)",
-  },
-  leftPanel: {
-    flex: "0 0 40%",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-    maxWidth: '500px',
-  },
-  rightPanel: {
-    flex: "0 0 50%",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-    overflow: 'hidden',
-    minHeight:"450px",
-    borderRadius: "4px",
-    boxShadow: "0 0 4px rgba(0, 0, 0, 0.1)",
-  },
-  card: {
+  mainCard: {
     height: "100%",
     display: "flex",
     flexDirection: "column",
     overflow: 'hidden',
-    minHeight:"450px"
   },
   cardContent: {
-    flex: 1,
-    padding: "6px",
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    gap: "16px",
+  },
+  controlsSection: {
+    height: "20%",
+    minHeight: "100px",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
+    overflow: "hidden",
   },
-  commandSection: {
+  topControlsRow: {
     display: "flex",
-    flexDirection: "column",
-    gap: "2px",
+    gap: "12px",
+    alignItems: "flex-end",
+    flexShrink: 0,
   },
-  commandInput: {
+  commandInputContainer: {
+    flex: 1,
     display: "flex",
     gap: "8px",
-    alignItems: "flex-end",
+  },
+  commandInputField: {
+    flex: 1,
+  },
+  quickCommandButton: {
+    whiteSpace: "nowrap",
+  },
+  searchAndActionsRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  searchContainer: {
+    flex: 1,
+    maxWidth: "400px",
+  },
+  actionButtons: {
+    display: "flex",
+    gap: "8px",
   },
   outputSection: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
-  },
-  output: {
-    flex: 1,
-    fontFamily: "Consolas, 'Courier New', monospace",
-    fontSize: "12px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
-    padding: "8px",
-    overflow: "auto",
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-all",
-  },
-  actions: {
-    display: "flex",
-    gap: "8px",
-    justifyContent: "flex-end",
-  },
-  quickCommands: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  quickCommandButton: {
-    justifyContent: "flex-start",
-  },
-  searchSection: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "flex-end",
-    marginBottom: "8px",
-  },
-  searchControls: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-  },
-  searchInfo: {
-    fontSize: "12px",
-    color: "var(--colorNeutralForeground2)",
-    whiteSpace: "nowrap",
-  },
-  quickCommandSection: {
-    marginBottom: "16px",
+    minHeight: "300px",
   },
   outputContainer: {
     flex: 1,
@@ -143,10 +96,6 @@ const useStyles = makeStyles({
     border: "1px solid var(--colorNeutralStroke2)", 
     borderRadius: "4px",
     overflow: "hidden",
-    minHeight: "200px",
-    maxHeight: "500px",
-    resize: "vertical",
-    position: "relative",
   },
   outputContent: {
     flex: 1,
@@ -162,57 +111,37 @@ const useStyles = makeStyles({
       wordBreak: 'break-word',
     }
   },
-  outputHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
+  dialogBody: {
+    maxHeight: "60vh",
+    overflowY: "auto",
+  },
+  categoryHeader: {
     padding: "8px 12px",
-    backgroundColor: "var(--colorNeutralBackground3)",
-    borderBottom: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    fontWeight: "600",
+    fontSize: "14px",
+    marginBottom: "8px",
+    borderRadius: "4px",
   },
-  outputContentCollapsed: {
-    maxHeight: "60px",
+  commandGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gap: "8px",
+    padding: "8px 0",
   },
-  highlightedText: {
-    backgroundColor: "yellow",
-    color: "black",
-  },
-  commandInputContainer: {
-    display: 'flex',
-    gap: '8px',
-    marginBottom: '16px',
-  },
-  commandInputField: {
-    flex: 1,
-  },
-  quickCommandsContainer: {
-    flex: 1,
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  quickCommandsList: {
-    flex: 1,
-    overflowY: 'auto',
-    border: '1px solid var(--colorNeutralStroke2)',
-    borderRadius: '4px',
-    padding: '8px',
-    backgroundColor: "var(--colorNeutralBackground1)",
-    /*支持下拉 */
-    position:'relative',
-    maxHeight:'250px'
-  },
-  quickCommandItem: {
-    padding: '8px',
-    cursor: 'pointer',
-    borderRadius: '4px',
-    marginBottom: '4px',
+  commandItem: {
+    padding: "10px 12px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "4px",
+    cursor: "pointer",
     '&:hover': {
-      backgroundColor: 'var(--colorNeutralBackground2)',
+      backgroundColor: "var(--colorNeutralBackground2)",
     },
   },
-  selectedCommand: {
-    backgroundColor: 'var(--colorNeutralBackground2)',
+  searchMatchesInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   },
 });
 
@@ -241,6 +170,42 @@ if (typeof document !== 'undefined') {
   }
 }
 
+// 分类的快捷命令
+const categorizedQuickCommands = [
+  {
+    category: "设备信息",
+    commands: [
+      { label: "获取设备信息", command: "shell getprop" },
+      { label: "查看电池信息", command: "shell dumpsys battery" },
+      { label: "查看内存信息", command: "shell cat /proc/meminfo" },
+      { label: "查看存储信息", command: "shell df" },
+    ]
+  },
+  {
+    category: "应用与进程",
+    commands: [
+      { label: "查看已安装应用", command: "shell pm list packages" },
+      { label: "查看运行进程", command: "shell ps" },
+      { label: "查看系统日志", command: "logcat -d" },
+    ]
+  },
+  {
+    category: "系统控制",
+    commands: [
+      { label: "重启到Recovery", command: "reboot recovery" },
+      { label: "重启到Fastboot", command: "reboot bootloader" },
+      { label: "重启到系统", command: "reboot" },
+    ]
+  }
+];
+
+// 扁平化所有命令以便搜索
+const getAllCommands = () => {
+  return categorizedQuickCommands.flatMap(category => 
+    category.commands.map(cmd => ({ ...cmd, category: category.category }))
+  );
+};
+
 const AdbToolsPanel: React.FC = () => {
   const styles = useStyles();
   const { selectedDevice } = useDeviceStore();
@@ -250,14 +215,19 @@ const AdbToolsPanel: React.FC = () => {
   const [output, setOutput] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isOutputCollapsed, setIsOutputCollapsed] = useState(false);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [selectedQuickCommand, setSelectedQuickCommand] = useState("");
+  const [isQuickCommandDialogOpen, setIsQuickCommandDialogOpen] = useState(false);
+  const [dialogSearchTerm, setDialogSearchTerm] = useState("");
 
   const outputRef = useRef<HTMLPreElement>(null);
 
+  // 处理对话框打开状态变化的函数
+  const handleDialogOpenChange = (isOpen: boolean) => {
+    setIsQuickCommandDialogOpen(isOpen);
+  };
+
   // 计算匹配项数量和位置
-  const searchMatches = useMemo(() => {
+  const searchMatches = useMemo<Array<{index: number, text: string, length: number}>>(() => {
     if (!searchTerm.trim() || !output) {
       return [];
     }
@@ -328,45 +298,34 @@ const AdbToolsPanel: React.FC = () => {
   }, []);
 
   // 当搜索词改变时重置索引
-  React.useEffect(() => {
+  useEffect(() => {
     resetSearch();
   }, [searchTerm, resetSearch]);
 
-  const quickCommands = [
-    { label: "获取设备信息", command: "shell getprop" },
-    { label: "查看已安装应用", command: "shell pm list packages" },
-    { label: "查看运行进程", command: "shell ps" },
-    { label: "查看系统日志", command: "logcat -d" },
-    { label: "查看电池信息", command: "shell dumpsys battery" },
-    { label: "查看内存信息", command: "shell cat /proc/meminfo" },
-    { label: "查看存储信息", command: "shell df" },
-    { label: "重启到Recovery", command: "reboot recovery" },
-    { label: "重启到Fastboot", command: "reboot bootloader" },
-    { label: "重启到系统", command: "reboot" },
-  ];
-
-  const executeCommand = async () => {
+  // 执行命令的通用函数
+  const executeCommand = async (cmd: string) => {
     // Clear output immediately when starting new command
     setOutput("");
+    setCommand(cmd);
     
-    if (!command.trim() || !selectedDevice) return;
+    if (!cmd.trim() || !selectedDevice) return;
 
     setIsExecuting(true);
 
     try {
-      const parts = command.trim().split(" ");
-      const cmd = parts[0];
+      const parts = cmd.trim().split(" ");
+      const commandName = parts[0];
       const args = parts.slice(1);
 
       const result = await deviceService.executeAdbCommand(
         selectedDevice.serial,
-        cmd,
+        commandName,
         args,
         30
       );
 
       const timestamp = new Date().toLocaleTimeString();
-      const newOutput = `[${timestamp}] $ adb -s ${selectedDevice.serial} ${command}\n`;
+      const newOutput = `[${timestamp}] $ adb -s ${selectedDevice.serial} ${cmd}\n`;
       
       if (result.success) {
         setOutput(prev => prev + newOutput + result.output + "\n\n");
@@ -381,52 +340,10 @@ const AdbToolsPanel: React.FC = () => {
     }
   };
 
-  const executeQuickCommand = async (cmd: string) => {
-    // Clear output immediately when starting new command
-    setOutput("");
-    setCommand(cmd);
-    if (!selectedDevice) return;
-
-    setIsExecuting(true);
-    try {
-      const parts = cmd.trim().split(" ");
-      const command = parts[0];
-      const args = parts.slice(1);
-
-      const result = await deviceService.executeAdbCommand(
-        selectedDevice.serial,
-        command,
-        args,
-        30
-      );
-
-      const timestamp = new Date().toLocaleTimeString();
-      const newOutput = `[${timestamp}] $ adb -s ${selectedDevice.serial} ${cmd}\n`;
-
-      if (result.success) {
-        setOutput(prev => prev + newOutput + result.output + "\n\n");
-      } else {
-        setOutput(prev => prev + newOutput + `错误: ${result.error || "命令执行失败"}\n\n`);
-      }
-    } catch (error) {
-      const timestamp = new Date().toLocaleTimeString();
-      setOutput(prev => prev + `[${timestamp}] 错误: ${error}\n\n`);
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
   // 处理快捷命令选择
-  const handleQuickCommandSelect = (value: string) => {
-    setSelectedQuickCommand(value);
-    const selectedCmd = quickCommands.find(cmd => cmd.label === value);
-    if (selectedCmd) {
-      executeQuickCommand(selectedCmd.command);
-    }
-  };
-
-  const handleCommandChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCommand(e.target.value);
+  const handleQuickCommandSelect = (cmd: string) => {
+    setIsQuickCommandDialogOpen(false);
+    executeCommand(cmd);
   };
 
   const clearOutput = () => {
@@ -437,136 +354,196 @@ const AdbToolsPanel: React.FC = () => {
     navigator.clipboard.writeText(output);
   };
 
+  // 根据搜索词过滤快捷命令
+  const getFilteredCommands = () => {
+    if (!dialogSearchTerm.trim()) {
+      return categorizedQuickCommands;
+    }
+    
+    const lowerSearch = dialogSearchTerm.toLowerCase();
+    const filteredCategories = [];
+    
+    for (const category of categorizedQuickCommands) {
+      const filteredCommands = category.commands.filter(cmd => 
+        cmd.label.toLowerCase().includes(lowerSearch) || 
+        cmd.command.toLowerCase().includes(lowerSearch)
+      );
+      
+      if (filteredCommands.length > 0) {
+        filteredCategories.push({
+          ...category,
+          commands: filteredCommands
+        });
+      }
+    }
+    
+    return filteredCategories;
+  };
+
   return (
     <div className={styles.container}>
-      <div className={styles.content}>
-        <div className={styles.leftPanel}>
-          <Card className={styles.card}>
+      <Card className={styles.mainCard}>
+        <div className={styles.cardContent}>
+          {/* 上部分：控制区域 */}
+          <div className={styles.controlsSection}>
+            {/* 命令输入和快捷命令按钮 */}
+            <div className={styles.topControlsRow}>
+              <div className={styles.commandInputContainer}>
+                <div className={styles.commandInputField}>
+                  <Field  style={{ marginBottom: 0 }}>
+                    <Input
+                      value={command}
+                      onChange={(_, data) => setCommand(data.value)}
+                      placeholder="例如: shell getprop"
+                      disabled={!selectedDevice || isExecuting}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          executeCommand(command);
+                        }
+                      }}
+                    />
+                  </Field>
+                </div>
+                <Button
+                  appearance="primary"
+                  icon={<Play24Regular />}
+                  onClick={() => executeCommand(command)}
+                  disabled={!selectedDevice || isExecuting || !command.trim()}
+                  style={{ alignSelf: "flex-end", marginBottom: "8px" }}
+                >
+                  {isExecuting ? '执行中...' : '执行'}
+                </Button>
+              </div>
+              <Button
+                className={styles.quickCommandButton}
+                icon={<ChevronDown24Regular />}
+                onClick={() => setIsQuickCommandDialogOpen(true)}
+                disabled={!selectedDevice || isExecuting}
+                style={{ alignSelf: "flex-end", marginBottom: "8px" }}
+              >
+                快捷命令
+              </Button>
+            </div>
 
-            <div className={styles.cardContent}>
-              <div className={styles.commandSection}>
-                <Field label="自定义ADB命令:">
-                  <div className={styles.commandInputContainer}>
-                    <div className={styles.commandInputField}>
-                      <Input
-                        value={command}
-                        onChange={(_, data) => setCommand(data.value)}
-                        placeholder="例如: shell getprop"
-                        disabled={!selectedDevice || isExecuting}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            executeCommand();
-                          }
-                        }}
-                      />
-                    </div>
+            {/* 搜索框和操作按钮 */}
+            <div className={styles.searchAndActionsRow}>
+              <div className={styles.searchContainer}>
+                <Input
+                  placeholder="搜索输出..."
+                  value={searchTerm}
+                  onChange={(_, data) => setSearchTerm(data.value)}
+                  contentBefore={<Search24Regular />}
+                  disabled={!output}
+                />
+              </div>
+              <div className={styles.actionButtons}>
+                {searchTerm && searchMatches.length > 0 && (
+                  <div className={styles.searchMatchesInfo}>
+                    <Text size={200}>
+                      找到 {searchMatches.length} 个匹配项
+                    </Text>
                     <Button
-                      appearance="primary"
-                      icon={<Play24Regular />}
-                      onClick={executeCommand}
-                      disabled={!selectedDevice || isExecuting || !command.trim()}
+                      appearance="subtle"
+                      size="small"
+                      onClick={navigateToMatch}
+                      disabled={!searchTerm || searchMatches.length === 0}
                     >
-                      {isExecuting ? '执行中...' : '执行'}
+                      下一个
                     </Button>
                   </div>
-                </Field>
+                )}
+                <Button
+                  appearance="subtle"
+                  icon={<Copy24Regular />}
+                  onClick={copyOutput}
+                  disabled={!output}
+                  title="复制输出"
+                />
+                <Button
+                  appearance="subtle"
+                  icon={<Delete24Regular />}
+                  onClick={clearOutput}
+                  disabled={!output}
+                  title="清空输出"
+                />
               </div>
+            </div>
+          </div>
 
-              <div className={styles.quickCommandsContainer}>
-                <Field label="快捷命令:">
-                  <div className={styles.quickCommandsList}>
-                    {quickCommands.map((cmd, index) => (
-                      <div 
-                        key={index} 
-                        className={mergeClasses(
-                          styles.quickCommandItem, 
-                          selectedQuickCommand === cmd.label && styles.selectedCommand
-                        )}
-                        onClick={() => {
-                          setSelectedQuickCommand(cmd.label);
-                          executeQuickCommand(cmd.command);
-                        }}
+          {/* 下部分：输出区域 */}
+          <div className={styles.outputSection}>
+            <div className={styles.outputContainer}>
+              <div className={styles.outputContent}>
+                <pre
+                  ref={outputRef}
+                  dangerouslySetInnerHTML={{
+                    __html: highlightedOutput || '<span style="color: #888">命令输出将显示在这里...</span>'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* 快捷命令选择对话框 */}
+      <Dialog
+        open={isQuickCommandDialogOpen}
+        onOpenChange={(event, data) => handleDialogOpenChange(data.open)}
+        modalType="modal"
+      >
+        <DialogSurface>
+          <DialogBody>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <DialogTitle>选择快捷命令</DialogTitle>
+              <Button 
+                appearance="subtle" 
+                size="small" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsQuickCommandDialogOpen(false);
+                }}
+              >
+                ×
+              </Button>
+            </div>
+            
+            <DialogContent className={styles.dialogBody}>
+              <Input
+                placeholder="搜索命令..."
+                value={dialogSearchTerm}
+                onChange={(_, data) => setDialogSearchTerm(data.value)}
+                contentBefore={<Search24Regular />}
+                style={{ marginBottom: "16px" }}
+              />
+              {getFilteredCommands().map((category, categoryIndex) => (
+                <div key={categoryIndex} style={{ marginBottom: "20px" }}>
+                  <div className={styles.categoryHeader}>{category.category}</div>
+                  <div className={styles.commandGrid}>
+                    {category.commands.map((cmd, cmdIndex) => (
+                      <div
+                        key={cmdIndex}
+                        className={styles.commandItem}
+                        onClick={() => handleQuickCommandSelect(cmd.command)}
                       >
-                        <Text size={200}>{cmd.label}</Text>
+                        <Text weight="medium" style={{ marginBottom: "4px" }}>{cmd.label}</Text>
+                        <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                          {cmd.command}
+                        </Text>
                       </div>
                     ))}
                   </div>
-                </Field>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div className={styles.rightPanel}>
-          <Card className={styles.card}>
-            <CardHeader
-              header={
-                <div className={styles.header}>
-                  <Text weight="semibold">命令输出</Text>
-                  <div>
-                    <Button
-                      appearance="subtle"
-                      icon={<Copy24Regular />}
-                      onClick={copyOutput}
-                      disabled={!output}
-                      title="复制输出"
-                    />
-                    <Button
-                      appearance="subtle"
-                      icon={<Delete24Regular />}
-                      onClick={clearOutput}
-                      disabled={!output}
-                      title="清空输出"
-                    />
-                  </div>
                 </div>
-              }
-            />
-            <div className={styles.cardContent}>
-              <div className={styles.outputSection}>
-                <div className={styles.searchSection}>
-                  <Input
-                    placeholder="搜索输出..."
-                    value={searchTerm}
-                    onChange={(_, data) => setSearchTerm(data.value)}
-                    contentBefore={<Search24Regular />}
-                    disabled={!output}
-                    style={{ marginBottom: '12px' }}
-                  />
-                  {searchTerm && searchMatches.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                      <Text size={200}>
-                        找到 {searchMatches.length} 个匹配项
-                      </Text>
-                      <Button
-                        appearance="subtle"
-                        size="small"
-                        onClick={navigateToMatch}
-                        disabled={!searchTerm || searchMatches.length === 0}
-                      >
-                        下一个匹配项
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.outputContainer}>
-                  <div className={styles.outputContent}>
-                    <pre
-                      ref={outputRef}
-                      dangerouslySetInnerHTML={{
-                        __html: highlightedOutput || '<span style="color: #888">命令输出将显示在这里...</span>'
-                      }}
-                    />
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
+              ))}
+            </DialogContent>
+            
+            <DialogActions>
+              <Button onClick={() => setIsQuickCommandDialogOpen(false)}>关闭</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };
