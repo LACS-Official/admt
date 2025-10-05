@@ -16,7 +16,7 @@ mod version;
 use activation::check_activation_expiry;
 use adb::app::app_management::*;
 use adb::command::adb_system_controler::{restart_adb_service, fix_usb3_connection, unfix_usb3_connection};
-use adb::command::adb_command_runer::{run_usb_fix_script, execute_batch_file, execute_batch_file_stream, finish_adb_service, finish_adb5037, execute_adb_command};
+use adb::command::adb_command_runer::{execute_batch_file, execute_batch_file_stream, finish_adb_service, finish_adb5037, execute_adb_command};
 use adb::device::device_reboot::reboot_device;
 use adb::file::file::{push_file, pull_file, list_device_files};
 use adb::scrcpy::screen_mirror::{check_screen_mirror_support, diagnose_scrcpy, start_screen_mirror, stop_screen_mirror};
@@ -145,7 +145,6 @@ pub fn run() {
             restart_adb_service,
             fix_usb3_connection,
             unfix_usb3_connection,
-            run_usb_fix_script,
             execute_batch_file,
             execute_batch_file_stream,
             finish_adb_service,

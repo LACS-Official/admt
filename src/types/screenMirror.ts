@@ -108,11 +108,17 @@ export interface ScreenMirrorError {
 export const SCREEN_MIRROR_QUALITY_PRESETS: Record<string, ScreenMirrorQuality> = {
   "ultra": {
     resolution: "auto",
-    bitrate: 8,
+    bitrate: 12,
     framerate: 60,
     codec: "h264"
   },
   "high": {
+    resolution: "1920x1080",
+    bitrate: 8,
+    framerate: 60,
+    codec: "h264"
+  },
+  "balanced": {
     resolution: "1920x1080",
     bitrate: 4,
     framerate: 30,
@@ -129,12 +135,36 @@ export const SCREEN_MIRROR_QUALITY_PRESETS: Record<string, ScreenMirrorQuality> 
     bitrate: 1,
     framerate: 15,
     codec: "h264"
+  },
+  "gaming": {
+    resolution: "1920x1080",
+    bitrate: 10,
+    framerate: 60,
+    codec: "h264"
+  },
+  "powerSaving": {
+    resolution: "1280x720",
+    bitrate: 1,
+    framerate: 15,
+    codec: "h264"
+  },
+  "h265High": {
+    resolution: "1920x1080",
+    bitrate: 6,
+    framerate: 60,
+    codec: "h265"
+  },
+  "h265Balanced": {
+    resolution: "1920x1080",
+    bitrate: 3,
+    framerate: 30,
+    codec: "h265"
   }
 };
 
 // 默认投屏配置
 export const DEFAULT_SCREEN_MIRROR_CONFIG: ScreenMirrorConfig = {
-  quality: SCREEN_MIRROR_QUALITY_PRESETS.medium,
+  quality: SCREEN_MIRROR_QUALITY_PRESETS.high,
   showTouches: false,
   stayAwake: true,
   turnScreenOff: false,

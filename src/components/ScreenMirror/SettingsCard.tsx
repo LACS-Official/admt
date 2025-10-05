@@ -158,6 +158,7 @@ const SettingsCard: React.FC = () => {
           <Field label="选择预设">
             <Dropdown
               placeholder="选择质量预设"
+              value="high"
               onOptionSelect={(_, data) => handleQualityPresetChange(data.optionValue as string)}
             >
               {qualityPresetOptions.map((option) => (

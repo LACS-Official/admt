@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { 
   ScreenMirrorSession, 
   ScreenMirrorConfig, 
@@ -109,117 +110,129 @@ interface ScreenMirrorActions {
   handleProcessTerminated: (sessionId: string) => void;
 }
 
-export const useScreenMirrorStore = create<ScreenMirrorState & ScreenMirrorActions>((set, get) => ({
-  // 初始状态
-  activeSessions: [],
-  sessions: [],
-  supportedDevices: [],
-  selectedDevice: null,
-  config: DEFAULT_SCREEN_MIRROR_CONFIG,
-  stats: null,
-  isLoading: false,
-  error: null,
-  showSettings: false,
-  isFullscreen: false,
+export const useScreenMirrorStore = create<ScreenMirrorState & ScreenMirrorActions>()(
+  persist(
+    (set, get) => ({
+      // 初始状态
+      activeSessions: [],
+      sessions: [],
+      supportedDevices: [],
+      selectedDevice: null,
+      config: DEFAULT_SCREEN_MIRROR_CONFIG,
+      stats: null,
+      isLoading: false,
+      error: null,
+      showSettings: false,
+      isFullscreen: false,
 
-  // Actions
-  addActiveSession: (session) => set((state) => ({
-    activeSessions: [...state.activeSessions, session]
-  })),
+      // Actions
+      addActiveSession: (session) => set((state) => ({
+        activeSessions: [...state.activeSessions, session]
+      })),
 
-  removeActiveSession: (sessionId) => set((state) => ({
-    activeSessions: state.activeSessions.filter(session => session.id !== sessionId)
-  })),
+      removeActiveSession: (sessionId) => set((state) => ({
+        activeSessions: state.activeSessions.filter(session => session.id !== sessionId)
+      })),
 
-  updateActiveSession: (sessionId, updates) => set((state) => ({
-    activeSessions: state.activeSessions.map(session =>
-      session.id === sessionId ? { ...session, ...updates } : session
-    )
-  })),
+      updateActiveSession: (sessionId, updates) => set((state) => ({
+        activeSessions: state.activeSessions.map(session =>
+          session.id === sessionId ? { ...session, ...updates } : session
+        )
+      })),
 
-  getActiveSessionByDevice: (deviceSerial) => {
-    const { activeSessions } = get();
-    return activeSessions.find(session => session.deviceSerial === deviceSerial) || null;
-  },
+      getActiveSessionByDevice: (deviceSerial) => {
+        const { activeSessions } = get();
+        return activeSessions.find(session => session.deviceSerial === deviceSerial) || null;
+      },
 
-  addSession: (session) => set((state) => ({
-    sessions: [...state.sessions, session]
-  })),
+      addSession: (session) => set((state) => ({
+        sessions: [...state.sessions, session]
+      })),
 
-  updateSession: (sessionId, updates) => set((state) => ({
-    sessions: state.sessions.map(session =>
-      session.id === sessionId ? { ...session, ...updates } : session
-    )
-  })),
+      updateSession: (sessionId, updates) => set((state) => ({
+        sessions: state.sessions.map(session =>
+          session.id === sessionId ? { ...session, ...updates } : session
+        )
+      })),
 
-  setSupportedDevices: (devices) => set({ supportedDevices: devices }),
+      setSupportedDevices: (devices) => set({ supportedDevices: devices }),
 
-  selectDevice: (device) => set({ selectedDevice: device }),
+      selectDevice: (device) => set({ selectedDevice: device }),
 
-  updateConfig: (configUpdates) => set((state) => ({
-    config: { ...state.config, ...configUpdates }
-  })),
+      updateConfig: (configUpdates) => set((state) => ({
+        config: { ...state.config, ...configUpdates }
+      })),
 
-  resetConfig: () => set({ config: DEFAULT_SCREEN_MIRROR_CONFIG }),
+      resetConfig: () => set({ config: DEFAULT_SCREEN_MIRROR_CONFIG }),
 
-  applyQualityPreset: (presetName) => set((state) => {
-    const preset = SCREEN_MIRROR_QUALITY_PRESETS[presetName];
-    if (preset) {
-      return {
-        config: {
-          ...state.config,
-          quality: preset
+      applyQualityPreset: (presetName) => set((state) => {
+        const preset = SCREEN_MIRROR_QUALITY_PRESETS[presetName];
+        if (preset) {
+          return {
+            config: {
+              ...state.config,
+              quality: preset
+            }
+          };
         }
-      };
+        return state;
+      }),
+
+      setStats: (stats) => set({ stats }),
+
+      setLoading: (loading) => set({ isLoading: loading }),
+
+      setError: (error) => set({ error }),
+
+      toggleSettings: () => set((state) => ({ showSettings: !state.showSettings })),
+
+      toggleFullscreen: () => set((state) => ({ isFullscreen: !state.isFullscreen })),
+
+      clearSessionHistory: () => set({ sessions: [] }),
+
+      getDeviceStatus: (deviceSerial) => {
+        const session = get().getActiveSessionByDevice(deviceSerial);
+        return session?.status || 'disconnected';
+      },
+
+      canStartMirroring: (deviceSerial) => {
+        const { activeSessions } = get();
+        // 检查设备是否已经有正在投屏的会话
+        const existingSession = activeSessions.find(session => session.deviceSerial === deviceSerial && session.status === 'streaming');
+        return !existingSession;
+      },
+
+      isDeviceStreaming: (deviceSerial) => {
+        const status = get().getDeviceStatus(deviceSerial);
+        return status === 'streaming';
+      },
+
+      isAnyDeviceStreaming: () => {
+        const { activeSessions } = get();
+        return activeSessions.some(session => session.status === 'streaming');
+      },
+
+      handleProcessTerminated: (sessionId) => set((state) => {
+        // 更新会话状态为已断开
+        const updatedSessions = state.activeSessions.map(session =>
+          session.id === sessionId ? { ...session, status: 'disconnected' as const } : session
+        );
+        
+        // 从活动会话中移除
+        const filteredSessions = updatedSessions.filter(session => session.id !== sessionId);
+        
+        return {
+          activeSessions: filteredSessions
+        };
+      })
+    }),
+    {
+      name: "hout-screen-mirror-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        config: state.config,
+        showSettings: state.showSettings,
+      }),
     }
-    return state;
-  }),
-
-  setStats: (stats) => set({ stats }),
-
-  setLoading: (loading) => set({ isLoading: loading }),
-
-  setError: (error) => set({ error }),
-
-  toggleSettings: () => set((state) => ({ showSettings: !state.showSettings })),
-
-  toggleFullscreen: () => set((state) => ({ isFullscreen: !state.isFullscreen })),
-
-  clearSessionHistory: () => set({ sessions: [] }),
-
-  getDeviceStatus: (deviceSerial) => {
-    const session = get().getActiveSessionByDevice(deviceSerial);
-    return session?.status || 'disconnected';
-  },
-
-  canStartMirroring: (deviceSerial) => {
-    const { activeSessions } = get();
-    // 检查设备是否已经有正在投屏的会话
-    const existingSession = activeSessions.find(session => session.deviceSerial === deviceSerial && session.status === 'streaming');
-    return !existingSession;
-  },
-
-  isDeviceStreaming: (deviceSerial) => {
-    const status = get().getDeviceStatus(deviceSerial);
-    return status === 'streaming';
-  },
-
-  isAnyDeviceStreaming: () => {
-    const { activeSessions } = get();
-    return activeSessions.some(session => session.status === 'streaming');
-  },
-
-  handleProcessTerminated: (sessionId) => set((state) => {
-    // 更新会话状态为已断开
-    const updatedSessions = state.activeSessions.map(session =>
-      session.id === sessionId ? { ...session, status: 'disconnected' as const } : session
-    );
-    
-    // 从活动会话中移除
-    const filteredSessions = updatedSessions.filter(session => session.id !== sessionId);
-    
-    return {
-      activeSessions: filteredSessions
-    };
-  })
-}));
+  )
+);
