@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   makeStyles,
   Text,
@@ -9,10 +9,13 @@ import {
   Input,
   Spinner,
   Checkbox,
+  Divider,
+  List,
 } from "@fluentui/react-components";
 import {
   DocumentAdd24Regular,
   Apps24Regular,
+  Folder24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -88,6 +91,74 @@ const useStyles = makeStyles({
   selectButton: {
     marginLeft: "8px",
   },
+  apkListSection: {
+    marginTop: "16px",
+  },
+  apkListHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "12px",
+  },
+  apkListTitle: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  apkList: {
+    maxHeight: "400px",
+    overflowY: "auto",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "4px",
+  },
+  apkListItem: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px",
+    borderBottom: "1px solid var(--colorNeutralStroke2)",
+    "&:last-child": {
+      borderBottom: "none",
+    },
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+    },
+  },
+  apkListItemInfo: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  apkListItemName: {
+    fontWeight: "600",
+  },
+  apkListItemPath: {
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground2)",
+    wordBreak: "break-all",
+  },
+  apkListItemActions: {
+    display: "flex",
+    gap: "8px",
+  },
+  refreshButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    minWidth: "auto",
+  },
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px",
+    color: "var(--colorNeutralForeground3)",
+  },
+  emptyStateText: {
+    marginTop: "8px",
+  },
 });
 
 interface InstallStatus {
@@ -95,6 +166,11 @@ interface InstallStatus {
   status: "installing" | "success" | "failed";
   progress: number;
   message?: string;
+}
+
+interface ApkFile {
+  path: string;
+  name: string;
 }
 
 const AppInstallPanel: React.FC = () => {
@@ -113,6 +189,10 @@ const AppInstallPanel: React.FC = () => {
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
   const [installHistory, setInstallHistory] = useState<InstallStatus[]>([]);
+  
+  // 本地APK文件列表相关状态
+  const [localApkFiles, setLocalApkFiles] = useState<ApkFile[]>([]);
+  const [isLoadingLocalApks, setIsLoadingLocalApks] = useState(false);
 
   // 使用文件选择器获取完整路径
   const handleFileSelect = useCallback(async () => {
@@ -152,6 +232,126 @@ const AppInstallPanel: React.FC = () => {
       });
     }
   }, [setStatusBarMessage]);
+
+  // 加载本地APK文件列表
+  const loadLocalApkFiles = useCallback(async () => {
+    setIsLoadingLocalApks(true);
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const apkPaths: string[] = await invoke('get_apk_files');
+      
+      const apkFiles: ApkFile[] = apkPaths.map(path => ({
+        path,
+        name: path.split(/[/\\]/).pop() || "未知文件.apk"
+      }));
+      
+      setLocalApkFiles(apkFiles);
+    } catch (error) {
+      console.error('加载本地APK文件列表失败:', error);
+      setStatusBarMessage({
+        type: "error",
+        message: `加载本地APK文件列表失败: ${error}`,
+      });
+    } finally {
+      setIsLoadingLocalApks(false);
+    }
+  }, [setStatusBarMessage]);
+
+  // 安装本地APK文件
+  const handleInstallLocalApk = useCallback(async (apkPath: string) => {
+    if (!selectedDevice) {
+      setStatusBarMessage({
+        type: "warning",
+        message: "请先选择一个设备",
+      });
+      return;
+    }
+
+    try {
+      setIsInstalling(true);
+      
+      const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
+      setStatusBarMessage({
+        type: "info",
+        message: `开始安装 ${fileName}`,
+      });
+
+      const newStatus: InstallStatus = {
+        fileName,
+        status: "installing",
+        progress: 0,
+      };
+
+      setInstallHistory(prev => [newStatus, ...prev]);
+
+      // 模拟安装进度
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setInstallHistory(prev => 
+          prev.map((item, index) => 
+            index === 0 ? { ...item, progress: i } : item
+          )
+        );
+      }
+
+      const result = await deviceService.installApk(selectedDevice.serial, apkPath, replaceExisting);
+      
+      if (result.success) {
+        setInstallHistory(prev => 
+          prev.map((item, index) => 
+            index === 0 ? { 
+              ...item, 
+              status: "success", 
+              progress: 100,
+              message: "安装成功"
+            } : item
+          )
+        );
+        
+        setStatusBarMessage({
+          type: "success",
+          message: `${fileName} 安装成功`,
+        });
+      } else {
+        setInstallHistory(prev => 
+          prev.map((item, index) => 
+            index === 0 ? { 
+              ...item, 
+              status: "failed", 
+              message: result.error || "安装失败"
+            } : item
+          )
+        );
+        
+        setStatusBarMessage({
+          type: "error",
+          message: result.error || "APK安装失败",
+        });
+      }
+    } catch (error) {
+      setInstallHistory(prev => 
+        prev.map((item, index) => 
+          index === 0 ? { 
+            ...item, 
+            status: "failed", 
+            message: `安装失败: ${error}`
+          } : item
+        )
+      );
+      
+      setStatusBarMessage({
+        type: "error",
+        message: `APK安装失败: ${error}`,
+      });
+    } finally {
+      setIsInstalling(false);
+    }
+  }, [selectedDevice, deviceService, replaceExisting, setStatusBarMessage]);
+
+  // 组件加载时获取本地APK文件列表
+  useEffect(() => {
+    loadLocalApkFiles();
+  }, [loadLocalApkFiles]);
 
   const handleInstallClick = async () => {
     if (!selectedDevice) {
@@ -383,6 +583,65 @@ const AppInstallPanel: React.FC = () => {
               </Button>
             </div>
 
+
+          </div>
+        </Card>
+        <Card>
+                      {/* 本地APK文件列表 */}
+          <div className={styles.apkListSection}>
+            <div className={styles.apkListHeader}>
+              <div className={styles.apkListTitle}>
+                <Folder24Regular />
+                <Text weight="semibold">本地已下载APK</Text>
+              </div>
+              <Button
+                appearance="secondary"
+                size="small"
+                onClick={loadLocalApkFiles}
+                disabled={isLoadingLocalApks}
+                className={styles.refreshButton}
+              >
+                {isLoadingLocalApks ? <Spinner size="tiny" /> : null}
+                刷新
+              </Button>
+            </div>
+
+            {isLoadingLocalApks ? (
+              <div className={styles.apkList}>
+                <div className={styles.emptyState}>
+                  <Spinner size="medium" />
+                  <Text className={styles.emptyStateText}>加载中...</Text>
+                </div>
+              </div>
+            ) : localApkFiles.length === 0 ? (
+              <div className={styles.apkList}>
+                <div className={styles.emptyState}>
+                  <Folder24Regular />
+                  <Text className={styles.emptyStateText}>未找到本地APK文件</Text>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.apkList}>
+                {localApkFiles.map((apk, index) => (
+                  <div key={index} className={styles.apkListItem}>
+                    <div className={styles.apkListItemInfo}>
+                      <Text className={styles.apkListItemName}>{apk.name}</Text>
+                      <Text className={styles.apkListItemPath}>{apk.path}</Text>
+                    </div>
+                    <div className={styles.apkListItemActions}>
+                      <Button
+                        appearance="primary"
+                        size="small"
+                        onClick={() => handleInstallLocalApk(apk.path)}
+                        disabled={!selectedDevice || isInstalling}
+                      >
+                        安装
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
 

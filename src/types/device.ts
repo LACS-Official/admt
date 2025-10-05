@@ -153,7 +153,7 @@ export interface BatchOperation {
   endTime?: string;
 }
 
-export type BatchOperationType = 'install' | 'uninstall';
+export type BatchOperationType = 'install' | 'uninstall' | 'freeze' | 'unfreeze' | 'forceStop' | 'exportApk' | 'clearData';
 export type BatchOperationStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
 export interface BatchOperationItem {

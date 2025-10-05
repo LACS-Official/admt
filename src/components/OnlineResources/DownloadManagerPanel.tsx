@@ -12,6 +12,7 @@ import {
   Dropdown,
   Option,
   Spinner,
+  Tooltip,
 } from '@fluentui/react-components';
 import {
   Delete24Regular,
@@ -24,6 +25,7 @@ import {
   ErrorCircle24Filled,
   Broom24Regular,
   FolderZip24Regular,
+  Folder24Regular,
 } from '@fluentui/react-icons';
 import { DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
@@ -329,7 +331,18 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
             if (downloadDirectory) {
               try {
                 const { invoke } = await import('@tauri-apps/api/core');
-                await invoke('open_folder', { path: downloadDirectory });
+                
+                // 检查是否有APK文件，如果有则优先打开APK目录
+                const hasApkFiles = tasks.some(task => {
+                  return task.fileName && task.fileName.toLowerCase().endsWith('.apk');
+                });
+                
+                // 如果有APK文件，则打开APK目录，否则打开默认下载目录
+                const targetDir = hasApkFiles 
+                  ? `${downloadDirectory}/apk` 
+                  : downloadDirectory;
+                
+                await invoke('open_folder', { path: targetDir });
               } catch (error) {
                 console.error('❌ 打开下载目录失败:', error);
               }
@@ -466,6 +479,22 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
     }
   };
 
+  // 打开文件位置
+  const handleOpenFileLocation = async () => {
+    try {
+      if (task.filePath) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        // 提取文件所在目录路径
+        const filePath = task.filePath;
+        const dirPath = filePath.substring(0, filePath.lastIndexOf('\\'));
+        await invoke('open_folder', { path: dirPath });
+        console.log('✅ 已打开文件位置:', dirPath);
+      }
+    } catch (error) {
+      console.error('❌ 打开文件位置失败:', error);
+    }
+  };
+
   const getStatusBadgeProps = (status: DownloadTask['status']) => {
     switch (status) {
       case 'downloading':
@@ -574,7 +603,16 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
           <Button size="small" appearance="subtle" icon={<Dismiss24Regular />} onClick={handleCancel} />
         )}
 
-        {(task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') && (
+        {task.status === 'completed' && (
+          <>
+            <Tooltip content="打开文件位置" relationship="label">
+              <Button size="small" appearance="subtle" icon={<Folder24Regular />} onClick={handleOpenFileLocation} />
+            </Tooltip>
+            <Button size="small" appearance="subtle" icon={<Delete24Regular />} onClick={handleDelete} />
+          </>
+        )}
+
+        {(task.status === 'failed' || task.status === 'cancelled') && (
           <Button size="small" appearance="subtle" icon={<Delete24Regular />} onClick={handleDelete} />
         )}
       </div>

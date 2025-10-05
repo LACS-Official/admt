@@ -236,6 +236,9 @@ const LogsPanel: React.FC = () => {
 
   // 订阅增强日志数据
   useEffect(() => {
+    // 记录用户访问日志面板
+    enhancedLogService.logUserAction("访问日志面板", "LogsPanel");
+    
     const unsubscribe = enhancedLogService.subscribe((newLogs) => {
       setLogs(newLogs);
       updateStats();
@@ -339,9 +342,35 @@ const LogsPanel: React.FC = () => {
     enhancedLogService.logUserAction("刷新日志", "LogsPanel");
   };
 
+  const handleLevelFilterChange = (value: string) => {
+    setLevelFilter(value);
+    enhancedLogService.logUserAction("更改日志级别过滤", "LogsPanel", { level: value });
+  };
+
+  const handleCategoryFilterChange = (value: string) => {
+    setCategoryFilter(value);
+    enhancedLogService.logUserAction("更改日志分类过滤", "LogsPanel", { category: value });
+  };
+
+  const handleDeviceFilterChange = (value: string) => {
+    setDeviceFilter(value);
+    enhancedLogService.logUserAction("更改设备过滤", "LogsPanel", { device: value });
+  };
+
+  const handleSearchFilterChange = (value: string) => {
+    setSearchFilter(value);
+    enhancedLogService.logUserAction("更改日志搜索", "LogsPanel", { search: value });
+  };
+
+  const handleAutoScrollChange = (checked: boolean) => {
+    setAutoScroll(checked);
+    enhancedLogService.logUserAction("更改自动滚动设置", "LogsPanel", { autoScroll: checked });
+  };
+
   const handleMaxLogEntriesChange = (value: number) => {
     setMaxLogEntries(value);
     enhancedLogService.setRetentionPolicy({ maxMemoryLogs: value });
+    enhancedLogService.logUserAction("更改最大日志条数设置", "LogsPanel", { maxLogEntries: value });
   };
 
 
@@ -393,8 +422,23 @@ const LogsPanel: React.FC = () => {
     const isRecent = LogUtils.isRecentLog(log.timestamp, 5);
     const entryClass = `logEntry${log.level.charAt(0).toUpperCase() + log.level.slice(1)}`;
     
+    const handleLogClick = () => {
+      enhancedLogService.logUserAction("查看日志详情", "LogsPanel", { 
+        logId: log.id, 
+        level: log.level, 
+        category: log.category,
+        source: log.source,
+        timestamp: log.timestamp
+      });
+    };
+    
     return (
-      <div key={log.id} className={mergeClasses(styles.logEntry, styles[entryClass as keyof typeof styles])}>
+      <div 
+        key={log.id} 
+        className={mergeClasses(styles.logEntry, styles[entryClass as keyof typeof styles])}
+        onClick={handleLogClick}
+        style={{ cursor: "pointer" }}
+      >
         <div className={styles.logHeader}>
           {isRecent && <span className={styles.recentIndicator} />}
           <span className={styles.logTimestamp}>
@@ -435,11 +479,40 @@ const LogsPanel: React.FC = () => {
               <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
                 显示 {filteredLogs.length} / {logs.length} 条日志记录
               </Text>
+              <div className={styles.actionButtons}>
+                <Button
+                  icon={<ArrowClockwise24Regular />}
+                  appearance="subtle"
+                  size="small"
+                  onClick={handleRefreshLogs}
+                >
+                  刷新
+                </Button>
+                <Button
+                  icon={<Delete24Regular />}
+                  appearance="subtle"
+                  size="small"
+                  onClick={handleClearLogs}
+                >
+                  清空
+                </Button>
+                <Dropdown
+                  defaultSelectedOptions={[]}
+                  onOptionSelect={(_, data) => {
+                    if (data.optionValue === 'json' || data.optionValue === 'text') {
+                      handleExportLogs(data.optionValue as 'json' | 'text');
+                    }
+                  }}
+                >
+                  <Option value="json">导出为JSON</Option>
+                  <Option value="text">导出为文本</Option>
+                </Dropdown>
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Text size={200}>自动滚动:</Text>
                 <Switch
                   checked={autoScroll}
-                  onChange={(_, data) => setAutoScroll(data.checked === true)}
+                  onChange={(_, data) => handleAutoScrollChange(data.checked === true)}
                 />
               </div>
             </div>
@@ -448,7 +521,7 @@ const LogsPanel: React.FC = () => {
               <Field label="日志级别:">
                 <Select
                   value={levelFilter}
-                  onChange={(_, data) => setLevelFilter(data.value)}
+                  onChange={(_, data) => handleLevelFilterChange(data.value)}
                 >
                   <option value="all">全部级别</option>
                   <option value="fatal">致命错误</option>
@@ -462,7 +535,7 @@ const LogsPanel: React.FC = () => {
               <Field label="日志分类:">
                 <Select
                   value={categoryFilter}
-                  onChange={(_, data) => setCategoryFilter(data.value)}
+                  onChange={(_, data) => handleCategoryFilterChange(data.value)}
                 >
                   <option value="all">全部分类</option>
                   <option value="device">📱 设备</option>
@@ -478,7 +551,7 @@ const LogsPanel: React.FC = () => {
                 <Input
                   placeholder="设备ID或型号..."
                   value={deviceFilter}
-                  onChange={(_, data) => setDeviceFilter(data.value)}
+                  onChange={(_, data) => handleDeviceFilterChange(data.value)}
                 />
               </Field>
 
@@ -486,7 +559,7 @@ const LogsPanel: React.FC = () => {
                 <Input
                   placeholder="搜索日志内容..."
                   value={searchFilter}
-                  onChange={(_, data) => setSearchFilter(data.value)}
+                  onChange={(_, data) => handleSearchFilterChange(data.value)}
                 />
               </Field>
             </div>
@@ -524,7 +597,18 @@ const LogsPanel: React.FC = () => {
 
             <div className={styles.cardContent}>
               {errorPatterns.map((pattern, index) => (
-                <div key={index} className={styles.errorPattern}>
+                <div 
+                  key={index} 
+                  className={styles.errorPattern}
+                  onClick={() => {
+                    enhancedLogService.logUserAction("查看错误模式", "LogsPanel", { 
+                      pattern: pattern.pattern, 
+                      count: pattern.count,
+                      lastOccurrence: pattern.lastOccurrence
+                    });
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Text size={200} style={{ flex: 1, wordBreak: "break-word" }}>
                       {pattern.pattern}

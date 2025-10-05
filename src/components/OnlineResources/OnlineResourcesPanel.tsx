@@ -330,6 +330,7 @@ const OnlineResourcesPanel: React.FC = () => {
           <Option value="脚本">脚本</Option>
           <Option value="驱动">驱动</Option>
           <Option value="设置文件">设置文件</Option>
+          <Option value="RootApp">RootApp</Option>
           <Option value="小米解锁">小米解锁</Option>
           <Option value="其它">其它</Option>
         </Dropdown>

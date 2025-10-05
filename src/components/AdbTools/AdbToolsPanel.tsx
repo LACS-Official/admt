@@ -173,6 +173,13 @@ if (typeof document !== 'undefined') {
 // 分类的快捷命令
 const categorizedQuickCommands = [
   {
+    category: "软件激活",
+    commands: [
+      { label: "激活shizuku", command: "shell sh /sdcard/android/data/moe.shizuku.privileged.api/start.sh" },
+      { label: "激活scene", command: "shell sh /data/user/0/com.omarea.vtools/files/up.sh" },
+    ]
+  },
+  {
     category: "设备信息",
     commands: [
       { label: "获取设备信息", command: "shell getprop" },
