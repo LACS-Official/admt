@@ -15,13 +15,13 @@ mod version;
 
 use activation::check_activation_expiry;
 use adb::app::app_management::*;
-use adb::command::adb_system_controler::{restart_adb_service, fix_usb3_connection};
+use adb::command::adb_system_controler::{restart_adb_service, fix_usb3_connection, unfix_usb3_connection};
 use adb::command::adb_command_runer::{run_usb_fix_script, execute_batch_file, execute_batch_file_stream, finish_adb_service, finish_adb5037, execute_adb_command};
 use adb::device::device_reboot::reboot_device;
 use adb::file::file::{push_file, pull_file, list_device_files};
 use adb::scrcpy::screen_mirror::{check_screen_mirror_support, diagnose_scrcpy, start_screen_mirror, stop_screen_mirror};
 use cache::cache_cleanup_task;
-use commands::{scan_devices, execute_adb_command_with_path, get_adb_tools_info, verify_adb_tools_integrity, get_device_properties, check_adb_availability, check_fastboot_availability, fastboot_flash_image, diagnose_adb_fastboot_paths, get_device_performance_info, get_device_memory_storage_info, check_device_connection, get_device_connection_info, download_apk, get_download_size, download_file, cancel_download, get_downloads_directory, cleanup_downloads, validate_activation_code_format, activate_application, check_activation_status, validate_local_activation_data, get_device_fingerprint, get_app_config, save_app_config, get_security_config, validate_security_config, get_platform_info, get_system_arch, open_devtools, is_debug_mode, set_window_always_on_top, get_window_always_on_top, get_app_environment, download_and_extract_software, get_default_download_directory, open_folder, check_file_exists, delete_file, read_json_file, execute_script_in_new_window, get_cache_stats, clear_all_cache, invalidate_device_cache, get_detailed_device_fingerprint, exit_app, terminate_process, check_process_alive};
+use commands::{scan_devices, execute_adb_command_with_path, get_adb_tools_info, verify_adb_tools_integrity, get_device_properties, check_adb_availability, check_fastboot_availability, fastboot_flash_image, diagnose_adb_fastboot_paths, get_device_performance_info, get_device_memory_storage_info, check_device_connection, get_device_connection_info, download_apk, get_download_size, download_file, cancel_download, get_downloads_directory, cleanup_downloads, validate_activation_code_format, activate_application, check_activation_status, validate_local_activation_data, get_device_fingerprint, get_app_config, save_app_config, get_security_config, validate_security_config, get_platform_info, get_system_arch, open_devtools, is_debug_mode, set_window_always_on_top, get_window_always_on_top, get_app_environment, download_and_extract_software, get_default_download_directory, open_folder, check_file_exists, delete_file, read_json_file, execute_script_in_new_window, get_cache_stats, clear_all_cache, invalidate_device_cache, get_detailed_device_fingerprint, exit_app, terminate_process, check_process_alive, get_apk_files};
 use fastboot::command::fastboot_command_runner::{execute_fastboot_command, execute_fastboot_command_with_path};
 use core::log::*;
 use sys::sys_tool_opener::{open_device_manager, open_task_manager};
@@ -76,6 +76,7 @@ pub fn run() {
             list_device_files,
             get_device_properties,
             get_installed_apps,
+            get_installed_apps_batch,
             uninstall_app,
             get_apk_info,
             batch_install_apks,
@@ -93,6 +94,7 @@ pub fn run() {
             download_file,
             cancel_download,
             get_downloads_directory,
+            get_apk_files,
             cleanup_downloads,
             check_screen_mirror_support,
             diagnose_scrcpy,
@@ -142,6 +144,7 @@ pub fn run() {
             // 杂项控制功能命令
             restart_adb_service,
             fix_usb3_connection,
+            unfix_usb3_connection,
             run_usb_fix_script,
             execute_batch_file,
             execute_batch_file_stream,

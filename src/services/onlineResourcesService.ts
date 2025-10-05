@@ -157,7 +157,7 @@ class OnlineResourcesService {
       const admtSoftware = admtResponse.data || [];
       
       // 获取其他分类的软件
-      const categories = ['脚本', '驱动', '设置文件', '小米解锁', '其它'];
+      const categories = ['脚本', '驱动', '设置文件', '小米解锁','RootApp', '其它'];
       const result: Record<string, OnlineSoftware[]> = {
         'ADMT': admtSoftware
       };
@@ -177,6 +177,7 @@ class OnlineResourcesService {
         '驱动': [],
         '设置文件': [],
         '小米解锁': [],
+        'RootApp': [],
         '其它': []
       };
     }
@@ -234,7 +235,7 @@ class OnlineResourcesService {
     if (this.activeDownloads.size >= this.MAX_ACTIVE_DOWNLOADS) {
       return {
         canDownload: false,
-        reason: `同时最多只能下载 ${this.MAX_ACTIVE_DOWNLOADS} 个文件，请等待正在下载的任务完成`
+        reason: `1分钟内最多只能同时下载 ${this.MAX_ACTIVE_DOWNLOADS} 个文件，请等待正在下载的任务完成`
       };
     }
 
@@ -794,8 +795,19 @@ class OnlineResourcesService {
       // 3. 检查默认下载目录中是否存在文件
       const downloadDir = await this.getDownloadsDirectory();
       if (downloadDir && software.latestDownloadUrl) {
+        // 从URL中提取文件扩展名
+        const fileExtension = this.extractFileExtension(software.latestDownloadUrl, software.filetype);
         const fileName = this.generateFileName(software);
-        const filePath = `${downloadDir}/${fileName}`;
+        
+        // 根据文件扩展名确定检查的目录
+        let filePath: string;
+        if (fileExtension === 'apk') {
+          // APK文件检查 downloads/apk/ 目录
+          filePath = `${downloadDir}/apk/${fileName}`;
+        } else {
+          // 其他文件检查默认下载目录
+          filePath = `${downloadDir}/${fileName}`;
+        }
 
         const { invoke } = await import('@tauri-apps/api/core');
         const fileExists = await invoke('check_file_exists', { path: filePath }) as boolean;

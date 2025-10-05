@@ -146,7 +146,22 @@ impl DownloadManager {
         // 构建文件名
         let file_extension = request.file_extension.as_deref().unwrap_or("bin");
         let filename = format!("{}.{}", request.software_name, file_extension);
-        let file_path = app_downloads_dir.join(&filename);
+        
+        // 根据文件扩展名确定下载目录
+        let target_dir = if file_extension == "apk" {
+            // APK文件保存到 downloads/apk/ 目录
+            let apk_dir = app_downloads_dir.join("apk");
+            // 确保apk目录存在
+            fs::create_dir_all(&apk_dir).map_err(|e| AdmtError::IoError {
+                message: e.to_string(),
+            })?;
+            apk_dir
+        } else {
+            // 其他文件保存到默认下载目录
+            app_downloads_dir.clone()
+        };
+        
+        let file_path = target_dir.join(&filename);
 
         // 确保下载目录存在
         if let Some(parent) = file_path.parent() {

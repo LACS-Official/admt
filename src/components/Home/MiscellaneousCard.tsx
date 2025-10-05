@@ -264,27 +264,75 @@ const MiscellaneousCard: React.FC = () => {
 
   // USB修复对话框处理函数
   const handleUsbFixStart = async () => {
-    // 关闭当前对话框
     setShowUsbFixDialog(false);
+    setUsbFixStatus('running');
+    setUsbFixOutput('正在执行USB 3.0修复...\n');
     
-    // 使用 BatchExecutorDialog 执行 USB 修复脚本
-    executeBatch({
-      title: "USB 3.0 修复工具",
-      batchFileName: "Usb_fix.bat",
-      workingDirectory: "tools/lacs"
-    });
+    try {
+      const result = await invoke("fix_usb3_connection") as any;
+      setUsbFixOutput(prev => prev + `执行结果: ${result.output}\n`);
+      
+      if (result.success) {
+        setUsbFixStatus('success');
+        setStatusBarMessage({
+          type: "success",
+          message: "USB 3.0修复成功，请重新连接设备",
+        });
+      } else {
+        setUsbFixStatus('error');
+        setUsbFixOutput(prev => prev + `错误: ${result.error || '未知错误'}\n`);
+        setStatusBarMessage({
+          type: "error",
+          message: "USB 3.0修复失败",
+        });
+      }
+    } catch (error) {
+      setUsbFixStatus('error');
+      setUsbFixOutput(prev => prev + `执行异常: ${error}\n`);
+      setStatusBarMessage({
+        type: "error",
+        message: `USB 3.0修复失败: ${error}`,
+      });
+    }
+    
+    // 重新打开对话框以显示结果
+    setShowUsbFixDialog(true);
   };
 
   const handleUsbUnFixStart = async () => {
-    // 关闭当前对话框
     setShowUsbFixDialog(false);
+    setUsbFixStatus('running');
+    setUsbFixOutput('正在撤销USB 3.0修复...\n');
     
-    // 使用 BatchExecutorDialog 执行 USB 修复脚本
-    executeBatch({
-      title: "USB 3.0 修复工具",
-      batchFileName: "Usb_Unfix.bat",
-      workingDirectory: "tools/lacs"
-    });
+    try {
+      const result = await invoke("unfix_usb3_connection") as any;
+      setUsbFixOutput(prev => prev + `执行结果: ${result.output}\n`);
+      
+      if (result.success) {
+        setUsbFixStatus('success');
+        setStatusBarMessage({
+          type: "success",
+          message: "USB 3.0修复已撤销，请重新连接设备",
+        });
+      } else {
+        setUsbFixStatus('error');
+        setUsbFixOutput(prev => prev + `错误: ${result.error || '未知错误'}\n`);
+        setStatusBarMessage({
+          type: "error",
+          message: "USB 3.0修复撤销失败",
+        });
+      }
+    } catch (error) {
+      setUsbFixStatus('error');
+      setUsbFixOutput(prev => prev + `执行异常: ${error}\n`);
+      setStatusBarMessage({
+        type: "error",
+        message: `USB 3.0修复撤销失败: ${error}`,
+      });
+    }
+    
+    // 重新打开对话框以显示结果
+    setShowUsbFixDialog(true);
   };
 
 

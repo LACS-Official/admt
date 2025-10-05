@@ -1633,6 +1633,41 @@ pub async fn download_and_extract_software<R: tauri::Runtime>(
     Ok(result_path.to_string_lossy().to_string())
 }
 
+/// 获取APK文件列表
+#[tauri::command]
+pub async fn get_apk_files() -> Result<Vec<String>> {
+    use tokio::fs;
+    
+    let downloads_dir = get_app_downloads_dir()?;
+    let apk_dir = downloads_dir.join("apk");
+    
+    // 确保APK目录存在
+    if !apk_dir.exists() {
+        fs::create_dir_all(&apk_dir)
+            .await
+            .map_err(|e| AdmtError::Io(format!("Failed to create APK directory: {}", e)))?;
+        return Ok(Vec::new());
+    }
+    
+    let mut apk_files = Vec::new();
+    let mut entries = fs::read_dir(&apk_dir)
+        .await
+        .map_err(|e| AdmtError::Io(format!("Failed to read APK directory: {}", e)))?;
+    
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .map_err(|e| AdmtError::Io(format!("Failed to read directory entry: {}", e)))?
+    {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) == Some("apk") {
+            apk_files.push(path.to_string_lossy().to_string());
+        }
+    }
+    
+    Ok(apk_files)
+}
+
 /// 获取默认下载目录（使用应用程序目录下的downloads）
 #[tauri::command]
 pub async fn get_default_download_directory() -> Result<String> {
