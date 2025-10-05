@@ -63,3 +63,93 @@ pub async fn execute_fastboot_command(
     
     result
 }
+
+/// 切换A/B分区
+#[tauri::command]
+pub async fn switch_ab_partition(
+    serial: String,
+    slot: String,
+    timeout: Option<u64>,
+) -> Result<CommandResult> {
+    log::info!("[fastboot_command_runner] switch_ab_partition called with serial: {}, slot: {}, timeout: {:?}", serial, slot, timeout);
+    
+    // 验证slot参数
+    if slot != "a" && slot != "b" {
+        return Err(crate::error::AdmtError::InvalidInput { message: format!("无效的slot参数: {}, 必须是 'a' 或 'b'", slot) });
+    }
+    
+    // 构建set_active命令参数
+    let args = vec![slot.clone()];
+    
+    // 执行fastboot set_active命令
+    let result = execute_fastboot_command(serial, "set_active".to_string(), args, timeout).await;
+    
+    match &result {
+        Ok(cmd_result) => {
+            if cmd_result.success {
+                log::info!("[fastboot_command_runner] 成功切换到分区 {}: {}", slot, cmd_result.output);
+            } else {
+                log::error!("[fastboot_command_runner] 切换分区失败: {:?}", cmd_result.error);
+            }
+        }
+        Err(e) => {
+            log::error!("[fastboot_command_runner] 执行切换分区命令时出错: {}", e);
+        }
+    }
+    
+    result
+}
+
+/// 获取当前活动的A/B分区
+#[tauri::command]
+pub async fn get_current_active_slot(
+    serial: String,
+    timeout: Option<u64>,
+) -> Result<CommandResult> {
+    log::info!("[fastboot_command_runner] get_current_active_slot called with serial: {}, timeout: {:?}", serial, timeout);
+    
+    // 执行fastboot getvar current-slot命令
+    let result = execute_fastboot_command(serial, "getvar".to_string(), vec!["current-slot".to_string()], timeout).await;
+    
+    match &result {
+        Ok(cmd_result) => {
+            if cmd_result.success {
+                log::info!("[fastboot_command_runner] 获取当前活动分区成功: {}", cmd_result.output);
+            } else {
+                log::error!("[fastboot_command_runner] 获取当前活动分区失败: {:?}", cmd_result.error);
+            }
+        }
+        Err(e) => {
+            log::error!("[fastboot_command_runner] 执行获取当前活动分区命令时出错: {}", e);
+        }
+    }
+    
+    result
+}
+
+/// 获取设备支持的分区信息
+#[tauri::command]
+pub async fn get_slot_info(
+    serial: String,
+    timeout: Option<u64>,
+) -> Result<CommandResult> {
+    log::info!("[fastboot_command_runner] get_slot_info called with serial: {}, timeout: {:?}", serial, timeout);
+    
+    // 执行fastboot getvar slot-count命令
+    let result = execute_fastboot_command(serial, "getvar".to_string(), vec!["slot-count".to_string()], timeout).await;
+    
+    match &result {
+        Ok(cmd_result) => {
+            if cmd_result.success {
+                log::info!("[fastboot_command_runner] 获取分区信息成功: {}", cmd_result.output);
+            } else {
+                log::error!("[fastboot_command_runner] 获取分区信息失败: {:?}", cmd_result.error);
+            }
+        }
+        Err(e) => {
+            log::error!("[fastboot_command_runner] 执行获取分区信息命令时出错: {}", e);
+        }
+    }
+    
+    result
+}

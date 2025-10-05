@@ -26,36 +26,36 @@ import { useBatchExecutor } from "../Common/BatchExecutorDialog";
 
 const useStyles = makeStyles({
   card: {
-    height: "200px",
-    display: "flex",
-    flexDirection: "column",
-    border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "8px",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+    padding: "16px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    transition: "box-shadow 0.2s ease",
+    borderRadius: "16px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "var(--shadow16)",
+    width: "100%",
+    flex: 1,
+    transition: "all 0.3s ease",
     ":hover": {
-      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
+      transform: "translateY(-4px)",
+      boxShadow: "var(--shadow28)",
     },
   },
   cardHeader: {
-    paddingBottom: "12px",
+    marginBottom: "12px",
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
-
+    gap: "8px",
   },
   cardTitle: {
-    fontSize: "12px", // 减少标题字体大小
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
     display: "flex",
     alignItems: "center",
-    gap: "6px", // 减少间距
+    gap: "8px",
   },
   titleIcon: {
-    color: tokens.colorBrandForeground1,
-    fontSize: "16px", // 减少图标大小
+    color: "var(--colorBrandForeground1)",
+    fontSize: "24px",
   },
   cardContent: {
     flex: 1,
@@ -464,14 +464,10 @@ const MiscellaneousCard: React.FC = () => {
   return (
     <>
       <Card className={styles.card}>
-        <CardHeader
-        header={
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Info24Regular className={styles.titleIcon} />
-            <Text weight="semibold">辅助功能</Text>
-          </div>
-        }
-      />
+        <div className={styles.cardHeader}>
+          <Info24Regular className={styles.titleIcon} />
+          <Text className={styles.cardTitle}>辅助功能</Text>
+        </div>
 
 
         <div className={styles.cardContent}>

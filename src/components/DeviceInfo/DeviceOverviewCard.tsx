@@ -22,6 +22,7 @@ import { DeviceInfo } from "../../types/device";
 import { deviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
+import { useDeviceService } from "../../services/deviceService";
 import { FastbootStorageInfoPanel } from "./FastbootStorageInfoPanel";
 import { DeviceInfoItem } from "./DeviceInfoItem";
 
@@ -468,9 +469,10 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
           <div className={styles.headerLeft}>
             {/* fastboot 模式下，标题、刷新按钮和标签页在同一行 */}
             {device.mode === "fastboot" ? (
+            
               <div className={styles.fastbootDeviceInfoRow}>
                 <div className={styles.title}>设备信息面板</div>
-                <Text>点击对应的值可以复制到剪贴板</Text>
+                <Text style={{ fontSize: '12px', color: 'var(--colorBrandForeground2)' }}>点击值可以复制</Text>
                 <div style={{ display: 'flex', gap: '4px' }}>
                   {/* 刷新按钮 */}
                   {device.connected && (
@@ -485,7 +487,8 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                     />
                   )}
                 </div>
-                {/* fastboot 模式下的标签页 */}
+                              <div className={styles.controlsRow}>
+                                {/* fastboot 模式下的标签页 */}
                 <TabList
                   selectedValue={selectedTab}
                   onTabSelect={(_, data) => setSelectedTab(data.value as string)}
@@ -499,12 +502,13 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
 
                 </TabList>
               </div>
+              </div>
             ) : (
               <>
                 {/* 第一行：信息面板标题 */}
                 <div className={styles.deviceInfoRow}>
                   <div className={styles.title}>设备信息面板</div>
-                  <Text>点击对应的值可以复制到剪贴板</Text>
+                    <Text style={{ fontSize: '12px', color: 'var(--colorBrandForeground2)' }}>点击值可以复制</Text>
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {/* 刷新按钮 */}
                     {device.connected && (
@@ -1263,13 +1267,13 @@ const FastbootBasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue,
     },
     {
       label: "支持并行刷写",
-      value: device.properties?.debuggable ? "是" : "否",
+      value: device.properties?.parallelDownloadFlash ? "是" : "否",
       copyLabel: "支持并行刷写",
       description: "支持并行刷写：表示可同时刷入多个分区镜像（如同时刷 boot、dtbo），提升刷机速度。"
     },
     {
       label: "关机充电模式",
-      value: device.properties?.secure ? "开启" : "关闭",
+      value: device.properties?.offModeCharge ? "开启" : "关闭",
       copyLabel: "关机充电模式",
       description: "关机充电模式：表示关闭 '关机充电时显示充电界面'（部分设备可自定义），1 则开启。"
     }
@@ -1299,7 +1303,7 @@ const FastbootSecurityInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVal
   const fastbootSecurityInfoItems = [
     {
       label: "Bootloader 解锁状态",
-      value: device.properties?.bootloaderLocked ? "已解锁" : "未解锁",
+      value: device.properties?.bootloaderLocked ? "已解锁" : "已锁定",
       copyLabel: "Bootloader 解锁状态",
       description: "Bootloader 已解锁（核心！）：表示设备已解锁，支持刷入第三方 ROM、recovery 等；锁定状态则无法修改系统底层。"
     },
@@ -1311,7 +1315,7 @@ const FastbootSecurityInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVal
     },
     {
       label: "防回滚保护",
-      value: device.properties?.verifiedBootState === "green" ? "启用" : "禁用",
+      value: device.properties?.antiRollback ? "启用" : "禁用",
       copyLabel: "防回滚保护",
       description: "防回滚保护：表示启用防回滚（Anti-Rollback），禁止刷入版本号更低的 bootloader / 基带，避免降级漏洞。"
     },
@@ -1343,32 +1347,85 @@ const FastbootSecurityInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVal
 
 // Fastboot 模式 A/B 分区信息面板
 const FastbootPartitionInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
+  const { deviceService } = useDeviceService();
+  const [currentSlot, setCurrentSlot] = useState<string>('');
+  const [slotCount, setSlotCount] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSwitching, setIsSwitching] = useState<boolean>(false);
+
+  // 获取A/B分区信息
+  useEffect(() => {
+    const fetchPartitionInfo = async () => {
+      if (!device || !device.serial) return;
+      
+      setIsLoading(true);
+      try {
+        // 获取当前活跃分区
+        const currentSlotResult = await deviceService.getCurrentActiveSlot(device.serial);
+        if (currentSlotResult.success && currentSlotResult.output) {
+          // 解析输出，格式通常是 "current-slot: a" 或 "current-slot: b"
+          const match = currentSlotResult.output.match(/current-slot:\s*([a-b])/i);
+          if (match && match[1]) {
+            setCurrentSlot(match[1].toUpperCase());
+          }
+        }
+        
+        // 获取分区数量
+        const slotInfoResult = await deviceService.getSlotInfo(device.serial);
+        if (slotInfoResult.success && slotInfoResult.output) {
+          // 解析输出，格式通常是 "slot-count: 2"
+          const match = slotInfoResult.output.match(/slot-count:\s*(\d+)/i);
+          if (match && match[1]) {
+            setSlotCount(match[1]);
+          }
+        }
+      } catch (error) {
+        console.error('获取分区信息失败:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPartitionInfo();
+  }, [device, deviceService]);
+
+  // 切换A/B分区
+  const handleSwitchPartition = async (targetSlot: string) => {
+    if (!device || !device.serial || currentSlot === targetSlot) return;
+    
+    setIsSwitching(true);
+    try {
+      const result = await deviceService.switchABPartition(device.serial, targetSlot);
+      if (result.success) {
+        // 切换成功后更新当前分区
+        setCurrentSlot(targetSlot.toUpperCase());
+        // 可以添加成功提示
+      } else {
+        // 可以添加失败提示
+        console.error('切换分区失败:', result.error);
+      }
+    } catch (error) {
+      console.error('切换分区失败:', error);
+      // 可以添加错误提示
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
   // Fastboot 模式下的 A/B 分区信息
   const fastbootPartitionInfoItems = [
     {
       label: "分区槽位数量",
-      value: device.properties?.firstApiLevel || "未知",
+      value: isLoading ? "加载中..." : (slotCount || "未知"),
       copyLabel: "分区槽位数量",
       description: "分区槽位数量：表示支持 A/B 双槽（A 槽：_a 后缀分区，B 槽：_b 后缀分区）。"
     },
     {
       label: "当前活跃槽位",
-      value: device.properties?.vndkVersion || "未知",
+      value: isLoading ? "加载中..." : (currentSlot || "未知"),
       copyLabel: "当前活跃槽位",
       description: "当前活跃槽位：设备当前使用 A 槽（_a 分区）启动系统，若 A 槽故障，会自动切换到 B 槽。"
     },
-    {
-      label: "A 槽启动状态",
-      value: device.properties?.adbSecure ? "启动成功" : "启动失败",
-      copyLabel: "A 槽启动状态",
-      description: "A 槽启动状态：表示 A 槽最近一次启动失败（可能是刷入的镜像有问题，或未完成激活）；启动成功则为正常。"
-    },
-    {
-      label: "A 槽重试次数",
-      value: device.properties?.buildId || "未知",
-      copyLabel: "A 槽重试次数",
-      description: "A 槽重试次数：若 A 槽启动失败，系统会重试多次，仍失败则切换到 B 槽（防止设备变砖）。"
-    }
   ];
 
   return (
@@ -1385,6 +1442,39 @@ const FastbootPartitionInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVa
           />
         ))}
       </div>
+      
+      {slotCount === "2" && currentSlot && (
+        <div className="mt-4 flex flex-col items-center justify-center">
+          <div className="flex items-center justify-between mb-2">
+            <Text className="text-sm font-medium">切换A/B分区:</Text>
+          </div>
+          <div className="flex space-x-2 justify-center items-center mt-2"> 
+            <Button
+              onClick={() => handleSwitchPartition('a')}
+              disabled={isSwitching || currentSlot === 'A'}
+              appearance={currentSlot === 'A' ? 'primary' : 'secondary'}
+              size="small"
+              style={{ minWidth: '80px' }}
+            >
+              A分区
+            </Button>
+            <Button
+              onClick={() => handleSwitchPartition('b')}
+              disabled={isSwitching || currentSlot === 'B'}
+              appearance={currentSlot === 'B' ? 'primary' : 'secondary'}
+              size="small"
+              style={{ minWidth: '80px' }}
+            >
+              B分区
+            </Button>
+          </div>
+          {isSwitching && (
+            <Text className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              正在切换分区，请稍候...
+            </Text>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -1413,7 +1503,7 @@ const FastbootHardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVal
     },
     {
       label: "CPU 唯一 ID",
-      value: device.properties?.buildHost || "未知",
+      value: device.properties?.cpuid || "未知",
       copyLabel: "CPU 唯一 ID",
       description: "CPU 唯一 ID：识别设备 CPU 芯片的专属标识，用于区分不同 CPU 批次（一般调试时用）。"
     }
