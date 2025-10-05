@@ -71,26 +71,25 @@ const useStyles = makeStyles({
   },
 
   modeCard: {
-    padding: "16px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "16px",
+    height: "200px",
+    width: "60%",
+    display: "flex",
+    flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke2)",
-    boxShadow: "var(--shadow16)",
-    width: "100%",
-    minHeight: "180px",
-    flex: 1,
-    transition: "all 0.3s ease",
+    borderRadius: "8px",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    transition: "box-shadow 0.2s ease",
     ":hover": {
-      transform: "translateY(-4px)",
-      boxShadow: "var(--shadow28)",
+      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
     },
   },
 
   // 连接指南卡片内部网格样式
   linkGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gridTemplateRows: "1fr 1fr 1fr",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gridTemplateRows: "1fr 1fr",
     gap: "4px",
     padding: "0 8px 8px 8px",
   },
@@ -324,27 +323,12 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
           </Card>
           
           
-          {/* 刷新按钮 */}
+
           {!isScanning && onRefresh && (
             <div>
               <Text className={styles.subtitle}>
-                自动刷新未开启，点击刷新按钮重新扫描设备
+                自动刷新未开启，请开启自动刷新功能
               </Text>
-              <div 
-                className={styles.refreshButton}
-                onClick={onRefresh}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onRefresh();
-                  }
-                }}
-              >
-                <ArrowClockwise24Regular />
-                <Text className={styles.refreshButtonText}>刷新设备列表</Text>
-              </div>
             </div>
           )}
         </div>

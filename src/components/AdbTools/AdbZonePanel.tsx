@@ -27,7 +27,7 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    padding: "18px",
+    padding: "8px",
     gap: "24px",
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -66,7 +66,7 @@ const useStyles = makeStyles({
   },
   tabContent: {
     flex: 1,
-    overflow: "hidden",
+    overflow: "auto"
   },
 
   noDevice: {

@@ -1,6 +1,6 @@
 [package]
 name = "admt-lacs"
-version = "1.0.4"
+version = "1.1.0"
 description = "Android设备跨平台全能管家"
 authors = ["领创工作室"]
 repository = ""

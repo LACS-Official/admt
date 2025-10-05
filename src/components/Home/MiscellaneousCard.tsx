@@ -13,6 +13,8 @@ import {
   DialogBody,
   DialogActions,
   Button,
+  Tab,
+  TabList,
 } from "@fluentui/react-components";
 import {
   Wrench24Regular,
@@ -26,17 +28,17 @@ import { useBatchExecutor } from "../Common/BatchExecutorDialog";
 
 const useStyles = makeStyles({
   card: {
-    padding: "16px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "16px",
+    height: "200px",
+    minWidth: "200px",
+    display: "flex",
+    flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke2)",
-    boxShadow: "var(--shadow16)",
-    width: "100%",
-    flex: 1,
-    transition: "all 0.3s ease",
+    borderRadius: "8px",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    transition: "box-shadow 0.2s ease",
     ":hover": {
-      transform: "translateY(-4px)",
-      boxShadow: "var(--shadow28)",
+      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
     },
   },
   cardHeader: {
