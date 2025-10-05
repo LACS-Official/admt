@@ -187,6 +187,7 @@ pub async fn execute_command(
     // 在发布版中隐藏命令行窗口，在调试版中保持可见
     #[cfg(all(windows, not(debug_assertions)))]
     {
+        #[allow(unused_imports)]
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);

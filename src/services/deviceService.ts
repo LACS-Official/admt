@@ -800,6 +800,50 @@ export class DeviceService {
       return null;
     }
   }
+
+  // A/B分区切换相关功能
+  async switchABPartition(serial: string, slot: string): Promise<CommandResult> {
+    try {
+      console.log(`[DeviceService] 切换A/B分区: ${serial} 到 ${slot}`);
+      const result = await invoke<CommandResult>("switch_ab_partition", {
+        serial,
+        slot,
+      });
+      console.log(`[DeviceService] A/B分区切换结果:`, result);
+      return result;
+    } catch (error) {
+      console.error("[DeviceService] 切换A/B分区失败:", error);
+      throw error;
+    }
+  }
+
+  async getCurrentActiveSlot(serial: string): Promise<CommandResult> {
+    try {
+      console.log(`[DeviceService] 获取当前活跃分区: ${serial}`);
+      const result = await invoke<CommandResult>("get_current_active_slot", {
+        serial,
+      });
+      console.log(`[DeviceService] 当前活跃分区:`, result);
+      return result;
+    } catch (error) {
+      console.error("[DeviceService] 获取当前活跃分区失败:", error);
+      throw error;
+    }
+  }
+
+  async getSlotInfo(serial: string): Promise<CommandResult> {
+    try {
+      console.log(`[DeviceService] 获取分区信息: ${serial}`);
+      const result = await invoke<CommandResult>("get_slot_info", {
+        serial,
+      });
+      console.log(`[DeviceService] 分区信息:`, result);
+      return result;
+    } catch (error) {
+      console.error("[DeviceService] 获取分区信息失败:", error);
+      throw error;
+    }
+  }
 }
 
 // 单例实例将在文件末尾创建

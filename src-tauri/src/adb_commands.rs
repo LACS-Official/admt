@@ -222,6 +222,7 @@ pub async fn execute_adb_command_with_path(
     // 在发布版中隐藏控制台窗口，在调试版中保持可见
     #[cfg(all(windows, not(debug_assertions)))]
     {
+        #[allow(unused_imports)]
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);
@@ -311,11 +312,30 @@ pub async fn execute_fastboot_command_with_path(
     // 在发布版中隐藏控制台窗口，在调试版中保持可见
     #[cfg(all(windows, not(debug_assertions)))]
     {
+        #[allow(unused_imports)]
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);
         log::debug!(
             "Fastboot命令设置隐藏窗口 (发布版): {}",
+            fastboot_path.display()
+        );
+    }
+
+    // 在调试版中保持窗口可见以便调试
+    #[cfg(all(windows, debug_assertions))]
+    {
+        log::debug!(
+            "Fastboot命令保持窗口可见 (调试版): {}",
+            fastboot_path.display()
+        );
+    }
+
+    // 非Windows平台的处理
+    #[cfg(not(windows))]
+    {
+        log::debug!(
+            "Fastboot命令在非Windows平台执行: {}",
             fastboot_path.display()
         );
     }

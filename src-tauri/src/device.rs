@@ -104,6 +104,10 @@ pub struct DeviceProperties {
     pub screen_resolution: Option<String>, // wm size
     pub total_memory: Option<String>,      // /proc/meminfo
     pub available_storage: Option<String>, // df /data
+    pub parallel_download_flash: Option<bool>, // 并行刷写支持
+    pub off_mode_charge: Option<bool>,     // 关机充电模式
+    pub anti_rollback: Option<bool>,       // 防回滚保护
+    pub cpuid: Option<String>,             // CPU唯一ID
 
     // 详细内存和存储信息
     pub memory_total: Option<u64>,      // 总内存 (MB)

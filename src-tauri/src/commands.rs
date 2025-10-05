@@ -92,42 +92,17 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
 async fn get_fastboot_device_properties(serial: &str) -> Result<DeviceProperties> {
     log::info!("Getting properties for fastboot device: {}", serial);
     
-    let mut properties = DeviceProperties::default();
+    // 使用新的fastboot设备信息获取实现
+    let fastboot_props = crate::fastboot::device::device_info::get_fastboot_device_properties(serial.to_string()).await?;
     
-    // 使用fastboot getvar product获取产品名称
-    match execute_fastboot_command(&["-s", serial, "getvar", "product"], Some(10)).await {
-        Ok(result) if result.success => {
-            // 解析输出，格式通常为: product: <product_name>
-            for line in result.output.lines() {
-                if line.starts_with("product:") {
-                    if let Some(product_name) = line.split(':').nth(1) {
-                        properties.product_name = Some(product_name.trim().to_string());
-                        log::info!("Got product name for fastboot device {}: {}", serial, product_name.trim());
-                        break;
-                    }
-                }
-            }
-        }
-        Ok(result) => {
-            log::warn!(
-                "Failed to get product name for fastboot device {}: success={}, output={}, error={:?}",
-                serial,
-                result.success,
-                result.output,
-                result.error
-            );
-        }
-        Err(e) => {
-            log::error!("Failed to execute fastboot getvar product for {}: {}", serial, e);
-        }
-    }
+    // 转换为通用的DeviceProperties
+    let properties = crate::fastboot::device::device_info::convert_to_device_properties(&fastboot_props);
     
-    // 可以添加更多fastboot属性的获取，例如：
-    // - fastboot getvar serialno
-    // - fastboot getvar version-bootloader
-    // - fastboot getvar version-baseband
-    // - fastboot getvar product-model
-    // - fastboot getvar manufacturer
+    log::info!("Successfully got fastboot properties for device {}: product={:?}, serial={:?}", 
+        serial, 
+        properties.product_name, 
+        properties.serial_number
+    );
     
     Ok(properties)
 }

@@ -232,6 +232,8 @@ export const useScreenMirrorStore = create<ScreenMirrorState & ScreenMirrorActio
       partialize: (state) => ({
         config: state.config,
         showSettings: state.showSettings,
+        selectedDevice: state.selectedDevice,
+        isFullscreen: state.isFullscreen,
       }),
     }
   )

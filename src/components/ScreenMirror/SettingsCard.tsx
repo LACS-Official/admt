@@ -126,6 +126,24 @@ const SettingsCard: React.FC = () => {
     });
   };
 
+  const handleTextChange = (field: string, value: string) => {
+    updateConfig({
+      [field]: value,
+    });
+  };
+
+  const handleNumberChange = (field: string, value: number) => {
+    updateConfig({
+      [field]: value,
+    });
+  };
+
+  const handleOrientationChange = (orientation: "unlocked" | "initial" | "portrait" | "landscape") => {
+    updateConfig({
+      lockVideoOrientation: orientation,
+    });
+  };
+
   const resolutionOptions = [
     { value: "auto", label: "自动" },
     { value: "1920x1080", label: "1920x1080 (FHD)" },
@@ -137,6 +155,20 @@ const SettingsCard: React.FC = () => {
   const codecOptions = [
     { value: "h264", label: "H.264" },
     { value: "h265", label: "H.265" },
+  ];
+
+  const orientationOptions = [
+    { value: "unlocked", label: "不锁定" },
+    { value: "initial", label: "初始方向" },
+    { value: "portrait", label: "竖屏" },
+    { value: "landscape", label: "横屏" },
+  ];
+
+  const rotationOptions = [
+    { value: 0, label: "0°" },
+    { value: 1, label: "90°" },
+    { value: 2, label: "180°" },
+    { value: 3, label: "270°" },
   ];
 
   const qualityPresetOptions = Object.keys(SCREEN_MIRROR_QUALITY_PRESETS).map(key => ({
@@ -257,8 +289,32 @@ const SettingsCard: React.FC = () => {
             />
           </div>
 
-      
+          <div className={styles.fieldRow}>
+            <Text className={styles.fieldLabel}>关闭时关机</Text>
+            <Switch
+              checked={config.powerOffOnClose}
+              onChange={(_, data) => handleSwitchChange('powerOffOnClose', data.checked)}
+            />
+          </div>
+
+          <div className={styles.fieldRow}>
+            <Text className={styles.fieldLabel}>启动时不开机</Text>
+            <Switch
+              checked={config.noPowerOn}
+              onChange={(_, data) => handleSwitchChange('noPowerOn', data.checked)}
+            />
+          </div>
+
+
+          <div className={styles.fieldRow}>
+            <Text className={styles.fieldLabel}>全屏模式</Text>
+            <Switch
+              checked={config.fullscreen}
+              onChange={(_, data) => handleSwitchChange('fullscreen', data.checked)}
+            />
+          </div>
         </div>
+
 
         {/* 操作按钮 */}
         <div className={styles.actions}>

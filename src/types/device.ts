@@ -76,6 +76,10 @@ export interface DeviceProperties {
   screenResolution?: string; // 屏幕分辨率
   totalMemory?: string;     // 总内存
   availableStorage?: string; // 可用存储
+  parallelDownloadFlash?: boolean; // 并行刷写支持
+  offModeCharge?: boolean;  // 关机充电模式
+  antiRollback?: boolean;   // 防回滚保护
+  cpuid?: string;           // CPU唯一ID
 }
 
 export interface DeviceStatus {

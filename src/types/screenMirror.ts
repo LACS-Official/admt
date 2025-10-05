@@ -12,9 +12,18 @@ export interface ScreenMirrorConfig {
   showTouches: boolean; // 显示触摸点
   stayAwake: boolean; // 保持屏幕常亮
   turnScreenOff: boolean; // 投屏时关闭设备屏幕
+  powerOffOnClose: boolean; // 关闭时关机
+  noPowerOn: boolean; // 启动时不开机
   recordScreen: boolean; // 是否录制屏幕
   audioEnabled: boolean; // 是否传输音频
   controlEnabled: boolean; // 是否启用控制功能
+  alwaysOnTop: boolean; // 投屏窗口始终置顶
+  fullscreen: boolean; // 全屏模式
+  windowTitle: string; // 窗口标题
+  crop: string; // 屏幕裁剪，格式为"width:height:x:y"
+  maxFps: number; // 最大帧率限制
+  lockVideoOrientation: "unlocked" | "initial" | "portrait" | "landscape"; // 锁定视频方向
+  rotation: number; // 屏幕旋转角度 (0, 1, 2, 3)
 }
 
 // 投屏状态
@@ -168,7 +177,16 @@ export const DEFAULT_SCREEN_MIRROR_CONFIG: ScreenMirrorConfig = {
   showTouches: false,
   stayAwake: true,
   turnScreenOff: false,
+  powerOffOnClose: false,
+  noPowerOn: false,
   recordScreen: false,
   audioEnabled: true,
-  controlEnabled: true
+  controlEnabled: true,
+  alwaysOnTop: false,
+  fullscreen: false,
+  windowTitle: "HOUT投屏",
+  crop: "",
+  maxFps: 60,
+  lockVideoOrientation: "unlocked",
+  rotation: 0
 };

@@ -1,26 +1,23 @@
-import React  from 'react';
+import React from 'react';
+import cx from 'classnames';
 import {
   makeStyles,
   Text,
   Spinner,
   tokens,
+  Card,
 } from "@fluentui/react-components";
 import {
   Settings24Regular,
   Open24Regular,
+  PresenceUnknown24Regular,
+  PlugDisconnected24Regular,
+  ArrowClockwise24Regular,
 } from "@fluentui/react-icons";
+import MiscellaneousCard from './MiscellaneousCard';
+
 
 const useStyles = makeStyles({
-  Bigcontainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
-    width: "100%",
-    padding: "20px 20px",
-    backgroundColor: tokens.colorNeutralBackground1,
-  },
   container: {
     display: "flex",
     flexDirection: "column",
@@ -28,21 +25,46 @@ const useStyles = makeStyles({
     justifyContent: "center",
     height: "100%",
     width: "100%",
-    padding: "20px 20px",
-    background: `linear-gradient(135deg, ${tokens.colorNeutralBackground1} 0%, ${tokens.colorNeutralBackground2} 100%)`,
+    padding: "24px",
     position: "relative",
     overflow: "hidden",
+    backgroundColor: tokens.colorNeutralBackground1,
   },
 
-  // 修改水平排列容器的样式
+  // 水平排列容器的样式
   horizontalContainer: {
     display: "flex",
     flexDirection: "row",
     gap: "24px",
-    width: "100%",
-    maxWidth: "100%",
+    width: "90%",
+    maxWidth: "1200px",
     marginBottom: "24px",
-    "@media screen and (max-width: 768px)": {
+    "@media screen and (max-width: 968px)": {
+      flexDirection: "column",
+      gap: "16px",
+    },
+  },
+
+  // 上部分容器样式
+  upperSection: {
+    height: "30%",
+    width: "90%",
+    maxWidth: "1200px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: "24px",
+  },
+
+  // 下部分容器样式
+  lowerSection: {
+    width: "90%",
+    maxWidth: "1200px",
+    display: "flex",
+    flexDirection: "row",
+    gap: "24px",
+    "@media screen and (max-width: 968px)": {
       flexDirection: "column",
       gap: "16px",
     },
@@ -50,107 +72,92 @@ const useStyles = makeStyles({
 
   modeCard: {
     padding: "16px",
-    backgroundColor: tokens.colorNeutralBackground1,
+    backgroundColor: "var(--colorNeutralBackground1)",
     borderRadius: "16px",
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    boxShadow: tokens.shadow16,
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "var(--shadow16)",
     width: "100%",
+    minHeight: "180px",
     flex: 1,
     transition: "all 0.3s ease",
-    "&:hover": {
+    ":hover": {
       transform: "translateY(-4px)",
-      boxShadow: tokens.shadow28,
+      boxShadow: "var(--shadow28)",
     },
   },
 
-  modeTitle: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: tokens.colorNeutralForeground1,
+  // 连接指南卡片内部网格样式
+  linkGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gridTemplateRows: "1fr 1fr 1fr",
+    gap: "4px",
+    padding: "0 8px 8px 8px",
+  },
+
+  // 卡片标题样式
+  cardHeader: {
     marginBottom: "12px",
     display: "flex",
     alignItems: "center",
     gap: "8px",
+  },
+
+  // 卡片标题文本样式
+  cardTitle: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+
+  // 标题图标样式
+  titleIcon: {
+    color: "var(--colorBrandForeground1)",
+    fontSize: "24px",
   },
 
   modeLink: {
     display: "flex",
+    flexDirection: "column",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: "8px",
-    padding: "10px 12px",
-    borderRadius: "10px",
-    backgroundColor: tokens.colorNeutralBackground2,
+    justifyContent: "center",
+    padding: "6px 4px",
+    margin: "4px 0",
+    border: "1px solid var(--colorNeutralStroke3)",
+    borderRadius: "6px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    transition: "all 0.2s ease",
+    cursor: "pointer",
+    minHeight: "60px",
+    textAlign: "center",
+    minWidth: 0,
+    position: "relative",
     textDecoration: "none",
     color: tokens.colorNeutralForeground1,
-    transition: "all 0.2s ease",
-    marginBottom: "6px",
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    "&:hover": {
-      backgroundColor: tokens.colorBrandBackground2,
-      border: `1px solid ${tokens.colorBrandStroke1}`,
-      color: tokens.colorBrandForeground1,
+    ":hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)",
+      transform: "translateY(-1px)",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
     },
-    "&:last-child": {
-      marginBottom: "0",
-    }
   },
 
   linkText: {
-    fontSize: "14px",
-    fontWeight: "500",
+    fontSize: "12px",
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: "1.2",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    width: "100%",
   },
 
   linkIcon: {
-    fontSize: "14px",
-    color: tokens.colorNeutralForeground2,
-  },
-
-  troubleshooting: {
-    padding: "16px",
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: "16px",
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    boxShadow: tokens.shadow16,
-    width: "100%",
-    flex: 1,
-    transition: "all 0.3s ease",
-    "&:hover": {
-      transform: "translateY(-4px)",
-      boxShadow: tokens.shadow28,
-    },
-  },
-
-  troubleshootingTitle: {
     fontSize: "16px",
-    fontWeight: "600",
-    color: tokens.colorNeutralForeground1,
-    marginBottom: "12px",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-
-  troubleshootingItem: {
-    fontSize: "14px",
     color: tokens.colorNeutralForeground2,
-    lineHeight: "1.5",
-    padding: "8px 12px",
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderRadius: "10px",
-    marginBottom: "6px",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    "&::before": {
-      content: "'•'",
-      color: tokens.colorBrandForeground1,
-      fontSize: "18px",
-    },
-    "&:last-child": {
-      marginBottom: "0",
-    }
   },
   
   backgroundDecoration: {
@@ -158,11 +165,12 @@ const useStyles = makeStyles({
     top: "50%",
     left: "50%",
     transform: "translate(-50%, -50%)",
-    width: "600px",
-    height: "600px",
-    background: `radial-gradient(circle, ${tokens.colorBrandBackground2}25 0%, transparent 70%)`,
+    width: "800px",
+    height: "800px",
+    background: `radial-gradient(circle, ${tokens.colorBrandBackground2}15 0%, transparent 70%)`,
     borderRadius: "50%",
     pointerEvents: "none",
+    zIndex: 0,
   },
   
   content: {
@@ -170,7 +178,8 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "center",
     gap: "32px",
-    maxWidth: "600px",
+    maxWidth: "800px",
+    width: "100%",
     textAlign: "center",
     position: "relative",
     zIndex: 1,
@@ -180,19 +189,23 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "20px",
-    marginBottom: "12px",
+    gap: "16px",
+    marginBottom: "16px",
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    padding: "12px 10px",
+    borderRadius: "12px",
+    minWidth: "100%",
   },
   
   mainIcon: {
-    fontSize: "72px",
+    fontSize: "64px",
     color: tokens.colorBrandForeground1,
-    filter: "drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15))",
+    filter: "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))",
   },
   
   connectionIcon: {
-    fontSize: "28px",
-    color: tokens.colorNeutralForeground2,
+    fontSize: "32px",
+    color: tokens.colorNeutralForeground3,
     animation: "pulse 2s infinite",
   },
   
@@ -200,63 +213,27 @@ const useStyles = makeStyles({
     fontSize: "20px",
     fontWeight: "700",
     color: tokens.colorNeutralForeground1,
-    marginBottom: "12px",
+    marginBottom: "8px",
+    lineHeight: "1.3",
   },
   
   subtitle: {
-    fontSize: "17px",
+    fontSize: "16px",
     color: tokens.colorNeutralForeground2,
-    lineHeight: "1.6",
-    marginBottom: "16px",
-  },
-  
-  stepsContainer: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    width: "100%",
-  },
-  
-  step: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    backgroundColor: tokens.colorNeutralBackground3,
-    borderRadius: "8px",
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-  },
-  
-  stepNumber: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "28px",
-    height: "28px",
-    borderRadius: "50%",
-    backgroundColor: tokens.colorBrandBackground,
-    color: tokens.colorNeutralForegroundOnBrand,
-    fontSize: "14px",
-    fontWeight: "600",
-    flexShrink: 0,
-  },
-  
-  stepText: {
-    fontSize: "15px",
-    color: tokens.colorNeutralForeground1,
     lineHeight: "1.5",
-    fontWeight: "500",
+    marginBottom: "24px",
   },
   
   scanningIndicator: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    padding: "14px 24px",
+    gap: "12px",
+    padding: "12px 20px",
     backgroundColor: tokens.colorBrandBackground2,
-    borderRadius: "24px",
+    borderRadius: "20px",
     border: `1px solid ${tokens.colorBrandStroke1}`,
     boxShadow: tokens.shadow4,
+    marginBottom: "24px",
   },
   
   scanningText: {
@@ -266,19 +243,41 @@ const useStyles = makeStyles({
   },
   
   refreshButton: {
-    marginTop: "12px",
+    marginTop: "16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 16px",
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    borderRadius: "6px",
+    color: tokens.colorNeutralForeground1,
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: tokens.colorNeutralBackground3,
+    },
+    "&:focus-visible": {
+      outline: `2px solid ${tokens.colorStrokeFocus2}`,
+      outlineOffset: "2px",
+    }
+  },
+  
+  refreshButtonText: {
+    fontSize: "14px",
+    fontWeight: "500",
   },
   
   "@keyframes pulse": {
-    "&0%": { opacity: "1" },
-    "&50%": { opacity: "0.4" },
-    "&100%": { opacity: "1" },
+    "0%": { opacity: "1" },
+    "50%": { opacity: "0.4" },
+    "100%": { opacity: "1" },
   },
   
   "@keyframes float": {
-    "&0%": { transform: "translateY(0px)" },
-    "&50%": { transform: "translateY(-10px)" },
-    "&100%": { transform: "translateY(0px)" },
+    "0%": { transform: "translateY(0px)" },
+    "50%": { transform: "translateY(-6px)" },
+    "100%": { transform: "translateY(0px)" },
   },
   
   floatingIcon: {
@@ -292,84 +291,104 @@ interface NoDevicePromptProps {
 }
 
 const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({ 
-  isScanning = false}) => {
+  isScanning = false,
+  onRefresh
+}) => {
   const styles = useStyles();
 
 
   return (
     <div className={styles.container}>
-      {/* 背景装饰 */}
-      <div className={styles.backgroundDecoration} />
+      <div className={styles.backgroundDecoration}></div>
       
       <div className={styles.content}>
-        
-        {/* 主标题 */}
-        <Text className={styles.title}>
-          暂未检测到设备 请检查设备是否正常连接 对应驱动是否安装
-        </Text>
-        
-        {/* 扫描状态指示器 */}
-        {isScanning && (
-        <div className={styles.scanningIndicator}>
-          <Spinner size="extra-small" />
-          <Text className={styles.scanningText}>
-            正在扫描设备...
-          </Text>
-        </div>
-        )}
-        
-        {/* 水平排列容器 */}
-        <div className={styles.horizontalContainer}>
-          {/* 连接模式卡片 */}
-          <div className={styles.modeCard}>
-            <Text className={styles.modeTitle}>
-              <Settings24Regular /> 连接模式指南
+        {/* 上部分容器 */}
+        <div className={styles.upperSection}>
+          {/* 主标题 */}
+          <Card className={styles.iconContainer}>
+            <PlugDisconnected24Regular className={styles.connectionIcon} />
+            <Text className={styles.title}>
+              暂未检测到设备连接
+              请检查设备是否正常连接，对应驱动是否安装
             </Text>
-            <div className={styles.stepsContainer}>
+            
+            {/* 扫描状态指示器 */}
+            {isScanning && (
+              <div className={styles.scanningIndicator}>
+                <Spinner size="extra-small" />
+                <Text className={styles.scanningText}>
+                  正在扫描设备...
+                </Text>
+              </div>
+            )}
+          </Card>
+          
+          
+          {/* 刷新按钮 */}
+          {!isScanning && onRefresh && (
+            <div>
+              <Text className={styles.subtitle}>
+                自动刷新未开启，点击刷新按钮重新扫描设备
+              </Text>
+              <div 
+                className={styles.refreshButton}
+                onClick={onRefresh}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onRefresh();
+                  }
+                }}
+              >
+                <ArrowClockwise24Regular />
+                <Text className={styles.refreshButtonText}>刷新设备列表</Text>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* 下部分容器 */}
+        <div className={styles.lowerSection}>
+          {/* 连接模式卡片 */}
+          <Card className={styles.modeCard}>
+            <div className={styles.cardHeader}>
+              <Settings24Regular className={styles.titleIcon} />
+              <Text className={styles.cardTitle}>连接指南</Text>
+            </div>
+            <div className={styles.linkGrid}>
+                            <a href="https://admt.lacs.cc/docs" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+                <Text className={styles.linkText}>文档中心</Text>
+
+              </a>
+                            <a href="https://space.bilibili.com/1779662818/lists/4978116?type=series" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+                <Text className={styles.linkText}>视频教程</Text>
+
+              </a>
               <a href="https://admt.lacs.cc/docs/device/linksys" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
                 <Text className={styles.linkText}>系统模式</Text>
-                <Open24Regular className={styles.linkIcon} />
+
               </a>
               <a href="https://admt.lacs.cc/docs/device/linkrec" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
                 <Text className={styles.linkText}>恢复模式</Text>
-                <Open24Regular className={styles.linkIcon} />
+
               </a>
               <a href="https://admt.lacs.cc/docs/device/linkfb" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
                 <Text className={styles.linkText}>引导模式</Text>
-                <Open24Regular className={styles.linkIcon} />
+
               </a>
               <a href="https://admt.lacs.cc/docs/device/linkedl" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
                 <Text className={styles.linkText}>EDL模式</Text>
-                <Open24Regular className={styles.linkIcon} />
+
               </a>
+
+
             </div>
-          </div>
+          </Card>
 
-          {/* 问题排查提示 */}
-          <div className={styles.troubleshooting}>
-            <Text className={styles.troubleshootingTitle}>
-              <Settings24Regular /> 连接设备后仍然检测不到？
-            </Text>
-            <Text className={styles.troubleshootingItem}>检查USB接口是否正常工作</Text>
-            <Text className={styles.troubleshootingItem}>检查设备尾插是否有损坏</Text>
-            <Text className={styles.troubleshootingItem}>确保已安装对应的驱动</Text>
-            <Text className={styles.troubleshootingItem}>检查自动检测设备开关是否开启</Text>
-          </div>
-
-          {/* 驱动安装指示器 */}
-          <div className={styles.troubleshooting}> 
-            <Text className={styles.troubleshootingTitle}>
-              <Settings24Regular /> 如何安装对应的驱动？
-            </Text>
-            <Text className={styles.troubleshootingItem}>点击在线资源标签页</Text>
-            <Text className={styles.troubleshootingItem}>选择驱动分类点击搜索</Text>
-            <Text className={styles.troubleshootingItem}>选择对应的驱动并安装</Text>
-            <Text className={styles.troubleshootingItem}>尝试重新连接</Text>
-          </div>
+          <MiscellaneousCard />
         </div>
-
-
-      
       </div>
     </div>
   );
