@@ -470,6 +470,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
             {device.mode === "fastboot" ? (
               <div className={styles.fastbootDeviceInfoRow}>
                 <div className={styles.title}>设备信息面板</div>
+                <Text>点击对应的值可以复制到剪贴板</Text>
                 <div style={{ display: 'flex', gap: '4px' }}>
                   {/* 刷新按钮 */}
                   {device.connected && (
@@ -503,6 +504,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                 {/* 第一行：信息面板标题 */}
                 <div className={styles.deviceInfoRow}>
                   <div className={styles.title}>设备信息面板</div>
+                  <Text>点击对应的值可以复制到剪贴板</Text>
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {/* 刷新按钮 */}
                     {device.connected && (

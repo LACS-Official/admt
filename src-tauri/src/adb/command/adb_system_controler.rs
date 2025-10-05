@@ -140,62 +140,50 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-        let mut output = String::new();
-        let mut success = true;
-        let mut error_msg = None;
+        // 获取批处理文件的路径
+        let bat_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tools")
+            .join("lacs")
+            .join("Usb_fix.bat");
 
-        // 执行注册表修改命令
-        let commands = vec![
-            "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\usbflags\\18D1D00D0100\" /v \"osvc\" /t REG_BINARY /d \"0000\" /f",
-            "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\usbflags\\18D1D00D0100\" /v \"SkipContainerIdQuery\" /t REG_BINARY /d \"01000000\" /f",
-            "reg add \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\usbflags\\18D1D00D0100\" /v \"SkipBOSDescriptorQuery\" /t REG_BINARY /d \"01000000\" /f"
-        ];
+        let mut command = Command::new("cmd");
+        command.args(&["/C", &bat_path.to_string_lossy()]);
+        command.creation_flags(CREATE_NO_WINDOW);
 
-        for cmd in commands {
-            let mut command = Command::new("cmd");
-            command.args(&["/C", cmd]);
-            command.creation_flags(CREATE_NO_WINDOW);
-
-            match command.output() {
-                Ok(result) => {
-                    let stdout = String::from_utf8_lossy(&result.stdout);
-                    let stderr = String::from_utf8_lossy(&result.stderr);
-                    output.push_str(&format!("命令: {}\n", cmd));
-                    output.push_str(&format!("输出: {}\n", stdout));
-                    if !stderr.is_empty() {
-                        output.push_str(&format!("错误: {}\n", stderr));
-                    }
-                    output.push_str("---\n");
-
-                    if !result.status.success() {
-                        success = false;
-                        error_msg = Some(format!("命令执行失败: {}", cmd));
-                    }
-                }
-                Err(e) => {
-                    output.push_str(&format!("命令执行错误: {}\n", e));
-                    success = false;
-                    error_msg = Some(e.to_string());
+        match command.output() {
+            Ok(result) => {
+                let stdout = String::from_utf8_lossy(&result.stdout);
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                
+                let output = format!("输出: {}\n错误: {}", stdout, stderr);
+                
+                if result.status.success() {
+                    log::info!("USB 3.0 registry modifications completed");
+                    Ok(CommandResult {
+                        success: true,
+                        output: "USB 3.0注册表修改完成，请重新连接设备".to_string(),
+                        error: None,
+                        exit_code: Some(0),
+                    })
+                } else {
+                    log::error!("Failed to modify USB 3.0 registry: {}", stderr);
+                    Ok(CommandResult {
+                        success: false,
+                        output: format!("USB 3.0注册表修改失败: {}", output),
+                        error: Some(stderr.to_string()),
+                        exit_code: Some(1),
+                    })
                 }
             }
-        }
-
-        if success {
-            log::info!("USB 3.0 registry modifications completed");
-            Ok(CommandResult {
-                success: true,
-                output: "USB 3.0注册表修改完成，请重新连接设备".to_string(),
-                error: None,
-                exit_code: Some(0),
-            })
-        } else {
-            log::error!("Failed to modify USB 3.0 registry: {:?}", error_msg);
-            Ok(CommandResult {
-                success: false,
-                output: format!("USB 3.0注册表修改失败: {}", output),
-                error: error_msg,
-                exit_code: Some(1),
-            })
+            Err(e) => {
+                log::error!("Failed to execute USB 3.0 fix script: {}", e);
+                Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(format!("执行USB 3.0修复脚本失败: {}", e)),
+                    exit_code: Some(1),
+                })
+            }
         }
     }
 
@@ -221,62 +209,50 @@ pub async fn unfix_usb3_connection() -> Result<CommandResult> {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-        let mut output = String::new();
-        let mut success = true;
-        let mut error_msg = None;
+        // 获取批处理文件的路径
+        let bat_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tools")
+            .join("lacs")
+            .join("Usb_Unfix.bat");
 
-        // 执行注册表删除命令
-        let commands = vec![
-            "reg delete \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\usbflags\\18D1D00D0100\" /v \"osvc\" /f",
-            "reg delete \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\usbflags\\18D1D00D0100\" /v \"SkipContainerIdQuery\" /f",
-            "reg delete \"HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\usbflags\\18D1D00D0100\" /v \"SkipBOSDescriptorQuery\" /f"
-        ];
+        let mut command = Command::new("cmd");
+        command.args(&["/C", &bat_path.to_string_lossy()]);
+        command.creation_flags(CREATE_NO_WINDOW);
 
-        for cmd in commands {
-            let mut command = Command::new("cmd");
-            command.args(&["/C", cmd]);
-            command.creation_flags(CREATE_NO_WINDOW);
-
-            match command.output() {
-                Ok(result) => {
-                    let stdout = String::from_utf8_lossy(&result.stdout);
-                    let stderr = String::from_utf8_lossy(&result.stderr);
-                    output.push_str(&format!("命令: {}\n", cmd));
-                    output.push_str(&format!("输出: {}\n", stdout));
-                    if !stderr.is_empty() {
-                        output.push_str(&format!("错误: {}\n", stderr));
-                    }
-                    output.push_str("---\n");
-
-                    if !result.status.success() {
-                        success = false;
-                        error_msg = Some(format!("命令执行失败: {}", cmd));
-                    }
-                }
-                Err(e) => {
-                    output.push_str(&format!("命令执行错误: {}\n", e));
-                    success = false;
-                    error_msg = Some(e.to_string());
+        match command.output() {
+            Ok(result) => {
+                let stdout = String::from_utf8_lossy(&result.stdout);
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                
+                let output = format!("输出: {}\n错误: {}", stdout, stderr);
+                
+                if result.status.success() {
+                    log::info!("USB 3.0 registry modifications reverted");
+                    Ok(CommandResult {
+                        success: true,
+                        output: "USB 3.0注册表修改已撤销，请重新连接设备".to_string(),
+                        error: None,
+                        exit_code: Some(0),
+                    })
+                } else {
+                    log::error!("Failed to revert USB 3.0 registry: {}", stderr);
+                    Ok(CommandResult {
+                        success: false,
+                        output: format!("USB 3.0注册表撤销失败: {}", output),
+                        error: Some(stderr.to_string()),
+                        exit_code: Some(1),
+                    })
                 }
             }
-        }
-
-        if success {
-            log::info!("USB 3.0 registry modifications undone");
-            Ok(CommandResult {
-                success: true,
-                output: "USB 3.0注册表修改已撤销，请重新连接设备".to_string(),
-                error: None,
-                exit_code: Some(0),
-            })
-        } else {
-            log::error!("Failed to undo USB 3.0 registry modifications: {:?}", error_msg);
-            Ok(CommandResult {
-                success: false,
-                output: format!("USB 3.0注册表修改撤销失败: {}", output),
-                error: error_msg,
-                exit_code: Some(1),
-            })
+            Err(e) => {
+                log::error!("Failed to execute USB 3.0 unfix script: {}", e);
+                Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(format!("执行USB 3.0撤销脚本失败: {}", e)),
+                    exit_code: Some(1),
+                })
+            }
         }
     }
 

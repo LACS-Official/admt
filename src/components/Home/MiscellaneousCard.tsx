@@ -342,6 +342,39 @@ const MiscellaneousCard: React.FC = () => {
     setUsbFixOutput('');
   };
 
+  const handleVerifyUsbRegistry = async () => {
+    setShowUsbFixDialog(true);
+    setUsbFixStatus('running');
+    setUsbFixOutput('正在验证USB 3.0注册表...\n');
+    
+    try {
+      const result = await invoke("verify_usb3_registry") as any;
+      setUsbFixOutput(prev => prev + `验证结果: ${result.output}\n`);
+      
+      if (result.success) {
+        setUsbFixStatus('success');
+        setStatusBarMessage({
+          type: "success",
+          message: "USB 3.0注册表验证成功",
+        });
+      } else {
+        setUsbFixStatus('error');
+        setUsbFixOutput(prev => prev + `错误: ${result.error || '验证失败'}\n`);
+        setStatusBarMessage({
+          type: "error",
+          message: "USB 3.0注册表验证失败",
+        });
+      }
+    } catch (error) {
+      setUsbFixStatus('error');
+      setUsbFixOutput(prev => prev + `验证异常: ${error}\n`);
+      setStatusBarMessage({
+        type: "error",
+        message: `USB 3.0注册表验证失败: ${error}`,
+      });
+    }
+  };
+
 
   const handleFinishAdb = async () => {
     setStatusBarMessage({
@@ -553,12 +586,21 @@ const MiscellaneousCard: React.FC = () => {
             )}
             
             {(usbFixStatus === 'success' || usbFixStatus === 'error') && (
-              <Button 
-                appearance="primary" 
-                onClick={handleUsbFixClose}
-              >
-                完成
-              </Button>
+              <>
+                <Button 
+                  appearance="secondary" 
+                  onClick={handleUsbFixClose}
+                >
+                  关闭
+                </Button>
+                <Button 
+                  appearance="primary" 
+                  onClick={handleVerifyUsbRegistry}
+                  icon={<Wrench24Regular />}
+                >
+                  重新验证
+                </Button>
+              </>
             )}
           </DialogActions>
         </DialogSurface>
