@@ -2,18 +2,16 @@ import React, { useState }  from 'react';
 import {
   makeStyles,
   Text,
-  Card,
-  CardHeader,
   TabList,
   Tab,
 } from "@fluentui/react-components";
 import {
   CloudArrowUp24Regular,
   Settings24Regular,
-  Warning24Regular,
   LockOpen24Regular,
   Database24Regular,
   Flash24Regular,
+  Code24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
@@ -22,6 +20,15 @@ import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
 import FastbootCommandCard from "../FlashZone/FastbootCommandCard";
 
 const useStyles = makeStyles({
+  container: {
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    padding: "8px",
+    gap: "24px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+  },
   headerTabList: {
     flex: "1 1 auto",
     maxHeight: "45px",
@@ -69,14 +76,6 @@ const useStyles = makeStyles({
       },
     },
   },
-  container: {
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    padding: "18px",
-    gap: "24px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-  },
   header: {
     display: "flex",
     alignItems: "center",
@@ -107,6 +106,7 @@ const useStyles = makeStyles({
     gap: "16px",
     flex: 1,
     overflow: "hidden",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   tabContent: {
     flex: 1,
@@ -143,8 +143,9 @@ const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
   const { selectedDevice, devices } = useDeviceStore();
   const [currentView, setCurrentView] = useState<FlashZoneView>("fastboot-command");
-
   const connectedDevices = devices.filter(d => d.connected);
+
+
 
   const tabs = [
     {
@@ -188,7 +189,24 @@ const FlashZonePanel: React.FC = () => {
   };
 
   return (
-    <div className={styles.container}>
+        <div className={styles.container}>
+  {connectedDevices.length === 0 ? (
+        <div className={styles.noDevice}>
+          <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
+          <Text size={400}>未检测到设备</Text>
+          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
+            请确保设备已连接
+          </Text>
+        </div>
+      ) : !selectedDevice ? (
+        <div className={styles.noDevice}>
+          <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
+          <Text size={400}>请选择一个设备</Text>
+          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
+            从设备信息页面选择要操作的设备
+          </Text>
+        </div>
+      ) : (
       <div className={styles.content}>
         <div className={styles.tabContainer}>
           <TabList
@@ -212,6 +230,7 @@ const FlashZonePanel: React.FC = () => {
           </div>
         </div>
       </div>
+          )}
     </div>
   );
 };

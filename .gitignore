@@ -8,6 +8,7 @@ yarn-error.log*
 dist/
 build/
 node_modules/
+jiaoben/
 
 # Environment variables
 .env
