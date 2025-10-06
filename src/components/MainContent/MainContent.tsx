@@ -1,4 +1,4 @@
-import React, { useEffect, useRef }  from 'react';
+import React, { useEffect, useRef, useState }  from 'react';
 import {
   makeStyles,
   TabList,
@@ -32,6 +32,7 @@ import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
 import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
+import VersionChecker from "../Common/VersionChecker";
 
 import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
@@ -533,6 +534,10 @@ const MainContent: React.FC = () => {
   const { selectedDevice, devices, selectDevice } = useDeviceStore();
   const { startScanning, stopScanning, refreshDeviceInfo } = useDeviceService();
   const prevConnectedCount = useRef<number>(0);
+  
+  // 版本检查相关状态
+  const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
+  const [updateCheckCompleted, setUpdateCheckCompleted] = useState(false);
 
   // 全局设备扫描 - 根据配置控制是否启用和扫描间隔
   useEffect(() => {
@@ -670,6 +675,26 @@ const MainContent: React.FC = () => {
 
     updateTrayConfig();
   }, [config.systemTrayEnabled, config.minimizeToTrayOnClose]);
+
+  // 进入主页面时自动检测更新
+  useEffect(() => {
+    // 延迟执行版本检查，确保应用完全加载
+    const timer = setTimeout(() => {
+      if (!updateCheckCompleted) {
+        console.log('🔄 开始自动检测更新...');
+        setTriggerVersionCheck(true);
+      }
+    }, 10);
+
+    return () => clearTimeout(timer);
+  }, [updateCheckCompleted]);
+
+  // 处理版本检查完成
+  const handleUpdateCheckComplete = () => {
+    console.log('✅ 版本检查完成');
+    setUpdateCheckCompleted(true);
+    setTriggerVersionCheck(false);
+  };
 
   const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setCurrentView(data.value as AppView);
@@ -928,6 +953,25 @@ const MainContent: React.FC = () => {
       <div className={`${styles.content} main-content-enter`}>
         {renderContent()}
       </div>
+
+      {/* 版本检查组件 - 隐藏但功能完整 */}
+      <VersionChecker
+        triggerCheck={triggerVersionCheck}
+        onCheckUpdate={() => console.log('🔄 开始检查更新...')}
+        onUpdateFound={(result) => {
+          console.log('🆕 发现新版本:', result);
+          handleUpdateCheckComplete();
+        }}
+        onNoUpdate={(currentVersion) => {
+          console.log('✅ 当前已是最新版本:', currentVersion);
+          handleUpdateCheckComplete();
+        }}
+        onError={(error) => {
+          console.error('❌ 版本检查失败:', error);
+          handleUpdateCheckComplete();
+        }}
+        showStatusMessage={false} // 不显示状态消息，避免干扰用户
+      />
     </div>
   );
 };
