@@ -86,6 +86,7 @@ export interface DeviceStatus {
   devices: DeviceInfo[];
   selectedDevice?: DeviceInfo;
   isScanning: boolean;
+  isFlashing: boolean;
   lastUpdate: Date;
 }
 

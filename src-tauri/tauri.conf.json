@@ -83,7 +83,6 @@
         "languages": [
           "SimpChinese"
         ],
-        "template": "test.nsi",
         "headerImage": null,
         "sidebarImage": null,
         "installerIcon": null,

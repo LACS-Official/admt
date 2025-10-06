@@ -404,7 +404,8 @@ pub async fn fastboot_flash_image(
     );
 
     let args = vec!["-s", &serial, "flash", &partition, &image_path];
-    let result = execute_fastboot_command(&args, Some(300)).await?;
+    // 增加刷写操作的超时时间到600秒（10分钟），以适应大型镜像的刷写
+    let result = execute_fastboot_command(&args, Some(600)).await?;
 
     Ok(result)
 }
@@ -1787,15 +1788,19 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
         log::info!("Script absolute path: {}", script_absolute_path.display());
         log::info!("Working directory: {}", working_dir.display());
 
-        // 使用简单的start命令在新窗口中启动脚本
-        let script_name = script_absolute_path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("bypass.cmd");
-
+        // 使用隐藏窗口的方式启动脚本
         let mut cmd = Command::new("cmd");
-        cmd.args(&["/C", "start", script_name]);
+        cmd.args(&["/C", script_absolute_path.to_string_lossy().as_ref()]);
         cmd.current_dir(working_dir);
+
+        // 在Windows上隐藏窗口
+        #[cfg(windows)]
+        {
+            #[allow(unused_imports)]
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
 
         match cmd.spawn() {
             Ok(child) => {
@@ -1841,6 +1846,13 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
         let mut cmd = Command::new("sh");
         cmd.args(&["-c", &script_str]);
         cmd.current_dir(working_dir);
+
+        // 在Unix-like系统上隐藏窗口（使用nohup或重定向输出）
+        #[cfg(not(windows))]
+        {
+            cmd.stdout(std::process::Stdio::null());
+            cmd.stderr(std::process::Stdio::null());
+        }
 
         match cmd.spawn() {
             Ok(child) => {

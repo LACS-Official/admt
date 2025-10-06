@@ -184,26 +184,14 @@ pub async fn execute_command(
     let mut cmd = TokioCommand::new(program);
     cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
 
-    // 在发布版中隐藏命令行窗口，在调试版中保持可见
-    #[cfg(all(windows, not(debug_assertions)))]
+    // 在所有情况下都隐藏命令行窗口
+    #[cfg(windows)]
     {
         #[allow(unused_imports)]
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);
-        log::debug!("设置隐藏窗口标志 (发布版): {}", program.display());
-    }
-
-    // 在调试版中保持窗口可见以便调试
-    #[cfg(all(windows, debug_assertions))]
-    {
-        log::debug!("保持窗口可见 (调试版): {}", program.display());
-    }
-
-    // 非Windows平台的处理
-    #[cfg(not(windows))]
-    {
-        log::debug!("非Windows平台，使用默认设置: {}", program.display());
+        log::debug!("设置隐藏窗口标志: {}", program.display());
     }
 
     let timeout_duration = Duration::from_secs(timeout_secs.unwrap_or(30));

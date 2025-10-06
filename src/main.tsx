@@ -8,6 +8,10 @@ import { useStartupFlowStore } from "./stores/startupFlowStore";
 import "./styles/global.css";
 import "./styles/startup-animations.css";
 
+// 导入安全保护模块，确保在应用启动时加载
+import "./utils/securityProtection";
+import "./utils/devtools";
+
 function AppWithTheme() {
   const { isDarkMode, followSystemTheme, updateThemeBasedOnSystem } = useThemeStore();
   const [isActivationValid, setIsActivationValid] = useState(true);

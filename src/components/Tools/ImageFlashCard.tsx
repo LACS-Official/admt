@@ -27,6 +27,8 @@ import {
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
+import { useDeviceStore } from "../../stores/deviceStore";
+import { useAppStore } from "../../stores/appStore";
 
 
 const useStyles = makeStyles({
@@ -110,6 +112,8 @@ type FlashStatus = "idle" | "preparing" | "flashing" | "success" | "error";
 const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
   const styles = useStyles();
   const { deviceService } = useDeviceService();
+  const { setFlashing } = useDeviceStore();
+  const { config, updateConfig } = useAppStore();
   
   // 选择的镜像文件（使用 Tauri 原生文件选择，保留真实路径）
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
@@ -122,6 +126,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [flashMode, setFlashMode] = useState<'ab' | 'a' | 'b' | 'direct'>("direct");
+  const [originalAutoDetect, setOriginalAutoDetect] = useState<boolean>(config.autoDetectDevices);
 
   // 常见分区列表
   const partitions = [
@@ -168,75 +173,87 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
   };
 
   const handleFlashConfirm = async () => {
-    if (!selectedFilePath || !selectedPartition) return;
-    
-    setShowConfirmDialog(false);
-    setIsFlashing(true);
-    setFlashStatus("preparing");
-    setProgress(0);
-    setFlashLog("准备刷入镜像...\n");
+  if (!selectedFilePath || !selectedPartition) return;
+  
+  setShowConfirmDialog(false);
+  setIsFlashing(true);
+  setFlashing(true); // 设置全局刷写状态
+  setFlashStatus("preparing");
+  setProgress(0);
+  setFlashLog("准备刷入镜像...\n");
+  
+  // 保存原始的自动检测状态，并关闭自动检测
+  setOriginalAutoDetect(config.autoDetectDevices);
+  if (config.autoDetectDevices) {
+    updateConfig({ autoDetectDevices: false });
+  }
 
+  try {
+    // 实际刷入逻辑（fastboot）
+    setFlashStatus("flashing");
+    setProgress(10);
+    setFlashLog(prev => prev + `开始刷入 ${selectedFileName} 到 ${selectedPartition} 分区，模式：${
+      flashMode === 'ab' ? 'A/B 同时' : flashMode === 'a' ? '仅 A' : flashMode === 'b' ? '仅 B' : '直接分区'
+    }...\n`);
+
+    // 可选：检查 fastboot 可用
     try {
-      // 实际刷入逻辑（fastboot）
-      setFlashStatus("flashing");
-      setProgress(10);
-      setFlashLog(prev => prev + `开始刷入 ${selectedFileName} 到 ${selectedPartition} 分区，模式：${
-        flashMode === 'ab' ? 'A/B 同时' : flashMode === 'a' ? '仅 A' : flashMode === 'b' ? '仅 B' : '直接分区'
-      }...\n`);
-
-      // 可选：检查 fastboot 可用
-      try {
-        const chk = await deviceService.checkFastbootAvailability();
-        if (!chk.success) {
-          setFlashLog(prev => prev + `Fastboot 不可用: ${chk.error || chk.output}\n`);
-        }
-      } catch (_) {}
-
-      // 计算目标分区列表
-      const targets: string[] = (() => {
-        if (flashMode === 'ab') return [`${selectedPartition}_a`, `${selectedPartition}_b`];
-        if (flashMode === 'a') return [`${selectedPartition}_a`];
-        if (flashMode === 'b') return [`${selectedPartition}_b`];
-        return [selectedPartition]; // direct
-      })();
-
-      let overallSuccess = true;
-      for (let i = 0; i < targets.length; i++) {
-        const target = targets[i];
-        setFlashLog(prev => prev + `\n>>> 正在刷入分区：${target}\n`);
-        const stepStart = 10 + Math.floor((80 / targets.length) * i);
-        setProgress(stepStart);
-
-        const result = await deviceService.fastbootFlashImage(
-          device.serial,
-          selectedFilePath,
-          target
-        );
-
-        setFlashLog(prev => prev + (result.output || "") + "\n");
-        if (!result.success) {
-          overallSuccess = false;
-          setFlashLog(prev => prev + `分区 ${target} 刷入失败: ${result.error || '未知错误'}\n`);
-          // A/B 同时模式下，若一个失败，继续尝试后续目标，但最终判定失败
-        }
+      const chk = await deviceService.checkFastbootAvailability();
+      if (!chk.success) {
+        setFlashLog(prev => prev + `Fastboot 不可用: ${chk.error || chk.output}\n`);
       }
+    } catch (_) {}
 
-      setProgress(100);
-      if (overallSuccess) {
-        setFlashStatus("success");
-        setFlashLog(prev => prev + "\n所有目标分区刷入完成！\n");
-      } else {
-        setFlashStatus("error");
-        setFlashLog(prev => prev + "\n刷入过程中发生错误，请检查日志。\n");
+    // 计算目标分区列表
+    const targets: string[] = (() => {
+      if (flashMode === 'ab') return [`${selectedPartition}_a`, `${selectedPartition}_b`];
+      if (flashMode === 'a') return [`${selectedPartition}_a`];
+      if (flashMode === 'b') return [`${selectedPartition}_b`];
+      return [selectedPartition]; // direct
+    })();
+
+    let overallSuccess = true;
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      setFlashLog(prev => prev + `\n>>> 正在刷入分区：${target}\n`);
+      const stepStart = 10 + Math.floor((80 / targets.length) * i);
+      setProgress(stepStart);
+
+      const result = await deviceService.fastbootFlashImage(
+        device.serial,
+        selectedFilePath,
+        target
+      );
+
+      setFlashLog(prev => prev + (result.output || "") + "\n");
+      if (!result.success) {
+        overallSuccess = false;
+        setFlashLog(prev => prev + `分区 ${target} 刷入失败: ${result.error || '未知错误'}\n`);
+        // A/B 同时模式下，若一个失败，继续尝试后续目标，但最终判定失败
       }
-      
-    } catch (error) {
-      setFlashStatus("error");
-      setFlashLog(prev => prev + `刷入失败: ${error}\n`);
-    } finally {
-      setIsFlashing(false);
     }
-  };
+
+    setProgress(100);
+    if (overallSuccess) {
+      setFlashStatus("success");
+      setFlashLog(prev => prev + "\n所有目标分区刷入完成！\n");
+    } else {
+      setFlashStatus("error");
+      setFlashLog(prev => prev + "\n刷入过程中发生错误，请检查日志。\n");
+    }
+    
+  } catch (error) {
+    setFlashStatus("error");
+    setFlashLog(prev => prev + `刷入失败: ${error}\n`);
+  } finally {
+    setIsFlashing(false);
+    setFlashing(false); // 清除全局刷写状态
+    // 恢复原始的自动检测状态
+    if (originalAutoDetect) {
+      updateConfig({ autoDetectDevices: true });
+    }
+  }
+};
 
 
   const formatFileSize = (bytes: number) => {

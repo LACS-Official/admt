@@ -6,6 +6,7 @@ interface DeviceState extends DeviceStatus {
   selectDevice: (device: DeviceInfo | undefined) => void;
   updateDevice: (serial: string, updates: Partial<DeviceInfo>) => void;
   setScanning: (isScanning: boolean) => void;
+  setFlashing: (isFlashing: boolean) => void;
   clearDevices: () => void;
 }
 
@@ -13,6 +14,7 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
   devices: [],
   selectedDevice: undefined,
   isScanning: false,
+  isFlashing: false,
   lastUpdate: new Date(),
 
   setDevices: (devices: DeviceInfo[]) => 
@@ -41,6 +43,8 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
     })),
 
   setScanning: (isScanning: boolean) => set({ isScanning }),
+
+  setFlashing: (isFlashing: boolean) => set({ isFlashing }),
 
   clearDevices: () => set({ 
     devices: [], 
