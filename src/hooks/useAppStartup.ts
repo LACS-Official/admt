@@ -23,6 +23,7 @@ export const useAppStartup = () => {
   const { 
     currentPhase, 
     setCurrentPhase, 
+    versionCheckResult,
     setVersionCheckResult, 
     setVersionCheckCompleted,
     markPrivacyConsentCompleted,
@@ -91,22 +92,24 @@ export const useAppStartup = () => {
         setTimeout(() => {
           setTransitionStage('complete');
           setTimeout(() => {
-            setShowTransition(false);
-            // 只有在当前阶段不是版本检查阶段时才隐藏启动流程
-            if (currentPhase !== 'version-check') {
-              setShowStartupFlow(false);
-              completeStartup();
-            } else {
-              console.log('⚠️ 检测到新版本，停留在版本检查阶段，不进入主页面');
-              // 保持在版本检查阶段，不隐藏启动流程
-            }
-          }, 500);
+              setShowTransition(false);
+              // 检查是否有版本检查结果，如果没有更新则允许进入主页面
+              const hasUpdate = versionCheckResult?.hasUpdate;
+              if (currentPhase !== 'version-check' || !hasUpdate) {
+                console.log('✅ 允许进入主页面');
+                setShowStartupFlow(false);
+                completeStartup();
+              } else {
+                console.log('⚠️ 检测到新版本，停留在版本检查阶段，不进入主页面');
+                // 保持在版本检查阶段，不隐藏启动流程
+              }
+            }, 500);
         }, 1000);
       }, 100);
       
       return () => clearTimeout(timer);
     }
-  }, [showTransition, completeStartup, currentPhase]);
+  }, [showTransition, completeStartup, currentPhase, versionCheckResult]);
 
   // 启动流程初始化
   const initializeStartupFlow = useCallback(async () => {
