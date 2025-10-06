@@ -1,0 +1,1 @@
+cd e:\tauri\admt && node scripts/inject-version.cjs

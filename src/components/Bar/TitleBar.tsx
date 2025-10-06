@@ -24,7 +24,6 @@ import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { admtLogo64 } from "../../assets/icons";
-import UserInfoModal from "../Settings/UserInfoModal";
 import AnnouncementBar from "../Announcement/AnnouncementBar";
 
 const useStyles = makeStyles({
@@ -270,15 +269,6 @@ const TitleBar: React.FC = () => {
 
         {/* 右侧区域 - 控制按钮 - 不支持拖拽 */}
         <div className={styles.rightSection} data-tauri-drag-region="false">
-          <Tooltip content="用户信息" relationship="label">
-            <UserInfoModal>
-              <Button
-                appearance="subtle"
-                icon={<Person24Regular />}
-                className={styles.titleBarButton}
-              />
-            </UserInfoModal>
-          </Tooltip>
 
 
           <Tooltip
