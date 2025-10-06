@@ -23,7 +23,6 @@ import {
 } from '@fluentui/react-icons';
 import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
 import { runPrivacyTests, getCurrentPrivacyState, resetPrivacyStateForTesting, simulatePrivacyConsentFlow } from '../../utils/privacyTestUtils';
-import { runCompleteVerification } from '../../utils/testPrivacyFix';
 
 const useStyles = makeStyles({
   container: {
@@ -101,11 +100,11 @@ const PrivacyDebugPanel: React.FC<PrivacyDebugPanelProps> = ({ onClose }) => {
     setTestResults(`测试完成: ${results.passed}通过, ${results.failed}失败`);
   };
 
-  const handleRunVerification = () => {
-    console.log('🔧 运行修复验证...');
-    const results = runCompleteVerification();
-    setTestResults(`修复验证: ${results.allPassed ? '✅ 成功' : '❌ 失败'}`);
-  };
+  // const handleRunVerification = () => {
+  //   console.log('🔧 运行修复验证...');
+  //   const results = runCompleteVerification();
+  //   setTestResults(`修复验证: ${results.allPassed ? '✅ 成功' : '❌ 失败'}`);
+  // };
 
   const handleResetState = () => {
     resetPrivacyStateForTesting();
@@ -313,13 +312,13 @@ const PrivacyDebugPanel: React.FC<PrivacyDebugPanelProps> = ({ onClose }) => {
               模拟流程
             </Button>
 
-            <Button
+            {/* <Button
               appearance="primary"
               onClick={handleRunVerification}
               size="small"
             >
               验证修复
-            </Button>
+            </Button> */}
           </div>
 
           {testResults && (

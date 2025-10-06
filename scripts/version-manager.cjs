@@ -199,6 +199,9 @@ class VersionManager {
     this.updateTauriConf(version);
     this.updateEnvFiles(config);
     
+    console.log('✅ 版本同步完成！');
+    console.log('💡 提示：package-lock.json、Cargo.lock等锁定文件中的版本号是自动生成的，无需手动管理');
+    
     console.log('\n✅ 版本同步完成！');
   }
 

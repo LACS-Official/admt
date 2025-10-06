@@ -22,10 +22,8 @@ import MainContent from "./components/MainContent/MainContent";
 import StatusBar from "./components/Bar/StatusBar";
 import { ErrorNotification } from "./components/Common/ErrorNotification";
 import { StartupFlow } from "./components/StartupFlow/StartupFlow";
-import StartupVersionChecker from "./components/Common/StartupVersionChecker";
 import { useAppStyles } from "./styles/appStyles";
 import { useAppStartup } from "./hooks/useAppStartup";
-import { useState, useEffect } from "react";
 
 function App() {
   const styles = useAppStyles();
@@ -44,43 +42,14 @@ function App() {
     handleStartupFlowComplete
   } = useAppStartup();
 
-  // 版本检查状态
-  const [showVersionCheck, setShowVersionCheck] = useState(true);
-  const [versionCheckComplete, setVersionCheckComplete] = useState(false);
-  const [needsUpdate, setNeedsUpdate] = useState(false);
 
-  // 处理版本检查完成
-  const handleVersionCheckComplete = (updateRequired: boolean) => {
-    setNeedsUpdate(updateRequired);
-    setVersionCheckComplete(true);
-    setShowVersionCheck(false);
-  };
 
-  // 处理离线使用
-  const handleAllowOfflineUse = () => {
-    setShowVersionCheck(false);
-    setVersionCheckComplete(true);
-  };
 
   // 加载中状态
   if (isLoading) {
     return null;
   }
 
-  // 显示版本检查
-  if (showVersionCheck) {
-    return (
-      <StartupVersionChecker
-        onCheckComplete={handleVersionCheckComplete}
-        onAllowOfflineUse={handleAllowOfflineUse}
-      />
-    );
-  }
-
-  // 如果需要更新，不继续启动流程
-  if (needsUpdate) {
-    return null; // StartupVersionChecker 组件会显示更新弹窗
-  }
 
   // 显示错误通知
   if (showErrorNotification && error) {

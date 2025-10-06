@@ -1,20 +1,19 @@
 {
   "name": "wanjiguanjia-tauri",
   "private": true,
-  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "build:dev": "vite build --mode development",
-    "build:prod": "vite build --mode production",
+    "build": "node scripts/inject-version.cjs && tsc && vite build",
+    "build:dev": "node scripts/inject-version.cjs && vite build --mode development",
+    "build:prod": "node scripts/inject-version.cjs && vite build --mode production",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "npm run prebuild-check && tauri build",
-    "tauri:build:debug": "npm run prebuild-check && tauri build --debug",
-    "tauri:build:prod": "npm run validate-env && npm run verify:tools && npm run prebuild-check && tauri build --mode production",
+    "tauri:build": "npm run prebuild-check && node scripts/inject-version.cjs && tauri build",
+    "tauri:build:debug": "npm run prebuild-check && node scripts/inject-version.cjs && tauri build --debug",
+    "tauri:build:prod": "npm run validate-env && npm run verify:tools && npm run prebuild-check && node scripts/inject-version.cjs && tauri build --mode production",
     "build:all": "npm run build && npm run tauri:build",
     "clean": "rimraf dist src-tauri/target",
     "prebuild": "npm run clean",
@@ -70,5 +69,6 @@
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.38.0",
     "vite": "^6.0.1"
-  }
+  },
+  "version": "1.1.0"
 }

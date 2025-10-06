@@ -4,7 +4,7 @@ import PrivacyConsentDialog from "../StartupFlow/PrivacyConsentDialog";
 import ActivationPage from "../StartupFlow/ActivationPage";
 import StartupTransition from "./StartupTransition";
 import StatusBar from "../Bar/StatusBar";
-import StartupVersionChecker from "../Common/StartupVersionChecker";
+import VersionChecker from "../Common/VersionChecker";
 
 interface StartupFlowProps {
   currentPhase: string;
@@ -56,9 +56,14 @@ export const StartupFlow = ({
       )}
       
       {currentPhase === 'version-check' && (
-        <StartupVersionChecker
-          onCheckComplete={(needsUpdate, result) => onStartupFlowComplete({ needsUpdate, result })}
-          onAllowOfflineUse={() => onStartupFlowComplete({ needsUpdate: false })}
+        <VersionChecker
+          autoCheck={true}
+          onUpdateFound={(result) => {
+            // 检测到有更新，不调用onStartupFlowComplete，让用户停留在更新弹窗
+            console.log('检测到有更新，显示更新弹窗，不允许进入主页面');
+          }}
+          onNoUpdate={(currentVersion) => onStartupFlowComplete({ needsUpdate: false, currentVersion })}
+          onError={(error) => onStartupFlowError(error)}
         />
       )}
       
@@ -74,7 +79,7 @@ export const StartupFlow = ({
         )}
       </AnimatePresence>
       
-      <StatusBar />
+      {/* <StatusBar /> */}
     </div>
   );
 };

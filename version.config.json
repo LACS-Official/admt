@@ -1,14 +1,13 @@
 {
   "version": "1.1.0",
   "buildNumber": 1,
-  "versionName": "1.1.0",
-  "releaseDate": "2025-09-15",
+  "versionName": "1.1.0 中秋特别版",
+  "releaseDate": "2025-10-06",
   "description": "统一版本管理配置文件",
   "changelog": [
-    "实现统一版本管理系统",
-    "支持环境变量集中配置",
-    "前后端版本号自动同步",
-    "版本号校验机制"
+    "修复了一些已知问题",
+    "添加了新的功能",
+    "优化了性能"
   ],
   "environments": {
     "development": {
