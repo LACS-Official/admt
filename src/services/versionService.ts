@@ -1,6 +1,5 @@
 import { getVersion } from '@tauri-apps/api/app';
-import { tauriHttpService } from './tauriHttpService';
-import { ApiResponse } from '../config/api';
+import { invoke } from '@tauri-apps/api/core';
 
 // API响应数据结构 - 根据实际API返回的结构
 interface VersionResponse {
@@ -16,6 +15,17 @@ interface VersionResponse {
   message?: string;
 }
 
+// Rust后端返回的版本检查结果
+interface RustUpdateCheckResult {
+  has_update: boolean;
+  current_version: string;
+  latest_version?: string;
+  download_url?: string;
+  release_notes?: string;
+  updated_at?: string;
+  error?: string;
+}
+
 // 版本检查结果
 export interface VersionCheckResult {
   hasUpdate: boolean;
@@ -24,52 +34,13 @@ export interface VersionCheckResult {
   updateInfo?: {
     updateLog?: string;
     downloadUrl: string;
+    updatedAt?: string;
   };
 }
 
 /**
- * 比较版本号 - 优化版本比较逻辑
- * @param remoteVersion 远程版本（API返回的currentVersion）
- * @param localVersion 本地版本
- * @returns true: 远程版本大于本地版本（需要更新）, false: 不需要更新
- */
-function isUpdateRequired(remoteVersion: string, localVersion: string): boolean {
-  // 清理版本号，移除可能的前缀（如 'v'）和后缀
-  const cleanRemote = remoteVersion.replace(/^v/, '').trim();
-  const cleanLocal = localVersion.replace(/^v/, '').trim();
-  
-  // 分割版本号并转换为数字数组
-  const remoteParts = cleanRemote.split('.').map(part => {
-    const num = parseInt(part, 10);
-    return isNaN(num) ? 0 : num;
-  });
-  
-  const localParts = cleanLocal.split('.').map(part => {
-    const num = parseInt(part, 10);
-    return isNaN(num) ? 0 : num;
-  });
-  
-  // 确保两个版本号长度一致，不足的部分补0
-  const maxLength = Math.max(remoteParts.length, localParts.length);
-  while (remoteParts.length < maxLength) remoteParts.push(0);
-  while (localParts.length < maxLength) localParts.push(0);
-  
-  // 逐位比较版本号
-  for (let i = 0; i < maxLength; i++) {
-    if (remoteParts[i] > localParts[i]) {
-      return true; // 远程版本更高，需要更新
-    } else if (remoteParts[i] < localParts[i]) {
-      return false; // 本地版本更高，不需要更新
-    }
-    // 如果相等，继续比较下一位
-  }
-  
-  return false; // 版本完全相同，不需要更新
-}
-
-/**
- * 检查版本更新 - 使用tauriHttpService的版本检测逻辑
- * 仅通过GET请求访问API，当currentVersion大于本地版本时触发更新
+ * 检查版本更新 - 使用Rust后端的版本检测逻辑
+ * 调用后端check_for_updates命令，由后端完成版本比较
  * @returns Promise<VersionCheckResult>
  */
 export async function checkForUpdates(): Promise<VersionCheckResult> {
@@ -77,61 +48,32 @@ export async function checkForUpdates(): Promise<VersionCheckResult> {
     // 获取本地应用版本
     const localVersion = await getVersion();
     
-    // 使用tauriHttpService发送GET请求到版本检查API
-    const response = await tauriHttpService.get<VersionResponse>('/app/software/id/1', {
-      timeout: 10000,
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'ADMT-App'
-      }
-    });
+    // 调用Rust后端的版本检查命令
+    const rustResult = await invoke<RustUpdateCheckResult>('check_for_updates');
     
-    // 检查HTTP响应状态
-    if (!response.success || !response.data) {
-      throw new Error(response.error || 'API请求失败');
+    // 检查后端返回结果
+    if (rustResult.error) {
+      throw new Error(rustResult.error);
     }
     
-    const data = response.data;
-    
-    // 验证API响应结构和必要字段
-    if (!data || typeof data !== 'object') {
-      throw new Error('API响应格式无效: 响应不是有效的对象');
-    }
-    
-    if (!data.success) {
-      throw new Error(`API返回错误: ${data.message || '未知错误'}`);
-    }
-    
-    if (!data.data || !data.data.currentVersion) {
-      throw new Error('API响应格式无效: 缺少必要的版本信息字段');
-    }
-    
-    const currentVersion = data.data.currentVersion;
-    
-    // 验证版本号格式
-    if (typeof currentVersion !== 'string' || !currentVersion.trim()) {
-      throw new Error('API返回的版本号格式无效');
-    }
-    
-    // 检查是否需要更新（currentVersion > localVersion）
-    const hasUpdate = isUpdateRequired(currentVersion, localVersion);
-    
-    // 构建返回结果 - 不解析API的updateLog和downloadUrl，使用固定值
+    // 构建返回结果
     const result: VersionCheckResult = {
-      hasUpdate,
-      currentVersion: currentVersion.trim(),
+      hasUpdate: rustResult.has_update,
+      currentVersion: rustResult.latest_version || rustResult.current_version,
       localVersion: localVersion.trim(),
-      updateInfo: hasUpdate ? {
-        updateLog: '请在下载页面查看相关内容', // 固定提示信息
-        downloadUrl: 'https://admt.lacs.cc/download' // 固定下载链接
+      updateInfo: rustResult.has_update ? {
+        updateLog: rustResult.release_notes || '请在下载页面查看相关内容',
+        downloadUrl: rustResult.download_url || 'https://admt.lacs.cc',
+        updatedAt: rustResult.updated_at
       } : undefined
     };
     
     // 记录版本检查结果
-    console.log('版本检查完成:', {
+    console.log('版本检查完成 (后端比较):', {
       本地版本: result.localVersion,
       远程版本: result.currentVersion,
-      需要更新: result.hasUpdate
+      需要更新: result.hasUpdate,
+      更新时间: result.updateInfo?.updatedAt
     });
     
     return result;
@@ -152,9 +94,9 @@ export async function checkForUpdates(): Promise<VersionCheckResult> {
 
 /**
  * 打开下载链接 - 在默认浏览器中打开下载页面
- * @param url 下载链接，默认使用官方下载页面
+ * @param url 下载链接，默认使用官方网站
  */
-export async function openDownloadLink(url: string = 'https://admt.lacs.cc/download'): Promise<void> {
+export async function openDownloadLink(url: string = 'https://admt.lacs.cc'): Promise<void> {
   try {
     // 优先使用Tauri的shell插件打开链接
     const { open } = await import('@tauri-apps/plugin-shell');
@@ -194,6 +136,6 @@ export function getUpdateMessage(versionInfo: VersionCheckResult): {
 请在下载页面查看相关内容。
 
 点击"打开下载页面"将在浏览器中打开下载页面。`,
-    downloadUrl: 'https://admt.lacs.cc/download' // 固定使用默认下载链接
+    downloadUrl: 'https://admt.lacs.cc' // 固定使用官方网站
   };
 }

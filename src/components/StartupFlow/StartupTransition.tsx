@@ -40,11 +40,13 @@ const useStyles = makeStyles({
 interface StartupTransitionProps {
   isTransitioning: boolean;
   onTransitionComplete?: () => void;
+  onComplete?: () => void;
 }
 
 const StartupTransition: React.FC<StartupTransitionProps> = ({
   isTransitioning,
   onTransitionComplete,
+  onComplete,
 }) => {
   const styles = useStyles();
   const [showCurtain, setShowCurtain] = useState(false);
@@ -57,11 +59,12 @@ const StartupTransition: React.FC<StartupTransitionProps> = ({
       const timer = setTimeout(() => {
         setShowCurtain(false);
         onTransitionComplete?.();
+        onComplete?.();
       }, 800); // 过渡动画持续时间
 
       return () => clearTimeout(timer);
     }
-  }, [isTransitioning, onTransitionComplete]);
+  }, [isTransitioning, onTransitionComplete, onComplete]);
 
   const curtainVariants = {
     hidden: {

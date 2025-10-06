@@ -24,9 +24,9 @@ export interface SecurityConfig {
  * 安全配置管理类
  */
 export class SecurityConfigManager {
-  private static instance: SecurityConfigManager
-  private config: SecurityConfig | null = null
-  private isInitialized = false
+  private static instance: SecurityConfigManager;
+  private config: SecurityConfig | null = null;
+  private isInitialized = false;
 
   private constructor() {}
 
@@ -35,9 +35,9 @@ export class SecurityConfigManager {
    */
   static getInstance(): SecurityConfigManager {
     if (!SecurityConfigManager.instance) {
-      SecurityConfigManager.instance = new SecurityConfigManager()
+      SecurityConfigManager.instance = new SecurityConfigManager();
     }
-    return SecurityConfigManager.instance
+    return SecurityConfigManager.instance;
   }
 
   /**
@@ -45,33 +45,41 @@ export class SecurityConfigManager {
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      return
+      return;
     }
 
     try {
       // 从Tauri后端获取安全配置
-      const config = await invoke<SecurityConfig>('get_security_config')
+      const config = await invoke<SecurityConfig>('get_security_config');
       
       // 验证配置完整性
-      this.validateConfig(config)
+      this.validateConfig(config);
       
-      this.config = config
-      this.isInitialized = true
+      this.config = config;
+      this.isInitialized = true;
       
-      console.log('✅ 安全配置初始化成功')
+      console.log('✅ 安全配置初始化成功');
     } catch (error) {
-      console.error('❌ 安全配置初始化失败:', error)
+      console.error('❌ 安全配置初始化失败:', error);
       
       // 尝试使用默认配置进行降级初始化
       try {
-        console.log('🔄 尝试使用默认配置进行降级初始化...')
-        await this.initializeWithDefaults()
-        console.log('✅ 降级初始化成功')
+        console.log('🔄 尝试使用默认配置进行降级初始化...');
+        await this.initializeWithDefaults();
+        console.log('✅ 降级初始化成功');
       } catch (fallbackError) {
-        console.error('❌ 降级初始化也失败:', fallbackError)
-        throw new Error('Failed to initialize security configuration')
+        console.error('❌ 降级初始化也失败:', fallbackError);
+        throw new Error('Failed to initialize security configuration');
       }
     }
+  }
+
+  /**
+   * 静态初始化方法，用于兼容性
+   */
+  static async initialize(): Promise<void> {
+    const instance = SecurityConfigManager.getInstance();
+    await instance.initialize();
   }
 
   /**

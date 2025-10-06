@@ -27,6 +27,9 @@ interface UseStartupOptimizationReturn extends StartupOptimizationState {
   completeStartup: () => void;
   updatePhase: (phase: string) => void;
   getMetrics: () => StartupOptimizationState['performanceMetrics'];
+  getPerformanceMetrics: () => StartupOptimizationState['performanceMetrics'];
+  isLowPerformanceDevice: boolean;
+  optimizationMode: 'low' | 'high';
 }
 
 export const useStartupOptimization = (): UseStartupOptimizationReturn => {
@@ -41,6 +44,7 @@ export const useStartupOptimization = (): UseStartupOptimizationReturn => {
     },
   });
 
+  const [isLowPerformance, setIsLowPerformance] = useState(false); // 添加低性能设备状态
   const metricsRef = useRef(state.performanceMetrics);
 
   // 更新性能指标
@@ -162,36 +166,111 @@ export const useStartupOptimization = (): UseStartupOptimizationReturn => {
       // 检查设备性能指标
       const connection = (navigator as any).connection;
       const memory = (performance as any).memory;
+      const deviceMemory = (navigator as any).deviceMemory;
       
       let isLowPerformance = false;
+      let performanceScore = 100; // 默认性能分数
       
-      // 检查网络连接
-      if (connection && connection.effectiveType && 
-          ['slow-2g', '2g'].includes(connection.effectiveType)) {
-        isLowPerformance = true;
+      // 检查网络连接 (最多扣30分)
+      if (connection) {
+        if (connection.effectiveType) {
+          switch (connection.effectiveType) {
+            case 'slow-2g': performanceScore -= 30; break;
+            case '2g': performanceScore -= 25; break;
+            case '3g': performanceScore -= 15; break;
+            case '4g': performanceScore -= 5; break;
+          }
+        }
+        
+        if (connection.saveData) {
+          performanceScore -= 20; // 省流模式
+        }
       }
       
-      // 检查内存使用情况
-      if (memory && memory.usedJSHeapSize > memory.jsHeapSizeLimit * 0.8) {
-        isLowPerformance = true;
+      // 检查内存使用情况 (最多扣30分)
+      if (memory) {
+        const memoryUsageRatio = memory.usedJSHeapSize / memory.jsHeapSizeLimit;
+        if (memoryUsageRatio > 0.9) performanceScore -= 30;
+        else if (memoryUsageRatio > 0.8) performanceScore -= 20;
+        else if (memoryUsageRatio > 0.7) performanceScore -= 10;
       }
       
-      // 检查硬件并发数
-      if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) {
-        isLowPerformance = true;
+      // 检查设备内存 (最多扣20分)
+      if (deviceMemory) {
+        if (deviceMemory < 2) performanceScore -= 20;
+        else if (deviceMemory < 4) performanceScore -= 10;
       }
+      
+      // 检查硬件并发数 (最多扣20分)
+      if (navigator.hardwareConcurrency) {
+        if (navigator.hardwareConcurrency < 2) performanceScore -= 20;
+        else if (navigator.hardwareConcurrency < 4) performanceScore -= 10;
+      }
+      
+      // 检查屏幕分辨率 (最多扣10分)
+      const screenPixelRatio = window.devicePixelRatio || 1;
+      const screenWidth = window.screen.width * screenPixelRatio;
+      const screenHeight = window.screen.height * screenPixelRatio;
+      const totalPixels = screenWidth * screenHeight;
+      
+      if (totalPixels > 3840 * 2160) { // 超过4K分辨率
+        performanceScore -= 10;
+      }
+      
+      // 性能分数低于60分被认为是低性能设备
+      isLowPerformance = performanceScore < 60;
 
       if (isLowPerformance) {
-        logService.info('检测到低性能设备，启用性能优化模式', 'useStartupOptimization');
+        logService.info('检测到低性能设备，启用性能优化模式', 'useStartupOptimization', {
+          performanceScore,
+          factors: {
+            connection: connection?.effectiveType,
+            memoryUsage: memory ? (memory.usedJSHeapSize / memory.jsHeapSizeLimit) : 'unknown',
+            deviceMemory,
+            cpuCores: navigator.hardwareConcurrency,
+            resolution: `${screenWidth}x${screenHeight}`
+          }
+        });
         
-        // 可以在这里设置性能优化标志
+        // 设置性能优化标志
         document.documentElement.setAttribute('data-performance-mode', 'low');
+        
+        // 可以在这里设置其他性能优化标志
+        document.documentElement.setAttribute('data-performance-score', performanceScore.toString());
+        
+        // 更新状态
+        setIsLowPerformance(true);
+        setState(prev => ({
+          ...prev,
+          startupPhase: 'low-performance'
+        }));
+      } else {
+        // 高性能设备
+        document.documentElement.setAttribute('data-performance-mode', 'high');
+        document.documentElement.setAttribute('data-performance-score', performanceScore.toString());
+        
+        // 更新状态
+        setIsLowPerformance(false);
+        setState(prev => ({
+          ...prev,
+          startupPhase: 'high-performance'
+        }));
       }
     };
 
     checkPerformance();
+    
+    // 监听网络变化
+    const connection = (navigator as any).connection;
+    if (connection) {
+      connection.addEventListener('change', checkPerformance);
+      return () => {
+        connection.removeEventListener('change', checkPerformance);
+      };
+    }
   }, []);
 
+  // 返回启动优化相关的状态和方法
   return {
     ...state,
     startPreload,
@@ -199,5 +278,8 @@ export const useStartupOptimization = (): UseStartupOptimizationReturn => {
     completeStartup,
     updatePhase,
     getMetrics,
+    getPerformanceMetrics: getMetrics, // 添加别名以保持兼容性
+    isLowPerformanceDevice: isLowPerformance, // 使用状态值
+    optimizationMode: isLowPerformance ? 'low' : 'high' // 使用状态值
   };
 };

@@ -351,29 +351,9 @@ export const shouldShowPrivacyConsent = (): boolean => {
     userAgreementVersion: state.userAgreementVersion,
   });
 
-  // 检查版本更新
-  const hasVersionUpdates = state.checkVersionUpdates();
-  if (hasVersionUpdates) {
-    console.log('📋 检测到版本更新，需要重新同意隐私政策');
-    return true;
-  }
-
-  // 检查是否所有必需的同意都已完成
-  const allAccepted = state.hasAcceptedPrivacyPolicy &&
-                     state.hasAcceptedUserAgreement &&
-                     state.hasAcceptedDataCollection;
-
-  // 如果未完成隐私设置或任何一项未同意，需要显示
-  const needsConsent = !state.hasCompletedPrivacySetup || !allAccepted;
-
-  console.log('🔍 隐私政策检查结果:', {
-    hasVersionUpdates,
-    allAccepted,
-    needsConsent,
-    shouldShow: needsConsent
-  });
-
-  return needsConsent;
+  // 强制始终显示隐私政策同意界面，确保用户必须同意
+  console.log('📋 强制显示隐私政策同意界面');
+  return true;
 };
 
 // 辅助函数：检查是否应该退出应用

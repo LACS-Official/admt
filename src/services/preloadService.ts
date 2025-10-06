@@ -69,13 +69,13 @@ class PreloadService {
       // 图片资源
       {
         type: 'image',
-        path: '/src/assets/icons/admt/128x128.png',
+        path: 'assets/icons/admt/128x128.png',
         priority: 'high',
-        preload: () => this.preloadImage('/src/assets/icons/admt/128x128.png'),
+        preload: () => this.preloadImage('assets/icons/admt/128x128.png'),
       },
       {
         type: 'image',
-        path: '/src/assets/icons/devices/',
+        path: 'assets/icons/devices/',
         priority: 'medium',
         preload: () => this.preloadDeviceIcons(),
       },
@@ -94,6 +94,35 @@ class PreloadService {
         preload: () => import('../services/adbToolsManager'),
       },
     ];
+  }
+
+  /**
+   * 预加载必要资源（简化版）
+   */
+  async preloadEssentialResources(): Promise<void> {
+    if (this.isPreloading) {
+      logService.info('预加载已在进行中', 'PreloadService');
+      return;
+    }
+
+    this.isPreloading = true;
+    logService.info('开始预加载必要资源', 'PreloadService');
+
+    const resources = this.getPreloadResources();
+    const essentialResources = resources.filter(r => r.priority === 'high');
+
+    try {
+      // 只预加载高优先级资源
+      logService.info(`预加载必要资源 (${essentialResources.length} 项)`, 'PreloadService');
+      await this.preloadResourcesBatch(essentialResources);
+
+      logService.info('必要资源预加载完成', 'PreloadService');
+    } catch (error) {
+      logService.error('预加载必要资源失败', 'PreloadService', error);
+      throw error;
+    } finally {
+      this.isPreloading = false;
+    }
   }
 
   /**
@@ -212,11 +241,11 @@ class PreloadService {
    */
   private async preloadDeviceIcons(): Promise<void> {
     const iconPaths = [
-      '/src/assets/icons/devices/sys.gif',
-      '/src/assets/icons/devices/rec.gif',
-      '/src/assets/icons/devices/fastboot.gif',
-      '/src/assets/icons/devices/unauthorized.gif',
-      '/src/assets/icons/devices/offline.gif',
+      'assets/icons/devices/sys.gif',
+      'assets/icons/devices/rec.gif',
+      'assets/icons/devices/fastboot.gif',
+      'assets/icons/devices/unauthorized.gif',
+      'assets/icons/devices/offline.gif',
     ];
 
     const promises = iconPaths.map(path => 
