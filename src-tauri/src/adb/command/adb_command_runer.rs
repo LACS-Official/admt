@@ -63,6 +63,21 @@ pub async fn execute_batch_file(
             .env("WINDIR", &system_root)
             .envs(std::env::vars().filter(|(key, _)| key != "PATH")); // 继承除PATH外的所有环境变量
 
+        // 在发布版中隐藏控制台窗口，在调试版中保持可见
+        #[cfg(all(windows, not(debug_assertions)))]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            log::debug!("批处理文件流式执行设置隐藏窗口");
+        }
+
+        // 在调试版中保持窗口可见以便调试
+        #[cfg(all(windows, debug_assertions))]
+        {
+            log::debug!("批处理文件流式执行保持窗口可见 (调试版)");
+        }
+
         match cmd.output() {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
@@ -151,6 +166,21 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
+        // 在发布版中隐藏控制台窗口，在调试版中保持可见
+        #[cfg(all(windows, not(debug_assertions)))]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            log::debug!("结束ADB服务设置隐藏窗口 (发布版)");
+        }
+
+        // 在调试版中保持窗口可见以便调试
+        #[cfg(all(windows, debug_assertions))]
+        {
+            log::debug!("结束ADB服务保持窗口可见 (调试版)");
+        }
+
         match cmd.output() {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
@@ -216,6 +246,21 @@ pub async fn finish_adb5037() -> Result<CommandResult> {
         ])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+
+        // 在发布版中隐藏控制台窗口，在调试版中保持可见
+        #[cfg(all(windows, not(debug_assertions)))]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            log::debug!("结束ADB-5037端口设置隐藏窗口 (发布版)");
+        }
+
+        // 在调试版中保持窗口可见以便调试
+        #[cfg(all(windows, debug_assertions))]
+        {
+            log::debug!("结束ADB-5037端口保持窗口可见 (调试版)");
+        }
 
         match cmd.output() {
             Ok(output) => {
@@ -330,6 +375,21 @@ pub async fn execute_batch_file_stream(
             .env("SYSTEMROOT", &system_root)
             .env("WINDIR", &system_root)
             .envs(std::env::vars().filter(|(key, _)| key != "PATH")); // 继承除PATH外的所有环境变量
+
+        // 在发布版中隐藏控制台窗口，在调试版中保持可见
+        #[cfg(all(windows, not(debug_assertions)))]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            log::debug!("批处理文件流式执行设置隐藏窗口");
+        }
+
+        // 在调试版中保持窗口可见以便调试
+        #[cfg(all(windows, debug_assertions))]
+        {
+            log::debug!("批处理文件流式执行保持窗口可见 (调试版)");
+        }
 
         match cmd.spawn() {
             Ok(mut child) => {
