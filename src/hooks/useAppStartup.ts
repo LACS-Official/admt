@@ -92,15 +92,21 @@ export const useAppStartup = () => {
           setTransitionStage('complete');
           setTimeout(() => {
             setShowTransition(false);
-            setShowStartupFlow(false);
-            completeStartup();
+            // 只有在当前阶段不是版本检查阶段时才隐藏启动流程
+            if (currentPhase !== 'version-check') {
+              setShowStartupFlow(false);
+              completeStartup();
+            } else {
+              console.log('⚠️ 检测到新版本，停留在版本检查阶段，不进入主页面');
+              // 保持在版本检查阶段，不隐藏启动流程
+            }
           }, 500);
         }, 1000);
       }, 100);
       
       return () => clearTimeout(timer);
     }
-  }, [showTransition, completeStartup]);
+  }, [showTransition, completeStartup, currentPhase]);
 
   // 启动流程初始化
   const initializeStartupFlow = useCallback(async () => {
@@ -215,11 +221,19 @@ export const useAppStartup = () => {
           } else {
             console.log('⚠️ 检测到新版本，进入版本检查阶段');
             setCurrentPhase('version-check');
+            // 不再继续执行后续流程，用户必须处理更新
+            // 确保不会调用 handleStartupFlowComplete
+            //不允许进入主页面‘’
+            
+            return;
           }
         } catch (error) {
           console.error('❌ 版本检查失败:', error);
-          console.log('✅ 版本检查失败，但其他检查通过，进入主应用');
-          handleStartupFlowComplete();
+          console.log('⚠️ 版本检查失败，进入版本检查阶段');
+          setCurrentPhase('version-check');
+          // 不再继续执行后续流程，用户必须处理版本检查问题
+          // 确保不会调用 handleStartupFlowComplete
+          return;
         }
       }
     } catch (error) {
@@ -296,13 +310,20 @@ export const useAppStartup = () => {
         } else {
           console.log('⚠️ 检测到新版本，进入版本检查阶段');
           setCurrentPhase('version-check');
+          // 不再继续执行后续流程，用户必须处理更新
+          // 这里不需要return，因为已经设置了phase，后续流程会被阻止
         }
       })
       .catch((error) => {
         console.error('❌ 版本检查失败:', error);
-        console.log('✅ 版本检查失败，但激活成功，进入数据收集同意阶段');
-        setCurrentPhase('data-collection');
+        console.log('⚠️ 版本检查失败，进入版本检查阶段');
+        setCurrentPhase('version-check');
+        // 不再继续执行后续流程，用户必须处理版本检查问题
+        // 这里不需要return，因为已经设置了phase，后续流程会被阻止
       });
+      
+    // 重要：在异步操作开始后立即返回，确保不会继续执行后续同步代码
+    return;
   }, [setCurrentPhase, setVersionCheckResult, setVersionCheckCompleted]);
 
   // 处理数据收集同意
@@ -320,13 +341,20 @@ export const useAppStartup = () => {
         } else {
           console.log('⚠️ 检测到新版本，进入版本检查阶段');
           setCurrentPhase('version-check');
+          // 不再继续执行后续流程，用户必须处理更新
+          // 这里不需要return，因为已经设置了phase，后续流程会被阻止
         }
       })
       .catch((error) => {
         console.error('❌ 版本检查失败:', error);
-        console.log('✅ 版本检查失败，但数据收集同意完成，进入主应用');
-        handleStartupFlowComplete();
+        console.log('⚠️ 版本检查失败，进入版本检查阶段');
+        setCurrentPhase('version-check');
+        // 不再继续执行后续流程，用户必须处理版本检查问题
+        // 这里不需要return，因为已经设置了phase，后续流程会被阻止
       });
+      
+    // 重要：在异步操作开始后立即返回，确保不会继续执行后续同步代码
+    return;
   }, [setCurrentPhase, setVersionCheckResult, setVersionCheckCompleted, handleStartupFlowComplete]);
 
   // 初始化应用

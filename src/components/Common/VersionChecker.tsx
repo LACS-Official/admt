@@ -152,12 +152,15 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
           });
         }
         
+        // 显示错误对话框
+        setUpdateDialogOpen(true);
+        
         if (onError) {
           onError(errorMessage);
         }
         
-        // 5秒后自动清除错误提示
-        setTimeout(() => setUpdateMessage(null), 5000);
+        // 不再自动清除错误提示，保持对话框打开状态
+        // setTimeout(() => setUpdateMessage(null), 5000);
       }
     } finally {
       setIsCheckingUpdate(false);
@@ -191,24 +194,68 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
 
   // 如果有更新对话框需要显示，则始终显示对话框，不返回null
   if (updateDialogOpen) {
+    // 如果是错误状态，显示错误对话框
+    if (updateMessage && updateMessage.type === 'error' && !updateInfo) {
+      return (
+        <>
+          {/* 错误对话框 */}
+          <Dialog open={updateDialogOpen} onOpenChange={(_e, data) => {
+            // 阻止用户通过其他方式关闭对话框，必须点击"重试"按钮
+            if (!data.open) {
+              // 如果用户尝试通过其他方式关闭，重新打开对话框
+              setTimeout(() => setUpdateDialogOpen(true), 0);
+            } else {
+              setUpdateDialogOpen(data.open);
+            }
+          }}>
+            <DialogSurface>
+              <DialogBody>
+                <DialogTitle>版本检查失败</DialogTitle>
+                <DialogContent>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <Text>
+                      请检查网络连接后重试
+                    </Text>
+                    <Text size={300} style={{ color: 'var(--colorNeutralForeground2)', textAlign: 'center' }}>
+                      请点击"重试"按钮重新检查版本，或检查网络连接后重试。
+                    </Text>
+                  </div>
+                </DialogContent>
+                <DialogActions>
+                  <Button 
+                    appearance="primary" 
+                    onClick={handleCheckUpdate}
+                    disabled={isCheckingUpdate}
+                  >
+                    {isCheckingUpdate ? '检查中...' : '重试'}
+                  </Button>
+                </DialogActions>
+              </DialogBody>
+            </DialogSurface>
+          </Dialog>
+        </>
+      );
+    }
+    
+    // 如果是更新状态，显示更新对话框
     return (
       <>
         {/* 更新对话框 */}
         <Dialog open={updateDialogOpen} onOpenChange={(_e, data) => {
-          // 如果正在下载更新，允许关闭对话框
-          if (isDownloading) {
-            setUpdateDialogOpen(data.open);
-            return;
-          }
-          
-          // 只有在点击下载按钮后才能关闭对话框，防止用户通过其他方式关闭
-          if (!data.open && updateInfo) {
-            // 如果用户尝试通过其他方式关闭，重新打开对话框
-            setTimeout(() => setUpdateDialogOpen(true), 0);
-          } else {
-            setUpdateDialogOpen(data.open);
-          }
-        }}>
+        // 如果正在下载更新，允许关闭对话框
+        if (isDownloading) {
+          setUpdateDialogOpen(data.open);
+          return;
+        }
+        
+        // 阻止用户通过其他方式关闭对话框，必须点击"立即更新"按钮
+        if (!data.open && updateInfo) {
+          // 如果用户尝试通过其他方式关闭，重新打开对话框
+          setTimeout(() => setUpdateDialogOpen(true), 0);
+        } else {
+          setUpdateDialogOpen(data.open);
+        }
+      }}>
           <DialogSurface>
             <DialogBody>
               <DialogTitle>重要更新可用</DialogTitle>
@@ -255,6 +302,7 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
     );
   }
 
+  // 如果没有更新对话框需要显示，则显示状态消息
   return (
     <>
       {/* 显示更新检查结果信息 */}
@@ -270,65 +318,6 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
           </MessageBarBody>
         </MessageBar>
       )}
-
-      {/* 更新对话框 */}
-      <Dialog open={updateDialogOpen} onOpenChange={(_e, data) => {
-        // 如果正在下载更新，允许关闭对话框
-        if (isDownloading) {
-          setUpdateDialogOpen(data.open);
-          return;
-        }
-        
-        // 只有在点击下载按钮后才能关闭对话框，防止用户通过其他方式关闭
-        if (!data.open && updateInfo) {
-          // 如果用户尝试通过其他方式关闭，重新打开对话框
-          setTimeout(() => setUpdateDialogOpen(true), 0);
-        } else {
-          setUpdateDialogOpen(data.open);
-        }
-      }}>
-        <DialogSurface>
-          <DialogBody>
-            <DialogTitle>重要更新可用</DialogTitle>
-            <DialogContent>
-              {updateInfo && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text weight="semibold">当前版本：</Text>
-                    <Text>{updateInfo.localVersion}</Text>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text weight="semibold">最新版本：</Text>
-                    <Text color="brand">{updateInfo.currentVersion}</Text>
-                  </div>
-                  <div style={{ 
-                    backgroundColor: 'var(--colorNeutralBackground2)', 
-                    padding: '12px', 
-                    borderRadius: '8px',
-                    marginTop: '8px'
-                  }}>
-                    <Text size={300} style={{ color: 'var(--colorNeutralForeground2)' }}>
-                      {updateInfo.updateInfo?.updateLog || '请在下载页面查看相关内容'}
-                    </Text>
-                  </div>
-                  <Text size={300} style={{ color: 'var(--colorNeutralForeground2)', textAlign: 'center' }}>
-                    此更新包含重要修复和改进，点击"立即更新"后将自动打开下载页面并退出应用。
-                  </Text>
-                </div>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button 
-                appearance="primary" 
-                onClick={handleDownloadUpdate}
-                icon={<ArrowUpload24Regular />}
-              >
-                立即更新
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
     </>
   );
 };

@@ -83,7 +83,7 @@ export class ReactDependencyChecker {
         issues
       };
     } catch (error) {
-      issues.push(`版本检查失败: ${error}`);
+      issues.push(`版本检查失败: `);
       return {
         isConsistent: false,
         versions,
