@@ -195,7 +195,6 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
   const formatActivationCode = (code: string): string => {
     if (!code || code.length < 8) return code;
     
-    // 假设激活码格式为 XXXXXXXX-XXXXXX-XXXXXXXX
     const parts = code.split('-');
     if (parts.length === 3) {
       const first = parts[0];

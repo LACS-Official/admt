@@ -620,6 +620,14 @@ export class ActivationService {
   }
 
   /**
+   * 获取激活状态（简化版，仅返回是否已激活）
+   */
+  public get isActivated(): boolean {
+    const status = this.checkActivationStatus();
+    return status.isActivated;
+  }
+
+  /**
    * 获取详细的激活状态信息（用于调试和监控）
    */
   public getDetailedActivationInfo(): {

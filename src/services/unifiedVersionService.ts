@@ -149,17 +149,6 @@ class UnifiedVersionService {
         }
       },
       {
-        name: 'env',
-        getter: async () => {
-          const version = import.meta.env.VITE_APP_VERSION;
-          if (version && version !== 'undefined') {
-            VersionCheckMonitor.log('env_version_success', { version });
-            return version;
-          }
-          throw new Error('环境变量版本未定义');
-        }
-      },
-      {
         name: 'config',
         getter: async () => {
           const version = API_CONFIG.APP_VERSION;

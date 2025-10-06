@@ -173,6 +173,19 @@ export interface StartupFlowActions {
   
   // 完成启动流程
   completeStartupFlow: () => void;
+  
+  // 阶段完成状态
+  completePhase: (phase: StartupPhase) => void;
+  isPhaseCompleted: (phase: StartupPhase) => boolean;
+  getPhaseProgress: (phase: StartupPhase) => number;
+  getPhaseDisplayName: (phase: StartupPhase) => string;
+  canProceedToNextPhase: (phase: StartupPhase) => boolean;
+  
+  // 标记阶段完成
+  markPrivacyConsentCompleted: () => void;
+  markActivationCompleted: () => void;
+  markFirstLaunchCompleted: () => void;
+  markDataCollectionCompleted: () => void;
 }
 
 // 默认用户设置
@@ -293,6 +306,118 @@ export const useStartupFlowStore = create<StartupFlowState & StartupFlowActions>
           error: null,
           isLoading: false 
         }),
+      
+      // 阶段完成状态
+      completePhase: (phase: StartupPhase) => 
+        set((state) => {
+          const updates: Partial<StartupFlowState> = {};
+          
+          switch (phase) {
+            case 'version-check':
+              updates.versionCheckCompleted = true;
+              break;
+            case 'first-launch-detection':
+              updates.firstLaunchDetected = true;
+              break;
+            case 'privacy-consent':
+              updates.privacyConsentCompleted = true;
+              break;
+            case 'activation-verification':
+              updates.activationVerified = true;
+              break;
+            case 'main-app':
+              updates.mainAppEntered = true;
+              break;
+            case 'data-collection':
+              updates.dataCollectionStarted = true;
+              break;
+          }
+          
+          return updates;
+        }),
+      
+      isPhaseCompleted: (phase: StartupPhase) => {
+        const state = get();
+        switch (phase) {
+          case 'version-check':
+            return state.versionCheckCompleted;
+          case 'first-launch-detection':
+            return state.firstLaunchDetected;
+          case 'privacy-consent':
+            return state.privacyConsentCompleted;
+          case 'activation-verification':
+            return state.activationVerified;
+          case 'main-app':
+            return state.mainAppEntered;
+          case 'data-collection':
+            return state.dataCollectionStarted;
+          case 'completed':
+            return state.currentPhase === 'completed';
+          default:
+            return false;
+        }
+      },
+      
+      getPhaseProgress: (phase: StartupPhase) => {
+        const index = phaseOrder.indexOf(phase);
+        return ((index + 1) / phaseOrder.length) * 100;
+      },
+      
+      getPhaseDisplayName: (phase: StartupPhase) => {
+        switch (phase) {
+          case 'version-check':
+            return '版本检查';
+          case 'first-launch-detection':
+            return '首次使用检测';
+          case 'privacy-consent':
+            return '隐私政策和用户协议';
+          case 'activation-verification':
+            return '激活码验证';
+          case 'main-app':
+            return '进入主页面';
+          case 'data-collection':
+            return '数据收集';
+          case 'completed':
+            return '启动完成';
+          default:
+            return '未知阶段';
+        }
+      },
+      
+      canProceedToNextPhase: (phase: StartupPhase) => {
+        const state = get();
+        switch (phase) {
+          case 'version-check':
+            return state.versionCheckCompleted;
+          case 'first-launch-detection':
+            return state.firstLaunchDetected;
+          case 'privacy-consent':
+            return state.privacyConsentCompleted;
+          case 'activation-verification':
+            return state.activationVerified;
+          case 'main-app':
+            return state.mainAppEntered;
+          case 'data-collection':
+            return state.dataCollectionStarted;
+          case 'completed':
+            return true;
+          default:
+            return false;
+        }
+      },
+      
+      // 标记阶段完成
+      markPrivacyConsentCompleted: () => 
+        set({ privacyConsentCompleted: true }),
+      
+      markActivationCompleted: () => 
+        set({ activationVerified: true }),
+      
+      markFirstLaunchCompleted: () => 
+        set({ firstLaunchDetected: true }),
+      
+      markDataCollectionCompleted: () => 
+        set({ dataCollectionStarted: true }),
     }),
     {
       name: 'hout-startup-flow-storage',

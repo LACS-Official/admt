@@ -1,8 +1,32 @@
+// 定义 reducer 的状态类型
+interface DialogState {
+  showForceUpdateDialog: boolean;
+}
+
+// 定义 reducer 的 action 类型
+type DialogAction = 
+  | { type: 'SHOW_FORCE_UPDATE_DIALOG' }
+  | { type: 'HIDE_FORCE_UPDATE_DIALOG' };
+
+// 创建 reducer 函数
+function dialogReducer(state: DialogState, action: DialogAction): DialogState {
+  switch (action.type) {
+    case 'SHOW_FORCE_UPDATE_DIALOG':
+      console.log('🔍 调试信息: reducer 中设置 showForceUpdateDialog 为 true');
+      return { ...state, showForceUpdateDialog: true };
+    case 'HIDE_FORCE_UPDATE_DIALOG':
+      console.log('🔍 调试信息: reducer 中设置 showForceUpdateDialog 为 false');
+      return { ...state, showForceUpdateDialog: false };
+    default:
+      return state;
+  }
+}
+
 /**
  * 启动时版本检查组件 - 极简风格
  * 在应用启动时执行版本检查，根据结果显示相应的UI
  */
-import React, { useCallback, useEffect, useState, useMemo }  from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useReducer } from 'react';
 import {
   Button,
   Text,
@@ -26,6 +50,7 @@ import {
   CheckmarkCircle24Filled,
   Warning24Filled,
   ArrowDownload24Regular,
+  Info24Regular,
 } from '@fluentui/react-icons';
 
 import { checkForUpdates, versionService, VersionCheckResult } from '../../services/versionServiceAdapter';
@@ -380,8 +405,11 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
   const [checkResult, setCheckResult] = useState<VersionCheckResult | null>(propCheckResult || null);
   const [error, setError] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(!propCheckResult || !propCheckResult.hasUpdate); // 如果传入需要更新的结果，隐藏普通对话框
-  const [showForceUpdateDialog, setShowForceUpdateDialog] = useState(propCheckResult?.hasUpdate || false); // 如果传入需要更新的结果，直接显示强制更新对话框
+  const [dialogState, dispatchDialog] = useReducer(dialogReducer, { 
+    showForceUpdateDialog: propCheckResult?.hasUpdate || false 
+  }); // 如果传入需要更新的结果，直接显示强制更新对话框
   const [retryCount, setRetryCount] = useState(0);
+  const [isVersionCheckInProgress, setIsVersionCheckInProgress] = useState(false); // 添加版本检查进行中的标志
 
   // 判断是否为关键错误（需要强制退出）
   const isCriticalError = useMemo(() => {
@@ -423,7 +451,14 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
    * 执行版本检查
    */
   const performVersionCheck = useCallback(async () => {
+    // 如果版本检查已经在进行中，则直接返回
+    if (isVersionCheckInProgress) {
+      console.log('🔍 调试信息: 版本检查已在进行中，跳过本次调用');
+      return;
+    }
+    
     setIsChecking(true);
+    setIsVersionCheckInProgress(true);
     setError(null);
     setTimeoutReached(false);
 
@@ -431,6 +466,7 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     const timeoutId = setTimeout(() => {
       setTimeoutReached(true);
       setIsChecking(false);
+      setIsVersionCheckInProgress(false);
       setError('版本检查超时，无法获取版本信息');
     }, 15000);
 
@@ -442,6 +478,7 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       clearTimeout(timeoutId);
 
       if (timeoutReached) {
+        setIsVersionCheckInProgress(false);
         return; // 如果已经超时，忽略结果
       }
 
@@ -457,6 +494,7 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
         console.error('🚨 检测到关键错误，版本检查失败:', result.error);
         setError(result.error);
         setShowDialog(true);
+        setIsVersionCheckInProgress(false);
         // 不调用 onCheckComplete，让用户看到错误信息
         return;
       }
@@ -479,14 +517,14 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       if (normalizedResult.hasUpdate) {
         // 有更新时显示强制更新对话框
         console.log('🆕 发现新版本，需要强制更新:', normalizedResult.latestVersion);
-        setShowForceUpdateDialog(true);
-        setShowDialog(false); // 隐藏普通对话框
+        console.log('🔍 调试信息: 在设置showForceUpdateDialog为true之前，当前值为:', dialogState.showForceUpdateDialog);
+        dispatchDialog({ type: 'SHOW_FORCE_UPDATE_DIALOG' });
+        console.log('🔍 调试信息: 已设置showForceUpdateDialog为true');
         onCheckComplete(true, normalizedResult);
       } else {
         // 不需要更新，显示成功提示
         console.log('✅ 当前已是最新版本:', normalizedResult.currentVersion);
         showSuccessToast();
-        setShowDialog(false); // 隐藏对话框
         onCheckComplete(false, normalizedResult);
       }
 
@@ -494,6 +532,7 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       clearTimeout(timeoutId);
 
       if (timeoutReached) {
+        setIsVersionCheckInProgress(false);
         return;
       }
 
@@ -504,14 +543,16 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       const criticalError = `无法获取版本信息: ${errorMessage}`;
       setError(criticalError);
       setShowDialog(true);
+      setIsVersionCheckInProgress(false);
       
       // 不调用 onCheckComplete，让用户看到错误信息
     } finally {
       if (!timeoutReached) {
         setIsChecking(false);
+        setIsVersionCheckInProgress(false);
       }
     }
-  }, [onCheckComplete, showSuccessToast, timeoutReached]);
+  }, [onCheckComplete, showSuccessToast, timeoutReached, isVersionCheckInProgress, dialogState.showForceUpdateDialog]);
 
   // 如果没有传入 checkResult，则自动执行版本检查
   useEffect(() => {
@@ -520,23 +561,56 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     }
   }, [propCheckResult, performVersionCheck]);
 
+  // 显示检查版本的提示
+  useEffect(() => {
+    if (!dialogState.showForceUpdateDialog && !propCheckResult) {
+      dispatchToast(
+        <Toast>
+          <ToastTitle media={<Info24Regular />}>
+            正在检查应用版本
+          </ToastTitle>
+          <ToastBody>
+            请稍后，我们正在检查最新版本...
+          </ToastBody>
+        </Toast>,
+        { intent: 'info' as ToastIntent, timeout: 5000 }
+      );
+    }
+  }, [dialogState.showForceUpdateDialog, propCheckResult, dispatchToast]);
+
   // 监听外部传入的checkResult变化
   useEffect(() => {
     if (propCheckResult) {
       console.log('📋 接收到外部传入的版本检查结果:', propCheckResult);
+      console.log('🔍 调试信息: 在外部checkResult useEffect中，showForceUpdateDialog 当前值为:', dialogState.showForceUpdateDialog);
       setCheckResult(propCheckResult);
       
       if (propCheckResult.hasUpdate) {
         console.log('🆕 外部传入结果显示需要更新，显示强制更新对话框');
-        setShowForceUpdateDialog(true);
+        dispatchDialog({ type: 'SHOW_FORCE_UPDATE_DIALOG' });
         setShowDialog(false);
       } else {
         console.log('✅ 外部传入结果显示已是最新版本');
-        setShowForceUpdateDialog(false);
+        dispatchDialog({ type: 'HIDE_FORCE_UPDATE_DIALOG' });
         setShowDialog(true);
       }
     }
-  }, [propCheckResult]);
+  }, [propCheckResult, dialogState.showForceUpdateDialog]);
+
+  // 监控 showForceUpdateDialog 状态变化
+  useEffect(() => {
+    console.log('🔍 调试信息: showForceUpdateDialog 状态变化为:', dialogState.showForceUpdateDialog);
+    console.log('🔍 调试信息: 组件重新渲染，showForceUpdateDialog 当前值为:', dialogState.showForceUpdateDialog);
+  }, [dialogState.showForceUpdateDialog]);
+
+  // 添加一个额外的useEffect来确保对话框状态正确
+  useEffect(() => {
+    if (dialogState.showForceUpdateDialog) {
+      console.log('🔍 调试信息: 检测到showForceUpdateDialog为true，对话框应该显示');
+    } else {
+      console.log('🔍 调试信息: 检测到showForceUpdateDialog为false，对话框应该隐藏');
+    }
+  }, [dialogState.showForceUpdateDialog]);
 
 
 
@@ -574,8 +648,6 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
       { intent: 'success' as ToastIntent, timeout: 8000 }
     );
 
-    // 注意：强制更新模式下不关闭对话框，用户必须完成更新
-    // setShowForceUpdateDialog(false); // 保持对话框打开
   }, [dispatchToast, checkResult]);
 
   /**
@@ -587,25 +659,6 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
     performVersionCheck();
   }, [performVersionCheck]);
 
-  /**
-   * 处理离线使用 - 在关键错误时不允许离线使用
-   */
-  const handleOfflineUse = useCallback(() => {
-    // 检查是否是关键错误
-    if (error && (
-      error.includes('无法获取版本信息') ||
-      error.includes('配置错误') ||
-      error.includes('API响应格式错误')
-    )) {
-      // 关键错误时强制退出，不允许离线使用
-      handleForceExit();
-      return;
-    }
-    
-    setShowDialog(false);
-    onAllowOfflineUse?.();
-    onCheckComplete(false);
-  }, [error, onAllowOfflineUse, onCheckComplete]);
 
   /**
    * 强制退出应用程序
@@ -656,75 +709,13 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
   };
 
   // 组件渲染 - 包含强制更新对话框
+  console.log('🔍 调试信息: 组件渲染时 showForceUpdateDialog 的值为:', dialogState.showForceUpdateDialog);
+  console.log('🔍 调试信息: Dialog open 属性将设置为:', dialogState.showForceUpdateDialog);
   return (
     <>
-      {/* 普通版本检查界面 */}
-      {showDialog && (
-        <div className={styles.container}>
-          <div className={styles.card}>
-            <Text size={500} weight="semibold" className={styles.title}>
-              版本检查
-            </Text>
-            
-            {isChecking ? (
-              // 加载状态 - 简洁设计
-              <div className={styles.loadingContainer}>
-                <Spinner size="medium" />
-                <Text>正在检查版本更新...</Text>
-              </div>
-            ) : error ? (
-              // 错误状态 - 清晰展示
-              <div className={styles.errorContainer}>
-                <Text className={styles.errorText}>{error}</Text>
-                <div className={styles.actions}>
-                  {isCriticalError ? (
-                    <Button
-                      appearance="primary"
-                      onClick={handleForceExit}
-                      className={styles.primaryButton}
-                    >
-                      退出应用
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        appearance="primary"
-                        onClick={performVersionCheck}
-                        disabled={isChecking}
-                        className={styles.primaryButton}
-                      >
-                        重试
-                      </Button>
-                      <Button
-                        appearance="secondary"
-                        onClick={handleOfflineUse}
-                        className={styles.secondaryButton}
-                      >
-                        离线使用
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : checkResult && !checkResult.hasUpdate ? (
-              // 当前已是最新版本 - 简洁确认
-              <div className={styles.successContainer}>
-                <CheckmarkCircle24Filled className={styles.successIcon} />
-                <Text size={400} weight="semibold">
-                  已是最新版本
-                </Text>
-                <Text className={`${styles.versionValue} ${styles.currentVersion}`}>
-                  {checkResult.currentVersion}
-                </Text>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      )}
-
       {/* 强制更新对话框 */}
       <Dialog 
-        open={showForceUpdateDialog}
+        open={dialogState.showForceUpdateDialog}
         modalType="modal"
       >
         <DialogSurface className={`${styles.forceUpdateDialog} ${styles.forceUpdateSurface}`}>
@@ -784,7 +775,3 @@ const StartupVersionChecker: React.FC<StartupVersionCheckerProps> = ({
 };
 
 export default StartupVersionChecker;
-
-function showSuccessToast() {
-  throw new Error('Function not implemented.');
-}

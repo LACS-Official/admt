@@ -24,6 +24,7 @@ export interface LegacyVersionCheckResult {
       official?: string;
     };
     id?: number;
+    updatedAt?: string;
   };
   versionInfo?: {
     version: string;
@@ -54,26 +55,31 @@ function adaptVersionResult(newResult: NewVersionCheckResult): LegacyVersionChec
       downloadLinks: {
         official: newResult.updateInfo.downloadUrl
       },
-      id: 0
+      id: 0,
+      updatedAt: newResult.updateInfo.updatedAt
     } : undefined,
     versionInfo: newResult.updateInfo ? {
       version: newResult.currentVersion,
       downloadUrl: newResult.updateInfo.downloadUrl,
       releaseNotes: newResult.updateInfo.updateLog,
       forceUpdate: newResult.hasUpdate,
-      publishedAt: new Date().toISOString()
+      publishedAt: newResult.updateInfo.updatedAt || new Date().toISOString()
     } : undefined
   };
 }
 
 /**
  * 兼容性版本检查函数
+ * 现在使用后端版本比较逻辑
  */
 export async function checkForUpdates(): Promise<LegacyVersionCheckResult> {
   try {
+    console.log('🔄 开始版本检查（使用后端比较逻辑）');
     const newResult = await newCheckForUpdates();
+    console.log('✅ 版本检查完成，结果:', newResult);
     return adaptVersionResult(newResult);
   } catch (error) {
+    console.error('❌ 版本检查失败:', error);
     return {
       hasUpdate: false,
       needsUpdate: false,

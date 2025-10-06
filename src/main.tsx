@@ -28,6 +28,7 @@ function AppWithTheme() {
   return (
     <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
       <App />
+
     </FluentProvider>
   );
 }

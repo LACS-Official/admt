@@ -104,6 +104,7 @@ pub struct UpdateCheckResult {
     pub latest_version: Option<String>,
     pub download_url: Option<String>,
     pub release_notes: Option<String>,
+    pub updated_at: Option<String>,
     pub error: Option<String>,
 }
 
@@ -112,11 +113,7 @@ pub async fn check_for_updates() -> Result<UpdateCheckResult, String> {
     let current_version = get_unified_version();
 
     // API端点配置
-    let api_url = if cfg!(debug_assertions) {
-        "http://localhost:3001/api/version/check"
-    } else {
-        "https://api-g.lacs.cc/api/version/check"
-    };
+    let api_url = "https://api-g.lacs.cc/app/software/id/1";
 
     match check_version_from_api(&api_url, &current_version).await {
         Ok(result) => Ok(result),
@@ -128,6 +125,7 @@ pub async fn check_for_updates() -> Result<UpdateCheckResult, String> {
                 latest_version: Some(current_version.to_string()),
                 download_url: None,
                 release_notes: None,
+                updated_at: None,
                 error: Some(format!("版本检查失败: {}", e)),
             })
         }
@@ -154,40 +152,65 @@ async fn check_version_from_api(
 
     let api_response: serde_json::Value = response.json().await?;
 
-    let latest_version = api_response["version"].as_str().unwrap_or(current_version);
+    // 检查API响应是否成功
+    if api_response["success"].as_bool().unwrap_or(false) {
+        let data = &api_response["data"];
+        let latest_version = data["currentVersion"].as_str().unwrap_or(current_version);
+        let official_website = data["officialWebsite"].as_str().unwrap_or("");
+        let updated_at = data["updatedAt"].as_str().unwrap_or("");
 
-    let has_update = compare_versions(current_version, latest_version);
+        // 清理下载链接，移除可能存在的反引号
+        let clean_download_url = official_website.trim_matches('`').trim();
 
-    Ok(UpdateCheckResult {
-        has_update,
-        current_version: current_version.to_string(),
-        latest_version: Some(latest_version.to_string()),
-        download_url: api_response["downloadUrl"].as_str().map(|s| s.to_string()),
-        release_notes: api_response["releaseNotes"].as_str().map(|s| s.to_string()),
-        error: None,
-    })
+        let has_update = compare_versions(current_version, latest_version);
+
+        Ok(UpdateCheckResult {
+            has_update,
+            current_version: current_version.to_string(),
+            latest_version: Some(latest_version.to_string()),
+            download_url: if clean_download_url.is_empty() { None } else { Some(clean_download_url.to_string()) },
+            release_notes: None,
+            updated_at: Some(updated_at.to_string()),
+            error: None,
+        })
+    } else {
+        Err("API返回失败状态".into())
+    }
 }
 
 fn compare_versions(current: &str, latest: &str) -> bool {
-    // 简单的版本比较逻辑
-    if current == latest {
-        return false;
-    }
-
-    let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
-    let latest_parts: Vec<u32> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
-
-    for i in 0..std::cmp::max(current_parts.len(), latest_parts.len()) {
-        let current_part = current_parts.get(i).unwrap_or(&0);
-        let latest_part = latest_parts.get(i).unwrap_or(&0);
-
-        if latest_part > current_part {
+    // 清理版本号，移除可能的前缀（如 'v'）
+    let clean_current = current.trim_start_matches('v').trim();
+    let clean_latest = latest.trim_start_matches('v').trim();
+    
+    // 分割版本号并转换为数字数组
+    let current_parts: Vec<u32> = clean_current.split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    let latest_parts: Vec<u32> = clean_latest.split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    
+    // 确保两个版本号长度一致，不足的部分补0
+    let max_len = std::cmp::max(current_parts.len(), latest_parts.len());
+    let current_padded: Vec<u32> = current_parts.iter()
+        .cloned()
+        .chain(std::iter::repeat(0).take(max_len - current_parts.len()))
+        .collect();
+    let latest_padded: Vec<u32> = latest_parts.iter()
+        .cloned()
+        .chain(std::iter::repeat(0).take(max_len - latest_parts.len()))
+        .collect();
+    
+    // 逐位比较版本号
+    for i in 0..max_len {
+        if latest_padded[i] > current_padded[i] {
             return true;
-        } else if latest_part < current_part {
+        } else if latest_padded[i] < current_padded[i] {
             return false;
         }
     }
-
+    
     false
 }
 
@@ -218,10 +241,31 @@ mod tests {
 
     #[test]
     fn test_compare_versions() {
+        // 基本版本比较
         assert_eq!(compare_versions("1.0.0", "1.0.1"), true);
         assert_eq!(compare_versions("1.0.1", "1.0.0"), false);
         assert_eq!(compare_versions("1.0.0", "1.0.0"), false);
         assert_eq!(compare_versions("1.0.0", "2.0.0"), true);
         assert_eq!(compare_versions("2.0.0", "1.0.0"), false);
+        
+        // 带前缀的版本比较
+        assert_eq!(compare_versions("v1.0.0", "1.0.1"), true);
+        assert_eq!(compare_versions("1.0.0", "v1.0.1"), true);
+        assert_eq!(compare_versions("v1.0.0", "v1.0.1"), true);
+        assert_eq!(compare_versions("v1.0.1", "v1.0.0"), false);
+        
+        // 不同长度版本号比较
+        assert_eq!(compare_versions("1.0", "1.0.1"), true);
+        assert_eq!(compare_versions("1.0.1", "1.0"), false);
+        assert_eq!(compare_versions("1", "1.0.1"), true);
+        assert_eq!(compare_versions("1.0.1", "1"), false);
+        
+        // 复杂版本号比较
+        assert_eq!(compare_versions("1.2.3", "1.2.4"), true);
+        assert_eq!(compare_versions("1.2.3", "1.3.0"), true);
+        assert_eq!(compare_versions("1.2.3", "2.0.0"), true);
+        assert_eq!(compare_versions("2.0.0", "1.2.3"), false);
+        assert_eq!(compare_versions("1.3.0", "1.2.3"), false);
+        assert_eq!(compare_versions("1.2.4", "1.2.3"), false);
     }
 }
