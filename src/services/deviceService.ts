@@ -534,6 +534,13 @@ export class DeviceService {
 
     const scanDevicesInternal = async () => {
       try {
+        // 如果正在执行刷写操作，则跳过设备扫描
+        const isFlashing = useDeviceStore.getState().isFlashing;
+        if (isFlashing) {
+          logService.debug("正在执行刷写操作，跳过设备扫描", "DeviceService");
+          return;
+        }
+        
         const devices = await this.scanDevices();
         useDeviceStore.getState().setDevices(devices);
       } catch (error) {
@@ -663,7 +670,35 @@ export class DeviceService {
       // 检测断开的设备
       for (const [serial, connectionInfo] of this.connectedDevices.entries()) {
         if (!currentSerials.has(serial)) {
-          await this.recordDeviceDisconnection(serial, connectionInfo);
+          // 检查是否正在执行刷写操作
+          const isFlashing = useDeviceStore.getState().isFlashing;
+          
+          if (isFlashing) {
+            // 如果正在刷写，延迟处理设备断开事件，给设备更多时间恢复
+            logService.info(`检测到设备 ${serial} 断开，但正在执行刷写操作，延迟处理断开事件`, "DeviceService");
+            
+            // 延迟10秒后再处理设备断开事件
+            setTimeout(async () => {
+              try {
+                // 重新检查设备是否仍然断开
+                const devices = await this.scanDevices();
+                const deviceStillDisconnected = !devices.some(d => d.serial === serial);
+                
+                if (deviceStillDisconnected) {
+                  await this.recordDeviceDisconnection(serial, connectionInfo);
+                } else {
+                  logService.info(`设备 ${serial} 已重新连接，取消断开事件`, "DeviceService");
+                }
+              } catch (error) {
+                logService.error(`延迟处理设备断开事件失败: ${serial}`, "DeviceService", error);
+                // 如果检查失败，仍然记录断开事件
+                await this.recordDeviceDisconnection(serial, connectionInfo);
+              }
+            }, 10000); // 10秒延迟
+          } else {
+            // 如果不在刷写，立即处理设备断开事件
+            await this.recordDeviceDisconnection(serial, connectionInfo);
+          }
         }
       }
 

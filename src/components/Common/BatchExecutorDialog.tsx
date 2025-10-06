@@ -26,6 +26,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { writeTextFile, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
+import { useDeviceStore } from "../../stores/deviceStore";
 
 // 简化的批处理执行参数接口
 interface BatchExecuteParams {
@@ -159,13 +160,14 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
   onClose,
 }) => {
   const styles = useStyles();
-  const { setStatusBarMessage } = useAppStore();
+  const { setStatusBarMessage, config, updateConfig } = useAppStore();
   const [output, setOutput] = useState<string>('');
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [exitCode, setExitCode] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
+  const [originalAutoDetect, setOriginalAutoDetect] = useState<boolean>(config.autoDetectDevices);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const outputRef = useRef<HTMLDivElement>(null);
   const logFileName = useRef<string>('');
@@ -371,6 +373,12 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
       setEndTime(null);
       return;
     }
+    
+    // 保存原始的自动检测状态，并关闭自动检测
+    setOriginalAutoDetect(config.autoDetectDevices);
+    if (config.autoDetectDevices) {
+      updateConfig({ autoDetectDevices: false });
+    }
 
     const executeBatchFile = async () => {
       try {
@@ -501,6 +509,10 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
       setShowConfirmDialog(true);
     } else {
       // 如果没有运行，直接关闭
+      // 恢复原始的自动检测状态
+      if (originalAutoDetect) {
+        updateConfig({ autoDetectDevices: true });
+      }
       setOutput('');
       onClose();
     }
@@ -522,6 +534,11 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
       type: "warning",
       message: "批处理脚本执行已被用户中断",
     });
+    
+    // 恢复原始的自动检测状态
+    if (originalAutoDetect) {
+      updateConfig({ autoDetectDevices: true });
+    }
     
     setOutput('');
     onClose();

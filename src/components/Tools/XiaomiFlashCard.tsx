@@ -32,6 +32,8 @@ import {
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
+import { useDeviceStore } from "../../stores/deviceStore";
+import { useAppStore } from "../../stores/appStore";
 import BatchExecutorDialog from "../Common/BatchExecutorDialog";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
@@ -152,6 +154,8 @@ type FlashStatus = "idle" | "checking" | "flashing" | "success" | "error";
 const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   const styles = useStyles();
   useDeviceService();
+  const { setFlashing } = useDeviceStore();
+  const { config, updateConfig } = useAppStore();
   const folderInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedPackage, setSelectedPackage] = useState<string>("");
@@ -171,6 +175,15 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   const [batchDialogTitle, setBatchDialogTitle] = useState<string>("");
   const [batchFileName, setBatchFileName] = useState<string>("");
   const [batchWorkingDirectory, setBatchWorkingDirectory] = useState<string>("");
+  const [originalAutoDetect, setOriginalAutoDetect] = useState<boolean>(config.autoDetectDevices);
+
+  const handleBatchDialogClose = () => {
+    setBatchDialogOpen(false);
+    // 恢复原始的自动检测状态
+    if (originalAutoDetect) {
+      updateConfig({ autoDetectDevices: true });
+    }
+  };
 
   const handlePackageSelect = async () => {
     try {
@@ -280,9 +293,19 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
     });
   };
 
-  const handleFlashStart = () => {
+  const handleFlashStart = (fileName: string, title: string, clearData: boolean, relock: boolean) => {
     if (!selectedFolderPath) return;
-    setShowConfirmDialog(true);
+    
+    setBatchDialogTitle(title);
+    setBatchFileName(fileName);
+    setBatchWorkingDirectory(selectedFolderPath);
+    setBatchDialogOpen(true);
+    
+    // 保存原始的自动检测状态，并关闭自动检测
+    setOriginalAutoDetect(config.autoDetectDevices);
+    if (config.autoDetectDevices) {
+      updateConfig({ autoDetectDevices: false });
+    }
   };
 
   const handleFlashConfirm = async () => {
@@ -290,6 +313,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
     // 这里保留模拟线刷逻辑；实际运行 .bat 使用下方三个专用按钮
     setShowConfirmDialog(false);
     setIsFlashing(true);
+    setFlashing(true); // 设置全局刷写状态
     setFlashStatus("checking");
     setProgress(0);
     setFlashLog("开始小米线刷流程...\n");
@@ -333,6 +357,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
       setFlashLog(prev => prev + `线刷失败: ${error}\n`);
     } finally {
       setIsFlashing(false);
+      setFlashing(false); // 清除全局刷写状态
     }
   };
 
@@ -610,7 +635,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
         title={batchDialogTitle}
         batchFileName={batchFileName}
         workingDirectory={batchWorkingDirectory}
-        onClose={() => setBatchDialogOpen(false)}
+        onClose={handleBatchDialogClose}
       />
     </>
   );

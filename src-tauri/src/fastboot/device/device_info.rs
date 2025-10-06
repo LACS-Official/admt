@@ -157,11 +157,12 @@ pub async fn get_fastboot_device_properties(
     log::info!("[fastboot_device_info] 获取fastboot设备属性: {}", serial);
     
     // 执行fastboot getvar all命令
+    // 增加超时时间到60秒，以适应刷写过程中设备响应变慢的情况
     let result = execute_fastboot_command(
         serial.clone(),
         "getvar".to_string(),
         vec!["all".to_string()],
-        Some(30), // 30秒超时
+        Some(60), // 60秒超时
     ).await?;
     
     if !result.success {
