@@ -6,6 +6,7 @@ import {
   Spinner,
   tokens,
   Card,
+  Button,
 } from "@fluentui/react-components";
 import {
   Settings24Regular,
@@ -13,6 +14,12 @@ import {
   PresenceUnknown24Regular,
   PlugDisconnected24Regular,
   ArrowClockwise24Regular,
+  DocumentText24Regular,
+  Video24Regular,
+  Phone24Regular,
+  Shield24Regular,
+  DeveloperBoard24Regular,
+  Warning24Regular,
 } from "@fluentui/react-icons";
 import MiscellaneousCard from './MiscellaneousCard';
 
@@ -47,7 +54,6 @@ const useStyles = makeStyles({
 
   // 上部分容器样式
   upperSection: {
-    height: "30%",
     width: "90%",
     maxWidth: "1200px",
     display: "flex",
@@ -55,6 +61,9 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: "24px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "8px",
+    padding: "24px",
   },
 
   // 下部分容器样式
@@ -70,19 +79,38 @@ const useStyles = makeStyles({
     },
   },
 
-  modeCard: {
-    height: "200px",
-    width: "60%",
+  // 统一卡片样式
+  unifiedCard: {
     display: "flex",
     flexDirection: "column",
-    border: "1px solid var(--colorNeutralStroke2)",
     borderRadius: "8px",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
     backgroundColor: "var(--colorNeutralBackground1)",
     transition: "box-shadow 0.2s ease",
     ":hover": {
       boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
     },
+    width: "60%",
+    maxHeight: "200px",
+  },
+
+  // 设备状态卡片样式
+  statusCard: {
+    width: "100%",
+    padding: "24px",
+    marginBottom: "16px",
+  },
+
+  // 连接指南卡片样式
+  guideCard: {
+    height: "200px",
+    width: "60%",
+    padding: "16px",
+  },
+
+  // 杂项卡片样式
+  miscCard: {
+    width: "50%",
+    padding: "16px",
   },
 
   // 连接指南卡片内部网格样式
@@ -90,13 +118,13 @@ const useStyles = makeStyles({
     display: "grid",
     gridTemplateColumns: "1fr 1fr 1fr",
     gridTemplateRows: "1fr 1fr",
-    gap: "4px",
-    padding: "0 8px 8px 8px",
+    gap: "8px",
+    padding: "8px 0 0 0",
   },
 
   // 卡片标题样式
   cardHeader: {
-    marginBottom: "12px",
+    marginBottom: "2px",
     display: "flex",
     alignItems: "center",
     gap: "8px",
@@ -118,13 +146,13 @@ const useStyles = makeStyles({
     fontSize: "24px",
   },
 
+  // 连接链接样式
   modeLink: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "6px 4px",
-    margin: "4px 0",
+    padding: "12px 8px",
     border: "1px solid var(--colorNeutralStroke3)",
     borderRadius: "6px",
     backgroundColor: "var(--colorNeutralBackground2)",
@@ -143,6 +171,7 @@ const useStyles = makeStyles({
     },
   },
 
+  // 链接文本样式
   linkText: {
     fontSize: "12px",
     fontWeight: "600",
@@ -154,11 +183,14 @@ const useStyles = makeStyles({
     width: "100%",
   },
 
+  // 链接图标样式
   linkIcon: {
-    fontSize: "16px",
+    fontSize: "20px",
     color: tokens.colorNeutralForeground2,
+    marginBottom: "4px",
   },
   
+  // 背景装饰样式
   backgroundDecoration: {
     position: "absolute",
     top: "50%",
@@ -172,6 +204,7 @@ const useStyles = makeStyles({
     zIndex: 0,
   },
   
+  // 内容区域样式
   content: {
     display: "flex",
     flexDirection: "column",
@@ -184,89 +217,85 @@ const useStyles = makeStyles({
     zIndex: 1,
   },
   
+  // 图标容器样式
   iconContainer: {
     display: "flex",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     gap: "16px",
-    marginBottom: "16px",
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    padding: "12px 10px",
+    padding: "24px",
     borderRadius: "12px",
-    minWidth: "100%",
+    width: "100%",
   },
   
+  // 主图标样式
   mainIcon: {
     fontSize: "64px",
     color: tokens.colorBrandForeground1,
     filter: "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))",
   },
   
+  // 连接图标样式
   connectionIcon: {
-    fontSize: "32px",
+    fontSize: "48px",
     color: tokens.colorNeutralForeground3,
     animation: "pulse 2s infinite",
+    marginBottom: "16px",
   },
   
+  // 标题样式
   title: {
     fontSize: "20px",
     fontWeight: "700",
     color: tokens.colorNeutralForeground1,
-    marginBottom: "8px",
     lineHeight: "1.3",
   },
   
+  // 副标题样式
   subtitle: {
     fontSize: "16px",
     color: tokens.colorNeutralForeground2,
     lineHeight: "1.5",
-    marginBottom: "24px",
   },
   
+  // 扫描指示器样式
   scanningIndicator: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: "12px",
     padding: "12px 20px",
     backgroundColor: tokens.colorBrandBackground2,
     borderRadius: "20px",
     border: `1px solid ${tokens.colorBrandStroke1}`,
     boxShadow: tokens.shadow4,
-    marginBottom: "24px",
+    marginTop: "16px",
+    width: "fit-content",
   },
   
+  // 扫描文本样式
   scanningText: {
     fontSize: "16px",
     color: tokens.colorBrandForeground1,
     fontWeight: "600",
   },
   
+  // 刷新按钮样式
   refreshButton: {
     marginTop: "16px",
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    padding: "8px 16px",
-    backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    borderRadius: "6px",
-    color: tokens.colorNeutralForeground1,
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    "&:hover": {
-      backgroundColor: tokens.colorNeutralBackground3,
-    },
-    "&:focus-visible": {
-      outline: `2px solid ${tokens.colorStrokeFocus2}`,
-      outlineOffset: "2px",
-    }
   },
   
+  // 刷新按钮文本样式
   refreshButtonText: {
     fontSize: "14px",
     fontWeight: "500",
   },
   
+  // 动画关键帧
   "@keyframes pulse": {
     "0%": { opacity: "1" },
     "50%": { opacity: "0.4" },
@@ -279,6 +308,7 @@ const useStyles = makeStyles({
     "100%": { transform: "translateY(0px)" },
   },
   
+  // 浮动图标样式
   floatingIcon: {
     animation: "float 4s ease-in-out infinite",
   }
@@ -303,71 +333,75 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
       <div className={styles.content}>
         {/* 上部分容器 */}
         <div className={styles.upperSection}>
-          {/* 主标题 */}
-          <Card className={styles.iconContainer}>
-            <PlugDisconnected24Regular className={styles.connectionIcon} />
-            <Text className={styles.title}>
-              暂未检测到设备连接
-              请检查设备是否正常连接，对应驱动是否安装
-            </Text>
-            
-            {/* 扫描状态指示器 */}
-            {isScanning && (
-              <div className={styles.scanningIndicator}>
-                <Spinner size="extra-small" />
-                <Text className={styles.scanningText}>
-                  正在扫描设备...
-                </Text>
-              </div>
-            )}
-          </Card>
-          
-          
-
-          {!isScanning && onRefresh && (
-            <div>
-              <Text className={styles.subtitle}>
-                自动刷新未开启，请开启自动刷新功能
+            <div className={styles.iconContainer}>
+              <PlugDisconnected24Regular className={styles.connectionIcon} />
+              <Text className={styles.title}>
+                暂未检测到设备连接
               </Text>
+              <Text className={styles.subtitle}>
+                请检查设备是否正常连接，对应驱动是否安装
+              </Text>
+              
+              {/* 扫描状态指示器 */}
+              {isScanning && (
+                <div className={styles.scanningIndicator}>
+                  <Spinner size="extra-small" />
+                  <Text className={styles.scanningText}>
+                    正在扫描设备...
+                  </Text>
+                </div>
+              )}
+              
+              {/* 刷新按钮 */}
+              {!isScanning && onRefresh && (
+                <div className={styles.refreshButton}>
+                  <Button 
+                    appearance="primary" 
+                    icon={<ArrowClockwise24Regular />}
+                    onClick={onRefresh}
+                  >
+                    手动刷新
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
         </div>
         
         {/* 下部分容器 */}
         <div className={styles.lowerSection}>
-          {/* 连接模式卡片 */}
-          <Card className={styles.modeCard}>
+          {/* 连接指南卡片 */}
+          <Card className={`${styles.unifiedCard} ${styles.guideCard}`}>
             <div className={styles.cardHeader}>
+
               <Settings24Regular className={styles.titleIcon} />
               <Text className={styles.cardTitle}>连接指南</Text>
             </div>
             <div className={styles.linkGrid}>
-                            <a href="https://admt.lacs.cc/docs" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+              <a href="https://admt.lacs.cc/docs" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
                 <Text className={styles.linkText}>文档中心</Text>
-
               </a>
-                            <a href="https://space.bilibili.com/1779662818/lists/4978116?type=series" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+              
+              <a href="https://space.bilibili.com/1779662818/lists/4978116?type=series" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
                 <Text className={styles.linkText}>视频教程</Text>
-
               </a>
+              
               <a href="https://admt.lacs.cc/docs/device/linksys" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
                 <Text className={styles.linkText}>系统模式</Text>
-
               </a>
+              
               <a href="https://admt.lacs.cc/docs/device/linkrec" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
+
                 <Text className={styles.linkText}>恢复模式</Text>
-
               </a>
+              
               <a href="https://admt.lacs.cc/docs/device/linkfb" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
-                <Text className={styles.linkText}>引导模式</Text>
 
+                <Text className={styles.linkText}>引导模式</Text>
               </a>
+              
               <a href="https://admt.lacs.cc/docs/device/linkedl" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
                 <Text className={styles.linkText}>EDL模式</Text>
-
               </a>
-
-
             </div>
           </Card>
 

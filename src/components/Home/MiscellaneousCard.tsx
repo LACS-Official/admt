@@ -163,7 +163,11 @@ interface MiscFunction {
   action: () => Promise<void>;
 }
 
-const MiscellaneousCard: React.FC = () => {
+interface MiscellaneousCardProps {
+  className?: string;
+}
+
+const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const styles = useStyles();
   const { setStatusBarMessage } = useAppStore();
   const { executeBatch, BatchExecutorDialog } = useBatchExecutor();
@@ -465,7 +469,7 @@ const MiscellaneousCard: React.FC = () => {
 
   return (
     <>
-      <Card className={styles.card}>
+      <Card className={`${styles.card} ${className || ''}`}>
         <div className={styles.cardHeader}>
           <Info24Regular className={styles.titleIcon} />
           <Text className={styles.cardTitle}>辅助功能</Text>
