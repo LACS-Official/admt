@@ -29,7 +29,8 @@ export type AppView =
   | "extended-features"
   | "online-resources"
   | "settings"
-  | "demo";
+  | "demo"
+  | "root";
 
 export type SettingsView =
   | "about"

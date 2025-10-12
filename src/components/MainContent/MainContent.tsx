@@ -7,7 +7,14 @@ import {
   SelectTabData,
   Text,
   Badge,
-
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogTrigger,
+  Button,
 } from "@fluentui/react-components";
 import {
   Code24Regular,
@@ -33,6 +40,7 @@ import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
+import RootPanel from "../Root/RootPanel";
 
 import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
@@ -514,7 +522,11 @@ const tabs = [
     label: "扩展功能",
     icon: <Wrench24Regular />,
   },
-
+  {
+    id: "root" as AppView,
+    label: "Root专区",
+    icon: <Wrench24Regular />,
+  },
   {
     id: "online-resources" as AppView,
     label: "在线资源",
@@ -538,6 +550,12 @@ const MainContent: React.FC = () => {
   // 版本检查相关状态
   const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
   const [updateCheckCompleted, setUpdateCheckCompleted] = useState(false);
+  
+  // 离线弹窗状态
+  const [isOfflineDialogOpen, setIsOfflineDialogOpen] = useState(false);
+  
+  // 未授权弹窗状态
+  const [isUnauthorizedDialogOpen, setIsUnauthorizedDialogOpen] = useState(false);
 
   // 全局设备扫描 - 根据配置控制是否启用和扫描间隔
   useEffect(() => {
@@ -550,6 +568,25 @@ const MainContent: React.FC = () => {
     }
     return () => stopScanning();
   }, [config.autoDetectDevices, config.scanInterval, startScanning, stopScanning]);
+
+  // 监听设备状态变化，检测离线和未授权设备
+  useEffect(() => {
+    if (selectedDevice) {
+      if (selectedDevice.mode === "offline") {
+        setIsOfflineDialogOpen(true);
+        setStatusBarMessage({
+          type: "warning",
+          message: "当前设备已离线，无法获取详细信息。",
+        });
+      } else if (selectedDevice.mode === "unauthorized") {
+        setIsUnauthorizedDialogOpen(true);
+        setStatusBarMessage({
+          type: "warning",
+          message: "当前设备未授权，无法获取详细信息。",
+        });
+      }
+    }
+  }, [selectedDevice]);
 
   // 监听设备连接/断开，提示状态栏消息
   useEffect(() => {
@@ -907,6 +944,8 @@ const MainContent: React.FC = () => {
         return <AdbZonePanel />;
       case "flash-zone":
         return <FlashZonePanel />;
+      case "root":
+        return <RootPanel />;
       case "extended-features":
         return <ExtendedFeaturesPanel />;
       case "online-resources":
@@ -972,6 +1011,46 @@ const MainContent: React.FC = () => {
         }}
         showStatusMessage={false} // 不显示状态消息，避免干扰用户
       />
+      
+      {/* 离线设备提示弹窗 */}
+      <Dialog
+        onOpenChange={
+          (isOpen) => setIsOfflineDialogOpen(!!isOpen)
+        }
+        open={isOfflineDialogOpen}
+      >
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>设备离线</DialogTitle>
+            <DialogContent>
+              <p>当前设备已离线，请重新连接设备后重试</p>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsOfflineDialogOpen(false)}>我知道了</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+      
+      {/* 未授权设备提示弹窗 */}
+      <Dialog
+        onOpenChange={
+          (isOpen) => setIsUnauthorizedDialogOpen(!!isOpen)
+        }
+        open={isUnauthorizedDialogOpen}
+      >
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>设备未授权</DialogTitle>
+            <DialogContent>
+              <p>当前设备未授权，请在设备上允许USB调试授权。</p>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsUnauthorizedDialogOpen(false)}>我知道了</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };
