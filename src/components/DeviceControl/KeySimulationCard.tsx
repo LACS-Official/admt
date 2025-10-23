@@ -16,6 +16,10 @@ import {
   ArrowLeft24Regular,
   Apps24Regular,
   WrenchScrewdriver24Regular,
+  WeatherSunny24Regular,
+  Wifi124Regular,
+  Cellular4GRegular,
+  Airplane24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
@@ -34,7 +38,7 @@ const useStyles = makeStyles({
   },
   commandGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(4, 1fr)",
     gap: "12px",
   },
   commandButton: {
@@ -64,6 +68,9 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
   const styles = useStyles();
   const { deviceService } = useDeviceService();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
+  const [wifiEnabled, setWifiEnabled] = useState<boolean>(false);
+  const [mobileDataEnabled, setMobileDataEnabled] = useState<boolean>(false);
+  const [airplaneModeEnabled, setAirplaneModeEnabled] = useState<boolean>(false);
   const { setStatusBarMessage } = useAppStore();
 
   const executeCommand = async (commandId: string, command: string[], description: string) => {
@@ -77,12 +84,39 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
 
     setExecutingCommand(commandId);
     try {
-      const result = await deviceService.executeAdbCommand(device.serial, command[0], command.slice(1));
+      let actualCommand = [...command];
+      let actualDescription = description;
+      
+      // 处理切换功能
+      if (commandId === "wifi_toggle") {
+        const wifiState = wifiEnabled ? "disable" : "enable";
+        actualCommand = ["shell", "svc", "wifi", wifiState];
+        actualDescription = wifiEnabled ? "关闭WiFi" : "开启WiFi";
+      } else if (commandId === "mobile_data_toggle") {
+        const dataState = mobileDataEnabled ? "disable" : "enable";
+        actualCommand = ["shell", "svc", "data", dataState];
+        actualDescription = mobileDataEnabled ? "关闭移动数据" : "开启移动数据";
+      } else if (commandId === "airplane_mode") {
+        const airplaneState = airplaneModeEnabled ? "0" : "1";
+        actualCommand = ["shell", "settings", "put", "global", "airplane_mode_on", airplaneState];
+        actualDescription = airplaneModeEnabled ? "关闭飞行模式" : "开启飞行模式";
+      }
+      
+      const result = await deviceService.executeAdbCommand(device.serial, actualCommand[0], actualCommand.slice(1));
       if (result.success) {
         setStatusBarMessage({
           type: "success",
-          message: description,
+          message: actualDescription,
         });
+        
+        // 更新状态
+        if (commandId === "wifi_toggle") {
+          setWifiEnabled(!wifiEnabled);
+        } else if (commandId === "mobile_data_toggle") {
+          setMobileDataEnabled(!mobileDataEnabled);
+        } else if (commandId === "airplane_mode") {
+          setAirplaneModeEnabled(!airplaneModeEnabled);
+        }
       } else {
         setStatusBarMessage({
           type: "error",
@@ -141,6 +175,41 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
       icon: <Power24Regular />,
       command: ["shell", "input", "keyevent", "224"],
       description: "唤醒设备屏幕",
+    },
+    {
+      id: "brightness_up",
+      label: "增加亮度",
+      icon: <WeatherSunny24Regular />,
+      command: ["shell", "settings", "put", "system", "screen_brightness", "255"],
+      description: "增加屏幕亮度",
+    },
+    {
+      id: "brightness_down",
+      label: "降低亮度",
+      icon: <WeatherSunny24Regular />,
+      command: ["shell", "settings", "put", "system", "screen_brightness", "50"],
+      description: "降低屏幕亮度",
+    },
+    {
+      id: "wifi_toggle",
+      label: wifiEnabled ? "关闭WiFi" : "开启WiFi",
+      icon: <Wifi124Regular />,
+      command: ["shell", "svc", "wifi", "disable"],
+      description: wifiEnabled ? "关闭WiFi" : "开启WiFi",
+    },
+    {
+      id: "mobile_data_toggle",
+      label: mobileDataEnabled ? "关闭数据" : "开启数据",
+      icon: <Cellular4GRegular />,
+      command: ["shell", "svc", "data", "disable"],
+      description: mobileDataEnabled ? "关闭移动数据" : "开启移动数据",
+    },
+    {
+      id: "airplane_mode",
+      label: airplaneModeEnabled ? "关闭飞行" : "开启飞行",
+      icon: <Airplane24Regular />,
+      command: ["shell", "settings", "put", "global", "airplane_mode_on", "1"],
+      description: airplaneModeEnabled ? "关闭飞行模式" : "开启飞行模式",
     },
     {
       id: "developer_options",
