@@ -595,13 +595,6 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                 >
                   关闭
                 </Button>
-                <Button 
-                  appearance="primary" 
-                  onClick={handleVerifyUsbRegistry}
-                  icon={<Wrench24Regular />}
-                >
-                  重新验证
-                </Button>
               </>
             )}
           </DialogActions>

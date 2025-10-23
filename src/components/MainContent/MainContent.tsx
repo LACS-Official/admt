@@ -523,11 +523,6 @@ const tabs = [
     icon: <Wrench24Regular />,
   },
   {
-    id: "root" as AppView,
-    label: "Root专区",
-    icon: <Wrench24Regular />,
-  },
-  {
     id: "online-resources" as AppView,
     label: "在线资源",
     icon: <CloudArrowDown24Regular />,
@@ -1023,7 +1018,7 @@ const MainContent: React.FC = () => {
           <DialogBody>
             <DialogTitle>设备离线</DialogTitle>
             <DialogContent>
-              <p>当前设备已离线，请重新连接设备后重试</p>
+              <p>当前设备已离线，请重新连接设备后，重新插播数据线后重试</p>
             </DialogContent>
             <DialogActions>
               <Button appearance="secondary" onClick={() => setIsOfflineDialogOpen(false)}>我知道了</Button>
@@ -1043,7 +1038,7 @@ const MainContent: React.FC = () => {
           <DialogBody>
             <DialogTitle>设备未授权</DialogTitle>
             <DialogContent>
-              <p>当前设备未授权，请在设备上允许USB调试授权。</p>
+              <p>当前设备未授权，请在设备上允许USB调试授权后，重新插拔数据线。</p>
             </DialogContent>
             <DialogActions>
               <Button appearance="secondary" onClick={() => setIsUnauthorizedDialogOpen(false)}>我知道了</Button>
