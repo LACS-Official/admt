@@ -140,6 +140,7 @@ const useStyles = makeStyles({
 const OtherSettingsPanel: React.FC = () => {
   const styles = useStyles();
   const { config, updateConfig } = useAppStore();
+  const { setStatusBarMessage } = useAppStore();
   
   // 从配置中读取状态
   const [minimizeToTray, setMinimizeToTray] = useState(config.systemTrayEnabled);
@@ -229,10 +230,6 @@ const OtherSettingsPanel: React.FC = () => {
           minimizeToTrayOnClose: true
         });
         
-        setTrayStatus({
-          type: 'success',
-          message: '系统托盘已启用，关闭窗口时将最小化到托盘'
-        });
       } else {
         // 禁用系统托盘 - 使用 SystemTrayManager 确保一致性
         await systemTrayManager.updateConfig({
@@ -240,10 +237,6 @@ const OtherSettingsPanel: React.FC = () => {
           minimizeToTrayOnClose: false
         });
         
-        setTrayStatus({
-          type: 'success',
-          message: '系统托盘已禁用，关闭窗口时将直接退出'
-        });
       }
 
       // 保存到配置
@@ -257,10 +250,9 @@ const OtherSettingsPanel: React.FC = () => {
       console.error('❌ 系统托盘设置失败:', error);
       // 回滚状态
       setMinimizeToTray(!checked);
-      setTrayStatus({
+      setStatusBarMessage({
         type: 'error',
-        message: '系统托盘设置失败，请检查系统权限',
-        action: () => handleMinimizeToTrayChange(checked)
+        message: '系统托盘设置失败，请检查系统权限'
       });
     } finally {
       setLoading(false);
@@ -290,22 +282,18 @@ function handleStartWithSystemChange(checked: boolean): void {
         if (checked) {
           const success = await autoStartService.enableAutoStart();
           if (success) {
-            setAutoStartStatus({
-              type: 'success',
-              message: '自启动已启用'
-            });
           } else {
             throw new Error('启用自启动失败');
           }
         } else {
           const success = await autoStartService.disableAutoStart();
           if (success) {
-            setAutoStartStatus({
-              type: 'success',
-              message: '自启动已禁用'
-            });
           } else {
-            throw new Error('禁用自启动失败');
+            setStatusBarMessage({
+              type: 'error',
+              message: '禁用自启动失败'
+            });
+          
           }
         }
         

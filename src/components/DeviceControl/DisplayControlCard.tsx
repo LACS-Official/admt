@@ -35,95 +35,95 @@ const useStyles = makeStyles({
     flexDirection: "column",
     width: "100%",
     border: "1px solid var(--colorNeutralStroke1)",
-    borderRadius: "6px",
-    boxShadow: "0 1px 4px rgba(0, 0, 0, 0.06)",
+    borderRadius: "8px",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
   },
   cardHeader: {
     borderBottom: "1px solid var(--colorNeutralStroke2)",
-    paddingBottom: "8px",
+    paddingBottom: "12px",
   },
   content: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    padding: "12px",
+    padding: "16px",
   },
   section: {
-    marginBottom: "16px",
+    marginBottom: "24px",
   },
   sectionTitle: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
-    marginBottom: "8px",
-    fontSize: "14px",
+    gap: "8px",
+    marginBottom: "12px",
+    fontSize: "16px",
     fontWeight: "600",
     color: "var(--colorNeutralForeground1)",
   },
   controlRow: {
     display: "flex",
     alignItems: "flex-start",
-    marginBottom: "12px",
-    gap: "12px",
+    marginBottom: "16px",
+    gap: "16px",
     flexWrap: "wrap",
   },
   controlLabel: {
-    minWidth: "60px",
-    fontSize: "12px",
+    minWidth: "120px",
+    fontSize: "14px",
     fontWeight: "500",
     color: "var(--colorNeutralForeground2)",
     alignSelf: "center",
   },
   controlValue: {
-    minWidth: "60px",
-    fontSize: "12px",
+    minWidth: "100px",
+    fontSize: "14px",
     color: "var(--colorNeutralForeground1)",
-    padding: "3px 6px",
+    padding: "6px 10px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "3px",
+    borderRadius: "6px",
     fontWeight: "500",
     alignSelf: "center",
   },
   controlButton: {
-    marginLeft: "6px",
+    marginLeft: "8px",
   },
   inputControl: {
-    width: "70px",
+    width: "80px",
   },
   inputControlWide: {
-    width: "100px",
+    width: "120px",
   },
   loadingIndicator: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: "8px",
     color: "var(--colorBrandForeground1)",
   },
   resolutionContainer: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: "8px",
     flex: 1,
     flexWrap: "wrap",
   },
   dialogContent: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "16px",
   },
   resolutionInputRow: {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: "8px",
   },
   statusMessage: {
-    fontSize: "12px",
-    padding: "6px 10px",
-    borderRadius: "4px",
-    marginTop: "6px",
+    fontSize: "13px",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    marginTop: "8px",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: "8px",
   },
   successMessage: {
     backgroundColor: "var(--colorSuccessBackground1)",
@@ -146,89 +146,87 @@ const useStyles = makeStyles({
     pointerEvents: "none",
   },
   unitLabel: {
-    marginLeft: "3px",
-    fontSize: "13px",
+    marginLeft: "4px",
+    fontSize: "14px",
     color: "var(--colorNeutralForeground3)",
   },
   deviceStatus: {
     textAlign: "center",
-    padding: "16px",
+    padding: "20px",
     color: "var(--colorNeutralForeground3)",
   },
   helpButton: {
     marginLeft: "auto",
-    minWidth: "24px",
-    width: "24px",
-    height: "24px",
+    minWidth: "32px",
+    width: "32px",
+    height: "32px",
   },
   actionButton: {
-    marginLeft: "4px",
-    minHeight: "24px",
-    padding: "0 8px",
+    marginLeft: "8px",
   },
   actionButtons: {
     display: "flex",
-    gap: "4px",
+    gap: "8px",
     alignItems: "flex-end",
   },
   inputContainer: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "12px",
     flex: 1,
     flexWrap: "wrap",
   },
   currentValueContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: "3px",
+    gap: "4px",
   },
   currentValueLabel: {
-    fontSize: "11px",
+    fontSize: "12px",
     color: "var(--colorNeutralForeground3)",
   },
   currentValue: {
-    fontSize: "13px",
+    fontSize: "14px",
     fontWeight: "500",
     color: "var(--colorBrandForeground1)",
-    padding: "3px 6px",
+    padding: "4px 8px",
     backgroundColor: "var(--colorBrandBackground2)",
-    borderRadius: "3px",
+    borderRadius: "4px",
     width: "fit-content",
   },
   resolutionInputGroup: {
     display: "flex",
     alignItems: "flex-end",
-    gap: "3px",
+    gap: "4px",
   },
   resolutionInput: {
-    width: "60px",
+    width: "80px",
   },
   densityInputGroup: {
     display: "flex",
     alignItems: "center",
-    gap: "3px",
+    gap: "4px",
   },
   densityInput: {
-    width: "70px",
+    width: "100px",
   },
   fontScaleInput: {
-    width: "80px",
+    width: "120px",
   },
   controlSection: {
-    marginBottom: "16px",
-    padding: "8px",
+    marginBottom: "20px",
+    padding: "12px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "6px",
+    borderRadius: "8px",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   sectionHeader: {
     display: "flex",
     alignItems: "center",
-    marginBottom: "8px",
+    marginBottom: "12px",
   },
   divider: {
-    margin: "12px 0",
+    margin: "16px 0",
   },
 });
 
@@ -645,7 +643,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
       <CardHeader
          className={styles.cardHeader}
          image={<Desktop24Regular />}
-         header={<Text weight="semibold" size={300}>显示控制</Text>}
+         header={<Text weight="semibold" size={200}>显示控制</Text>}
        />
       
       <div className={styles.content}>
@@ -675,87 +673,81 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
               </div>
               
               <div className={styles.controlRow}>
-                <Text className={styles.controlLabel}>当前:</Text>
-                <Text className={styles.controlValue}>
-                  {displaySettings.resolution.width > 0 && displaySettings.resolution.height > 0 
-                    ? `${displaySettings.resolution.width}x${displaySettings.resolution.height}` 
-                    : "未知"}
-                </Text>
                 
-                <div className={styles.resolutionInputGroup}>
-                  <Field 
-                    label="宽度" 
-                    style={{ marginBottom: 0, marginRight: '6px' }}
-                    validationState={inputValidation.resolutionWidth.isValid ? undefined : 'error'}
-                  >
-                    <Input
-                      className={styles.resolutionInput}
-                      type="number"
-                      placeholder="宽度"
-                      value={customInputs.resolutionWidth}
-                      onChange={(e) => handleInputChange('resolutionWidth', e.target.value)}
-                      disabled={executingCommand !== null}
-                      onFocus={clearStatusMessage}
-                      min="1"
-                      max="10000"
-                    />
-                    {!inputValidation.resolutionWidth.isValid && (
-                      <Text size={100} style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                        {inputValidation.resolutionWidth.error}
-                      </Text>
-                    )}
-                  </Field>
+                <div className={styles.inputContainer}>
+                  <div className={styles.resolutionInputGroup}>
+                    <Field 
+                      label="宽度" 
+                      style={{ marginBottom: 0, marginRight: '8px' }}
+                      validationState={inputValidation.resolutionWidth.isValid ? undefined : 'error'}
+                    >
+                      <Input
+                        className={styles.resolutionInput}
+                        type="number"
+                        placeholder="宽度"
+                        value={customInputs.resolutionWidth}
+                        onChange={(e) => handleInputChange('resolutionWidth', e.target.value)}
+                        disabled={executingCommand !== null}
+                        onFocus={clearStatusMessage}
+                        min="1"
+                        max="10000"
+                      />
+                      {!inputValidation.resolutionWidth.isValid && (
+                        <Text size={100} style={{ color: "var(--colorPaletteRedForeground1)" }}>
+                          {inputValidation.resolutionWidth.error}
+                        </Text>
+                      )}
+                    </Field>
+                    
+                    <Text style={{ alignSelf: 'flex-end', marginBottom: '8px' }}>×</Text>
+                    
+                    <Field 
+                      label="高度" 
+                      style={{ marginBottom: 0, marginLeft: '8px' }}
+                      validationState={inputValidation.resolutionHeight.isValid ? undefined : 'error'}
+                    >
+                      <Input
+                        className={styles.resolutionInput}
+                        type="number"
+                        placeholder="高度"
+                        value={customInputs.resolutionHeight}
+                        onChange={(e) => handleInputChange('resolutionHeight', e.target.value)}
+                        disabled={executingCommand !== null}
+                        onFocus={clearStatusMessage}
+                        min="1"
+                        max="10000"
+                      />
+                      {!inputValidation.resolutionHeight.isValid && (
+                        <Text size={100} style={{ color: "var(--colorPaletteRedForeground1)" }}>
+                          {inputValidation.resolutionHeight.error}
+                        </Text>
+                      )}
+                    </Field>
+                  </div>
                   
-                  <Text style={{ alignSelf: 'flex-end', marginBottom: '6px' }}>×</Text>
-                  
-                  <Field 
-                    label="高度" 
-                    style={{ marginBottom: 0, marginLeft: '6px' }}
-                    validationState={inputValidation.resolutionHeight.isValid ? undefined : 'error'}
-                  >
-                    <Input
-                      className={styles.resolutionInput}
-                      type="number"
-                      placeholder="高度"
-                      value={customInputs.resolutionHeight}
-                      onChange={(e) => handleInputChange('resolutionHeight', e.target.value)}
+                  <div className={styles.actionButtons}>
+                    <Button
+                      className={styles.actionButton}
+                      appearance="primary"
+                      size="small"
                       disabled={executingCommand !== null}
-                      onFocus={clearStatusMessage}
-                      min="1"
-                      max="10000"
-                    />
-                    {!inputValidation.resolutionHeight.isValid && (
-                      <Text size={100} style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                        {inputValidation.resolutionHeight.error}
-                      </Text>
-                    )}
-                  </Field>
-                </div>
-                
-                <div className={styles.actionButtons}>
-                  <Button
-                    className={styles.actionButton}
-                    appearance="primary"
-                    size="small"
-                    disabled={executingCommand !== null}
-                    onClick={applyCustomResolution}
-                  >
-                    应用
-                  </Button>
-                  <Button
-                    className={styles.actionButton}
-                    appearance="secondary"
-                    size="small"
-                    disabled={executingCommand !== null}
-                    onClick={() => resetToDefault("resolution")}
-                  >
-                    恢复默认
-                  </Button>
+                      onClick={applyCustomResolution}
+                    >
+                      应用
+                    </Button>
+                    <Button
+                      className={styles.actionButton}
+                      appearance="secondary"
+                      size="small"
+                      disabled={executingCommand !== null}
+                      onClick={() => resetToDefault("resolution")}
+                    >
+                      恢复默认
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <Divider className={styles.divider} />
 
             {/* 显示密度控制 */}
             <div className={styles.controlSection}>
@@ -772,61 +764,56 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
               </div>
               
               <div className={styles.controlRow}>
-                <Text className={styles.controlLabel}>当前:</Text>
-                <Text className={styles.controlValue}>
-                  {displaySettings.density > 0 ? `${displaySettings.density} dpi` : "未知"}
-                </Text>
                 
-                <div className={styles.densityInputGroup}>
+                <div className={styles.inputContainer}>
                   <Field 
-                    label="DPI" 
                     style={{ marginBottom: 0, flex: 1 }}
                     validationState={inputValidation.density.isValid ? undefined : 'error'}
                   >
-                    <Input
-                      className={styles.densityInput}
-                      type="number"
-                      placeholder="DPI"
-                      value={customInputs.density}
-                      onChange={(e) => handleInputChange('density', e.target.value)}
-                      disabled={executingCommand !== null}
-                      onFocus={clearStatusMessage}
-                      min="1"
-                      max="1000"
-                    />
+                    <div className={styles.densityInputGroup}>
+                      <Input
+                        className={styles.densityInput}
+                        type="number"
+                        placeholder="DPI"
+                        value={customInputs.density}
+                        onChange={(e) => handleInputChange('density', e.target.value)}
+                        disabled={executingCommand !== null}
+                        onFocus={clearStatusMessage}
+                        min="1"
+                        max="1000"
+                      />
+                      <Text className={styles.unitLabel}>dpi</Text>
+                    </div>
                     {!inputValidation.density.isValid && (
                       <Text size={100} style={{ color: "var(--colorPaletteRedForeground1)" }}>
                         {inputValidation.density.error}
                       </Text>
                     )}
                   </Field>
-                  <Text className={styles.unitLabel}>dpi</Text>
-                </div>
-                
-                <div className={styles.actionButtons}>
-                  <Button
-                    className={styles.actionButton}
-                    appearance="primary"
-                    size="small"
-                    disabled={executingCommand !== null}
-                    onClick={applyCustomDensity}
-                  >
-                    应用
-                  </Button>
-                  <Button
-                    className={styles.actionButton}
-                    appearance="secondary"
-                    size="small"
-                    disabled={executingCommand !== null}
-                    onClick={() => resetToDefault("density")}
-                  >
-                    恢复默认
-                  </Button>
+                  
+                  <div className={styles.actionButtons}>
+                    <Button
+                      className={styles.actionButton}
+                      appearance="primary"
+                      size="small"
+                      disabled={executingCommand !== null}
+                      onClick={applyCustomDensity}
+                    >
+                      应用
+                    </Button>
+                    <Button
+                      className={styles.actionButton}
+                      appearance="secondary"
+                      size="small"
+                      disabled={executingCommand !== null}
+                      onClick={() => resetToDefault("density")}
+                    >
+                      恢复默认
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-            
-            <Divider className={styles.divider} />
             
             {/* 字体缩放控制 */}
             <div className={styles.controlSection}>
@@ -843,45 +830,43 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
               </div>
               
               <div className={styles.controlRow}>
-                <Text className={styles.controlLabel}>当前:</Text>
-                <Text className={styles.controlValue}>
-                  {displaySettings.fontScale > 0 ? `${displaySettings.fontScale.toFixed(2)}` : "未知"}
-                </Text>
                 
-                <Field 
-                  label="缩放值" 
-                  style={{ marginBottom: 0, flex: 1 }}
-                  validationState={inputValidation.fontScale.isValid ? undefined : 'error'}
-                >
-                  <Input
-                    className={styles.fontScaleInput}
-                    type="number"
-                    placeholder="缩放值"
-                    value={customInputs.fontScale}
-                    onChange={(e) => handleInputChange('fontScale', e.target.value)}
-                    disabled={executingCommand !== null}
-                    onFocus={clearStatusMessage}
-                    min="0.1"
-                    max="3.0"
-                    step="0.01"
-                  />
-                  {!inputValidation.fontScale.isValid && (
-                    <Text size={100} style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                      {inputValidation.fontScale.error}
-                    </Text>
-                  )}
-                </Field>
-                
-                <div className={styles.actionButtons}>
-                  <Button
-                    className={styles.actionButton}
-                    appearance="primary"
-                    size="small"
-                    disabled={executingCommand !== null}
-                    onClick={applyCustomFontScale}
+                <div className={styles.inputContainer}>
+                  <Field 
+                    label="缩放值" 
+                    style={{ marginBottom: 0, flex: 1 }}
+                    validationState={inputValidation.fontScale.isValid ? undefined : 'error'}
                   >
-                    应用
-                  </Button>
+                    <Input
+                      className={styles.fontScaleInput}
+                      type="number"
+                      placeholder="缩放值"
+                      value={customInputs.fontScale}
+                      onChange={(e) => handleInputChange('fontScale', e.target.value)}
+                      disabled={executingCommand !== null}
+                      onFocus={clearStatusMessage}
+                      min="0.1"
+                      max="3.0"
+                      step="0.01"
+                    />
+                    {!inputValidation.fontScale.isValid && (
+                      <Text size={100} style={{ color: "var(--colorPaletteRedForeground1)" }}>
+                        {inputValidation.fontScale.error}
+                      </Text>
+                    )}
+                  </Field>
+                  
+                  <div className={styles.actionButtons}>
+                    <Button
+                      className={styles.actionButton}
+                      appearance="primary"
+                      size="small"
+                      disabled={executingCommand !== null}
+                      onClick={applyCustomFontScale}
+                    >
+                      应用
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -894,7 +879,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
             {operationStatus.type === 'success' && <Checkmark24Regular />}
              {operationStatus.type === 'error' && <ErrorCircle24Regular />}
              {operationStatus.type === 'info' && <Info24Regular />}
-             <Text size={200}>{operationStatus.message}</Text>
+             <Text size={300}>{operationStatus.message}</Text>
           </div>
         )}
       </div>
