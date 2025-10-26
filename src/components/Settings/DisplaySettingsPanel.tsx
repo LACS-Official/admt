@@ -29,6 +29,8 @@ const useStyles = makeStyles({
   },
   card: {
     height: "fit-content",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   cardContent: {
     padding: "20px",

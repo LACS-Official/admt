@@ -14,7 +14,7 @@ import {
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
 
-const useStyles = makeStyles({
+const useStyles = makeStyles( {
   container: {
     padding: "20px",
     height: "100%",
@@ -29,6 +29,8 @@ const useStyles = makeStyles({
   },
   card: {
     height: "fit-content",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   cardContent: {
     padding: "20px",

@@ -30,6 +30,8 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
+    border: "1px solid var(--colorNeutralStroke1)",
+    borderRadius: "8px",
   },
   content: {
     flex: 1,
@@ -42,13 +44,13 @@ const useStyles = makeStyles({
     gap: "12px",
   },
   commandButton: {
-    height: "60px",
+    height: "80px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     gap: "8px",
-    borderRadius: "6px",
+    borderRadius: "8px",
   },
   commandIcon: {
     fontSize: "24px",
@@ -102,25 +104,60 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
         actualDescription = airplaneModeEnabled ? "关闭飞行模式" : "开启飞行模式";
       }
       
-      const result = await deviceService.executeAdbCommand(device.serial, actualCommand[0], actualCommand.slice(1));
-      if (result.success) {
-        setStatusBarMessage({
-          type: "success",
-          message: actualDescription,
-        });
+      // 检查是否为需要特殊权限的命令
+      const isKeyEventCommand = actualCommand.includes('input') && actualCommand.includes('keyevent');
+      const isSettingsCommand = actualCommand.includes('settings');
+      
+      let result;
+      try {
+        // 首先尝试普通方式执行命令
+        result = await deviceService.executeAdbCommand(device.serial, actualCommand[0], actualCommand.slice(1));
         
-        // 更新状态
-        if (commandId === "wifi_toggle") {
-          setWifiEnabled(!wifiEnabled);
-        } else if (commandId === "mobile_data_toggle") {
-          setMobileDataEnabled(!mobileDataEnabled);
-        } else if (commandId === "airplane_mode") {
-          setAirplaneModeEnabled(!airplaneModeEnabled);
+        if (result.success) {
+          setStatusBarMessage({
+            type: "success",
+            message: actualDescription,
+          });
+          
+          // 更新状态
+          if (commandId === "wifi_toggle") {
+            setWifiEnabled(!wifiEnabled);
+          } else if (commandId === "mobile_data_toggle") {
+            setMobileDataEnabled(!mobileDataEnabled);
+          } else if (commandId === "airplane_mode") {
+            setAirplaneModeEnabled(!airplaneModeEnabled);
+          }
+        } else {
+          // 针对不同类型的权限错误提供不同的错误提示
+          if (result.error?.includes('SecurityException')) {
+            if (isKeyEventCommand) {
+              setStatusBarMessage({
+                type: "error",
+                message: `执行${description}失败：需要设备USB调试安全设置权限或无障碍服务权限`,
+              });
+            } else if (isSettingsCommand && result.error?.includes('WRITE_SECURE_SETTINGS')) {
+              setStatusBarMessage({
+                type: "error",
+                message: `执行${description}失败：需要设备WRITE_SECURE_SETTINGS权限（通常需要root权限）`,
+              });
+            } else {
+              setStatusBarMessage({
+                type: "error",
+                message: `执行${description}失败：需要设备特殊权限`,
+              });
+            }
+          } else {
+            setStatusBarMessage({
+              type: "error",
+              message: result.error || "未知错误",
+            });
+          }
         }
-      } else {
+      } catch (error) {
+        // 捕获执行过程中的其他错误
         setStatusBarMessage({
           type: "error",
-          message: result.error || "未知错误",
+          message: `${description}失败: ${error}`,
         });
       }
     } catch (error) {

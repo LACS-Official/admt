@@ -20,6 +20,9 @@ const useStyles = makeStyles({
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     position: 'relative',
+    borderRadius: '8px',
+    border: '1px solid var(--colorNeutralStroke2)',
+    margin: '2px',
     '&:hover': {
       transform: 'translateY(-2px)',
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
@@ -79,11 +82,13 @@ const useStyles = makeStyles({
 interface SoftwareCardProps {
   software: OnlineSoftware;
   onClick: () => void;
+  className?: string;
 }
 
 export const SoftwareCard: React.FC<SoftwareCardProps> = ({
   software,
   onClick,
+  className,
 }) => {
   const styles = useStyles();
   const [downloadStatus, setDownloadStatus] = useState<{

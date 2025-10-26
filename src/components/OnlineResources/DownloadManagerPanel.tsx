@@ -57,6 +57,8 @@ const useStyles = makeStyles({
     minWidth: '120px',
   },
   statsCard: {
+    border: '1px solid var(--colorNeutralStroke2)',
+    borderRadius: '8px',
     padding: '16px',
     marginBottom: '16px',
         minHeight: '80px',
@@ -87,8 +89,9 @@ const useStyles = makeStyles({
     maxHeight: '65vh', // 增加最大高度
     minHeight: '400px', // 增加最小高度
     border: '1px solid var(--colorNeutralStroke2)',
-    borderRadius: '6px',
+    borderRadius: '8px',
     backgroundColor: 'var(--colorNeutralBackground1)',
+
   },
   taskListHeader: {
     display: 'grid',

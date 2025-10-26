@@ -20,6 +20,8 @@ import { SCREEN_MIRROR_QUALITY_PRESETS } from "../../types/screenMirror";
 const useStyles = makeStyles({
   card: {
     height: "fit-content",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   content: {
     padding: "16px",

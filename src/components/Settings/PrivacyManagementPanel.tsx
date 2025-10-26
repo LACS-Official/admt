@@ -38,6 +38,9 @@ const useStyles = makeStyles({
   },
   card: {
     width: '100%',
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    
   },
   cardContent: {
     padding: tokens.spacingVerticalM,

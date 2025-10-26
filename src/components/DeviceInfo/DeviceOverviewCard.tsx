@@ -148,6 +148,8 @@ const useStyles = makeStyles({
     justifyContent: "center",
     flex: "0 0 35%", // 占据35%的宽度，不伸缩
     minWidth: "240px", // 最小宽度确保进度条正常显示
+    borderLeft: "1px solid var(--colorNeutralStroke2)",
+    
     "@media (max-width: 768px)": {
       flex: "1 1 100%", // 移动端占据全宽
       minWidth: "auto",
@@ -178,6 +180,7 @@ const useStyles = makeStyles({
     textOverflow: "ellipsis",
     maxWidth: "180px",
     flexShrink: 1,
+    
   },
   // 进度条区域 - 右上角两行布局
   progressSection: {
@@ -188,11 +191,12 @@ const useStyles = makeStyles({
     minWidth: "240px",
     maxWidth: "280px",
     padding: "10px",
+    
   },
   progressItem: {
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
+
   },
   progressHeader: {
     display: "flex",
@@ -235,7 +239,7 @@ const useStyles = makeStyles({
       minHeight: "28px",
       borderRadius: "6px",
       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-      border: "1px solid transparent",
+      border: "1px solid var(--colorNeutralStroke2)",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
       margin: "0 4px",
