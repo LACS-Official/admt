@@ -38,7 +38,7 @@ const useStyles = makeStyles({
   appIconImage: {
     width: "100%",
     height: "100%",
-    borderRadius: "16px",
+    borderRadius: "8px",
   },
   container: {
     padding: "8px",
@@ -58,7 +58,7 @@ const useStyles = makeStyles({
     border: "1px solid var(--colorNeutralStroke2)",
   },
   cardContent: {
-    padding: "20px",
+    padding: "10px",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
@@ -67,7 +67,7 @@ const useStyles = makeStyles({
     gridColumn: "1 / -1",
   },
   aboutContent: {
-    padding: "24px",
+    padding: "14px",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
@@ -92,7 +92,7 @@ const useStyles = makeStyles({
     borderBottom: "1px solid var(--colorNeutralStroke2)",
   },
   infoLabel: {
-    fontWeight: "500",
+    fontWeight: "400",
     color: "var(--colorNeutralForeground2)",
   },
   infoValue: {

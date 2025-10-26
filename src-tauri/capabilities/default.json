@@ -28,16 +28,44 @@
     "shell:allow-open",
     "shell:default",
     "shell:allow-spawn",
+    "opener:default",
     "process:default",
     "dialog:allow-open",
     "dialog:allow-message",
     "dialog:allow-save",
     "fs:allow-read-dir",
     "fs:allow-appdata-write",
-      "fs:allow-appdata-write-recursive",
-      "fs:allow-exists",
-      "fs:allow-read-file",
-      "fs:allow-read-text-file",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-resource-write",
+    "fs:allow-resource-write-recursive",
+    "fs:allow-resource-read",
+    "fs:allow-resource-read-recursive",
+    "fs:allow-exists",
+    "fs:allow-read-file",
+    "fs:allow-read-text-file",
+    "fs:allow-write-file",
+    "fs:allow-write-text-file",
+    "fs:allow-mkdir",
+    "fs:allow-remove",
+    "fs:allow-copy-file",
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$APP/**" }, { "path": "$DOCUMENT/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$APP/**" }, { "path": "$DOCUMENT/**" }]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "$APP/**" }, { "path": "$DOCUMENT/**" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$DOCUMENT/**" }]
+    },
     {
       "identifier": "http:default",
       "allow": [

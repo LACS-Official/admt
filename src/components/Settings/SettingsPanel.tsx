@@ -23,20 +23,22 @@ import PrivacyManagementPanel from "./PrivacyManagementPanel";
 
 const useStyles = makeStyles({
   container: {
-    padding: "20px",
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden",
+    padding: "8px",
+    gap: "24px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   header: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    marginBottom: "20px",
+    gap: "8px",
+    marginBottom: "5px",
   },
   tabContainer: {
-    marginBottom: "20px",
+    marginBottom: "5px",
   },
   tabList: {
     backgroundColor: "transparent",
@@ -44,6 +46,62 @@ const useStyles = makeStyles({
   content: {
     flex: 1,
     overflow: "auto",
+  },
+  headerTabList: {
+    flex: "1 1 auto",
+    maxHeight: "45px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    borderRadius: "8px",
+    padding: "4px 8px",
+    //居中显示
+    display: "flex",
+    alignItems: "center",
+    "& .fui-TabList": {
+      minHeight: "32px",
+      backgroundColor: "transparent",
+    },
+    "& .fui-Tab": {
+      fontSize: "12px",
+      padding: "6px 12px",
+      minHeight: "28px",
+      borderRadius: "8px",
+      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      border: "1px solid var(--colorNeutralStroke2)",
+      fontWeight: 500,
+      color: "var(--colorNeutralForeground2)",
+      margin: "0 4px",
+
+      
+      "&:hover": {
+        backgroundColor: "var(--colorNeutralBackground2)",
+        color: "var(--colorNeutralForeground1)",
+        transform: "translateY(-1px)",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+      },
+      
+      "&[aria-selected='true']": {
+        backgroundColor: "var(--colorBrandBackground2)",
+        color: "var(--colorBrandForeground1)",
+        border: "1px solid var(--colorBrandStroke2)",
+        fontWeight: 600,
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+      },
+    },
+    
+    "@media (max-width: 768px)": {
+      "& .fui-Tab": {
+        fontSize: "11px",
+        padding: "4px 8px",
+      },
+    },
+  },
+  tab: {
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2)",
+      color: "var(--colorNeutralForeground1)",
+      transform: "translateY(-1px)",
+      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    },
   },
 });
 
@@ -108,7 +166,7 @@ const SettingsPanel: React.FC = () => {
         <TabList
           selectedValue={currentView}
           onTabSelect={handleTabSelect}
-          className={styles.tabList}
+          className={styles.headerTabList}
         >
           {tabs.map((tab) => (
             <Tab

@@ -2051,31 +2051,51 @@ pub async fn get_resource_path<R: tauri::Runtime>(
 ) -> Result<String> {
     log::info!("Getting resource path for: {}", path);
     
-    // 尝试从data_dir构造路径
-    let data_dir = app_handle.path().app_data_dir()
-        .map_err(|_| AdmtError::Unknown { 
-            message: "Failed to get app data directory".to_string() 
-        })?;
+    // 1. 首先检查应用资源目录（适用于打包后的应用）
+    if let Ok(resource_dir) = app_handle.path().resource_dir() {
+        let resource_path = resource_dir.join(&path);
+        log::debug!("Checking app resource path: {:?}", resource_path);
+        
+        if resource_path.exists() {
+            log::info!("Resource found in app resources at: {:?}", resource_path);
+            return Ok(resource_path.to_string_lossy().to_string());
+        }
+    }
     
-    // 检查src-tauri/resource目录
+    // 2. 检查src-tauri/resource目录（开发环境）
     let resource_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("resource")
         .join(&path);
     
-    log::debug!("Checking resource path: {:?}", resource_path);
+    log::debug!("Checking development resource path: {:?}", resource_path);
     
     if resource_path.exists() {
         log::info!("Resource found at: {:?}", resource_path);
         return Ok(resource_path.to_string_lossy().to_string());
     }
     
-    // 检查app data目录
-    let app_data_path = data_dir.join("resource").join(&path);
-    log::debug!("Checking app data path: {:?}", app_data_path);
+    // 3. 检查app data目录（备用方案）
+    if let Ok(data_dir) = app_handle.path().app_data_dir() {
+        let app_data_path = data_dir.join("resource").join(&path);
+        log::debug!("Checking app data path: {:?}", app_data_path);
+        
+        if app_data_path.exists() {
+            log::info!("Resource found in app data at: {:?}", app_data_path);
+            return Ok(app_data_path.to_string_lossy().to_string());
+        }
+    }
     
-    if app_data_path.exists() {
-        log::info!("Resource found in app data at: {:?}", app_data_path);
-        return Ok(app_data_path.to_string_lossy().to_string());
+    // 4. 检查当前可执行文件目录（适用于便携版）
+    if let Ok(exe_dir) = std::env::current_exe() {
+        if let Some(parent) = exe_dir.parent() {
+            let exe_resource_path = parent.join("resource").join(&path);
+            log::debug!("Checking exe directory path: {:?}", exe_resource_path);
+            
+            if exe_resource_path.exists() {
+                log::info!("Resource found in exe directory at: {:?}", exe_resource_path);
+                return Ok(exe_resource_path.to_string_lossy().to_string());
+            }
+        }
     }
     
     // 如果都找不到，返回错误

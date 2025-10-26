@@ -1,6 +1,8 @@
 
 import { open } from '@tauri-apps/plugin-dialog';
 import { exists, mkdir } from '@tauri-apps/plugin-fs';
+import { documentDir, join } from '@tauri-apps/api/path';
+import { open as openPath } from '@tauri-apps/plugin-shell';
 import React, { useState, useEffect, useCallback } from "react";
 import {
   makeStyles,
@@ -554,7 +556,7 @@ const FileManagerPanel: React.FC = () => {
     if (!selectedDevice) return;
 
     // 检查设备是否处于离线状态
-    console.log('单文件下载设备模式检查:', selectedDevice.mode, '设备信息:', selectedDevice);
+    console.log('单文件传出设备模式检查:', selectedDevice.mode, '设备信息:', selectedDevice);
     if (selectedDevice.mode === 'offline') {
       setStatusBarMessage({
         type: "error",
@@ -564,29 +566,42 @@ const FileManagerPanel: React.FC = () => {
     }
 
     try {
+      // 获取用户文档目录
+      const docDir = await documentDir();
+      const downloadDir = await join(docDir, 'ADMT', 'output');
+      
+      // 检查并创建传出目录
+      const dirExists = await exists(downloadDir);
+      if (!dirExists) {
+        await mkdir(downloadDir, { recursive: true });
+        console.log('创建传出目录:', downloadDir);
+      }
+      
+      const localPath = await join(downloadDir, file.name);
+      
       setStatusBarMessage({
         type: "info",
-        message: `正在下载文件: ${file.name}...`,
+        message: `正在传出文件: ${file.name}...`,
       });
 
-      console.log('尝试拉取单个文件:', file.path, '设备状态:', selectedDevice.mode);
-      const result = await deviceService.pullFile(selectedDevice.serial, file.path, file.name);
+      console.log('尝试拉取单个文件:', file.path, '到:', localPath, '设备状态:', selectedDevice.mode);
+      const result = await deviceService.pullFile(selectedDevice.serial, file.path, localPath);
       if (result.success) {
         setStatusBarMessage({
           type: "success",
-          message: `文件下载成功: ${file.name}`,
+          message: `文件传出成功: ${file.name}，已保存到: ${downloadDir}`,
         });
       } else {
         setStatusBarMessage({
           type: "error",
-          message: `文件下载失败: ${result.error || '未知错误'}`,
+          message: `文件传出失败: ${result.error || '未知错误'}`,
         });
       }
     } catch (error) {
-      console.error('单文件下载失败:', error, '设备状态:', selectedDevice.mode);
+      console.error('单文件传出失败:', error, '设备状态:', selectedDevice.mode);
       setStatusBarMessage({
         type: "error",
-        message: `文件下载失败: ${error}`,
+        message: `文件传出失败: ${error}`,
       });
     }
   };
@@ -608,27 +623,27 @@ const FileManagerPanel: React.FC = () => {
     let successCount = 0;
     let failCount = 0;
 
-    // 定义下载目录
-    const downloadDir = "e:\\tauri\\admt\\output\\file";
-
-    // 添加下载开始的通知
-    setStatusBarMessage({
-      type: "info",
-      message: `正在下载 ${selectedFiles.size} 个文件到 ${downloadDir}，请稍候...`,
-    });
-
     try {
-      // 检查并创建下载目录
+      // 获取用户文档目录
+      const docDir = await documentDir();
+      const downloadDir = await join(docDir, 'ADMT', 'output');
+      
+      setStatusBarMessage({
+        type: "info",
+        message: `正在传出 ${selectedFiles.size} 个文件到 ${downloadDir}，请稍候...`,
+      });
+
+      // 检查并创建传出目录
       const dirExists = await exists(downloadDir);
       if (!dirExists) {
         await mkdir(downloadDir, { recursive: true });
-        console.log('创建下载目录:', downloadDir);
+        console.log('创建传出目录:', downloadDir);
       }
 
       for (const file of selectedFileItems) {
         if (file.type === 'file') {
           try {
-            const localPath = `${downloadDir}\\${file.name}`;
+            const localPath = await join(downloadDir, file.name);
             console.log('尝试拉取文件:', file.path, '到:', localPath, '设备状态:', selectedDevice.mode);
             const result = await deviceService.pullFile(selectedDevice.serial, file.path, localPath);
             if (result.success) {
@@ -642,21 +657,49 @@ const FileManagerPanel: React.FC = () => {
           }
         }
       }
+
+      setStatusBarMessage({
+        type: successCount > 0 ? "success" : "error",
+        message: `批量导出完成 - 成功: ${successCount}个, 失败: ${failCount}个，文件已保存到: ${downloadDir}`,
+      });
     } catch (error) {
-      console.error('创建下载目录失败:', error);
+      console.error('导出文件失败:', error);
       setStatusBarMessage({
         type: "error",
-        message: `创建下载目录失败: ${error}`,
+        message: `导出文件失败: ${error}`,
       });
-      return;
     }
 
-    setStatusBarMessage({
-      type: successCount > 0 ? "success" : "error",
-      message: `批量下载完成 - 成功: ${successCount}个, 失败: ${failCount}个，文件已保存到: ${downloadDir}`,
-    });
-
     setSelectedFiles(new Set());
+  };
+
+  // 打开导出目录
+  const handleOpenExportDirectory = async () => {
+    try {
+      const docDir = await documentDir();
+      const exportDir = await join(docDir, 'ADMT', 'output');
+      
+      // 确保目录存在
+      const dirExists = await exists(exportDir);
+      if (!dirExists) {
+        await mkdir(exportDir, { recursive: true });
+        console.log('创建导出目录:', exportDir);
+      }
+      
+      // 打开目录 - 使用Tauri的invoke方式
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('open_folder', { path: exportDir });
+      setStatusBarMessage({
+        type: "success",
+        message: "已打开导出目录",
+      });
+    } catch (error) {
+      console.error('打开导出目录失败:', error);
+      setStatusBarMessage({
+        type: "error",
+        message: `打开导出目录失败: ${error}`,
+      });
+    }
   };
 
   const handleUploadFile = async () => {
@@ -811,6 +854,13 @@ const FileManagerPanel: React.FC = () => {
               {isUploading ? '上传中...' : '上传文件'}
             </Button>
 
+            <Button
+              appearance="secondary"
+              icon={<Folder24Regular />}
+              onClick={handleOpenExportDirectory}
+            >
+              打开导出目录
+            </Button>
             {selectedFiles.size > 0 && (
               <>
                 <div className={styles.selectedInfo}>
@@ -821,7 +871,7 @@ const FileManagerPanel: React.FC = () => {
                   icon={<ArrowDownload24Regular />}
                   onClick={handleBatchDownload}
                 >
-                  批量下载
+                  批量导出
                 </Button>
               </>
             )}
@@ -894,7 +944,7 @@ const FileManagerPanel: React.FC = () => {
                                   icon={<ArrowDownload24Regular />}
                                   onClick={() => handleDownloadFile(file)}
                                 >
-                                  下载文件
+                                  传出文件
                                 </MenuItem>
                               )}
                               <MenuItem

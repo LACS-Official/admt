@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogSurface,
@@ -15,6 +15,7 @@ import {
 import {
   Phone24Regular,
   CheckmarkCircle24Regular,
+  Wifi2Regular,
 } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
@@ -42,6 +43,7 @@ const useStyles = makeStyles({
     '&:hover': {
       backgroundColor: 'var(--colorNeutralBackground1Hover)',
     },
+    flexWrap: 'wrap',
   },
   selectedDevice: {
     backgroundColor: 'var(--colorBrandBackground2)',
@@ -54,7 +56,8 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    flex: 1,
+    flex: 2,
+    minWidth: '250px',
   },
   deviceDetails: {
     display: 'flex',
@@ -108,6 +111,24 @@ const useStyles = makeStyles({
   statusUnauthorized: {
     backgroundColor: 'var(--colorPaletteRedForeground1)',
   },
+  wirelessDebuggingControl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  wirelessDebuggingButton: {
+    fontSize: '12px',
+    padding: '4px 8px',
+    minHeight: '24px',
+  },
+  wirelessDebuggingLabel: {
+    fontSize: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
 });
 
 interface Device {
@@ -116,6 +137,7 @@ interface Device {
   model?: string;
   mode: string;
   connected: boolean;
+  wirelessDebugging?: boolean; // 添加无线调试状态
   properties?: {
     marketName?: string;
     deviceName?: string;
@@ -130,6 +152,7 @@ interface DeviceSelectionDialogProps {
   devices: Device[];
   selectedDevice: Device | null;
   onDeviceSelect: (device: Device) => void;
+  onToggleWirelessDebugging?: (deviceSerial: string, enabled: boolean) => void; // 添加无线调试切换回调
 }
 
 const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
@@ -138,8 +161,26 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
   devices,
   selectedDevice,
   onDeviceSelect,
+  onToggleWirelessDebugging,
 }) => {
   const styles = useStyles();
+  const [wirelessDebuggingStates, setWirelessDebuggingStates] = useState<Record<string, boolean>>({});
+
+  // 切换无线调试状态
+  const toggleWirelessDebugging = (deviceSerial: string, currentState: boolean | undefined) => {
+    const newState = !currentState;
+    setWirelessDebuggingStates(prev => ({
+      ...prev,
+      [deviceSerial]: newState
+    }));
+    
+    // 调用父组件传递的回调函数
+    if (onToggleWirelessDebugging) {
+      onToggleWirelessDebugging(deviceSerial, newState);
+    }
+    
+    console.log(`切换设备 ${deviceSerial} 的无线调试状态为: ${newState ? '开启' : '关闭'}`);
+  };
 
   const getDeviceStatusColor = (device: Device) => {
     switch (device.mode) {
@@ -242,11 +283,10 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
                     }}
                   >
                     <div className={styles.deviceInfo}>
-                                  <div 
-                            className={mergeClasses(styles.statusIndicator, getDeviceStatusColor(device))}
-                          />
+                      <div 
+                        className={mergeClasses(styles.statusIndicator, getDeviceStatusColor(device))}
+                      />
                       <div className={styles.deviceDetails}>
-
                         <Text className={styles.deviceName}>
                           {getDeviceModeText(device.mode)}的设备：{getDeviceDisplayName(device)}
                         </Text>
@@ -260,6 +300,22 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
                         </div>
                       </div>
                     </div>
+                    {/* <div className={styles.wirelessDebuggingControl}>
+                      <Button
+                        size="small"
+                        appearance={wirelessDebuggingStates[device.serial] ?? device.wirelessDebugging ? "primary" : "outline"}
+                        className={styles.wirelessDebuggingButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleWirelessDebugging(device.serial, wirelessDebuggingStates[device.serial] ?? device.wirelessDebugging);
+                        }}
+                      >
+                        <Wifi2Regular />
+                        <Text style={{ marginLeft: '4px' }}>
+                          {wirelessDebuggingStates[device.serial] ?? device.wirelessDebugging ? "关闭无线" : "开启无线"}
+                        </Text>
+                      </Button>
+                    </div> */}
                     {selectedDevice?.serial === device.serial && (
                       <CheckmarkCircle24Regular style={{ color: 'var(--colorBrandForeground1)' }} />
                     )}

@@ -276,6 +276,7 @@ const AppManagerPanel: React.FC = () => {
   const [appToUninstall, setAppToUninstall] = useState<InstalledApp | null>(null);
   const [batchOperationUninstall, setBatchOperationUninstall] = useState<BatchOperation | null>(null);
   const [batchUninstallDialogOpen, setBatchUninstallDialogOpen] = useState(false);
+  const [useBatchLoading, setUseBatchLoading] = useState(true); // 是否使用分批加载
   const [appCache, setAppCache] = useState<Map<string, {apps: InstalledApp[], timestamp: number, includeSystem: boolean}>>(new Map());
   const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
   const [loadingProgress, setLoadingProgress] = useState<{current: number, total: number}>({current: 0, total: 0});
@@ -332,8 +333,8 @@ const AppManagerPanel: React.FC = () => {
       // 转换字段名格式（从snake_case到camelCase）并创建应用对象数组
        const appsWithVersion: InstalledApp[] = installedApps.map((app: any) => ({
          packageName: app.package_name || app.packageName || '',
-         versionName: app.version_name || app.versionName || '未知',
-         versionCode: app.version_code || app.versionCode || '',
+         versionName: normalizeVersionInfo(app.version_name || app.versionName || ''),
+         versionCode: normalizeVersionInfo(app.version_code || app.versionCode || ''),
          isSystemApp: app.is_system_app || app.isSystemApp || false,
          isEnabled: app.is_enabled !== undefined ? app.is_enabled : (app.isEnabled !== undefined ? app.isEnabled : true),
          // 保留其他可能存在的字段
@@ -380,7 +381,7 @@ const AppManagerPanel: React.FC = () => {
     }
   }, [selectedDevice, includeSystemApps, deviceService, setStatusBarMessage, appCache, CACHE_DURATION]);
 
-  // 分批加载应用列表（每10个应用显示一次）
+  // 分批加载应用列表（每10个应用显示一次）- 优化版本
   const loadAppsBatch = useCallback(async (forceRefresh = false) => {
     if (!selectedDevice) return;
 
@@ -427,8 +428,8 @@ const AppManagerPanel: React.FC = () => {
         // 转换字段名格式（从snake_case到camelCase）并创建应用对象数组
         const appsWithVersion: InstalledApp[] = batchApps.map((app: any) => ({
           packageName: app.package_name || app.packageName || '',
-          versionName: app.version_name || app.versionName || '未知',
-          versionCode: app.version_code || app.versionCode || '',
+          versionName: normalizeVersionInfo(app.version_name || app.versionName || ''),
+          versionCode: normalizeVersionInfo(app.version_code || app.versionCode || ''),
           isSystemApp: app.is_system_app || app.isSystemApp || false,
           isEnabled: app.is_enabled !== undefined ? app.is_enabled : (app.isEnabled !== undefined ? app.isEnabled : true),
           // 保留其他可能存在的字段
@@ -458,11 +459,13 @@ const AppManagerPanel: React.FC = () => {
         // 调试信息：打印当前进度
         console.log(`📊 当前进度: ${allApps.length}/${totalApps}`);
         
-        // 让UI先更新完成，再添加延迟
-        await new Promise(resolve => setTimeout(resolve, 100)); // 给UI一点时间更新
-        
-        // 添加较长的延迟，让用户能清楚地看到每批应用的加载效果
-        await new Promise(resolve => setTimeout(resolve, 600)); // 增加延迟时间到600ms
+        // 优化：减少延迟时间，提高响应速度
+        // 只在需要时添加延迟，第一批立即显示，后续批次适当延迟
+        if (batchIndex > 0) {
+          // 根据批次动态调整延迟时间：第一批0ms，第二批50ms，后续批次100ms
+          const delay = batchIndex === 1 ? 50 : 100;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
         
         // 如果已经加载完所有应用，退出循环
         if (allApps.length >= totalApps) {
@@ -470,9 +473,6 @@ const AppManagerPanel: React.FC = () => {
         }
         
         batchIndex++;
-        
-        // 添加短暂延迟，让UI有时间更新
-        await new Promise(resolve => setTimeout(resolve, 50));
       }
       
       const loadTime = Date.now() - startTime;
@@ -789,8 +789,8 @@ const AppManagerPanel: React.FC = () => {
           if (frozenApps) {
             const frozenAppsWithVersion: InstalledApp[] = frozenApps.map((app: any) => ({
               packageName: app.package_name || '',
-              versionName: app.version_name || '',
-              versionCode: app.version_code || '',
+              versionName: normalizeVersionInfo(app.version_name || ''),
+              versionCode: normalizeVersionInfo(app.version_code || ''),
               isSystemApp: app.is_system_app || false,
               isEnabled: app.is_enabled || false,
               installLocation: app.install_location || '',
@@ -1277,6 +1277,60 @@ const AppManagerPanel: React.FC = () => {
     };
   }, [viewSource, selectedDevice, loadCurrentApp]);
 
+  // 规范化版本信息，处理各种格式问题
+  const normalizeVersionInfo = (versionInfo: string): string => {
+    if (!versionInfo || versionInfo.trim() === '') {
+      return '';
+    }
+    
+    // 处理常见的版本格式问题
+    let normalized = versionInfo.trim();
+    
+    // 移除多余的引号
+    normalized = normalized.replace(/^["']|["']$/g, '');
+    
+    // 处理版本号中的特殊字符
+    normalized = normalized.replace(/[\r\n\t]/g, '');
+    
+    // 移除版本信息中的多余空格
+    normalized = normalized.replace(/\s+/g, ' ').trim();
+    
+    return normalized;
+  };
+
+  // 格式化版本名称，处理各种格式问题
+  const formatVersionName = (versionName: string): string => {
+    if (!versionName || versionName.trim() === '') {
+      return '未知';
+    }
+    
+    // 处理常见的版本格式问题
+    let formatted = versionName.trim();
+    
+    // 移除多余的引号
+    formatted = formatted.replace(/^["']|["']$/g, '');
+    
+    // 处理版本号中的特殊字符
+    formatted = formatted.replace(/[\r\n\t]/g, '');
+    
+    // 如果版本名称过长，截断并添加省略号
+    if (formatted.length > 20) {
+      formatted = formatted.substring(0, 20) + '...';
+    }
+    
+    // 检查是否为有效的版本格式
+    const versionRegex = /^[\d.]+$/;
+    if (!versionRegex.test(formatted)) {
+      // 如果不是纯数字和点，尝试提取版本号
+      const versionMatch = formatted.match(/(\d+(?:\.\d+)*)/);
+      if (versionMatch) {
+        formatted = versionMatch[1];
+      }
+    }
+    
+    return formatted;
+  };
+
   // 获取已冻结（被禁用）的应用列表
   const loadFrozenApps = useCallback(async () => {
     if (!selectedDevice) return;
@@ -1288,8 +1342,8 @@ const AppManagerPanel: React.FC = () => {
         // 转换为前端需要的格式
         const frozenAppsWithVersion: InstalledApp[] = frozenApps.map((app: any) => ({
           packageName: app.package_name || '',
-          versionName: app.version_name || '',
-          versionCode: app.version_code || '',
+          versionName: normalizeVersionInfo(app.version_name || ''),
+          versionCode: normalizeVersionInfo(app.version_code || ''),
           isSystemApp: app.is_system_app || false,
           isEnabled: app.is_enabled || false,
           installLocation: app.install_location || '',
@@ -1454,12 +1508,25 @@ const AppManagerPanel: React.FC = () => {
                   <Text>类型:</Text>
                   <div className={styles.buttonGroup}>
                     <Button
+                      appearance={useBatchLoading ? "primary" : "secondary"}
+                      size="small"
+                      onClick={() => setUseBatchLoading(!useBatchLoading)}
+                      disabled={isLoadingApps}
+                      title={useBatchLoading ? "当前使用分批加载（快速显示）" : "当前使用传统加载（一次性显示）"}
+                    >
+                      {useBatchLoading ? "分批加载" : "传统加载"}
+                    </Button>
+                    <Button
                       appearance={viewSource === "apps" && !includeSystemApps ? "primary" : "secondary"}
                       size="small"
                       onClick={() => {
                         setIncludeSystemApps(false);
                         setViewSource("apps");
-                        loadAppsBatch();
+                        if (useBatchLoading) {
+                          loadAppsBatch();
+                        } else {
+                          loadApps();
+                        }
                       }}
                       disabled={isLoadingApps}
                     >
@@ -1471,7 +1538,11 @@ const AppManagerPanel: React.FC = () => {
                       onClick={() => {
                         setIncludeSystemApps(true);
                         setViewSource("apps");
-                        loadAppsBatch();
+                        if (useBatchLoading) {
+                          loadAppsBatch();
+                        } else {
+                          loadApps();
+                        }
                       }}
                       disabled={isLoadingApps}
                     >
@@ -1618,7 +1689,16 @@ const AppManagerPanel: React.FC = () => {
                           </div>
                         </TableCell>
                         <TableCell className={styles.compactCell}>
-                          <Text size={200}>{app.versionName || "未知"}</Text>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <Text size={200} weight="semibold" title={app.versionName || "未知版本"}>
+                              {app.versionName ? formatVersionName(app.versionName) : "未知"}
+                            </Text>
+                            {app.versionCode && (
+                              <Text size={100} style={{ color: "var(--colorNeutralForeground3)" }} title={`版本代码: ${app.versionCode}`}>
+                                v{app.versionCode}
+                              </Text>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className={styles.compactCell}>
                           <Badge appearance={app.isEnabled ? "filled" : "outline"} color={app.isEnabled ? "success" : "warning"} size="small">
