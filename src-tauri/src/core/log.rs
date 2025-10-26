@@ -90,8 +90,8 @@ pub fn persist_log(level: String, message: String, context: Option<serde_json::V
 pub fn persist_log_to_file(log_entry: StructuredLogEntry) -> Result<()> { 
     let logs_dir = initialize_log_directory()?; 
     
-    // 使用当前日期作为日志文件名的一部分 
-    let date_str = Local::now().format("%Y%m%d").to_string(); 
+    // 使用当前日期作为日志文件名的一部分，格式为 admt_log_YYYY-MM-DD.log
+    let date_str = Local::now().format("%Y-%m-%d").to_string(); 
     let log_file_path = logs_dir.join(format!("admt_log_{}.log", date_str)); 
     
     // 打开日志文件（如果不存在则创建，如果存在则追加） 
@@ -276,11 +276,11 @@ pub fn cleanup_expired_logs(basic_cutoff_days: Option<u64>, error_cutoff_days: O
                     if filename.starts_with("admt_log_") && filename.ends_with(".log") { 
                         // 尝试从文件名提取日期 
                         if let Some(date_str) = filename.strip_prefix("admt_log_").and_then(|s| s.strip_suffix(".log")) { 
-                            if let Ok(file_date) = chrono::NaiveDate::parse_from_str(date_str, "%Y%m%d") { 
+                            if let Ok(file_date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") { 
                                 let file_datetime = Utc.timestamp_opt(file_date.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp(), 0).unwrap(); 
                                 
                                 // 判断文件是否应该被清理 
-                                let should_cleanup = if date_str == now.format("%Y%m%d").to_string() { 
+                                let should_cleanup = if date_str == now.format("%Y-%m-%d").to_string() { 
                                     // 不清理当前日期的日志文件 
                                     false 
                                 } else { 

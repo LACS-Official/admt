@@ -19,7 +19,6 @@ import AboutPanel from "./AboutPanel";
 import DeviceSettingsPanel from "./DeviceSettingsPanel";
 import DisplaySettingsPanel from "./DisplaySettingsPanel";
 import OtherSettingsPanel from "./OtherSettingsPanel";
-import LogsPanel from "./LogsPanel";
 import PrivacyManagementPanel from "./PrivacyManagementPanel";
 
 const useStyles = makeStyles({
@@ -74,12 +73,7 @@ const tabs = [
     id: "privacy" as SettingsView,
     label: "隐私政策",
     icon: <Shield24Regular />,
-  },
-  {
-    id: "logs" as SettingsView,
-    label: "日志",
-    icon: <Document24Regular />,
-  },
+  }
 ];
 
 const SettingsPanel: React.FC = () => {
@@ -102,8 +96,6 @@ const SettingsPanel: React.FC = () => {
         return <OtherSettingsPanel />;
       case "privacy":
         return <PrivacyManagementPanel />;
-      case "logs":
-        return <LogsPanel />;
     }
   };
 

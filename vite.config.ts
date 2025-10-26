@@ -10,6 +10,15 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        'command_panel': resolve(__dirname, 'command_panel.html'),
+        'log_panel': resolve(__dirname, 'log_panel.html'),
+      },
+    },
+  },
   server: {
     port: 2935,
     strictPort: false, // 允许使用其他端口

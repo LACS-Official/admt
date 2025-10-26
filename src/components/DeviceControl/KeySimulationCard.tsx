@@ -38,11 +38,11 @@ const useStyles = makeStyles({
   },
   commandGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: "12px",
   },
   commandButton: {
-    height: "80px",
+    height: "60px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -54,7 +54,7 @@ const useStyles = makeStyles({
     fontSize: "24px",
   },
   commandLabel: {
-    fontSize: "14px",
+    fontSize: "12px",
     textAlign: "center",
     lineHeight: "1.2",
   },

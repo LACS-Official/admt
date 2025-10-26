@@ -2,13 +2,10 @@ import React from "react";
 import {
   makeStyles,
   mergeClasses,
-  Text,
   Button,
   Tooltip,
 } from "@fluentui/react-components";
 import {
-  WeatherMoon24Regular,
-  WeatherSunny24Regular,
   Subtract24Regular,
   Dismiss24Regular,
   Maximize24Regular,
@@ -22,9 +19,15 @@ import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { admtLogo64 } from "../../assets/icons";
-import AnnouncementBar from "./AnnouncementBar";
 
 const useStyles = makeStyles({
+  appName: {
+    fontWeight: "600",
+    fontSize: "18px",
+    color: "var(--colorNeutralForeground1)",
+    userSelect: "none",
+    cursor: "default",
+  },
   IconImage: {
     width: "100%",
     height: "100%",
@@ -258,34 +261,15 @@ const TitleBar: React.FC = () => {
         {/* 左侧区域 - Logo和应用名称 - 支持拖拽 */}
         <div className={styles.leftSection} data-tauri-drag-region>
           <img src={admtLogo64} alt="Logo" className={styles.logo} />
+          <span className={styles.appName}>玩机管家</span>
         </div>
 
-        {/* 中间区域 - 公告展示条 - 支持拖拽 */}
-        <div className={styles.centerSection} data-tauri-drag-region>
-          <AnnouncementBar />
-        </div>
 
         {/* 右侧区域 - 控制按钮 - 不支持拖拽 */}
         <div className={styles.rightSection} data-tauri-drag-region="false">
 
 
-          <Tooltip
-            content={isDarkMode ? "切换到浅色模式" : "切换到深色模式"}
-            relationship="label"
-          >
-            <Button
-              appearance="subtle"
-              icon={
-                isDarkMode ? (
-                  <WeatherSunny24Regular />
-                ) : (
-                  <WeatherMoon24Regular />
-                )
-              }
-              className={styles.titleBarButton}
-              onClick={toggleTheme}
-            />
-          </Tooltip>
+
 
           <Tooltip
             content={isAlwaysOnTop ? "取消置顶" : "窗口置顶"}

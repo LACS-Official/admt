@@ -5,6 +5,9 @@
 
 import { invoke } from '@tauri-apps/api/core'
 
+// 检查是否在Tauri环境中
+const isTauriEnvironment = typeof window !== 'undefined' && window.__TAURI__;
+
 /**
  * 安全配置接口（匹配Rust结构体字段名）
  */
@@ -49,16 +52,22 @@ export class SecurityConfigManager {
     }
 
     try {
-      // 从Tauri后端获取安全配置
-      const config = await invoke<SecurityConfig>('get_security_config');
-      
-      // 验证配置完整性
-      this.validateConfig(config);
-      
-      this.config = config;
-      this.isInitialized = true;
-      
-      console.log('✅ 安全配置初始化成功');
+      // 从Tauri后端获取安全配置（仅在Tauri环境中）
+      if (isTauriEnvironment) {
+        const config = await invoke<SecurityConfig>('get_security_config');
+        
+        // 验证配置完整性
+        this.validateConfig(config);
+        
+        this.config = config;
+        this.isInitialized = true;
+        
+        console.log('✅ 安全配置初始化成功');
+      } else {
+        // 非Tauri环境，直接使用默认配置
+        console.log('🔄 非Tauri环境，使用默认配置...');
+        await this.initializeWithDefaults();
+      }
     } catch (error) {
       console.error('❌ 安全配置初始化失败:', error);
       

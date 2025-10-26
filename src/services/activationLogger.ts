@@ -224,12 +224,12 @@ export class ActivationLogger {
   }
 
   public logExpirationCheck(result: any): void {
-    this.info('EXPIRATION', '过期检查完成', {
-      isExpired: result.isExpired,
-      needsActivation: result.needsActivation,
-      expiryDate: result.expiryDate?.toISOString(),
-      expiredReason: result.expiredReason,
-    });
+    // this.info('EXPIRATION', '过期检查完成', {
+    //   isExpired: result.isExpired,
+    //   needsActivation: result.needsActivation,
+    //   expiryDate: result.expiryDate?.toISOString(),
+    //   expiredReason: result.expiredReason,
+    // });
   }
 
   public logExpirationHandling(action: string, details?: any): void {

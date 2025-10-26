@@ -1,4 +1,4 @@
-import React, { useState }  from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
   Text,
@@ -9,13 +9,13 @@ import {
   CloudArrowUp24Regular,
   Settings24Regular,
   LockOpen24Regular,
-  Flash24Regular,
   Code24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
-import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
-import ImageFlashCard from "../Tools/ImageFlashCard";
-import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
+import { DownloadManagerPanel } from "./DownloadManagerPanel";
+import OnlineResourcesPanel from "./OnlineResourcesPanel";
+
+
 
 const useStyles = makeStyles({
   container: {
@@ -135,69 +135,41 @@ const useStyles = makeStyles({
   },
 });
 
-type FlashZoneView =  "unlock-tools" | "image-flash" | "xiaomi-flash" | "system-backup";
+type FlashZoneView =  "online-resources" | "download-manager";
 
-const FlashZonePanel: React.FC = () => {
+const OnlineZonePanel: React.FC = () => {
   const styles = useStyles();
-  const { selectedDevice, devices } = useDeviceStore();
-  const [currentView, setCurrentView] = useState<FlashZoneView>("unlock-tools");
-  const connectedDevices = devices.filter(d => d.connected);
+  const [currentView, setCurrentView] = useState<FlashZoneView>("online-resources");
 
 
 
   const tabs = [
     {
-      id: "unlock-tools" as FlashZoneView,
-      label: "解锁工具",
+      id: "online-resources" as FlashZoneView,
+      label: "在线资源",
       icon: <LockOpen24Regular />,
     },
     {
-      id: "image-flash" as FlashZoneView,
-      label: "镜像刷入",
+      id: "download-manager" as FlashZoneView,
+      label: "下载管理",
       icon: <CloudArrowUp24Regular />,
-    },
-    {
-      id: "xiaomi-flash" as FlashZoneView,
-      label: "线刷工具",
-      icon: <Flash24Regular />,
     },
   ];
 
   const renderContent = () => {
-    // 即使没有选中设备也显示默认内容，以支持刷机过程中设备断开的情况
-    const deviceToUse = selectedDevice || connectedDevices[0] || null;
 
     switch (currentView) {
-      case "unlock-tools":
-        return deviceToUse ? <XiaomiUnlockCard device={deviceToUse} /> : <XiaomiUnlockCard device={null} />;
-      case "image-flash":
-        return deviceToUse ? <ImageFlashCard device={deviceToUse} /> : <ImageFlashCard device={null} />;
-      case "xiaomi-flash":
-        return deviceToUse ? <XiaomiFlashCard device={deviceToUse} /> : <XiaomiFlashCard device={null} />;
+      case "online-resources":
+        return <OnlineResourcesPanel />;
+      case "download-manager":
+        return <DownloadManagerPanel onBack={() => {}}/>;
       default:
-       return deviceToUse ? <XiaomiUnlockCard device={deviceToUse} /> : <XiaomiUnlockCard device={null} />;
+       return <OnlineResourcesPanel />;
     }
   };
 
   return (
         <div className={styles.container}>
-  {connectedDevices.length === 0 ? (
-        <div className={styles.noDevice}>
-          <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>未检测到设备</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备已连接
-          </Text>
-        </div>
-      ) : !selectedDevice ? (
-        <div className={styles.noDevice}>
-          <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>请选择一个设备</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            从设备信息页面选择要操作的设备
-          </Text>
-        </div>
-      ) : (
       <div className={styles.content}>
         <div className={styles.tabContainer}>
           <TabList
@@ -221,9 +193,8 @@ const FlashZonePanel: React.FC = () => {
           </div>
         </div>
       </div>
-          )}
     </div>
   );
 };
 
-export default FlashZonePanel;
+export default OnlineZonePanel;

@@ -39,6 +39,10 @@
     "http": null,
     "shell": {
       "open": true
+    },
+    "dialog": null,
+    "fs": {
+      "requireLiteralLeadingDot": true
     }
   },
   "bundle": {
@@ -59,7 +63,8 @@
       "tools",
       "tools/adb",
       "tools/scrcpy-win32-v3.3.1",
-      "tools/lacs"
+      "tools/lacs",
+      "config"
     ],
     "windows": {
       "certificateThumbprint": null,

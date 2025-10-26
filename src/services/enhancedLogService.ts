@@ -99,12 +99,12 @@ class EnhancedLogService {
       this.logStructured({
         level: "info",
         category: "system",
-        message: "增强日志服务已启动 - 使用新日志格式",
+        message: "日志服务已启动",
         source: "EnhancedLogService",
         context: {
           sessionId: this.sessionId,
           retentionPolicy: this.retentionPolicy,
-          logFormat: "admt_log_YYYYMMDD.log",
+          logFormat: "admt_log_YYYY-MM-DD.log",
           logLocation: logDirectory || "{软件运行目录}/logs/"
         }
       });
@@ -196,7 +196,7 @@ class EnhancedLogService {
           console.warn("内存持久化失败:", error);
         }),
         // 新的文件持久化
-        invoke('persist_log_to_file', JSON.stringify(entry)).catch(error => {
+        invoke('persist_log_to_file', { logEntry: JSON.stringify(entry) }).catch(error => {
           console.warn("文件持久化失败:", error);
         })
       ]);
@@ -418,6 +418,147 @@ class EnhancedLogService {
       message: `安全事件: ${event}`,
       source,
       context
+    });
+  }
+
+  // 应用启动和关闭记录
+  logAppStartup(source: string, context?: any): void {
+    this.logStructured({
+      level: "info",
+      category: "system",
+      message: "应用启动",
+      source,
+      context: {
+        startupTime: new Date().toISOString(),
+        version: import.meta.env?.VITE_APP_VERSION || "unknown",
+        ...context
+      }
+    });
+  }
+
+  logAppShutdown(source: string, context?: any): void {
+    this.logStructured({
+      level: "info",
+      category: "system",
+      message: "应用关闭",
+      source,
+      context: {
+        shutdownTime: new Date().toISOString(),
+        ...context
+      }
+    });
+  }
+
+  // 页面导航记录
+  logPageNavigation(page: string, source: string, context?: any): void {
+    this.logStructured({
+      level: "info",
+      category: "user",
+      message: `页面导航: ${page}`,
+      source,
+      context: {
+        page,
+        timestamp: new Date().toISOString(),
+        ...context
+      }
+    });
+  }
+
+  // 设备连接/断开记录
+  logDeviceConnection(deviceId: string, action: 'connected' | 'disconnected', source: string, context?: any): void {
+    this.logStructured({
+      level: action === 'connected' ? "info" : "warning",
+      category: "device",
+      message: `设备${action === 'connected' ? '连接' : '断开'}: ${deviceId}`,
+      source,
+      context: {
+        deviceId,
+        action,
+        timestamp: new Date().toISOString(),
+        ...context
+      }
+    });
+  }
+
+  // 文件操作记录
+  logFileOperation(operation: string, filePath: string, source: string, context?: any): void {
+    this.logStructured({
+      level: "info",
+      category: "system",
+      message: `文件操作: ${operation} - ${filePath}`,
+      source,
+      context: {
+        operation,
+        filePath,
+        timestamp: new Date().toISOString(),
+        ...context
+      }
+    });
+  }
+
+  // 设置变更记录
+  logSettingChange(setting: string, oldValue: any, newValue: any, source: string, context?: any): void {
+    this.logStructured({
+      level: "info",
+      category: "user",
+      message: `设置变更: ${setting}`,
+      source,
+      context: {
+        setting,
+        oldValue,
+        newValue,
+        timestamp: new Date().toISOString(),
+        ...context
+      }
+    });
+  }
+
+  // 网络状态记录
+  logNetworkStatus(status: 'online' | 'offline', source: string, context?: any): void {
+    this.logStructured({
+      level: status === 'online' ? "info" : "warning",
+      category: "network",
+      message: `网络状态: ${status === 'online' ? '在线' : '离线'}`,
+      source,
+      context: {
+        status,
+        timestamp: new Date().toISOString(),
+        ...context
+      }
+    });
+  }
+
+  // 性能监控记录
+  logPerformance(operation: string, duration: number, source: string, context?: any): void {
+    this.logStructured({
+      level: duration > 1000 ? "warning" : "info",
+      category: "system",
+      message: `性能监控: ${operation} - ${duration}ms`,
+      source,
+      context: {
+        operation,
+        duration,
+        timestamp: new Date().toISOString(),
+        ...context
+      }
+    });
+  }
+
+  // 错误边界记录
+  logErrorBoundary(error: Error, component: string, source: string, context?: any): void {
+    this.logStructured({
+      level: "error",
+      category: "system",
+      message: `React错误边界: ${component}`,
+      source,
+      context: {
+        errorName: error.name,
+        errorMessage: error.message,
+        component,
+        stackTrace: error.stack,
+        ...context
+      },
+      stackTrace: error.stack
     });
   }
 

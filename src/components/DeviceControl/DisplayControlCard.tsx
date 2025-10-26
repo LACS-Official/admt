@@ -21,8 +21,6 @@ import {
 import {
   Desktop24Regular,
   Navigation24Regular,
-  Timer24Regular,
-  Settings24Regular,
   ArrowReset24Regular,
   Checkmark24Regular,
   Dismiss24Regular,
@@ -148,21 +146,11 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
   const [displaySettings, setDisplaySettings] = useState({
     resolution: { width: 0, height: 0 },
     density: 0,
-    fontScale: 0,
-    windowAnimationScale: 0,
-    transitionAnimationScale: 0,
-    animatorDurationScale: 0,
-    screenTimeout: 0,
     overscan: 0,
   });
   
   const [defaultSettings, setDefaultSettings] = useState({
     density: 1.0,
-    fontScale: 1.0,
-    windowAnimationScale: 1.0,
-    transitionAnimationScale: 1.0,
-    animatorDurationScale: 1.0,
-    screenTimeout: 30000, // 30秒
     overscan: 0,
   });
 
@@ -214,50 +202,6 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
             density: parseInt(match[1])
           }));
         }
-      }
-      
-      // 获取字体缩放
-      const fontScaleResult = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "get", "system", "font_scale"]);
-      if (fontScaleResult.success && fontScaleResult.output) {
-        setDisplaySettings(prev => ({
-          ...prev,
-          fontScale: parseFloat(fontScaleResult.output)
-        }));
-      }
-      
-      // 获取动画缩放
-      const windowAnimScaleResult = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "get", "global", "window_animation_scale"]);
-      const transitionAnimScaleResult = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "get", "global", "transition_animation_scale"]);
-      const animatorDurationScaleResult = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "get", "global", "animator_duration_scale"]);
-      
-      if (windowAnimScaleResult.success && windowAnimScaleResult.output) {
-        setDisplaySettings(prev => ({
-          ...prev,
-          windowAnimationScale: parseFloat(windowAnimScaleResult.output)
-        }));
-      }
-      
-      if (transitionAnimScaleResult.success && transitionAnimScaleResult.output) {
-        setDisplaySettings(prev => ({
-          ...prev,
-          transitionAnimationScale: parseFloat(transitionAnimScaleResult.output)
-        }));
-      }
-      
-      if (animatorDurationScaleResult.success && animatorDurationScaleResult.output) {
-        setDisplaySettings(prev => ({
-          ...prev,
-          animatorDurationScale: parseFloat(animatorDurationScaleResult.output)
-        }));
-      }
-      
-      // 获取屏幕超时
-      const screenTimeoutResult = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "get", "system", "screen_off_timeout"]);
-      if (screenTimeoutResult.success && screenTimeoutResult.output) {
-        setDisplaySettings(prev => ({
-          ...prev,
-          screenTimeout: parseInt(screenTimeoutResult.output)
-        }));
       }
       
       // 获取过扫描设置
@@ -436,149 +380,11 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     }
   };
 
-  // 设置窗口动画缩放
-  const setWindowAnimationScale = async (scale: number) => {
-    const commandId = "set_window_animation_scale";
-    setExecutingCommand(commandId);
-    try {
-      const result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "global", "window_animation_scale", scale.toString()]);
-      
-      if (result.success) {
-        setDisplaySettings(prev => ({ ...prev, windowAnimationScale: scale }));
-        setStatusBarMessage({
-          type: "success",
-          message: `窗口动画速度已设置为 ${scale}`,
-        });
-        // 重新获取设置以确保更新
-        setTimeout(fetchDisplaySettings, 500);
-      } else {
-        setStatusBarMessage({
-          type: "error",
-          message: "设置窗口动画速度失败",
-        });
-      }
-    } catch (error) {
-      setStatusBarMessage({
-        type: "error",
-        message: `设置窗口动画速度失败: ${error}`,
-      });
-    } finally {
-      setExecutingCommand(null);
-    }
-  };
-
-  // 设置过渡动画缩放
-  const setTransitionAnimationScale = async (scale: number) => {
-    const commandId = "set_transition_animation_scale";
-    setExecutingCommand(commandId);
-    try {
-      const result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "global", "transition_animation_scale", scale.toString()]);
-      
-      if (result.success) {
-        setDisplaySettings(prev => ({ ...prev, transitionAnimationScale: scale }));
-        setStatusBarMessage({
-          type: "success",
-          message: `过渡动画速度已设置为 ${scale}`,
-        });
-        // 重新获取设置以确保更新
-        setTimeout(fetchDisplaySettings, 500);
-      } else {
-        setStatusBarMessage({
-          type: "error",
-          message: "设置过渡动画速度失败",
-        });
-      }
-    } catch (error) {
-      setStatusBarMessage({
-        type: "error",
-        message: `设置过渡动画速度失败: ${error}`,
-      });
-    } finally {
-      setExecutingCommand(null);
-    }
-  };
-
-  // 设置动画持续时间缩放
-  const setAnimatorDurationScale = async (scale: number) => {
-    const commandId = "set_animator_duration_scale";
-    setExecutingCommand(commandId);
-    try {
-      const result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "global", "animator_duration_scale", scale.toString()]);
-      
-      if (result.success) {
-        setDisplaySettings(prev => ({ ...prev, animatorDurationScale: scale }));
-        setStatusBarMessage({
-          type: "success",
-          message: `程序动画速度已设置为 ${scale}`,
-        });
-        // 重新获取设置以确保更新
-        setTimeout(fetchDisplaySettings, 500);
-      } else {
-        setStatusBarMessage({
-          type: "error",
-          message: "设置程序动画速度失败",
-        });
-      }
-    } catch (error) {
-      setStatusBarMessage({
-        type: "error",
-        message: `设置程序动画速度失败: ${error}`,
-      });
-    } finally {
-      setExecutingCommand(null);
-    }
-  };
-
-  // 设置屏幕超时
-  const setScreenTimeout = async (timeout: number) => {
-    const commandId = "set_screen_timeout";
-    setExecutingCommand(commandId);
-    try {
-      const result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "system", "screen_off_timeout", timeout.toString()]);
-      if (result.success) {
-        setDisplaySettings(prev => ({ ...prev, screenTimeout: timeout }));
-        setStatusBarMessage({
-          type: "success",
-          message: `自动锁屏时间已设置为 ${timeout/1000} 秒`,
-        });
-        // 重新获取设置以确保更新
-        setTimeout(fetchDisplaySettings, 500);
-      } else {
-        setStatusBarMessage({
-          type: "error",
-          message: result.error || "设置自动锁屏时间失败",
-        });
-      }
-    } catch (error) {
-      setStatusBarMessage({
-        type: "error",
-        message: `设置自动锁屏时间失败: ${error}`,
-      });
-    } finally {
-      setExecutingCommand(null);
-    }
-  };
-
   // 恢复默认设置
   const resetToDefault = (settingType: string) => {
     switch (settingType) {
       case "density":
         setDisplayDensity(Math.round(defaultSettings.density * 160)); // Android中默认密度1.0对应160dpi
-        break;
-      case "fontScale":
-        setFontScale(defaultSettings.fontScale);
-        break;
-      case "windowAnimationScale":
-          setWindowAnimationScale(defaultSettings.windowAnimationScale);
-          break;
-        case "transitionAnimationScale":
-          setTransitionAnimationScale(defaultSettings.transitionAnimationScale);
-          break;
-        case "animatorDurationScale":
-          setAnimatorDurationScale(defaultSettings.animatorDurationScale);
-          break;
-      case "screenTimeout":
-        setScreenTimeout(defaultSettings.screenTimeout);
         break;
       case "overscan":
         setOverscan(defaultSettings.overscan);
@@ -600,10 +406,6 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
       <div className={styles.content}>
         {/* 屏幕分辨率控制 */}
         <div className={styles.section}>
-          <div className={styles.sectionTitle}>
-            <Desktop24Regular />
-            <Text>屏幕设置</Text>
-          </div>
           
           {/* 分辨率控制 */}
           <div className={styles.controlRow}>
@@ -682,222 +484,6 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
             </Button>
           </div>
 
-          {/* 过扫描控制 */}
-          <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>过扫描:</Text>
-            <Text className={styles.controlValue}>
-              {displaySettings.overscan >= 0 ? `${displaySettings.overscan}%` : "未知"}
-            </Text>
-            <Dropdown
-              className={styles.dropdownControl}
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              value={displaySettings.overscan >= 0 ? displaySettings.overscan.toString() : ""}
-              onOptionSelect={(_, data) => {
-                if (data.optionValue) {
-                  setOverscan(parseInt(data.optionValue));
-                }
-              }}
-            >
-              <Option value="0">0% (关闭)</Option>
-              <Option value="5">5%</Option>
-              <Option value="10">10%</Option>
-              <Option value="15">15%</Option>
-              <Option value="20">20%</Option>
-            </Dropdown>
-            <Button
-              className={styles.controlButton}
-              appearance="outline"
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              onClick={() => resetToDefault("overscan")}
-            >
-              恢复默认
-            </Button>
-          </div>
-        </div>
-
-        {/* 显示效果控制 */}
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>
-            <Settings24Regular />
-            <Text>显示效果</Text>
-          </div>
-
-          {/* 字体大小控制 */}
-          <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>字体大小:</Text>
-            <Text className={styles.controlValue}>
-              {displaySettings.fontScale > 0 ? `${displaySettings.fontScale}x` : "未知"}
-            </Text>
-            <Dropdown
-                className={styles.dropdownControl}
-                disabled={!isDeviceAvailable || executingCommand !== null}
-                value={displaySettings.fontScale > 0 ? displaySettings.fontScale.toString() : ""}
-                onOptionSelect={(_, data) => {
-                  if (data.optionValue) {
-                    setFontScale(parseFloat(data.optionValue));
-                  }
-                }}
-              >
-                <Option value="0">0x</Option>
-                <Option value="0.5">0.5x</Option>
-                <Option value="0.85">0.85x (小)</Option>
-                <Option value="1.0">1.0x (默认)</Option>
-                <Option value="1.15">1.15x (大)</Option>
-                <Option value="1.3">1.3x (特大)</Option>
-                <Option value="1.5">1.5x</Option>
-                <Option value="2.0">2.0x</Option>
-                <Option value="3.0">3.0x</Option>
-                <Option value="4.0">4.0x</Option>
-                <Option value="5.0">5.0x</Option>
-              </Dropdown>
-            <Button
-              className={styles.controlButton}
-              appearance="outline"
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              onClick={() => resetToDefault("fontScale")}
-            >
-              恢复默认
-            </Button>
-          </div>
-
-          {/* 窗口动画速度控制 */}
-          <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>窗口动画速度:</Text>
-            <Text className={styles.controlValue}>
-              {displaySettings.windowAnimationScale >= 0 ? `${displaySettings.windowAnimationScale}x` : "未知"}
-            </Text>
-            <Dropdown
-              className={styles.dropdownControl}
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              value={displaySettings.windowAnimationScale >= 0 ? displaySettings.windowAnimationScale.toString() : ""}
-              onOptionSelect={(_, data) => {
-                if (data.optionValue) {
-                  setWindowAnimationScale(parseFloat(data.optionValue));
-                }
-              }}
-            >
-              <Option value="0">动画关闭</Option>
-              <Option value="0.5">0.5x (慢)</Option>
-              <Option value="1.0">1.0x (标准)</Option>
-              <Option value="1.5">1.5x (快)</Option>
-              <Option value="2.0">2.0x (更快)</Option>
-            </Dropdown>
-            <Button
-              className={styles.controlButton}
-              appearance="outline"
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              onClick={() => resetToDefault("windowAnimationScale")}
-            >
-              恢复默认
-            </Button>
-          </div>
-
-          {/* 过渡动画速度控制 */}
-          <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>过渡动画速度:</Text>
-            <Text className={styles.controlValue}>
-              {displaySettings.transitionAnimationScale >= 0 ? `${displaySettings.transitionAnimationScale}x` : "未知"}
-            </Text>
-            <Dropdown
-              className={styles.dropdownControl}
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              value={displaySettings.transitionAnimationScale >= 0 ? displaySettings.transitionAnimationScale.toString() : ""}
-              onOptionSelect={(_, data) => {
-                if (data.optionValue) {
-                  setTransitionAnimationScale(parseFloat(data.optionValue));
-                }
-              }}
-            >
-              <Option value="0">动画关闭</Option>
-              <Option value="0.5">0.5x (慢)</Option>
-              <Option value="1.0">1.0x (标准)</Option>
-              <Option value="1.5">1.5x (快)</Option>
-              <Option value="2.0">2.0x (更快)</Option>
-            </Dropdown>
-            <Button
-              className={styles.controlButton}
-              appearance="outline"
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              onClick={() => resetToDefault("transitionAnimationScale")}
-            >
-              恢复默认
-            </Button>
-          </div>
-
-          {/* 程序动画速度控制 */}
-          <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>程序动画速度:</Text>
-            <Text className={styles.controlValue}>
-              {displaySettings.animatorDurationScale >= 0 ? `${displaySettings.animatorDurationScale}x` : "未知"}
-            </Text>
-            <Dropdown
-              className={styles.dropdownControl}
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              value={displaySettings.animatorDurationScale >= 0 ? displaySettings.animatorDurationScale.toString() : ""}
-              onOptionSelect={(_, data) => {
-                if (data.optionValue) {
-                  setAnimatorDurationScale(parseFloat(data.optionValue));
-                }
-              }}
-            >
-              <Option value="0">动画关闭</Option>
-              <Option value="0.5">0.5x (慢)</Option>
-              <Option value="1.0">1.0x (标准)</Option>
-              <Option value="1.5">1.5x (快)</Option>
-              <Option value="2.0">2.0x (更快)</Option>
-            </Dropdown>
-            <Button
-              className={styles.controlButton}
-              appearance="outline"
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              onClick={() => resetToDefault("animatorDurationScale")}
-            >
-              恢复默认
-            </Button>
-          </div>
-        </div>
-
-        {/* 电源管理控制 */}
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>
-            <Timer24Regular />
-            <Text>电源管理</Text>
-          </div>
-
-          {/* 自动锁屏时间控制 */}
-          <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>自动锁屏:</Text>
-            <Text className={styles.controlValue}>
-              {displaySettings.screenTimeout > 0 ? `${displaySettings.screenTimeout / 1000} 秒` : "未知"}
-            </Text>
-            <Dropdown
-              className={styles.dropdownControl}
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              value={displaySettings.screenTimeout > 0 ? (displaySettings.screenTimeout / 1000).toString() : ""}
-              onOptionSelect={(_, data) => {
-                if (data.optionValue) {
-                  setScreenTimeout(parseInt(data.optionValue) * 1000);
-                }
-              }}
-            >
-              <Option value="15">15 秒</Option>
-              <Option value="30">30 秒</Option>
-              <Option value="60">1 分钟</Option>
-              <Option value="120">2 分钟</Option>
-              <Option value="300">5 分钟</Option>
-              <Option value="600">10 分钟</Option>
-              <Option value="1800">30 分钟</Option>
-              <Option value="-1">从不</Option>
-            </Dropdown>
-            <Button
-              className={styles.controlButton}
-              appearance="outline"
-              disabled={!isDeviceAvailable || executingCommand !== null}
-              onClick={() => resetToDefault("screenTimeout")}
-            >
-              恢复默认
-            </Button>
-          </div>
         </div>
 
         {!isDeviceAvailable && (
