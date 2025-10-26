@@ -1,5 +1,5 @@
 use crate::activation::{ActivationRequest, ActivationResponse, ActivationValidator, AppConfig};
-use crate::adb::device::device_info::{get_device_info, get_device_properties_batch};
+  use crate::adb::device::device_info::{get_device_info, get_device_properties_batch};
 
 use crate::adb_commands::{AdbIntegrityReport, AdbToolsInfo};
 use crate::cache::get_cache_manager;
@@ -2041,5 +2041,66 @@ fn get_config_file_path() -> Result<PathBuf> {
         .join("adbCommands.json");
 
     Ok(default_path)
+}
+
+/// 获取资源文件的完整路径
+#[tauri::command]
+pub async fn get_resource_path<R: tauri::Runtime>(
+    app_handle: tauri::AppHandle<R>,
+    path: String
+) -> Result<String> {
+    log::info!("Getting resource path for: {}", path);
+    
+    // 尝试从data_dir构造路径
+    let data_dir = app_handle.path().app_data_dir()
+        .map_err(|_| AdmtError::Unknown { 
+            message: "Failed to get app data directory".to_string() 
+        })?;
+    
+    // 检查src-tauri/resource目录
+    let resource_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("resource")
+        .join(&path);
+    
+    log::debug!("Checking resource path: {:?}", resource_path);
+    
+    if resource_path.exists() {
+        log::info!("Resource found at: {:?}", resource_path);
+        return Ok(resource_path.to_string_lossy().to_string());
+    }
+    
+    // 检查app data目录
+    let app_data_path = data_dir.join("resource").join(&path);
+    log::debug!("Checking app data path: {:?}", app_data_path);
+    
+    if app_data_path.exists() {
+        log::info!("Resource found in app data at: {:?}", app_data_path);
+        return Ok(app_data_path.to_string_lossy().to_string());
+    }
+    
+    // 如果都找不到，返回错误
+    log::error!("Resource not found: {}", path);
+    Err(AdmtError::FileNotFound { path: path.to_string() })
+}
+
+/// 读取资源文件内容并返回为字节数组
+#[tauri::command]
+pub async fn read_resource_file<R: tauri::Runtime>(
+    app_handle: tauri::AppHandle<R>,
+    path: String
+) -> Result<Vec<u8>> {
+    log::info!("Reading resource file: {}", path);
+    
+    // 使用get_resource_path获取文件路径
+    let file_path = get_resource_path(app_handle, path.clone()).await?;
+    
+    // 读取文件内容
+    let content = std::fs::read(&file_path)
+        .map_err(|e| AdmtError::IoError {
+            message: format!("Failed to read resource file {}: {}", file_path, e)
+        })?;
+    
+    log::info!("Successfully read resource file: {} ({} bytes)", file_path, content.len());
+    Ok(content)
 }
 

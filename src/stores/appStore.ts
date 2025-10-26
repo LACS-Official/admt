@@ -38,6 +38,7 @@ const defaultConfig: AppConfig = {
   autoStartEnabled: false,
   minimizeToTrayOnClose: true,
   startMinimizedToTray: false,
+  soundEnabled: true,
 };
 
 export const useAppStore = create<AppStoreState>()(

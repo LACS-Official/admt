@@ -144,6 +144,7 @@ const OtherSettingsPanel: React.FC = () => {
   const [startWithSystem, setStartWithSystem] = useState(config.autoStartEnabled);
   const [startMinimizedToTray, setStartMinimizedToTray] = useState(config.startMinimizedToTray);
   const [minimizeToTrayOnClose, setMinimizeToTrayOnClose] = useState(config.minimizeToTrayOnClose);
+  const [soundEnabled, setSoundEnabled] = useState(config.soundEnabled);
   const [traySupported, setTraySupported] = useState(false);
   const [autoStartSupported, setAutoStartSupported] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -209,7 +210,8 @@ const OtherSettingsPanel: React.FC = () => {
     setMinimizeToTray(config.systemTrayEnabled);
     setStartWithSystem(config.autoStartEnabled);
     setStartMinimizedToTray(config.startMinimizedToTray);
-  }, [config.systemTrayEnabled, config.autoStartEnabled, config.startMinimizedToTray]);
+    setSoundEnabled(config.soundEnabled);
+  }, [config.systemTrayEnabled, config.autoStartEnabled, config.startMinimizedToTray, config.soundEnabled]);
 
   // 优化的托盘切换处理
   const handleMinimizeToTrayChange = async (checked: boolean) => {
@@ -420,6 +422,29 @@ function handleStartWithSystemChange(checked: boolean): void {
                 checked={startWithSystem}
                 disabled={!autoStartSupported || loading}
                 onChange={(_, data) => handleStartWithSystemChange(data.checked === true)}
+              />
+            </div>
+            
+            {/* 通知音效设置 */}
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <Text weight="semibold">
+                  <Play24Regular style={{ marginRight: '8px' }} />
+                  通知音效
+                </Text>
+                <br />
+                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                  开启后，通知和状态消息将播放相应的音效
+                </Text>
+              </div>
+              <Switch
+                checked={soundEnabled}
+                disabled={loading}
+                onChange={(_, data) => {
+                  const checked = data.checked === true;
+                  setSoundEnabled(checked);
+                  updateConfig({ soundEnabled: checked });
+                }}
               />
             </div>
           </div>

@@ -11,6 +11,7 @@ export interface AppConfig {
   autoStartEnabled: boolean;
   minimizeToTrayOnClose: boolean;
   startMinimizedToTray: boolean;
+  soundEnabled: boolean;
 }
 
 export interface AppState {
