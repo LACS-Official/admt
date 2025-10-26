@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { invoke } from '@tauri-apps/api/core';
 import {
   makeStyles,
   mergeClasses,
   Text,
   Spinner,
-  Button,
-  Tooltip,
   tokens,
 } from "@fluentui/react-components";
 import {
@@ -14,12 +13,11 @@ import {
   ErrorCircle24Regular,
   Info24Regular,
   Dismiss24Regular,
+  Copy24Regular,
+  Checkmark24Filled,
 } from "@fluentui/react-icons";
 import { useAppStore, StatusBarMessage } from "../../stores/appStore";
 import { NotificationMessage } from "../../types/app";
-
-
-
 
 
 const useStyles = makeStyles({
@@ -72,9 +70,6 @@ const useStyles = makeStyles({
     // 响应式设计
     "@media (max-width: 1024px)": {
       fontSize: "11px",
-    },
-    "@media (max-width: 800px)": {
-      fontSize: "10px",
     },
   },
   rightSection: {
@@ -141,26 +136,113 @@ const useStyles = makeStyles({
   },
   // 通知类型颜色
   notificationSuccess: {
-    backgroundColor: tokens.colorPaletteGreenBackground2,
-    color: tokens.colorPaletteGreenForeground2,
+    backgroundColor: "var(--colorSuccessBackground2)",
+    color: "var(--colorSuccessForeground2)",
   },
   notificationWarning: {
-    backgroundColor: tokens.colorPaletteYellowBackground2,
-    color: tokens.colorPaletteYellowForeground2,
+    backgroundColor: "var(--colorWarningBackground2)",
+    color: "var(--colorWarningForeground2)",
   },
   notificationError: {
-    backgroundColor: tokens.colorPaletteRedBackground2,
-    color: tokens.colorPaletteRedForeground2,
+    backgroundColor: "var(--colorErrorBackground2)",
+    color: "var(--colorErrorForeground2)",
   },
   notificationInfo: {
-    backgroundColor: tokens.colorPaletteBlueBackground2,
-    color: tokens.colorPaletteBlueForeground2,
+    backgroundColor: "var(--colorInformationBackground2)",
+    color: "var(--colorInformationForeground2)",
   },
 });
 
 const StatusBar: React.FC = () => {
   const styles = useStyles();
-  const { isLoading, notifications, removeNotification, statusBarMessage, clearStatusBarMessage } = useAppStore();
+  const { isLoading, notifications, removeNotification, statusBarMessage, clearStatusBarMessage, config } = useAppStore();
+
+  // 音效文件路径映射
+  const soundFiles = {
+    info: 'notification-010-352755.mp3',
+    warning: 'warning-notification-call-184996.mp3',
+    error: 'error-08-206492.mp3',
+    success: 'sucess_01.mp3'
+  };
+
+  // 播放音效函数
+  const playSound = async (type: 'info' | 'warning' | 'error' | 'success') => {
+    if (!config.soundEnabled) return;
+    
+    try {
+      // 直接使用Tauri的read_resource_file命令读取文件内容并创建Blob URL
+      const soundFile = soundFiles[type];
+      
+      try {
+        // 使用invoke调用后端命令读取文件
+        const rawData = await invoke('read_resource_file', {
+          path: `music/${soundFile}`
+        });
+        
+        
+        // 确保数据存在
+        if (!rawData) {
+          console.error(`获取${type}音效文件数据为空`);
+          return;
+        }
+        
+        // 将数据转换为ArrayBuffer
+        let arrayBuffer: ArrayBuffer;
+        
+        // 处理不同类型的数据返回
+        if (Array.isArray(rawData)) {
+          // 如果是普通数组，创建Uint8Array并转换为ArrayBuffer
+          const uint8Array = new Uint8Array(rawData);
+          arrayBuffer = uint8Array.buffer;
+        } else if (rawData instanceof ArrayBuffer) {
+          // 如果已经是ArrayBuffer，直接使用
+          arrayBuffer = rawData;
+        } else {
+          // 尝试其他转换方式
+          console.error(`无法识别的${type}音效数据类型`);
+          return;
+        }
+        
+        
+        // 创建Blob对象和Blob URL
+        const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // 创建并播放音频
+        const audio = new Audio(blobUrl);
+        audio.volume = 0.5;
+        
+        // 设置事件监听器
+        audio.addEventListener('ended', () => {
+          URL.revokeObjectURL(blobUrl); // 清理资源
+        });
+        
+        audio.addEventListener('error', (error) => {
+          console.error(`${type}音效播放出错:`, error);
+          URL.revokeObjectURL(blobUrl); // 清理资源
+        });
+        
+        // 尝试播放
+        await audio.play();
+        console.log(`成功开始播放${type}音效`);
+      } catch (error) {
+        console.error(`读取或播放${type}音效失败:`, error);
+        
+        // 添加更多的错误处理和日志记录
+        try {
+          // 尝试获取资源路径作为备选方案
+          const resourcePath = await invoke('get_resource_path', {
+            path: `music/${soundFile}`
+          }) as string;
+          console.log(`备选路径: ${resourcePath}`);
+        } catch (pathError) {
+          console.error(`获取${type}音效资源路径失败:`, pathError);
+        }
+      }
+    } catch (error) {
+      console.error(`创建${type}音效失败:`, error);
+    }
+  };
 
 
 
@@ -169,6 +251,48 @@ const StatusBar: React.FC = () => {
   const [progressWidth, setProgressWidth] = useState(100);
   const [notificationTimer, setNotificationTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [progressTimer, setProgressTimer] = useState<ReturnType<typeof setInterval> | null>(null);
+  const [copiedNotificationId, setCopiedNotificationId] = useState<string | null>(null);
+  const [isStatusBarMessageCopied, setIsStatusBarMessageCopied] = useState(false);
+
+  // 监听状态栏消息变化，播放对应音效
+  useEffect(() => {
+    if (statusBarMessage && config.soundEnabled) {
+      (async () => {
+        await playSound(statusBarMessage.type as 'info' | 'warning' | 'error' | 'success');
+      })();
+    }
+  }, [statusBarMessage, config.soundEnabled])
+
+  // 复制状态栏消息内容
+  const handleCopyStatusBarMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(statusBarMessage?.message || '');
+      setIsStatusBarMessageCopied(true);
+      
+      // 1秒后重置按钮状态
+      setTimeout(() => {
+        setIsStatusBarMessageCopied(false);
+      }, 1000);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  };
+
+  // 复制通知内容
+  const handleCopyNotification = async (notification: NotificationMessage) => {
+    try {
+      const textToCopy = `${notification.title}: ${notification.message}`;
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedNotificationId(notification.id);
+      
+      // 1秒后重置按钮状态
+      setTimeout(() => {
+        setCopiedNotificationId(null);
+      }, 1000);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  };
 
   // 手动关闭通知
   const handleCloseNotification = () => {
@@ -199,6 +323,9 @@ const StatusBar: React.FC = () => {
       const latestNotification = notifications[notifications.length - 1];
       setCurrentNotification(latestNotification);
       setProgressWidth(100);
+      
+      // 播放通知音效
+      playSound(latestNotification.type);
 
       // 延迟显示通知，确保DOM更新完成
       const showTimer = setTimeout(() => {
@@ -316,14 +443,14 @@ const StatusBar: React.FC = () => {
           {isLoading && (
             <div className={styles.statusItem}>
               <Spinner size="extra-small" className={styles.spinner} />
-              <Text size={200}>处理中...</Text>
+              <span className="text-200">处理中...</span>
             </div>
           )}
         </div>
 
         {/* 中间区域 - 默认显示信息 */}
         <div className={styles.centerSection}>
-          <Text size={200}>By 领创工作室   |    Website: lacs.cc</Text>
+          <span className="text-200">领创工作室全栈开发</span>
         </div>
 
         {/* 右侧状态信息 */}
@@ -357,6 +484,34 @@ const StatusBar: React.FC = () => {
           <Text size={200} style={{ flex: 1, fontWeight: "500", color: "inherit" }}>
             {statusBarMessage.message}
           </Text>
+          {/* 复制按钮 */}
+          <button
+            onClick={handleCopyStatusBarMessage}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: 0.7,
+              transition: "opacity 0.2s ease",
+              marginRight: "4px",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+            title="复制消息内容"
+          >
+            {isStatusBarMessageCopied ? (
+              <Checkmark24Filled style={{ fontSize: "16px" }} />
+            ) : (
+              <Copy24Regular style={{ fontSize: "16px" }} />
+            )}
+          </button>
+          
+          {/* 关闭按钮 */}
           <button
             onClick={clearStatusBarMessage}
             style={{
@@ -406,7 +561,7 @@ const StatusBar: React.FC = () => {
           }}
         >
           {getNotificationIcon(currentNotification.type)}
-          <Text style={{
+          <span style={{
             flex: 1,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -415,8 +570,40 @@ const StatusBar: React.FC = () => {
             fontWeight: "500"
           }}>
             {currentNotification.title}: {currentNotification.message}
-          </Text>
+          </span>
 
+          {/* 复制按钮 */}
+          <button
+            onClick={() => handleCopyNotification(currentNotification)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: "44px",
+              minHeight: "44px",
+              color: "inherit",
+              transition: "background-color 0.2s ease-in-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            title="复制通知内容"
+          >
+            {copiedNotificationId === currentNotification.id ? (
+              <Checkmark24Filled />
+            ) : (
+              <Copy24Regular />
+            )}
+          </button>
+          
           {/* 关闭按钮 */}
           <button
             onClick={handleCloseNotification}

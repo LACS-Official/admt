@@ -17,6 +17,7 @@ import {
   Storage24Regular,
   DesktopPulse24Regular,
   ArrowClockwise24Regular,
+  Flash24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { deviceService } from "../../services/deviceService";
@@ -557,7 +558,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                   <div className={styles.progressHeader}>
                     <div className={styles.progressLabel}>
                       <Battery024Regular />
-                      <Text>电池</Text>
+                      <Text>电量</Text>
                     </div>
                     <Text className={styles.progressValue}>{device.properties?.batteryLevel || 0}%</Text>
                   </div>
@@ -607,7 +608,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                 <div className={styles.progressItem}>
                   <div className={styles.progressHeader}>
                     <div className={styles.progressLabel}>
-                      <DesktopPulse24Regular />
+                      <Flash24Regular />
                       <Text>内存</Text>
                     </div>
                     <Text className={styles.progressValue}>{getMemoryUsage(memoryStorageInfo).used}%</Text>
