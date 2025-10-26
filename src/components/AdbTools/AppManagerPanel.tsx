@@ -287,7 +287,7 @@ const AppManagerPanel: React.FC = () => {
     if (selectedDevice && !viewSource) {
       loadCurrentApp();
     }
-  }, [selectedDevice]);
+  }, [selectedDevice, viewSource]);
 
   // 应用管理相关函数（超级优化版本）
   const loadApps = useCallback(async (forceRefresh = false) => {
@@ -1234,15 +1234,8 @@ const AppManagerPanel: React.FC = () => {
         setViewSource("current");
         
         // 只有当检测到的应用与上次不同时才显示状态栏消息
-        if (packageName !== lastDetectedApp) {
-          setStatusBarMessage({ 
-            type: "success", 
-            message: `当前前台应用：${packageName}${versionName ? ` (版本: ${versionName})` : ''}` 
-          });
           setLastDetectedApp(packageName);
-        } else {
-          setLastDetectedApp(packageName);
-        }
+        
       } catch (versionError) {
         console.error('获取应用版本信息失败:', versionError);
         // 即使获取版本信息失败，也显示应用包名，但仅当与上次不同时

@@ -12,6 +12,7 @@ mod sys;
 mod system_features;
 mod utils;
 mod version;
+use crate::commands::{get_resource_path, read_resource_file};
 
 use activation::check_activation_expiry;
 use adb::app::app_management::*;
@@ -62,6 +63,8 @@ pub fn run() {
             version::check_for_updates,
             scan_devices,
             execute_adb_command,
+            get_resource_path,
+            read_resource_file,
             execute_adb_command_with_path,
             execute_fastboot_command,
             execute_fastboot_command_with_path,

@@ -1,5 +1,6 @@
 
 import { open } from '@tauri-apps/plugin-dialog';
+import { exists, mkdir } from '@tauri-apps/plugin-fs';
 import React, { useState, useEffect, useCallback } from "react";
 import {
   makeStyles,
@@ -38,6 +39,15 @@ import {
   Copy24Regular,
   ChevronRight24Regular,
   Storage24Regular,
+  Image24Regular,
+  Video24Regular,
+  Mic24Regular,
+  DocumentPdf24Regular,
+  Archive24Regular,
+  Code24Regular,
+  Apps24Regular,
+  Settings24Regular,
+  DocumentText24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -212,6 +222,7 @@ const FileManagerPanel: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   // 排序：name_asc, name_desc, date_desc (新-旧), date_asc (旧-新)
   const [sortMode, setSortMode] = useState<'name_asc' | 'name_desc' | 'date_desc' | 'date_asc'>('name_asc');
+  const [iconColor, setIconColor] = useState<string>('#0078d4'); // 默认图标颜色
 
   // Quick navigation paths
   const quickPaths = [
@@ -325,17 +336,119 @@ const FileManagerPanel: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDevice, deviceService, setStatusBarMessage]);
+  }, [selectedDevice, deviceService, setStatusBarMessage, sortMode]);
 
   // 排序选择变化
   const handleSortChange = (_: any, data: { optionValue: string }) => {
     const value = data.optionValue as 'name_asc'|'name_desc'|'date_desc'|'date_asc';
     setSortMode(value);
-    // 重新排序当前列表
-    loadFiles(currentPath);
+    
+    // 对当前文件列表进行排序，避免重新加载
+    if (files.length > 0) {
+      const sortedFiles = [...files];
+      
+      // 解析 ls 日期字符串为时间戳（用于排序）
+      const monthMap: Record<string, number> = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+      const parseModifiedToTs = (s: string): number => {
+        if (!s || s === '-') return 0;
+        const parts = s.trim().split(/\s+/); // 可能是 "Aug 1 12:34" 或 "Aug 1 2023"
+        if (parts.length < 3) return 0;
+        const mon = monthMap[(parts[0] || '').slice(0,3).toLowerCase()];
+        const day = parseInt(parts[1], 10) || 1;
+        let year: number;
+        let hours = 0, minutes = 0;
+        if (parts[2].includes(':')) {
+          // 没有年份，只有时间，年份用当前年
+          const now = new Date();
+          year = now.getFullYear();
+          const [hh, mm] = parts[2].split(':');
+          hours = parseInt(hh, 10) || 0;
+          minutes = parseInt(mm, 10) || 0;
+        } else {
+          year = parseInt(parts[2], 10) || new Date().getFullYear();
+        }
+        if (mon == null) return 0;
+        const dt = new Date(year, mon, day, hours, minutes, 0, 0);
+        return dt.getTime();
+      };
+
+      // 排序：目录优先，再按所选模式
+      sortedFiles.sort((a, b) => {
+        if (a.type === 'directory' && b.type !== 'directory') return -1;
+        if (a.type !== 'directory' && b.type === 'directory') return 1;
+        if (value === 'name_asc') return a.name.localeCompare(b.name);
+        if (value === 'name_desc') return b.name.localeCompare(a.name);
+        const ta = parseModifiedToTs(a.modifiedTime);
+        const tb = parseModifiedToTs(b.modifiedTime);
+        if (value === 'date_desc') return tb - ta; // 新-旧
+        if (value === 'date_asc') return ta - tb; // 旧-新
+        return a.name.localeCompare(b.name);
+      });
+      
+      setFiles(sortedFiles);
+    }
   };
 
   // 格式化文件大小显示
+  // 文件类型识别函数
+  const getFileIcon = (fileName: string, fileType: 'file' | 'directory'): React.ReactElement => {
+    const iconProps = { style: { color: iconColor } };
+    
+    if (fileType === 'directory') {
+      return <Folder24Regular {...iconProps} />;
+    }
+
+    const ext = fileName.toLowerCase().split('.').pop() || '';
+    
+    // 图片文件
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif'].includes(ext)) {
+      return <Image24Regular {...iconProps} />;
+    }
+    
+    // 视频文件
+    if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v', '3gp'].includes(ext)) {
+      return <Video24Regular {...iconProps} />;
+    }
+    
+    // 音频文件
+    if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'].includes(ext)) {
+      return <Mic24Regular {...iconProps} />;
+    }
+    
+    // 文档文件
+    if (['pdf'].includes(ext)) {
+      return <DocumentPdf24Regular {...iconProps} />;
+    }
+    
+    // 压缩文件
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) {
+      return <Archive24Regular {...iconProps} />;
+    }
+    
+    // 代码文件
+    if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'scss', 'less', 'json', 'xml', 'py', 'java', 'cpp', 'c', 'h', 'php', 'rb', 'go', 'rs', 'sh', 'bat', 'md'].includes(ext)) {
+      return <Code24Regular {...iconProps} />;
+    }
+    
+    // APK文件
+    if (['apk'].includes(ext)) {
+      return <Apps24Regular {...iconProps} />;
+    }
+    
+    // 镜像文件
+    if (['img', 'iso', 'dmg', 'vmdk', 'vhd', 'qcow2'].includes(ext)) {
+      return <Settings24Regular {...iconProps} />;
+    }
+    
+    // 文本文件
+    if (['txt', 'log', 'ini', 'conf', 'cfg', 'yml', 'yaml', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+      return <DocumentText24Regular {...iconProps} />;
+    }
+    
+    // 默认文件图标
+    return <Document24Regular {...iconProps} />;
+  };
+
   const formatFileSize = (size: string): string => {
     if (size === '-' || !size) return '-';
     const bytes = parseInt(size);
@@ -493,32 +606,52 @@ const FileManagerPanel: React.FC = () => {
     let successCount = 0;
     let failCount = 0;
 
+    // 定义下载目录
+    const downloadDir = "e:\\tauri\\admt\\output\\file";
+
     // 添加下载开始的通知
     setStatusBarMessage({
       type: "info",
-      message: `正在下载 ${selectedFiles.size} 个文件，请稍候...`,
+      message: `正在下载 ${selectedFiles.size} 个文件到 ${downloadDir}，请稍候...`,
     });
 
-    for (const file of selectedFileItems) {
-      if (file.type === 'file') {
-        try {
-          console.log('尝试拉取文件:', file.path, '设备状态:', selectedDevice.mode);
-          const result = await deviceService.pullFile(selectedDevice.serial, file.path, file.name);
-          if (result.success) {
-            successCount++;
-          } else {
+    try {
+      // 检查并创建下载目录
+      const dirExists = await exists(downloadDir);
+      if (!dirExists) {
+        await mkdir(downloadDir, { recursive: true });
+        console.log('创建下载目录:', downloadDir);
+      }
+
+      for (const file of selectedFileItems) {
+        if (file.type === 'file') {
+          try {
+            const localPath = `${downloadDir}\\${file.name}`;
+            console.log('尝试拉取文件:', file.path, '到:', localPath, '设备状态:', selectedDevice.mode);
+            const result = await deviceService.pullFile(selectedDevice.serial, file.path, localPath);
+            if (result.success) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch (error) {
+            console.error('文件拉取失败:', error, '设备状态:', selectedDevice.mode);
             failCount++;
           }
-        } catch (error) {
-          console.error('文件拉取失败:', error, '设备状态:', selectedDevice.mode);
-          failCount++;
         }
       }
+    } catch (error) {
+      console.error('创建下载目录失败:', error);
+      setStatusBarMessage({
+        type: "error",
+        message: `创建下载目录失败: ${error}`,
+      });
+      return;
     }
 
     setStatusBarMessage({
       type: successCount > 0 ? "success" : "error",
-      message: `批量下载完成 - 成功: ${successCount}个, 失败: ${failCount}个`,
+      message: `批量下载完成 - 成功: ${successCount}个, 失败: ${failCount}个，文件已保存到: ${downloadDir}`,
     });
 
     setSelectedFiles(new Set());
@@ -649,6 +782,7 @@ const FileManagerPanel: React.FC = () => {
                 <Option value="date_asc">日期 旧-新</Option>
               </Dropdown>
             </div>
+
             {/* 快速导航按钮 */}
             <div className={styles.quickNavButtons}>
               {quickPaths.map((item) => (
@@ -730,7 +864,7 @@ const FileManagerPanel: React.FC = () => {
                       <TableCell className={styles.compactCell}>
                         <div className={styles.fileName} onClick={() => handleFileClick(file)}>
                           <div className={styles.fileIcon}>
-                            {file.type === 'directory' ? <Folder24Regular /> : <Document24Regular />}
+                            {getFileIcon(file.name, file.type)}
                           </div>
                           <Text weight={file.type === 'directory' ? "semibold" : "regular"}>
                             {file.name}
