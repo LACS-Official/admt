@@ -227,7 +227,6 @@ const StatusBar: React.FC = () => {
         
         // 尝试播放
         await audio.play();
-        console.log(`成功开始播放${type}音效`);
       } catch (error) {
         console.error(`读取或播放${type}音效失败:`, error);
         
