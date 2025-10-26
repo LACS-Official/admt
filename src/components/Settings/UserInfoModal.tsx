@@ -163,10 +163,10 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
       let expiryDate: Date;
       if (data.apiValidation?.expiresAt) {
         expiryDate = new Date(data.apiValidation.expiresAt);
-        console.log('UserInfoModal: 使用API验证过期时间:', data.apiValidation.expiresAt);
+        // console.log('UserInfoModal: 使用API验证过期时间:', data.apiValidation.expiresAt);
       } else {
         expiryDate = new Date(data.expiryDate);
-        console.log('UserInfoModal: 使用本地存储过期时间:', data.expiryDate);
+        // console.log('UserInfoModal: 使用本地存储过期时间:', data.expiryDate);
       }
 
       const activationDate = new Date(data.activationDate);

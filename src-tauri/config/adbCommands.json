@@ -1,0 +1,95 @@
+{
+  "categories": [
+    {
+      "commands": [
+        {
+          "command": "shell sh /data/user/0/com.omarea.vtools/files/up.sh",
+          "description": "激活Scene工具箱",
+          "id": "activate_scene",
+          "label": "激活scene"
+        }
+      ],
+      "description": "常用软件激活命令",
+      "id": "software_activation",
+      "name": "软件激活"
+    },
+    {
+      "commands": [
+        {
+          "command": "shell getprop",
+          "description": "获取设备所有系统属性",
+          "id": "get_device_info",
+          "label": "获取设备信息"
+        },
+        {
+          "command": "shell dumpsys battery",
+          "description": "查看电池状态和健康信息",
+          "id": "battery_info",
+          "label": "查看电池信息"
+        },
+        {
+          "command": "shell cat /proc/meminfo",
+          "description": "查看系统内存使用情况",
+          "id": "memory_info",
+          "label": "查看内存信息"
+        },
+        {
+          "command": "shell df",
+          "description": "查看存储空间使用情况",
+          "id": "storage_info",
+          "label": "查看存储信息"
+        }
+      ],
+      "description": "获取设备硬件和系统信息",
+      "id": "device_info",
+      "name": "设备信息"
+    },
+    {
+      "commands": [
+        {
+          "command": "shell pm list packages",
+          "description": "列出设备上已安装的所有应用包名",
+          "id": "list_installed_apps",
+          "label": "查看已安装应用"
+        },
+        {
+          "command": "shell ps",
+          "description": "查看当前运行的进程列表",
+          "id": "running_processes",
+          "label": "查看运行进程"
+        }
+      ],
+      "description": "应用和进程管理相关命令",
+      "id": "apps_processes",
+      "name": "应用与进程"
+    },
+    {
+      "commands": [
+        {
+          "command": "reboot recovery",
+          "description": "重启设备到Recovery模式",
+          "id": "reboot_recovery",
+          "label": "重启到Recovery"
+        },
+        {
+          "command": "reboot bootloader",
+          "description": "重启设备到Fastboot模式",
+          "id": "reboot_fastboot",
+          "label": "重启到Fastboot"
+        },
+        {
+          "command": "reboot",
+          "description": "重启设备到正常系统",
+          "id": "reboot_system",
+          "label": "重启到系统"
+        }
+      ],
+      "description": "系统重启和引导相关命令",
+      "id": "system_control",
+      "name": "系统控制"
+    }
+  ],
+  "lastUpdated": "2025-10-25",
+  "version": "1.0.0",
+  "author": "LACS"
+}

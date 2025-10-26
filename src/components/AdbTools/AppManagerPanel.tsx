@@ -31,21 +31,24 @@ import {
   Radio,
   RadioGroup,
 } from "@fluentui/react-components";
-import {
-  Apps24Regular,
+import { Apps24Regular,
   ArrowClockwise24Regular,
   Delete24Regular,
   Info24Regular,
   Search24Regular,
   MoreHorizontal24Regular,
+  ArrowDownload24Regular,
+  ArrowUpload24Regular,
 } from "@fluentui/react-icons";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import { InstalledApp, BatchOperation } from "../../types/device";
 import ErrorDialog from "../Common/ErrorDialog";
 import { ErrorInfo } from "../../utils/errorHandler";
+// 移除Node.js path模块导入，避免浏览器环境中的兼容性问题
 
 const useStyles = makeStyles({
   container: {
@@ -276,6 +279,7 @@ const AppManagerPanel: React.FC = () => {
   const [loadingProgress, setLoadingProgress] = useState<{current: number, total: number}>({current: 0, total: 0});
   const [performanceStats, setPerformanceStats] = useState<{loadTime: number, appCount: number, isOptimized: boolean}>({loadTime: 0, appCount: 0, isOptimized: false});
   const [currentApp, setCurrentApp] = useState<string | null>(null);
+  const [lastDetectedApp, setLastDetectedApp] = useState<string | null>(null);
   const [frozenAppsWithVersion, setFrozenAppsWithVersion] = useState<InstalledApp[]>([]);
   
   // 默认加载当前应用
@@ -979,6 +983,91 @@ const AppManagerPanel: React.FC = () => {
     }
   };
 
+  // 导出选中的应用列表为文件
+  const handleExportAppList = async () => {
+    if (selectedApps.size === 0) return;
+
+    try {
+      // 获取选中应用的详细信息
+      const selectedAppDetails = apps.filter(app => selectedApps.has(app.packageName));
+      
+      // 准备导出数据
+      const exportData = {
+        exportTime: new Date().toISOString(),
+        deviceInfo: selectedDevice,
+        appCount: selectedAppDetails.length,
+        apps: selectedAppDetails,
+      };
+
+      // 生成固定格式的文件名：admt_applist_时间戳_随机字符串.json
+      const timestamp = Date.now();
+      // 生成6位随机字符串
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const fileName = `admt_applist_${timestamp}_${randomStr}.json`;
+      
+      // 打开对话框让用户选择保存目录（但不选择文件名）
+      const directory = await openDialog({
+        title: "选择保存目录",
+        directory: true,
+        multiple: false,
+      });
+
+      if (!directory || typeof directory !== "string") {
+        setStatusBarMessage({ type: "info", message: "已取消导出" });
+        return;
+      }
+
+      // 组合完整路径，手动处理路径分隔符
+      const targetPath = `${directory}${directory.endsWith('/') || directory.endsWith('\\') ? '' : '/'}${fileName}`;
+
+      // 写入文件
+      await writeTextFile(targetPath, JSON.stringify(exportData, null, 2));
+      setStatusBarMessage({ type: "success", message: `应用列表已导出到：${targetPath}` });
+    } catch (error) {
+      setStatusBarMessage({ type: "error", message: `导出失败：${error}` });
+    }
+  };
+
+  // 从文件导入应用列表
+  const handleImportAppList = async () => {
+    try {
+      // 选择文件
+      const filePath = await openDialog({
+        title: "选择应用列表文件",
+        multiple: false,
+        filters: [
+          { name: "JSON Files", extensions: ["json"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+
+      if (!filePath || typeof filePath !== "string") {
+        setStatusBarMessage({ type: "info", message: "已取消导入" });
+        return;
+      }
+
+      // 读取文件内容
+      const fileContent = await readTextFile(filePath);
+      const importData = JSON.parse(fileContent);
+
+      // 验证文件格式
+      if (!importData.apps || !Array.isArray(importData.apps)) {
+        throw new Error("无效的应用列表文件格式");
+      }
+
+      // 设置选中的应用
+      const importedPackageNames = new Set<string>(importData.apps.map((app: any) => app.packageName).filter(Boolean));
+      setSelectedApps(importedPackageNames);
+
+      setStatusBarMessage({ 
+        type: "success", 
+        message: `成功导入 ${importedPackageNames.size} 个应用到选择列表` 
+      });
+    } catch (error) {
+      setStatusBarMessage({ type: "error", message: `导入失败：${error}` });
+    }
+  };
+
   // 批量清除应用数据
   const handleBatchClearData = async () => {
     if (!selectedDevice || selectedApps.size === 0) return;
@@ -1143,20 +1232,55 @@ const AppManagerPanel: React.FC = () => {
         });
         
         setViewSource("current");
-        setStatusBarMessage({ 
-          type: "success", 
-          message: `当前前台应用：${packageName}${versionName ? ` (版本: ${versionName})` : ''}` 
-        });
+        
+        // 只有当检测到的应用与上次不同时才显示状态栏消息
+        if (packageName !== lastDetectedApp) {
+          setStatusBarMessage({ 
+            type: "success", 
+            message: `当前前台应用：${packageName}${versionName ? ` (版本: ${versionName})` : ''}` 
+          });
+          setLastDetectedApp(packageName);
+        } else {
+          setLastDetectedApp(packageName);
+        }
       } catch (versionError) {
         console.error('获取应用版本信息失败:', versionError);
-        // 即使获取版本信息失败，也显示应用包名
+        // 即使获取版本信息失败，也显示应用包名，但仅当与上次不同时
         setViewSource("current");
-        setStatusBarMessage({ type: "success", message: `当前前台应用：${packageName}` });
+        if (packageName !== lastDetectedApp) {
+          setStatusBarMessage({ type: "success", message: `当前前台应用：${packageName}` });
+          setLastDetectedApp(packageName);
+        } else {
+          setLastDetectedApp(packageName);
+        }
       }
     } catch (e) {
       setStatusBarMessage({ type: "error", message: `获取当前应用失败：${e}` });
     }
   }, [selectedDevice, deviceService, setStatusBarMessage]);
+
+  // 获取已冻结（被禁用）的应用列表
+  // 当viewSource为"current"时，每隔1秒刷新当前应用
+  useEffect(() => {
+    let refreshInterval: NodeJS.Timeout | undefined;
+    
+    if (viewSource === "current" && selectedDevice) {
+      // 立即执行一次刷新
+      loadCurrentApp();
+      
+      // 设置每秒刷新一次
+      refreshInterval = setInterval(() => {
+        loadCurrentApp();
+      }, 1000);
+    }
+    
+    // 清除定时器
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [viewSource, selectedDevice, loadCurrentApp]);
 
   // 获取已冻结（被禁用）的应用列表
   const loadFrozenApps = useCallback(async () => {
@@ -1424,6 +1548,22 @@ const AppManagerPanel: React.FC = () => {
               disabled={isLoadingApps || selectedApps.size === 0}
             >
               清除数据 {selectedApps.size > 0 && `(${selectedApps.size})`}
+            </Button>
+            <Button
+              appearance="primary"
+              icon={<ArrowDownload24Regular />}
+              onClick={handleExportAppList}
+              disabled={isLoadingApps || selectedApps.size === 0}
+            >
+              导出列表 {selectedApps.size > 0 && `(${selectedApps.size})`}
+            </Button>
+            <Button
+              appearance="primary"
+              icon={<ArrowUpload24Regular />}
+              onClick={handleImportAppList}
+              disabled={isLoadingApps}
+            >
+              导入列表
             </Button>
           </div>
           <div className={styles.content}>

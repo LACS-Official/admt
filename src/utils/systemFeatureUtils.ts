@@ -113,8 +113,8 @@ export class SystemTrayHelper {
    */
   static async enable(config?: any): Promise<SystemFeatureResult> {
     try {
-      await systemTrayService.initialize(config);
-      await systemTrayService.setupWindowCloseHandler(true);
+      await systemTrayService().initialize(config);
+      await systemTrayService().setupWindowCloseHandler(true);
       
       return {
         success: true,
@@ -134,8 +134,8 @@ export class SystemTrayHelper {
    */
   static async disable(): Promise<SystemFeatureResult> {
     try {
-      await systemTrayService.setupWindowCloseHandler(false);
-      await systemTrayService.cleanup();
+      await systemTrayService().setupWindowCloseHandler(false);
+      await systemTrayService().cleanup();
       
       return {
         success: true,
@@ -155,7 +155,7 @@ export class SystemTrayHelper {
    */
   static async checkSupport(): Promise<SystemFeatureResult<boolean>> {
     try {
-      const supported = await systemTrayService.isSystemTraySupported();
+      const supported = await systemTrayService().isSystemTraySupported();
       return {
         success: true,
         data: supported
@@ -288,13 +288,13 @@ export class SystemFeatureRecovery {
       console.log('🔧 正在修复系统托盘...');
       
       // 先清理现有状态
-      await systemTrayService.cleanup();
+      await systemTrayService().cleanup();
       
       // 等待一段时间
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // 重新初始化
-      await systemTrayService.initialize({
+      await systemTrayService().initialize({
         tooltip: '玩机管家',
         menuItems: [
           { id: 'show', label: '显示窗口' },

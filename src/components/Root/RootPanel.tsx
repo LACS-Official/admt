@@ -15,7 +15,7 @@ import {
   Folder24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
-import AdbToolsPanel from "../AdbTools/AdbToolsPanel";
+import AdbToolsPanel from "../Others/CommandExecutePanel";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
 import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
 

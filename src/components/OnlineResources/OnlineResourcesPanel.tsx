@@ -295,20 +295,6 @@ const OnlineResourcesPanel: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <CloudArrowDown24Regular />
-          <Title2>在线资源</Title2>
-        </div>
-        <Button
-          appearance="outline"
-          icon={<ArrowDownload24Regular />}
-          onClick={handleViewDownloads}
-        >
-          下载管理
-        </Button>
-      </div>
-
       <div className={styles.searchContainer}>
         <SearchBox
           className={styles.searchBox}

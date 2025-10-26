@@ -141,7 +141,8 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         // 获取批处理文件的路径
-        let bat_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let bat_path = std::path::Path::new(&manifest_dir)
             .join("tools")
             .join("lacs")
             .join("Usb_fix.bat");
@@ -210,7 +211,8 @@ pub async fn unfix_usb3_connection() -> Result<CommandResult> {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         // 获取批处理文件的路径
-        let bat_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let bat_path = std::path::Path::new(&manifest_dir)
             .join("tools")
             .join("lacs")
             .join("Usb_Unfix.bat");

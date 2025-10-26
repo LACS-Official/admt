@@ -2,6 +2,13 @@ use std::env;
 use std::process::Command;
 
 fn main() {
+    // 确保OUT_DIR环境变量可用
+    let _out_dir = env::var("OUT_DIR").unwrap_or_else(|_| {
+        // 如果OUT_DIR未设置，使用默认值
+        println!("cargo:warning=OUT_DIR not set, using default value");
+        "target/build".to_string()
+    });
+    
     // 设置构建时间
     let build_date = chrono::Utc::now()
         .format("%Y-%m-%d %H:%M:%S UTC")

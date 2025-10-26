@@ -15,7 +15,6 @@ import {
   Folder24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
-import AdbToolsPanel from "../AdbTools/AdbToolsPanel";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
 import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
 import AppManagerPanel from './AppManagerPanel';
@@ -128,21 +127,16 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "adb-tools" | "device-control" | "app_install" | "file-manager" | "screen-mirror" | "app-manager" ;
+type AdbZoneView =  "device-control" | "app_install" | "file-manager" | "screen-mirror" | "app-manager" ;
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
   const { selectedDevice, devices } = useDeviceStore();
-  const [currentView, setCurrentView] = useState<AdbZoneView>("adb-tools");
+  const [currentView, setCurrentView] = useState<AdbZoneView>("device-control");
 
   const connectedDevices = devices.filter(d => d.connected);
 
   const tabs = [
-    {
-      id: "adb-tools" as AdbZoneView,
-      label: "ADB命令",
-      icon: <Code24Regular />,
-    },
     {
       id: "device-control" as AdbZoneView,
       label: "设备控制",
@@ -175,12 +169,6 @@ const AdbZonePanel: React.FC = () => {
     if (!selectedDevice) return null;
 
     switch (currentView) {
-      case "adb-tools":
-        return (
-          <div style={{ height: "100%", overflow: "hidden" }}>
-            <AdbToolsPanel />
-          </div>
-        );
       case "device-control":
         return (
           <div style={{
@@ -222,7 +210,7 @@ const AdbZonePanel: React.FC = () => {
       default:
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-            <AdbToolsPanel />
+            <AdbZonePanel />
           </div>
         );
     }

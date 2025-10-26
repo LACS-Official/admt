@@ -3,7 +3,9 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main"
+    "main",
+    "command_panel",
+    "log_panel"
   ],
   "permissions": [
     "autostart:allow-enable",
@@ -22,16 +24,21 @@
     "core:window:allow-show",
     "core:window:allow-hide",
     "core:window:allow-start-dragging",
+    "core:window:allow-create",
     "shell:allow-open",
     "shell:default",
     "shell:allow-spawn",
     "process:default",
     "dialog:allow-open",
+    "dialog:allow-message",
+    "dialog:allow-save",
     "fs:allow-read-dir",
     "fs:allow-appdata-write",
       "fs:allow-appdata-write-recursive",
       "fs:allow-exists",
-      {
+      "fs:allow-read-file",
+      "fs:allow-read-text-file",
+    {
       "identifier": "http:default",
       "allow": [
         { "url": "https://api-g.lacs.cc/**" }

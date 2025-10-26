@@ -16,6 +16,7 @@ use crate::utils::{
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tauri::Manager;
+use std::path::PathBuf;
 
 /// 扫描连接的设备（使用缓存）
 #[tauri::command]
@@ -1529,21 +1530,14 @@ pub async fn is_debug_mode() -> Result<bool> {
 
 /// 设置窗口置顶状态
 #[tauri::command]
-pub async fn set_window_always_on_top(app: tauri::AppHandle, always_on_top: bool) -> Result<()> {
-    if let Some(window) = app.get_webview_window("main") {
-        window
-            .set_always_on_top(always_on_top)
-            .map_err(|e| AdmtError::FileOperationFailed {
-                message: format!("设置窗口置顶状态失败: {}", e),
-            })?;
-        log::info!("窗口置顶状态已设置为: {}", always_on_top);
-        Ok(())
-    } else {
-        log::error!("无法找到主窗口");
-        Err(AdmtError::FileOperationFailed {
-            message: "无法找到主窗口".to_string(),
-        })
-    }
+pub async fn set_window_always_on_top(window: tauri::Window, always_on_top: bool) -> Result<()> {
+    window
+        .set_always_on_top(always_on_top)
+        .map_err(|e| AdmtError::FileOperationFailed {
+            message: format!("设置窗口置顶状态失败: {}", e),
+        })?;
+    log::info!("窗口置顶状态已设置为: {}, 窗口标签: {}", always_on_top, window.label());
+    Ok(())
 }
 
 /// 获取窗口置顶状态
@@ -1864,5 +1858,188 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
             }
         }
     }
+}
+
+/// 写入JSON文件内容
+#[tauri::command]
+pub async fn write_json_file(path: String, content: String) -> Result<()> {
+    use std::fs;
+    use std::path::Path;
+
+    let path = Path::new(&path);
+    
+    // 确保父目录存在
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent).map_err(|e| AdmtError::IoError {
+                message: format!("Failed to create directory: {}", e),
+            })?;
+        }
+    }
+
+    // 验证内容是有效的JSON
+    let _json: serde_json::Value = serde_json::from_str(&content).map_err(|e| AdmtError::IoError {
+        message: format!("Invalid JSON content: {}", e),
+    })?;
+
+    // 写入文件
+    fs::write(path, content).map_err(|e| AdmtError::IoError {
+        message: format!("Failed to write file: {}", e),
+    })?;
+
+    log::info!("Successfully wrote JSON file: {}", path.display());
+    Ok(())
+}
+
+/// 监听配置文件变化
+#[tauri::command]
+pub async fn watch_config_file(
+    _app_handle: tauri::AppHandle,
+    window: tauri::Window,
+) -> Result<()> {
+    use notify::{Watcher, RecursiveMode, Event, EventKind};
+    use std::sync::mpsc;
+    use std::time::Duration;
+    use std::sync::Arc;
+    use std::sync::Mutex;
+
+    // 确定配置文件路径
+    let config_path = get_config_file_path().map_err(|e| AdmtError::IoError {
+        message: format!("Failed to get config path: {}", e),
+    })?;
+
+    let (tx, rx) = mpsc::channel();
+
+    // 创建文件监听器
+    let mut watcher = notify::recommended_watcher(tx).map_err(|e| AdmtError::IoError {
+        message: format!("Failed to create file watcher: {}", e),
+    })?;
+
+    // 监听配置文件所在目录
+    let config_dir = config_path.parent().ok_or_else(|| AdmtError::IoError {
+        message: "Failed to get config directory".to_string(),
+    })?;
+
+    watcher.watch(config_dir, RecursiveMode::NonRecursive).map_err(|e| AdmtError::IoError {
+        message: format!("Failed to watch config directory: {}", e),
+    })?;
+
+    log::info!("Started watching config file: {}", config_path.display());
+
+    // 使用Arc<Mutex<>>来共享状态
+    let last_modified = Arc::new(Mutex::new(None));
+    let config_path_clone = config_path.clone();
+    let last_modified_clone = last_modified.clone();
+
+    // 在新线程中处理文件变化事件
+    tauri::async_runtime::spawn(async move {
+        // 添加防抖动机制，避免短时间内多次触发
+        while let Ok(event) = rx.recv() {
+            match event {
+                Ok(Event { kind: EventKind::Modify(_), paths, .. }) => {
+                    // 检查是否是配置文件发生了变化
+                    if paths.contains(&config_path_clone) {
+                        // 获取文件修改时间
+                        if let Ok(metadata) = std::fs::metadata(&config_path_clone) {
+                            if let Ok(modified_time) = metadata.modified() {
+                                let mut last = last_modified_clone.lock().unwrap();
+                                
+                                // 检查是否是新的修改
+                                if Some(modified_time) != *last {
+                                    *last = Some(modified_time);
+                                    drop(last); // 释放锁
+                                    
+                                    log::info!("Config file modified: {}", config_path_clone.display());
+                                    
+                                    // 防抖动处理，延迟500ms再发送事件
+                                    let timer = tokio::time::sleep(Duration::from_millis(500));
+                                    
+                                    // 克隆窗口句柄用于异步任务
+                                    let window_clone = window.clone();
+                                    let config_path_str = config_path_clone.to_string_lossy().to_string();
+                                    
+                                    // 启动异步任务处理防抖动
+                                    tokio::spawn(async move {
+                                        timer.await;
+                                        
+                                        // 再次检查文件是否仍然存在且有效
+                                        if std::path::Path::new(&config_path_str).exists() {
+                                            // 发送事件到前端
+                                            if let Err(e) = window_clone.emit("config-file-changed", &config_path_str) {
+                                                log::error!("Failed to emit config file changed event: {}", e);
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+                Ok(Event { kind: EventKind::Create(_), paths, .. }) => {
+                    // 处理文件创建事件（可能配置文件被重新创建）
+                    if paths.contains(&config_path_clone) {
+                        log::info!("Config file created: {}", config_path_clone.display());
+                        
+                        let window_clone = window.clone();
+                        let config_path_str = config_path_clone.to_string_lossy().to_string();
+                        
+                        // 延迟发送事件，确保文件写入完成
+                        tokio::spawn(async move {
+                            tokio::time::sleep(Duration::from_millis(500)).await;
+                            
+                            if std::path::Path::new(&config_path_str).exists() {
+                                if let Err(e) = window_clone.emit("config-file-changed", &config_path_str) {
+                                    log::error!("Failed to emit config file created event: {}", e);
+                                }
+                            }
+                        });
+                    }
+                }
+                Ok(_) => {
+                    // 忽略其他类型的事件
+                }
+                Err(e) => {
+                    log::error!("File watcher error: {:?}", e);
+                }
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// 获取配置文件路径
+fn get_config_file_path() -> Result<PathBuf> {
+    // 尝试多个可能的配置文件位置
+    let possible_paths = vec![
+        // 应用数据目录
+        dirs::data_dir().map(|dir| dir.join("admt").join("config").join("adbCommands.json")),
+        // 资源目录
+        std::env::current_exe().ok().map(|exe| {
+            exe.parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join("config")
+                .join("adbCommands.json")
+        }),
+        // 相对路径
+        Some(PathBuf::from("./src-tauri/config/adbCommands.json")),
+    ];
+
+    for path_option in possible_paths {
+        if let Some(path) = path_option {
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+    }
+
+    // 如果都不存在，返回默认路径（应用数据目录）
+    let default_path = dirs::data_dir()
+        .unwrap_or_else(|| std::path::Path::new(".").to_path_buf())
+        .join("admt")
+        .join("config")
+        .join("adbCommands.json");
+
+    Ok(default_path)
 }
 

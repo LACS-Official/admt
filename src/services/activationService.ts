@@ -156,18 +156,18 @@ export class ActivationService {
 
     if (isExpired) {
       const expiredMinutes = Math.floor((now.getTime() - expiryDate.getTime()) / (1000 * 60));
-      console.log('激活码已过期:', {
-        expiryDate: expiryDate.toISOString(),
-        currentTime: now.toISOString(),
-        expiredMinutes: expiredMinutes
-      });
+      // console.log('激活码已过期:', {
+      //   expiryDate: expiryDate.toISOString(),
+      //   currentTime: now.toISOString(),
+      //   expiredMinutes: expiredMinutes
+      // });
     } else {
       const remainingMinutes = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60));
-      console.log('激活码仍有效:', {
-        expiryDate: expiryDate.toISOString(),
-        currentTime: now.toISOString(),
-        remainingMinutes: remainingMinutes
-      });
+      // console.log('激活码仍有效:', {
+      //   expiryDate: expiryDate.toISOString(),
+      //   currentTime: now.toISOString(),
+      //   remainingMinutes: remainingMinutes
+      // });
     }
 
     return isExpired;
@@ -440,7 +440,7 @@ export class ActivationService {
         return null;
       }
 
-      console.log('成功加载本地激活数据');
+      // console.log('成功加载本地激活数据');
       return data;
     } catch (error) {
       console.error('加载激活数据失败:', error);
@@ -521,9 +521,9 @@ export class ActivationService {
   public clearActivationData(): void {
     try {
       localStorage.removeItem(STORAGE_KEY);
-      console.log('已清除本地激活数据');
+      // console.log('已清除本地激活数据');
     } catch (error) {
-      console.error('清除激活数据失败:', error);
+      // console.error('清除激活数据失败:', error);
     }
   }
 

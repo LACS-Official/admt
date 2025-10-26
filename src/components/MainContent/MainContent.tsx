@@ -20,12 +20,18 @@ import {
   Code24Regular,
   Settings24Regular,
   Wrench24Regular,
-    CloudArrowUp24Regular,
+  CloudArrowUp24Regular,
   CloudArrowDown24Regular,
   Circle12Filled,
   Home24Regular,
   Beaker24Regular,
+  Tent24Regular,
+  DocumentText24Regular,
+  ChevronDown24Regular,
+  Warning16Regular,
+  Warning24Regular,
 } from "@fluentui/react-icons";
+import DeviceSelectionDialog from './DeviceSelectionDialog';
 import { getDeviceIcon } from "../../assets/icons";
 import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
 import { useAppStore } from "../../stores/appStore";
@@ -36,7 +42,7 @@ import HomePage from "../Home/HomePage";
 import AdbZonePanel from "../AdbTools/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
-import OnlineResourcesPanel from "../OnlineResources/OnlineResourcesPanel";
+import OnlineZonePanel from "../OnlineResources/OnlineZonePanel"; 
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
@@ -44,6 +50,7 @@ import RootPanel from "../Root/RootPanel";
 
 import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 
 const useStyles = makeStyles({
@@ -112,7 +119,59 @@ const useStyles = makeStyles({
   },
   deviceSelectorArea: {
     width: "100%",
-    marginTop: "4px",
+    marginTop: "2px",
+  },
+  deviceSelectCard: {
+    width: "100%",
+    padding: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    '&:hover': {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      border: "1px solid var(--colorNeutralStroke1)",
+    },
+  },
+  deviceSelectCardContent: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    flex: 1,
+  },
+  deviceSelectCardText: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  deviceSelectCardTitle: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
+  },
+  deviceSelectCardSubtitle: {
+    fontSize: "10px",
+    color: "var(--colorNeutralForeground3)",
+  },
+  noDeviceCard: {
+    width: "100%",
+    padding: "12px",
+    border: "1px solid var(--colorNeutralStroke3)",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    cursor: "not-allowed",
+  },
+  noDeviceCardText: {
+    fontSize: "14px",
+    color: "var(--colorNeutralForeground3)",
   },
   deviceIconSection: {
     display: "flex",
@@ -480,6 +539,41 @@ const useStyles = makeStyles({
     position: "relative",
     boxSizing: "border-box",
   },
+  buttonGroupContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "8px",
+    padding: "8px",
+    maxHeight: "50px",
+    borderTop: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxSizing: "border-box",
+  },
+  actionButton: {
+    flex: 1,
+    height: "34px",
+    fontSize: "12px",
+    fontWeight: "500",
+    borderRadius: "6px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    color: "var(--colorNeutralForeground2)",
+    gap: "6px", // 添加图标和文字之间的间距
+    
+    "&:hover": {
+      backgroundColor: "var(--colorBrandBackground2)",
+      color: "var(--colorBrandForeground1)",
+    },
+    
+    "&:active": {
+      transform: "scale(0.98)",
+    },
+  },
   content: {
     flex: 1,
     overflow: "hidden",
@@ -518,11 +612,6 @@ const tabs = [
     icon: <CloudArrowUp24Regular />,
   },
   {
-    id: "extended-features" as AppView,
-    label: "扩展功能",
-    icon: <Wrench24Regular />,
-  },
-  {
     id: "online-resources" as AppView,
     label: "在线资源",
     icon: <CloudArrowDown24Regular />,
@@ -545,6 +634,9 @@ const MainContent: React.FC = () => {
   // 版本检查相关状态
   const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
   const [updateCheckCompleted, setUpdateCheckCompleted] = useState(false);
+  
+  // 设备选择弹窗状态
+  const [isDeviceSelectionDialogOpen, setIsDeviceSelectionDialogOpen] = useState(false);
   
   // 离线弹窗状态
   const [isOfflineDialogOpen, setIsOfflineDialogOpen] = useState(false);
@@ -776,9 +868,9 @@ const MainContent: React.FC = () => {
 
 
 
-  const renderDeviceInfo = () => {
-    const connectedDevices = devices.filter(d => d.connected);
+  const connectedDevices = devices.filter(d => d.connected);
 
+  const renderDeviceInfo = () => {
     if (connectedDevices.length === 0) {
       return (
         <div className={styles.deviceInfo}>
@@ -806,15 +898,16 @@ const MainContent: React.FC = () => {
             </div>
 
             {/* 下半部分：设备选择区域（保持一致性） */}
-            <div className={styles.deviceSelectorArea}>
-              <select
-                className={styles.deviceSelectDropdown}
-                disabled
-                value=""
+                          <div 
+                className={styles.deviceSelectCard}
               >
-                <option value="">暂无可用设备</option>
-              </select>
-            </div>
+                <div className={styles.deviceSelectCardContent}>
+                    <div className={styles.deviceSelectCardTitle}>
+                     暂无设备连接
+                  </div>
+                </div>
+                <Warning24Regular />
+              </div>
           </div>
         </div>
       );
@@ -841,12 +934,8 @@ const MainContent: React.FC = () => {
     };
 
     const getDeviceOptionText = (device: any) => {
-      if (device.mode === "fastboot" || device.mode === "fastbootd") {
-        // 对于fastboot模式，优先使用product_name，如果没有则使用serial
-        return `选择设备: ${device.properties?.productName || device.serial}`;
-      }
-      // 对于其他模式，使用原有的逻辑
-      return `选择设备: ${device.properties?.marketName || device.properties?.model || device.serial}`;
+      // 直接返回设备序列号
+      return device.serial;
     };
     
     const getDeviceCodeName = () => {
@@ -911,20 +1000,32 @@ const MainContent: React.FC = () => {
 
           {/* 下半部分：设备选择框 */}
           <div className={styles.deviceSelectorArea}>
-            <select
-              className={styles.deviceSelectDropdown}
-              value={selectedDevice.serial}
-              onChange={(e) => {
-                const device = connectedDevices.find(d => d.serial === e.target.value);
-                if (device) handleDeviceSelect(device);
-              }}
-            >
-              {connectedDevices.map((device) => (
-                <option key={device.serial} value={device.serial}>
-                  {getDeviceOptionText(device)}
-                </option>
-              ))}
-            </select>
+            {connectedDevices.length > 0 ? (
+              <div 
+                className={styles.deviceSelectCard}
+                onClick={() => setIsDeviceSelectionDialogOpen(true)}
+              >
+                <div className={styles.deviceSelectCardContent}>
+                  
+                    <div className={styles.deviceSelectCardTitle}>
+                      选择设备:
+                     {getDeviceOptionText(selectedDevice)}
+                  </div>
+                </div>
+                <ChevronDown24Regular />
+              </div>
+            ) : (
+              <div 
+                className={styles.deviceSelectCard}
+              >
+                <div className={styles.deviceSelectCardContent}>
+                    <div className={styles.deviceSelectCardTitle}>
+                     暂无设备连接
+                  </div>
+                </div>
+                <Warning24Regular />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -944,7 +1045,7 @@ const MainContent: React.FC = () => {
       case "extended-features":
         return <ExtendedFeaturesPanel />;
       case "online-resources":
-        return <OnlineResourcesPanel />;
+        return <OnlineZonePanel />;
       case "settings":
         return <SettingsPanel />;
 
@@ -978,11 +1079,134 @@ const MainContent: React.FC = () => {
           ))}
         </TabList>
 
+
         {/* 轮播图区域 */}
         <div className={styles.carouselContainer}>
           <CarouselComponent />
         </div>
+                <div className={styles.buttonGroupContainer}>
+                  <div 
+                    className={styles.actionButton}
+                    onClick={async () => {
+                      try {
+                        console.log('尝试创建命令行窗口...');
+                  
+                        // 创建新窗口显示命令行面板
+                        const commandWindow = new WebviewWindow('command_panel', {
+                          url: '/command_panel.html',
+                          width:  720,
+                          height: 720,
+                          minWidth:  600,
+                          minHeight: 720,
+                          resizable: true,
+                          center: true,
+                          decorations: false, // 启用窗口装饰，显示标题栏和按钮
+                          title: '命令行窗口',
+                          fullscreen: false,
+                          maximizable: true,
+                          minimizable: false, 
+                          closable: false, 
+                          alwaysOnTop: false,
+                          skipTaskbar: false,
+                          dragDropEnabled: false
+                        });
+                        
+                        console.log('命令行窗口创建请求已发送');
+                        
+                        // 监听窗口创建完成事件
+                        commandWindow.once('tauri://created', () => {
+                          console.log('命令行窗口创建完成');
+                        });
+                        
+                        // 监听窗口关闭事件
+                        commandWindow.once('tauri://closed', () => {
+                          console.log('命令行窗口已关闭');
+                        });
+                        
+                        // 监听窗口错误事件
+                        commandWindow.once('tauri://error', (e) => {
+                          console.error('命令行窗口错误:', e);
+                        });
+                      } catch (error) {
+                        console.error('创建命令行窗口失败:', error);
+                        // 如果创建窗口失败，回退到原来的方式
+                        setCurrentView("adb-zone");
+                      }
+                    }}
+                  >
+                    <Tent24Regular />
+                    命令行
+                  </div>
+                   <div 
+                    className={styles.actionButton}
+                    onClick={async () => {
+                      try {
+                        console.log('尝试创建日志窗口...');
+                  
+                        // 创建新窗口显示日志面板
+                        const logWindow = new WebviewWindow('log_panel', {
+                          url: '/log_panel.html',
+                          width:  720,
+                          height: 720,
+                          minWidth:  720,
+                          minHeight: 720,
+                          resizable: true,
+                          center: true,
+                          decorations: false,
+                          title: '日志管理窗口',
+                          fullscreen: false,
+                          maximizable: true,
+                          minimizable: true, // 启用最小化按钮
+                          closable: true, // 启用关闭按钮
+                          alwaysOnTop: false,
+                          skipTaskbar: false,
+                          dragDropEnabled: false
+                        });
+                        
+                        console.log('日志窗口创建请求已发送');
+                        
+                        // 监听窗口创建完成事件
+                        logWindow.once('tauri://created', () => {
+                          console.log('日志窗口创建完成');
+                        });
+                        
+                        // 监听窗口关闭事件
+                        logWindow.once('tauri://closed', () => {
+                          console.log('日志窗口已关闭');
+                        });
+                        
+                        // 监听窗口错误事件
+                        logWindow.once('tauri://error', (e) => {
+                          console.error('日志窗口错误:', e);
+                        });
+                      } catch (error) {
+                        console.error('创建日志窗口失败:', error);
+                        // 如果创建窗口失败，回退到原来的方式
+                        setCurrentView("adb-zone");
+                      }
+                    }}
+                  >
+                    <DocumentText24Regular />
+                    日志
+                  </div>
+                </div>
+
+
+
+
       </div>
+
+      {/* 设备选择弹窗 */}
+      <DeviceSelectionDialog
+        open={isDeviceSelectionDialogOpen}
+        onOpenChange={(open) => setIsDeviceSelectionDialogOpen(open)}
+        devices={connectedDevices}
+        selectedDevice={selectedDevice}
+        onDeviceSelect={(device) => {
+          handleDeviceSelect(device);
+          setIsDeviceSelectionDialogOpen(false);
+        }}
+      />
 
       <div className={`${styles.content} main-content-enter`}>
         {renderContent()}

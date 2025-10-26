@@ -310,9 +310,6 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
   if (isLoading) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <Title2>下载管理</Title2>
-        </div>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
           <Spinner size="large" />
         </div>
@@ -322,36 +319,6 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <Title2>下载管理</Title2>
-        <Button
-          appearance="subtle"
-          icon={<FolderOpen24Regular />}
-          onClick={async () => {
-            if (downloadDirectory) {
-              try {
-                const { invoke } = await import('@tauri-apps/api/core');
-                
-                // 检查是否有APK文件，如果有则优先打开APK目录
-                const hasApkFiles = tasks.some(task => {
-                  return task.fileName && task.fileName.toLowerCase().endsWith('.apk');
-                });
-                
-                // 如果有APK文件，则打开APK目录，否则打开默认下载目录
-                const targetDir = hasApkFiles 
-                  ? `${downloadDirectory}/apk` 
-                  : downloadDirectory;
-                
-                await invoke('open_folder', { path: targetDir });
-              } catch (error) {
-                console.error('❌ 打开下载目录失败:', error);
-              }
-            }
-          }}
-        >
-          打开下载目录
-        </Button>
-      </div>
 
       {/* 统计信息 */}
       <Card className={styles.statsCard}>
@@ -408,6 +375,33 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
         >
           清理已完成
         </Button>
+                <Button
+          appearance="subtle"
+          icon={<FolderOpen24Regular />}
+          onClick={async () => {
+            if (downloadDirectory) {
+              try {
+                const { invoke } = await import('@tauri-apps/api/core');
+                
+                // 检查是否有APK文件，如果有则优先打开APK目录
+                const hasApkFiles = tasks.some(task => {
+                  return task.fileName && task.fileName.toLowerCase().endsWith('.apk');
+                });
+                
+                // 如果有APK文件，则打开APK目录，否则打开默认下载目录
+                const targetDir = hasApkFiles 
+                  ? `${downloadDirectory}/apk` 
+                  : downloadDirectory;
+                
+                await invoke('open_folder', { path: targetDir });
+              } catch (error) {
+                console.error('❌ 打开下载目录失败:', error);
+              }
+            }
+          }}
+        >
+          打开下载目录
+        </Button>
       </div>
 
       {/* 任务列表 */}
@@ -437,7 +431,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
       </div>
     </div>
   );
-};
+}; 
 
 // 任务行组件
 interface TaskRowProps {

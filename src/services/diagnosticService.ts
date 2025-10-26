@@ -1,9 +1,10 @@
- /**
+/**
  * 诊断服务
  * 提供系统诊断和问题排查功能
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { consoleLogger } from '../utils/consoleLogger';
 
 export interface DiagnosticResult {
   current_working_directory: string;
@@ -29,16 +30,25 @@ export interface DiagnosticResult {
 }
 
 export class DiagnosticService {
+  private logger = consoleLogger.withContext('DiagnosticService', 'system');
+
   /**
    * 诊断 ADB 和 Fastboot 路径配置
    */
   async diagnoseAdbFastbootPaths(): Promise<DiagnosticResult> {
+    this.logger.info('开始诊断ADB和Fastboot路径配置');
+    
     try {
       const result = await invoke<DiagnosticResult>('diagnose_adb_fastboot_paths');
-      console.log('ADB/Fastboot 诊断结果:', result);
+      this.logger.info('ADB/Fastboot诊断完成', { 
+        adbExists: result.adb_exists,
+        fastbootExists: result.fastboot_exists,
+        adbTestSuccess: result.adb_command_test.success,
+        fastbootTestSuccess: result.fastboot_command_test.success
+      });
       return result;
     } catch (error) {
-      console.error('ADB/Fastboot 诊断失败:', error);
+      this.logger.error('ADB/Fastboot诊断失败', error);
       throw new Error(`诊断失败: ${error}`);
     }
   }
@@ -47,11 +57,17 @@ export class DiagnosticService {
    * 检查 ADB 可用性
    */
   async checkAdbAvailability(): Promise<{ success: boolean; output: string; error?: string }> {
+    this.logger.debug('开始检查ADB可用性');
+    
     try {
       const result = await invoke<{ success: boolean; output: string; error?: string }>('check_adb_availability');
+      this.logger.info('ADB可用性检查完成', { 
+        success: result.success,
+        hasError: !!result.error 
+      });
       return result;
     } catch (error) {
-      console.error('ADB 可用性检查失败:', error);
+      this.logger.error('ADB可用性检查失败', error);
       throw new Error(`ADB 检查失败: ${error}`);
     }
   }
@@ -60,11 +76,17 @@ export class DiagnosticService {
    * 检查 Fastboot 可用性
    */
   async checkFastbootAvailability(): Promise<{ success: boolean; output: string; error?: string }> {
+    this.logger.debug('开始检查Fastboot可用性');
+    
     try {
       const result = await invoke<{ success: boolean; output: string; error?: string }>('check_fastboot_availability');
+      this.logger.info('Fastboot可用性检查完成', { 
+        success: result.success,
+        hasError: !!result.error 
+      });
       return result;
     } catch (error) {
-      console.error('Fastboot 可用性检查失败:', error);
+      this.logger.error('Fastboot可用性检查失败', error);
       throw new Error(`Fastboot 检查失败: ${error}`);
     }
   }

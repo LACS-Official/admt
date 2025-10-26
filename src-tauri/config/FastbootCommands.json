@@ -1,0 +1,87 @@
+{
+  "categories": [
+    {
+      "commands": [
+        {
+          "command": "devices",
+          "description": "列出当前连接的所有fastboot设备",
+          "id": "list_devices",
+          "label": "列出设备"
+        },
+        {
+          "command": "getvar all",
+          "description": "获取设备的所有变量信息",
+          "id": "get_variables",
+          "label": "获取设备变量"
+        },
+        {
+          "command": "oem device-info",
+          "description": "获取OEM设备信息",
+          "id": "oem_info",
+          "label": "OEM设备信息"
+        }
+      ],
+      "description": "获取fastboot设备的基本信息和状态",
+      "id": "device_info",
+      "name": "设备信息"
+    },
+    {
+      "commands": [
+        {
+          "command": "erase cache",
+          "description": "擦除cache分区",
+          "id": "erase_cache",
+          "label": "擦除Cache"
+        },
+        {
+          "command": "erase userdata",
+          "description": "擦除userdata分区（恢复出厂设置）",
+          "id": "erase_userdata",
+          "label": "擦除用户数据"
+        },
+        {
+          "command": "format cache",
+          "description": "格式化cache分区",
+          "id": "format_cache",
+          "label": "格式化Cache"
+        },
+        {
+          "command": "format userdata",
+          "description": "格式化userdata分区",
+          "id": "format_userdata",
+          "label": "格式化用户数据"
+        }
+      ],
+      "description": "擦除和格式化设备分区",
+      "id": "partition_operations",
+      "name": "分区操作"
+    },
+    {
+      "commands": [
+        {
+          "command": "unlock",
+          "description": "解锁设备Bootloader",
+          "id": "unlock_bootloader",
+          "label": "解锁Bootloader"
+        },
+        {
+          "command": "flashing unlock",
+          "description": "一加设备和Pixel设备的解锁命令",
+          "id": "flashing_unlock",
+          "label": "一加/Pixel设备解锁"
+        },{
+          "command": "oem unlock ",
+          "description": "摩托摩拉和索尼设备的解锁命令,后面接解锁码",
+          "id": "oem_unlock",
+          "label": "摩托摩拉/索尼设备解锁"
+        }
+      ],
+      "description": "Bootloader解锁和锁定相关操作",
+      "id": "security_operations",
+      "name": "安全操作"
+    }
+  ],
+  "lastUpdated": "2025-10-25",
+  "version": "1.0.0",
+  "author": "LACS"
+}

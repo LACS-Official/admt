@@ -9,12 +9,10 @@ import {
 import {
   WeatherMoon24Regular,
   WeatherSunny24Regular,
-  Settings24Regular,
   Subtract24Regular,
   Dismiss24Regular,
   Maximize24Regular,
   SquareMultiple24Regular,
-  Person24Regular,
   Pin24Regular,
   PinOff24Regular,
 } from "@fluentui/react-icons";
@@ -24,7 +22,7 @@ import { useAppConfigStore } from "../../stores/welcomeStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { admtLogo64 } from "../../assets/icons";
-import AnnouncementBar from "../Announcement/AnnouncementBar";
+import AnnouncementBar from "./AnnouncementBar";
 
 const useStyles = makeStyles({
   IconImage: {
@@ -193,7 +191,7 @@ const TitleBar: React.FC = () => {
       if (config.systemTrayEnabled && config.minimizeToTrayOnClose) {
         // 最小化到托盘
         const { systemTrayService } = await import("../../services/systemTrayService");
-        await systemTrayService.minimizeToTray();
+        await systemTrayService().minimizeToTray();
       } else {
         // 直接关闭应用
         await getCurrentWindow().close();

@@ -9,7 +9,6 @@ import {
   CloudArrowUp24Regular,
   Settings24Regular,
   LockOpen24Regular,
-  Database24Regular,
   Flash24Regular,
   Code24Regular,
 } from "@fluentui/react-icons";
@@ -17,7 +16,6 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
 import ImageFlashCard from "../Tools/ImageFlashCard";
 import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
-import FastbootCommandCard from "../FlashZone/FastbootCommandCard";
 
 const useStyles = makeStyles({
   container: {
@@ -137,22 +135,17 @@ const useStyles = makeStyles({
   },
 });
 
-type FlashZoneView = "fastboot-command" | "unlock-tools" | "image-flash" | "xiaomi-flash" | "system-backup";
+type FlashZoneView =  "unlock-tools" | "image-flash" | "xiaomi-flash" | "system-backup";
 
 const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
   const { selectedDevice, devices } = useDeviceStore();
-  const [currentView, setCurrentView] = useState<FlashZoneView>("fastboot-command");
+  const [currentView, setCurrentView] = useState<FlashZoneView>("unlock-tools");
   const connectedDevices = devices.filter(d => d.connected);
 
 
 
   const tabs = [
-    {
-      id:"fastboot-command",
-      label: "Fastboot 命令",
-      icon: <Database24Regular />,
-    },
     {
       id: "unlock-tools" as FlashZoneView,
       label: "解锁工具",
@@ -175,8 +168,6 @@ const FlashZonePanel: React.FC = () => {
     const deviceToUse = selectedDevice || connectedDevices[0] || null;
 
     switch (currentView) {
-      case "fastboot-command":
-        return deviceToUse ? <FastbootCommandCard /> : <FastbootCommandCard />;
       case "unlock-tools":
         return deviceToUse ? <XiaomiUnlockCard device={deviceToUse} /> : <XiaomiUnlockCard device={null} />;
       case "image-flash":
@@ -184,7 +175,7 @@ const FlashZonePanel: React.FC = () => {
       case "xiaomi-flash":
         return deviceToUse ? <XiaomiFlashCard device={deviceToUse} /> : <XiaomiFlashCard device={null} />;
       default:
-       return deviceToUse ? <FastbootCommandCard /> : <FastbootCommandCard />;
+       return deviceToUse ? <XiaomiUnlockCard device={deviceToUse} /> : <XiaomiUnlockCard device={null} />;
     }
   };
 

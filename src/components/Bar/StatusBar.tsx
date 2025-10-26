@@ -4,8 +4,6 @@ import {
   mergeClasses,
   Text,
   Spinner,
-  Button,
-  Tooltip,
   tokens,
 } from "@fluentui/react-components";
 import {
@@ -14,9 +12,15 @@ import {
   ErrorCircle24Regular,
   Info24Regular,
   Dismiss24Regular,
+  Copy24Regular,
+  Checkmark24Filled,
 } from "@fluentui/react-icons";
 import { useAppStore, StatusBarMessage } from "../../stores/appStore";
 import { NotificationMessage } from "../../types/app";
+
+
+
+
 
 const useStyles = makeStyles({
   statusBar: {
@@ -165,6 +169,39 @@ const StatusBar: React.FC = () => {
   const [progressWidth, setProgressWidth] = useState(100);
   const [notificationTimer, setNotificationTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [progressTimer, setProgressTimer] = useState<ReturnType<typeof setInterval> | null>(null);
+  const [copiedNotificationId, setCopiedNotificationId] = useState<string | null>(null);
+  const [isStatusBarMessageCopied, setIsStatusBarMessageCopied] = useState(false);
+
+  // 复制状态栏消息内容
+  const handleCopyStatusBarMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(statusBarMessage?.message || '');
+      setIsStatusBarMessageCopied(true);
+      
+      // 1秒后重置按钮状态
+      setTimeout(() => {
+        setIsStatusBarMessageCopied(false);
+      }, 1000);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  };
+
+  // 复制通知内容
+  const handleCopyNotification = async (notification: NotificationMessage) => {
+    try {
+      const textToCopy = `${notification.title}: ${notification.message}`;
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedNotificationId(notification.id);
+      
+      // 1秒后重置按钮状态
+      setTimeout(() => {
+        setCopiedNotificationId(null);
+      }, 1000);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  };
 
   // 手动关闭通知
   const handleCloseNotification = () => {
@@ -353,6 +390,34 @@ const StatusBar: React.FC = () => {
           <Text size={200} style={{ flex: 1, fontWeight: "500", color: "inherit" }}>
             {statusBarMessage.message}
           </Text>
+          {/* 复制按钮 */}
+          <button
+            onClick={handleCopyStatusBarMessage}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: 0.7,
+              transition: "opacity 0.2s ease",
+              marginRight: "4px",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+            title="复制消息内容"
+          >
+            {isStatusBarMessageCopied ? (
+              <Checkmark24Filled style={{ fontSize: "16px" }} />
+            ) : (
+              <Copy24Regular style={{ fontSize: "16px" }} />
+            )}
+          </button>
+          
+          {/* 关闭按钮 */}
           <button
             onClick={clearStatusBarMessage}
             style={{
@@ -413,6 +478,38 @@ const StatusBar: React.FC = () => {
             {currentNotification.title}: {currentNotification.message}
           </Text>
 
+          {/* 复制按钮 */}
+          <button
+            onClick={() => handleCopyNotification(currentNotification)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: "44px",
+              minHeight: "44px",
+              color: "inherit",
+              transition: "background-color 0.2s ease-in-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            title="复制通知内容"
+          >
+            {copiedNotificationId === currentNotification.id ? (
+              <Checkmark24Filled />
+            ) : (
+              <Copy24Regular />
+            )}
+          </button>
+          
           {/* 关闭按钮 */}
           <button
             onClick={handleCloseNotification}

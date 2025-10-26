@@ -933,12 +933,6 @@ export const useDeviceService = () => {
     }
   }, [setStatusBarMessage]);
 
-  useEffect(() => {
-    return () => {
-      stopScanning();
-    };
-  }, [stopScanning]);
-
   return {
     startScanning,
     stopScanning,

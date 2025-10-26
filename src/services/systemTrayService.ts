@@ -33,11 +33,26 @@ export interface TrayConfig {
 export class SystemTrayService {
   private static instance: SystemTrayService;
   private isInitialized = false;
-  private currentWindow = getCurrentWindow();
+  private currentWindow: any = null;
   private closeToTrayEnabled = false;
   private closeEventUnlisten?: () => void;
+  private windowInitialized = false;
 
-  private constructor() {}
+  private constructor() {
+    // 不在构造函数中初始化窗口，延迟到需要时再初始化
+  }
+
+  private async ensureWindowInitialized() {
+    if (!this.windowInitialized) {
+      try {
+        this.currentWindow = getCurrentWindow();
+        this.windowInitialized = true;
+      } catch (error) {
+        console.warn('无法获取当前窗口:', error);
+        this.windowInitialized = true; // 即使失败也标记为已尝试，避免重复尝试
+      }
+    }
+  }
 
   /**
    * 清理可能存在的子进程/后台任务（容错动态导入）
@@ -239,6 +254,12 @@ export class SystemTrayService {
    */
   private async handleTrayIconClick(): Promise<void> {
     try {
+      await this.ensureWindowInitialized();
+      if (!this.currentWindow) {
+        console.warn('无法获取窗口对象，跳过托盘图标点击处理');
+        return;
+      }
+      
       const isVisible = await this.currentWindow.isVisible();
       if (isVisible) {
         await this.hideWindow();
@@ -255,6 +276,11 @@ export class SystemTrayService {
    */
   async showWindow(): Promise<void> {
     try {
+      await this.ensureWindowInitialized();
+      if (!this.currentWindow) {
+        throw new Error('无法获取窗口对象');
+      }
+      
       await this.currentWindow.show();
       await this.currentWindow.setFocus();
       await this.currentWindow.unminimize();
@@ -270,6 +296,11 @@ export class SystemTrayService {
    */
   async hideWindow(): Promise<void> {
     try {
+      await this.ensureWindowInitialized();
+      if (!this.currentWindow) {
+        throw new Error('无法获取窗口对象');
+      }
+      
       await this.currentWindow.hide();
       console.log('✅ 窗口已隐藏到托盘');
     } catch (error) {
@@ -435,4 +466,11 @@ export class SystemTrayService {
 }
 
 // 导出单例实例
-export const systemTrayService = SystemTrayService.getInstance();
+let systemTrayServiceInstance: SystemTrayService | null = null;
+
+export const systemTrayService = (): SystemTrayService => {
+  if (!systemTrayServiceInstance) {
+    systemTrayServiceInstance = SystemTrayService.getInstance();
+  }
+  return systemTrayServiceInstance;
+};

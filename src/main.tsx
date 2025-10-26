@@ -13,7 +13,7 @@ import "./utils/securityProtection";
 import "./utils/devtools";
 
 function AppWithTheme() {
-  const { isDarkMode, followSystemTheme, updateThemeBasedOnSystem } = useThemeStore();
+  const { isDarkMode, followSystemTheme, updateThemeBasedOnSystem, subscribeToStorageChanges } = useThemeStore();
   const [isActivationValid, setIsActivationValid] = useState(true);
   const { setCurrentPhase } = useStartupFlowStore();
 
@@ -32,6 +32,12 @@ function AppWithTheme() {
       return () => mediaQuery.removeEventListener('change', handler);
     }
   }, [followSystemTheme, updateThemeBasedOnSystem]);
+
+  // 监听跨页面的主题变化
+  useEffect(() => {
+    const cleanup = subscribeToStorageChanges();
+    return cleanup;
+  }, [subscribeToStorageChanges]);
 
   // 每隔1秒检测激活码是否过期
   useEffect(() => {

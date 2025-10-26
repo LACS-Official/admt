@@ -155,7 +155,7 @@ const OtherSettingsPanel: React.FC = () => {
     debounce(async () => {
       try {
         const [traySupported, autoStartSupported] = await Promise.all([
-          systemTrayService.isSystemTraySupported(),
+          systemTrayService().isSystemTraySupported(),
           isEnabled().then(() => true).catch(() => false), // 检查自启动支持
         ]);
         
@@ -177,7 +177,7 @@ const OtherSettingsPanel: React.FC = () => {
         await checkSystemFeatures();
         
         // 同步托盘状态（不重复初始化）
-        const trayStatus = await systemTrayService.isReady();
+        const trayStatus = await systemTrayService().isReady();
         if (trayStatus !== config.systemTrayEnabled) {
           console.log(`🔄 同步托盘状态: ${trayStatus ? '已启用' : '未启用'}`);
           updateConfig({ systemTrayEnabled: trayStatus });
