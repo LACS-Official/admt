@@ -54,6 +54,8 @@ const useStyles = makeStyles({
   },
   card: {
     height: "fit-content",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   cardContent: {
     padding: "20px",
@@ -374,7 +376,7 @@ const AboutPanel: React.FC = () => {
               {versionLoading ? 'v1.0.0' : fullVersionString}
             </Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
-              基于Tauri框架开发的现代化Android设备免费玩机工具，体积小，功能强大
+              基于Tauri2框架开发的现代化Android设备免费玩机工具，体积小，功能强大
             </Text>
 
             <div className={styles.buttonGroup}>

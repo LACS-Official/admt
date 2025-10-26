@@ -175,7 +175,6 @@ const StatusBar: React.FC = () => {
     try {
       // 直接使用Tauri的read_resource_file命令读取文件内容并创建Blob URL
       const soundFile = soundFiles[type];
-      console.log(`准备播放音效: ${type} (${soundFile})`);
       
       try {
         // 使用invoke调用后端命令读取文件
@@ -183,7 +182,6 @@ const StatusBar: React.FC = () => {
           path: `music/${soundFile}`
         });
         
-        console.log(`原始数据类型: ${typeof rawData}, 结构:`, rawData);
         
         // 确保数据存在
         if (!rawData) {
@@ -208,7 +206,6 @@ const StatusBar: React.FC = () => {
           return;
         }
         
-        console.log(`成功读取${type}音效文件数据，大小: ${arrayBuffer.byteLength} 字节`);
         
         // 创建Blob对象和Blob URL
         const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
@@ -220,7 +217,6 @@ const StatusBar: React.FC = () => {
         
         // 设置事件监听器
         audio.addEventListener('ended', () => {
-          console.log(`${type}音效播放完成`);
           URL.revokeObjectURL(blobUrl); // 清理资源
         });
         

@@ -46,6 +46,8 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   content: {
     flex: 1,

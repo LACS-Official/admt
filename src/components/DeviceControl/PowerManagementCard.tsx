@@ -24,6 +24,8 @@ const useStyles = makeStyles({
     flexDirection: "column",
     width: "100%",
     minWidth: "400px",
+    border: "1px solid var(--colorNeutralStroke1)",
+    borderRadius: "8px",
   },
   content: {
     flex: 1,

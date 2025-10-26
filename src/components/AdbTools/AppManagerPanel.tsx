@@ -97,6 +97,8 @@ const useStyles = makeStyles({
   card: {
     width: "100%",
     height: "fit-content",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
     /* 支持下拉*/
     "--scrollbarWidth": "8px",
     "scrollbar-width": "8px",

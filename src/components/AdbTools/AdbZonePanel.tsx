@@ -82,7 +82,7 @@ const useStyles = makeStyles({
     flex: "1 1 auto",
     maxHeight: "45px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "6px",
+    borderRadius: "8px",
     padding: "4px 8px",
     //居中显示
     display: "flex",
@@ -95,12 +95,13 @@ const useStyles = makeStyles({
       fontSize: "12px",
       padding: "6px 12px",
       minHeight: "28px",
-      borderRadius: "6px",
+      borderRadius: "8px",
       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-      border: "1px solid transparent",
+      border: "1px solid var(--colorNeutralStroke2)",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
       margin: "0 4px",
+
       
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground2)",
@@ -123,6 +124,14 @@ const useStyles = makeStyles({
         fontSize: "11px",
         padding: "4px 8px",
       },
+    },
+  },
+  tab: {
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2)",
+      color: "var(--colorNeutralForeground1)",
+      transform: "translateY(-1px)",
+      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
     },
   },
 });
@@ -247,6 +256,7 @@ const AdbZonePanel: React.FC = () => {
                   key={tab.id}
                   value={tab.id}
                   icon={tab.icon}
+                  className={styles.tab}
                 >
                   {tab.label}
                 </Tab>

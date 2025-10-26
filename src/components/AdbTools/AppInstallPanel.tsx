@@ -39,6 +39,8 @@ const useStyles = makeStyles({
   card: {
     width: "100%",
     height: "fit-content",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   content: {
     flex: 1,
@@ -584,7 +586,7 @@ const AppInstallPanel: React.FC = () => {
 
           </div>
         </Card>
-        <Card>
+        <Card className={styles.card}>
                       {/* 本地APK文件列表 */}
           <div className={styles.apkListSection}>
             <div className={styles.apkListHeader}>

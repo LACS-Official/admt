@@ -232,6 +232,7 @@ const useStyles = makeStyles({
     alignItems: "flex-end",
     gap: "16px",
     marginBottom: "12px",
+    borderRadius: "8px",
   },
   buttonsContainer: {
     display: "flex",
@@ -1041,7 +1042,7 @@ const executeCommand = async (cmd: string) => {
               {/* 第一行：设备选择器、执行按钮和快捷命令按钮 */}
               <div className={styles.deviceAndButtonsRow}>
                 {/* 设备选择器 */}
-                <Field  style={{ marginBottom: 0, width: '400px' }}>
+                <Field  style={{ marginBottom: 0, width: '400px', borderRadius: '8px' }}>
                   <div className={styles.deviceSelector}>
                     <Button
                       appearance="outline"
@@ -1054,7 +1055,7 @@ const executeCommand = async (cmd: string) => {
                       }}
                     >
                       {selectedDevice ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' }}>
                           选择设备:
                           <div 
                             style={{ 
