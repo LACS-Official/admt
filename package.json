@@ -15,7 +15,7 @@
     "tauri:build:debug": "npm run prebuild-check && node scripts/inject-version.cjs && tauri build --debug",
     "tauri:build:prod": "npm run validate-env && npm run verify:tools && npm run prebuild-check && node scripts/inject-version.cjs && tauri build --mode production",
     "build:all": "npm run build && npm run tauri:build",
-    "clean": "rimraf dist src-tauri/target",
+    "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "verify:tools": "node scripts/verify-tools.cjs",
     "prestart": "npm run verify:tools",
