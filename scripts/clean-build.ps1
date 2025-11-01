@@ -1,69 +1,69 @@
-# 清理构建脚本 - 用于解决Tauri构建时的文件锁定问题
+# Clean build script - used to solve file locking issues during Tauri build
 
-Write-Host "开始清理构建环境..." -ForegroundColor Cyan
+Write-Host "Starting to clean build environment..." -ForegroundColor Cyan
 
-# 1. 尝试关闭可能占用文件的进程
-Write-Host "正在检查并关闭可能占用文件的进程..." -ForegroundColor Yellow
+# 1. Try to close processes that might be holding files
+Write-Host "Checking and closing processes that might be holding files..." -ForegroundColor Yellow
 
 $processesToCheck = @("node", "cargo", "rustc", "tauri", "npm")
 foreach ($proc in $processesToCheck) {
     $processes = Get-Process -Name $proc -ErrorAction SilentlyContinue
     if ($processes) {
-        Write-Host "发现 $proc 进程，尝试关闭..." -ForegroundColor Yellow
+        Write-Host "Found $proc processes, trying to close..." -ForegroundColor Yellow
         $processes | ForEach-Object {
-            Write-Host "  - 关闭进程: $($_.Id) $($_.ProcessName)" -ForegroundColor Gray
+            Write-Host "  - Closing process: $($_.Id) $($_.ProcessName)" -ForegroundColor Gray
             try {
                 Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
             } catch {
-                Write-Host "    无法关闭进程: $($_.Id) $($_.ProcessName)" -ForegroundColor Red
+                Write-Host "    Unable to close process: $($_.Id) $($_.ProcessName)" -ForegroundColor Red
             }
         }
     }
 }
 
-# 2. 等待一段时间确保进程完全关闭
-Write-Host "等待进程完全关闭..." -ForegroundColor Yellow
+# 2. Wait for processes to fully close
+Write-Host "Waiting for processes to fully close..." -ForegroundColor Yellow
 Start-Sleep -Seconds 2
 
-# 3. 手动删除target目录
-Write-Host "尝试手动删除target目录..." -ForegroundColor Yellow
+# 3. Manually delete target directory
+Write-Host "Trying to manually delete target directory..." -ForegroundColor Yellow
 $targetDir = ".\src-tauri\target"
 $distDir = ".\dist"
 
 if (Test-Path $targetDir) {
     try {
         Remove-Item -Path $targetDir -Recurse -Force -ErrorAction Stop
-        Write-Host "成功删除 $targetDir" -ForegroundColor Green
+        Write-Host "Successfully deleted $targetDir" -ForegroundColor Green
     } catch {
-        Write-Host "无法删除 $targetDir: $_" -ForegroundColor Red
-        Write-Host "尝试使用robocopy清空目录..." -ForegroundColor Yellow
+        Write-Host "Unable to delete ${targetDir}: $_" -ForegroundColor Red
+        Write-Host "Trying to empty directory using robocopy..." -ForegroundColor Yellow
         
-        # 使用robocopy清空目录的技巧
+        # Technique to empty directory using robocopy
         $emptyDir = New-Item -ItemType Directory -Path ".\empty_dir" -Force
         robocopy $emptyDir.FullName $targetDir /MIR /NFL /NDL /NJH /NJS /NC /NS /NP
         Remove-Item -Path $emptyDir -Recurse -Force
         
-        # 再次尝试删除
+        # Try to delete again
         if (Test-Path $targetDir) {
             try {
                 Remove-Item -Path $targetDir -Recurse -Force -ErrorAction Stop
-                Write-Host "成功删除 $targetDir" -ForegroundColor Green
+                Write-Host "Successfully deleted $targetDir" -ForegroundColor Green
             } catch {
-                Write-Host "仍然无法删除 $targetDir，请手动删除或重启电脑后再试" -ForegroundColor Red
+                Write-Host "Still unable to delete ${targetDir}, please delete manually or restart computer and try again" -ForegroundColor Red
             }
         }
     }
 }
 
-# 4. 删除dist目录
+# 4. Delete dist directory
 if (Test-Path $distDir) {
     try {
         Remove-Item -Path $distDir -Recurse -Force -ErrorAction Stop
-        Write-Host "成功删除 $distDir" -ForegroundColor Green
+        Write-Host "Successfully deleted $distDir" -ForegroundColor Green
     } catch {
-        Write-Host "无法删除 $distDir: $_" -ForegroundColor Red
+        Write-Host "Unable to delete ${distDir}: $_" -ForegroundColor Red
     }
 }
 
-Write-Host "清理完成，现在可以尝试重新构建项目" -ForegroundColor Cyan
-Write-Host "运行命令: npm run tauri build" -ForegroundColor Green
+Write-Host "Cleanup completed, now you can try to rebuild the project" -ForegroundColor Cyan
+Write-Host "Run command: npm run tauri build" -ForegroundColor Green
