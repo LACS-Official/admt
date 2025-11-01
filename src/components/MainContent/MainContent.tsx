@@ -1089,47 +1089,56 @@ const MainContent: React.FC = () => {
                     className={styles.actionButton}
                     onClick={async () => {
                       try {
-                        console.log('尝试创建命令行窗口...');
+                        console.log('尝试创建或聚焦命令行窗口...');
                   
-                        // 创建新窗口显示命令行面板
-                        const commandWindow = new WebviewWindow('command_panel', {
-                          url: '/command_panel.html',
-                          width:  720,
-                          height: 720,
-                          minWidth:  600,
-                          minHeight: 720,
-                          resizable: true,
-                          center: true,
-                          decorations: false, // 启用窗口装饰，显示标题栏和按钮
-                          title: '命令行窗口',
-                          fullscreen: false,
-                          maximizable: true,
-                          minimizable: false, 
-                          closable: false, 
-                          alwaysOnTop: false,
-                          skipTaskbar: false,
-                          dragDropEnabled: false
-                        });
+                        // 先尝试获取已存在的窗口
+                        let existingWindow = await WebviewWindow.getByLabel('command_panel');
                         
-                        console.log('命令行窗口创建请求已发送');
-                        
-                        // 监听窗口创建完成事件
-                        commandWindow.once('tauri://created', () => {
-                          console.log('命令行窗口创建完成');
-                        });
-                        
-                        // 监听窗口关闭事件
-                        commandWindow.once('tauri://closed', () => {
-                          console.log('命令行窗口已关闭');
-                        });
-                        
-                        // 监听窗口错误事件
-                        commandWindow.once('tauri://error', (e) => {
-                          console.error('命令行窗口错误:', e);
-                        });
+                        if (!existingWindow) {
+                          // 如果窗口不存在，创建新窗口
+                          const commandWindow = new WebviewWindow('command_panel', {
+                            url: '/command_panel.html',
+                            width:  720,
+                            height: 720,
+                            minWidth:  600,
+                            minHeight: 720,
+                            resizable: true,
+                            center: true,
+                            decorations: false, // 启用窗口装饰，显示标题栏和按钮
+                            title: '命令行窗口',
+                            fullscreen: false,
+                            maximizable: true,
+                            minimizable: false, 
+                            closable: false, 
+                            alwaysOnTop: false,
+                            skipTaskbar: false,
+                            dragDropEnabled: false
+                          });
+                          
+                          console.log('命令行窗口创建请求已发送');
+                          
+                          // 监听窗口创建完成事件
+                          commandWindow.once('tauri://created', () => {
+                            console.log('命令行窗口创建完成');
+                          });
+                          
+                          // 监听窗口关闭事件
+                          commandWindow.once('tauri://closed', () => {
+                            console.log('命令行窗口已关闭');
+                          });
+                        } else {
+                          // 如果窗口已存在，尝试聚焦到该窗口
+                          console.log('命令行窗口已存在，尝试聚焦...');
+                          try {
+                            // 移除unminimize调用，只使用show方法
+                            await existingWindow.show();
+                          } catch (focusError) {
+                            console.error('聚焦命令行窗口失败:', focusError);
+                          }
+                        }
                       } catch (error) {
-                        console.error('创建命令行窗口失败:', error);
-                        // 如果创建窗口失败，回退到原来的方式
+                        console.error('命令行窗口操作失败:', error);
+                        // 如果操作窗口失败，回退到原来的方式
                         setCurrentView("adb-zone");
                       }
                     }}
