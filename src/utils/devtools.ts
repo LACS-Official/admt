@@ -114,8 +114,24 @@ export class DevToolsManager {
       if (
         event.key === 'F12' ||
         (event.ctrlKey && event.shiftKey && ['I', 'J', 'C'].includes(event.key)) ||
-        (event.ctrlKey && event.key === 'U') // 查看源代码
+        (event.ctrlKey && event.key === 'U') || // 查看源代码
+        // 禁用F3和F7以及其他功能键
+        (event.key.startsWith('F') && event.key.length >= 2 && event.key.length <= 3)
       ) {
+        // 特别处理F3和F7，确保它们被禁用
+        if (event.key === 'F3' || event.key === 'F7') {
+          event.preventDefault();
+          event.stopPropagation();
+          console.warn(`🔒 ${event.key}快捷键在生产模式下被禁用`);
+          return;
+        }
+        
+        // F5单独处理，因为可能有刷新页面的逻辑
+        if (event.key === 'F5') {
+          // 这里不处理F5，让其他逻辑处理
+          return;
+        }
+        
         event.preventDefault();
         event.stopPropagation();
         console.warn('🔒 开发者工具在生产模式下被禁用');

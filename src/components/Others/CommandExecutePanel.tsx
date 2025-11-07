@@ -16,11 +16,6 @@ import {
   DialogBody,
   DialogSurface,
   DialogActions,
-  Toast,
-  ToastTitle,
-  useToastController,
-  shorthands,
-  tokens
 } from "@fluentui/react-components";
 import {
   Play24Regular,
@@ -38,8 +33,6 @@ import {
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { DeviceInfo, DeviceMode } from "../../types/device";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { 
   loadAdbCommandsConfig, 
   saveAdbCommandsConfig,

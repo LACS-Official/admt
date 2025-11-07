@@ -5,6 +5,7 @@ import CommandExecutePanel from './components/Others/CommandExecutePanel';
 import { useThemeStore } from './stores/themeStore';
 import TitleBar from './components/Bar/TitleBarMini';
 import StatusBar from './components/Bar/StatusBarMini'; 
+import "./styles/global.css";
 
 
 function AppWithTheme() {
