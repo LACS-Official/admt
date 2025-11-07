@@ -326,7 +326,7 @@ const AboutPanel: React.FC = () => {
     officialWebsite: "https://www.lacs.cc",
     officialADMTWeb: "https://admt.lacs.cc",
     officialGroup: "https://www.lacs.cc/contact#qun-group",
-    contact: "https://your-organization.com/contact",
+    contact: "https://www.lacs.cc/contact",
     donate: "https://www.lacs.cc/donate",
   };
 

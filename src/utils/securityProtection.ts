@@ -61,6 +61,28 @@ export class SecurityProtection {
     document.addEventListener('keydown', (e) => {
       if (!this.protectionEnabled) return;
 
+      // 禁用F1-F12功能键（除了已特别处理的）
+      if (e.key.startsWith('F') && e.key.length >= 2 && e.key.length <= 3) {
+        const fKeyNum = parseInt(e.key.substring(1));
+        // 禁用F1-F12所有功能键（除非是已经特别处理的F5等）
+        if (fKeyNum >= 1 && fKeyNum <= 12) {
+          // 特别处理F3和F7，确保它们被禁用
+          if (fKeyNum === 3 || fKeyNum === 7) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.warn(`🔒 F${fKeyNum}快捷键在生产模式下被禁用`);
+            return false;
+          }
+          
+          // 其他F键也在这里统一处理
+          if (fKeyNum !== 5) { // F5单独处理
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }
+      }
+
       // F12 - 开发者工具
       if (e.key === 'F12') {
         e.preventDefault();
@@ -112,6 +134,28 @@ export class SecurityProtection {
 
       // Ctrl+Shift+C - 元素选择器
       if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // 禁用其他常见的开发者快捷键
+      // Ctrl+Shift+K - 打开控制台
+      if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Ctrl+Shift+M - 切换设备模式
+      if (e.ctrlKey && e.shiftKey && e.key === 'M') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Ctrl+Shift+D - 切换设备模式
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         e.stopPropagation();
         return false;

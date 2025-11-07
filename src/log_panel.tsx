@@ -5,6 +5,7 @@ import LogsPanel from './components/Others/LogsPanel';
 import { useThemeStore } from './stores/themeStore';
 import TitleBar from './components/Bar/TitleBarMini';
 import StatusBar from './components/Bar/StatusBarMini'; 
+import "./styles/global.css";
 
 
 function AppWithTheme() {

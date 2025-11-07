@@ -50,11 +50,34 @@ export const useAppStartup = () => {
   // 禁用F5刷新功能
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // 禁用F5刷新和Ctrl+R刷新
       if (event.key === 'F5' || (event.ctrlKey && event.key === 'r') || 
           (event.ctrlKey && event.shiftKey && event.key === 'R')) {
         event.preventDefault();
         event.stopPropagation();
         logService.info('用户尝试刷新页面，已被拦截', 'App');
+        return;
+      }
+      
+      // 禁用F3和F7以及其他功能键
+      if (event.key.startsWith('F') && event.key.length >= 2 && event.key.length <= 3) {
+        const fKeyNum = parseInt(event.key.substring(1));
+        // 禁用F1-F12所有功能键（除了F5，因为上面已经处理）
+        if (fKeyNum >= 1 && fKeyNum <= 12 && fKeyNum !== 5) {
+          // 特别处理F3和F7
+          if (fKeyNum === 3 || fKeyNum === 7) {
+            event.preventDefault();
+            event.stopPropagation();
+            logService.info(`用户尝试使用F${fKeyNum}快捷键，已被拦截`, 'App');
+            return;
+          }
+          
+          // 其他F键也在这里统一处理
+          event.preventDefault();
+          event.stopPropagation();
+          logService.info(`用户尝试使用F${fKeyNum}快捷键，已被拦截`, 'App');
+          return;
+        }
       }
     };
 
