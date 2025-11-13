@@ -363,7 +363,7 @@ const AboutPanel: React.FC = () => {
         <Card className={mergeClasses(styles.card)}>
           <CardHeader
             image={<Info24Regular />}
-            header={<Text weight="semibold">关于</Text>}
+            header={<Text weight="semibold">关于软件</Text>}
           />
 
           <div className={styles.aboutContent}>

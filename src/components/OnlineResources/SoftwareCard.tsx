@@ -1,3 +1,6 @@
+/*
+在线资源-软件卡片页面
+*/
 import React, { useEffect, useState }  from 'react';
 import {
   makeStyles,
@@ -78,6 +81,7 @@ const useStyles = makeStyles({
     marginTop: '8px',
   },
 });
+
 
 interface SoftwareCardProps {
   software: OnlineSoftware;

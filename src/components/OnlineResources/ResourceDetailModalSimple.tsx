@@ -1,3 +1,7 @@
+
+/*
+在线资源-资源详情弹窗页面
+*/
 import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
@@ -57,6 +61,20 @@ const useStyles = makeStyles({
     minHeight: '200px',
   },
 });
+
+// 打开链接的通用函数
+const openUrl = (url: string) => {
+  import('@tauri-apps/plugin-shell').then(({ open }) => {
+    open(url).catch((error) => {
+      console.error('Failed to open URL:', error);
+      // 如果 Tauri shell 插件不可用，使用 window.open
+      window.open(url, '_blank');
+    });
+  }).catch(() => {
+    // 如果 Tauri shell 插件不可用，使用 window.open
+    window.open(url, '_blank');
+  });
+};
 
 interface ResourceDetailModalProps {
   software: OnlineSoftware;
@@ -229,6 +247,11 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     }
   };
 
+  //使用appfun下载
+  const OpenWithAppfun = () => {
+    openUrl(`https://www.appfun.fun/software/${currentData.id}`);
+  };
+
   const currentData = detailData || software;
 
   return (
@@ -244,7 +267,21 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             />
           }
         >
-          {currentData.name}
+          资源：{currentData.name}
+              {/* 提示*/}
+          <div style={{ 
+            backgroundColor: '#FFF9C4', 
+            border: '1px solid #FFD600', 
+            borderRadius: '8px', 
+            padding: '12px 16px', 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginTop: '8px'
+          }}>
+            <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请在资源弹窗内点击Appfun下载进行资源获取</span>
+          </div>
+    
         </DialogTitle>
         
         <DialogContent className={styles.dialogContent}>
@@ -350,6 +387,9 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
           <Button appearance="secondary" onClick={onClose}>
             关闭
           </Button>
+          <Button appearance="secondary" onClick={OpenWithAppfun}>
+            使用Appfun下载
+          </Button>
 
           {/* 下载限制提示 */}
           {!downloadLimitInfo.canDownload && (
@@ -393,7 +433,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
               disabled={isDownloading || !currentData.latestDownloadUrl || !downloadLimitInfo.canDownload}
               className={styles.downloadButton}
             >
-              {isDownloading ? '下载中...' : downloadLimitInfo.canDownload ? '下载软件' : `等待 ${downloadLimitInfo.remainingTime || 0}s`}
+              {isDownloading ? '下载中...' : downloadLimitInfo.canDownload ? '下载资源' : `等待 ${downloadLimitInfo.remainingTime || 0}s`}
             </Button>
           )}
         </DialogActions>
