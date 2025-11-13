@@ -1,3 +1,6 @@
+/*
+在线资源-下载管理卡片页面
+*/
 import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
@@ -21,16 +24,16 @@ import {
   Play24Regular,
   Dismiss24Regular,
   ArrowDownload24Regular,
-  CheckmarkCircle24Filled,
-  ErrorCircle24Filled,
-  Broom24Regular,
-  FolderZip24Regular,
   Folder24Regular,
 } from '@fluentui/react-icons';
 import { DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 
 const useStyles = makeStyles({
+  infoText: {
+    fontSize: '12px',
+    color: 'var(--colorNeutralForeground2)',
+  },
   container: {
     display: 'flex',
     flexDirection: 'column',
@@ -323,6 +326,21 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
   return (
     <div className={styles.container}>
 
+    {/* 提示*/}
+    <div style={{ 
+      backgroundColor: '#FFF9C4', 
+      border: '1px solid #FFD600', 
+      borderRadius: '8px', 
+      padding: '12px 16px', 
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <span style={{ color: '#F57F17', fontWeight: '600' }}>💡 提示：</span>
+      <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请在资源弹窗内点击Appfun下载进行资源获取</span>
+    </div>
+    
+
       {/* 统计信息 */}
       <Card className={styles.statsCard}>
         <div className={styles.statsGrid}>
@@ -372,13 +390,6 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
           <Option value="cancelled">已取消</Option>
         </Dropdown>
         <Button
-          appearance="outline"
-          icon={<Broom24Regular />}
-          onClick={() => onlineResourcesService.clearCompletedTasks()}
-        >
-          清理已完成
-        </Button>
-                <Button
           appearance="subtle"
           icon={<FolderOpen24Regular />}
           onClick={async () => {
@@ -402,8 +413,9 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
               }
             }
           }}
+
         >
-          打开下载目录
+          打开资源下载目录
         </Button>
       </div>
 

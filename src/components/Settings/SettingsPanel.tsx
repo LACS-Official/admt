@@ -27,7 +27,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     padding: "8px",
-    gap: "24px",
+    gap: "8px",
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
@@ -38,7 +38,7 @@ const useStyles = makeStyles({
     marginBottom: "5px",
   },
   tabContainer: {
-    marginBottom: "5px",
+    marginBottom: "0px",
   },
   tabList: {
     backgroundColor: "transparent",
@@ -113,7 +113,7 @@ const tabs = [
   },
   {
     id: "devices-settings" as SettingsView,
-    label: "设备检测设置",
+    label: "设备设置",
     icon: <DeviceEq24Regular />,
   },
     {

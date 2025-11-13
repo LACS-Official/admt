@@ -86,7 +86,7 @@ const useStyles = makeStyles({
   },
   dangerButton: {
     backgroundColor: tokens.colorPaletteRedBackground3,
-    color: tokens.colorPaletteRedForeground3,
+    color: tokens.colorPaletteRedForeground1,
     '&:hover': {
       backgroundColor: tokens.colorPaletteRedBackground2,
     },
@@ -387,7 +387,6 @@ const PrivacyManagementPanel: React.FC = () => {
               <Button
                 appearance="primary"
                 onClick={handleFinalReset}
-                className={styles.dangerButton}
                 style={{
                   backgroundColor: tokens.colorPaletteRedBackground3,
                   borderColor: tokens.colorPaletteRedBorder2
