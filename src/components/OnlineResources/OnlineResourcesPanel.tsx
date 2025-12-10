@@ -2,7 +2,7 @@
 /*
 在线资源-在线资源卡片页面
 */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   makeStyles,
   Button,
@@ -10,7 +10,6 @@ import {
   Spinner,
   Body1,
   Caption1,
-  Title2,
   Dropdown,
   Option,
 } from '@fluentui/react-components';
@@ -18,13 +17,13 @@ import {
   CloudArrowDown24Regular,
   Search24Regular,
   ErrorCircle24Filled,
-  ArrowDownload24Regular,
 } from '@fluentui/react-icons';
 import { OnlineSoftware, OnlineResourcesState } from '../../types/app';
 import { onlineResourcesService, SearchParams } from '../../services/onlineResourcesService';
 
 import { DownloadManagerPanel } from './DownloadManagerPanel';
 import { ResourceDetailModal } from './ResourceDetailModalSimple';
+import RomDownloadPanel from '../OnlineResources/RomDownloadPanel';
 import SoftwareCard from './SoftwareCard';
 
 const useStyles = makeStyles({
@@ -41,6 +40,14 @@ const useStyles = makeStyles({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '8px',
+  },
+  tabContainer: {
+    display: 'flex',
+    marginBottom: '16px',
+  },
+  tabList: {
+    borderBottom: '1px solid var(--colorNeutralStroke2)',
+    paddingBottom: '8px',
   },
   searchContainer: {
     display: 'flex',
@@ -174,7 +181,7 @@ const OnlineResourcesPanel: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('ADMT'); // 默认选择ADMT分类，显示为"全部"
 
   // 加载软件列表
-  const loadSoftwareList = async (params: SearchParams = {}, category?: string) => {
+  const loadSoftwareList = useCallback(async (params: SearchParams = {}, category?: string) => {
     setLoading(true);
     setError(null);
     
@@ -205,7 +212,7 @@ const OnlineResourcesPanel: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeCategory]);
 
   // 搜索软件
   const handleSearch = async () => {
@@ -219,7 +226,7 @@ const OnlineResourcesPanel: React.FC = () => {
 
 
   // 查看下载管理
-  const handleViewDownloads = () => {
+  const _handleViewDownloads = () => {
     setState({
       currentView: 'downloads',
       selectedSoftwareId: undefined,
@@ -254,7 +261,7 @@ const OnlineResourcesPanel: React.FC = () => {
       // handleCloseResourceModal();
       return taskId;
     } catch (error) {
-      console.error('下载失败:', error);
+      setError(error instanceof Error ? error.message : '下载失败');
       throw error;
     }
   };
@@ -286,7 +293,7 @@ const OnlineResourcesPanel: React.FC = () => {
   // 初始化加载
   useEffect(() => {
     loadSoftwareList();
-  }, []);
+  }, [loadSoftwareList]);
 
   // 根据当前视图渲染不同内容
   if (state.currentView === 'downloads') {
@@ -294,6 +301,14 @@ const OnlineResourcesPanel: React.FC = () => {
       <DownloadManagerPanel
         onBack={() => setState(prev => ({ ...prev, currentView: 'list' }))}
       />
+    );
+  }
+
+  if (state.currentView === 'rom-download') {
+    return (
+      <div className={styles.container}>
+        <RomDownloadPanel />
+      </div>
     );
   }
 

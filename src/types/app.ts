@@ -250,7 +250,7 @@ export interface DownloadManagerState {
 }
 
 // 在线资源页面状态
-export type OnlineResourcesView = "list" | "detail" | "downloads";
+export type OnlineResourcesView = "list" | "detail" | "downloads" | "rom-download";
 
 export interface OnlineResourcesState {
   currentView: OnlineResourcesView;

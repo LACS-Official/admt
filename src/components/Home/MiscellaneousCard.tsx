@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   makeStyles,
   Card,
-  CardHeader,
   Text,
   Spinner,
   tokens,
@@ -13,8 +12,6 @@ import {
   DialogBody,
   DialogActions,
   Button,
-  Tab,
-  TabList,
 } from "@fluentui/react-components";
 import {
   Wrench24Regular,
@@ -170,12 +167,11 @@ interface MiscellaneousCardProps {
 const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const styles = useStyles();
   const { setStatusBarMessage } = useAppStore();
-  const { executeBatch, BatchExecutorDialog } = useBatchExecutor();
+  const {BatchExecutorDialog } = useBatchExecutor();
 
   const [executingFunction, setExecutingFunction] = useState<string | null>(null);
 
   // 对话框状态
-  const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [showUsbFixDialog, setShowUsbFixDialog] = useState(false);
   const [usbFixStatus, setUsbFixStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
   const [usbFixOutput, setUsbFixOutput] = useState<string>('');
@@ -229,17 +225,6 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     );
   };
 
-  const handleFinishAdb5037 = async () => {
-    setStatusBarMessage({
-      type: "info",
-      message: "正在结束ADB-5037端口...",
-      });
-    await executeCommand(
-      "finish-adb5037",
-      () => invoke("finish_adb5037"),
-      "结束ADB-5037端口"
-    );
-  };
 
   
 
@@ -348,38 +333,6 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     setUsbFixOutput('');
   };
 
-  const handleVerifyUsbRegistry = async () => {
-    setShowUsbFixDialog(true);
-    setUsbFixStatus('running');
-    setUsbFixOutput('正在验证USB 3.0注册表...\n');
-    
-    try {
-      const result = await invoke("verify_usb3_registry") as any;
-      setUsbFixOutput(prev => prev + `验证结果: ${result.output}\n`);
-      
-      if (result.success) {
-        setUsbFixStatus('success');
-        setStatusBarMessage({
-          type: "success",
-          message: "USB 3.0注册表验证成功",
-        });
-      } else {
-        setUsbFixStatus('error');
-        setUsbFixOutput(prev => prev + `错误: ${result.error || '验证失败'}\n`);
-        setStatusBarMessage({
-          type: "error",
-          message: "USB 3.0注册表验证失败",
-        });
-      }
-    } catch (error) {
-      setUsbFixStatus('error');
-      setUsbFixOutput(prev => prev + `验证异常: ${error}\n`);
-      setStatusBarMessage({
-        type: "error",
-        message: `USB 3.0注册表验证失败: ${error}`,
-      });
-    }
-  };
 
 
   const handleFinishAdb = async () => {

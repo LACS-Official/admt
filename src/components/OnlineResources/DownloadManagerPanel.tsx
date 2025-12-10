@@ -10,7 +10,6 @@ import {
   ProgressBar,
   Body1,
   Caption1,
-  Title2,
   SearchBox,
   Dropdown,
   Option,
