@@ -144,6 +144,9 @@ const AdbZonePanel: React.FC = () => {
   const [currentView, setCurrentView] = useState<AdbZoneView>("device-control");
 
   const connectedDevices = devices.filter(d => d.connected);
+  
+  // 检查设备是否处于fastboot模式
+  const isFastbootMode = selectedDevice?.mode === 'fastboot' || selectedDevice?.mode === 'fastbootd';
 
   const tabs = [
     {
@@ -241,6 +244,14 @@ const AdbZonePanel: React.FC = () => {
           <Text size={400}>请选择一个设备</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
             从设备信息页面选择要操作的设备
+          </Text>
+        </div>
+      ) : isFastbootMode ? (
+        <div className={styles.noDevice}>
+          <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
+          <Text size={400}>设备未在 adb 模式</Text>
+          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
+            请将设备重启到系统或Recovery模式以使用ADB功能
           </Text>
         </div>
       ) : (

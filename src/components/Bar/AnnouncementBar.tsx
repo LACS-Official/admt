@@ -345,13 +345,6 @@ const AnnouncementBar: React.FC<AnnouncementBarProps> = ({ className }) => {
               >
                 关闭
               </Button>
-              <Button 
-                appearance="primary" 
-                onClick={loadAnnouncements}
-                disabled={isLoading}
-              >
-                刷新
-              </Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>

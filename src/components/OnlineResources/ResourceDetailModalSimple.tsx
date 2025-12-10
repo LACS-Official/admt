@@ -279,7 +279,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             gap: '8px',
             marginTop: '8px'
           }}>
-            <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请在资源弹窗内点击Appfun下载进行资源获取</span>
+            <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请点击“使用Appfun下载”进行资源获取</span>
           </div>
     
         </DialogTitle>

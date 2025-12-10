@@ -172,12 +172,10 @@ pub async fn diagnose_scrcpy() -> Result<serde_json::Value> {
             if tools_dir.exists() {
                 if let Ok(entries) = std::fs::read_dir(&tools_dir) {
                     let mut tools_content = Vec::new();
-                    for entry in entries {
-                        if let Ok(entry) = entry {
-                            tools_content.push(serde_json::Value::String(
-                                entry.file_name().to_string_lossy().to_string(),
-                            ));
-                        }
+                    for entry in entries.flatten() {
+                        tools_content.push(serde_json::Value::String(
+                            entry.file_name().to_string_lossy().to_string(),
+                        ));
                     }
                     diagnosis.insert(
                         "tools_directory_content".to_string(),

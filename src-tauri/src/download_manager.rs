@@ -1,6 +1,5 @@
 use crate::error::{AdmtError, Result};
 use futures_util::StreamExt;
-use reqwest;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Write};

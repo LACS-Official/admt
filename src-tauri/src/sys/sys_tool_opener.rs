@@ -41,7 +41,7 @@ pub async fn open_device_manager() -> Result<CommandResult> {
         // 方法2: 使用 cmd /c start 作为备用方案
         log::info!("Attempting to open Device Manager with cmd /c start");
         let mut cmd2 = Command::new("cmd");
-        cmd2.args(&["/c", "start", "", "devmgmt.msc"]);
+        cmd2.args(["/c", "start", "", "devmgmt.msc"]);
 
         match cmd2.spawn() {
             Ok(_) => {
@@ -65,7 +65,7 @@ pub async fn open_device_manager() -> Result<CommandResult> {
         // 方法3: 使用 explorer 作为最后的备用方案
         log::info!("Attempting to open Device Manager with explorer");
         let mut cmd3 = Command::new("explorer");
-        cmd3.args(&["devmgmt.msc"]);
+        cmd3.args(["devmgmt.msc"]);
 
         match cmd3.spawn() {
             Ok(_) => {
@@ -146,7 +146,7 @@ pub async fn open_task_manager() -> Result<CommandResult> {
         // 方法2: 使用 cmd /c start 作为备用方案
         log::info!("Attempting to open Task Manager with cmd /c start");
         let mut cmd2 = Command::new("cmd");
-        cmd2.args(&["/c", "start", "", "taskmgr.exe"]);
+        cmd2.args(["/c", "start", "", "taskmgr.exe"]);
 
         match cmd2.spawn() {
             Ok(_) => {
@@ -170,7 +170,7 @@ pub async fn open_task_manager() -> Result<CommandResult> {
         // 方法3: 使用 explorer 作为最后的备用方案
         log::info!("Attempting to open Task Manager with explorer");
         let mut cmd3 = Command::new("explorer");
-        cmd3.args(&["taskmgr.exe"]);
+        cmd3.args(["taskmgr.exe"]);
 
         match cmd3.spawn() {
             Ok(_) => {
@@ -194,7 +194,7 @@ pub async fn open_task_manager() -> Result<CommandResult> {
         // 方法4: 使用 Ctrl+Shift+Esc 快捷键模拟
         log::info!("Attempting to open Task Manager with keyboard shortcut simulation");
         let mut cmd4 = Command::new("cmd");
-        cmd4.args(&["/c", "echo", "Set WshShell = WScript.CreateObject(\"WScript.Shell\") > %temp%\\open_taskmgr.vbs && echo WshShell.SendKeys \"^+{ESC}\" >> %temp%\\open_taskmgr.vbs && cscript //nologo %temp%\\open_taskmgr.vbs && del %temp%\\open_taskmgr.vbs"]);
+        cmd4.args(["/c", "echo", "Set WshShell = WScript.CreateObject(\"WScript.Shell\") > %temp%\\open_taskmgr.vbs && echo WshShell.SendKeys \"^+{ESC}\" >> %temp%\\open_taskmgr.vbs && cscript //nologo %temp%\\open_taskmgr.vbs && del %temp%\\open_taskmgr.vbs"]);
 
         match cmd4.output() {
             Ok(_) => {

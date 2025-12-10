@@ -1,8 +1,8 @@
 {
   "version": "1.2.0",
-  "buildNumber": 2,
-  "versionName": "1.2.0 中秋特别版",
-  "releaseDate": "2025-10-06",
+  "buildNumber": 3,
+  "versionName": "1.2.0",
+  "releaseDate": "2025-11-20",
   "description": "统一版本管理配置文件",
   "changelog": [
     "修复了一些已知问题",

@@ -244,7 +244,7 @@ class SmartVersionService {
     console.log(`📦 处理版本数据，共 ${data.length} 个版本`);
     
     // 根据配置过滤版本
-    let filteredVersions = data.filter(version => {
+    const filteredVersions = data.filter(version => {
       // 基本验证
       if (!version.version) return false;
       

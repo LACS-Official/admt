@@ -94,7 +94,7 @@ pub async fn list_device_files(serial: String, path: String) -> Result<Vec<Devic
         }
 
         // 例：drwxr-xr-x  2 u0_a123 u0_a123    4096 Aug  1 12:34 Download
-        let is_directory = trimmed.chars().next() == Some('d');
+        let is_directory = trimmed.starts_with('d');
         let parts: Vec<&str> = trimmed.split_whitespace().collect();
         println!("分割字段数: {}, 内容: {:?}", parts.len(), parts);
 

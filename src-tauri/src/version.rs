@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use reqwest;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -115,7 +114,7 @@ pub async fn check_for_updates() -> Result<UpdateCheckResult, String> {
     // API端点配置
     let api_url = "https://api-g.lacs.cc/app/software/id/1";
 
-    match check_version_from_api(&api_url, &current_version).await {
+    match check_version_from_api(api_url, &current_version).await {
         Ok(result) => Ok(result),
         Err(e) => {
             // 网络错误时返回默认结果

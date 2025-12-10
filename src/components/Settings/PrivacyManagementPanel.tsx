@@ -38,8 +38,9 @@ const useStyles = makeStyles({
   },
   card: {
     width: '100%',
-    borderRadius: tokens.borderRadiusMedium,
+    borderRadius: "8px",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
+    
     
   },
   cardContent: {
@@ -299,8 +300,8 @@ const PrivacyManagementPanel: React.FC = () => {
       <Dialog open={showFirstConfirmDialog} modalType="modal">
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>
-              <Warning24Regular />
+            <DialogTitle style={{ color: tokens.colorPaletteRedForeground3 }}>
+              <Warning24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
               确认重置应用数据
             </DialogTitle>
             <DialogContent>

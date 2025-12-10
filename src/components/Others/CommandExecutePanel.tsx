@@ -70,7 +70,7 @@ const useStyles = makeStyles({
     gap: "16px",
   },
   controlsSection: {
-    height: "20%",
+    height: "30%",
     minHeight: "100px",
     display: "flex",
     flexDirection: "column",
@@ -106,7 +106,7 @@ const useStyles = makeStyles({
   },
   searchContainer: {
     flex: 1,
-    width: "300px",
+    width: "400px",
   },
   actionButtons: {
     display: "flex",

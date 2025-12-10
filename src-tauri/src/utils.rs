@@ -267,7 +267,7 @@ pub fn parse_adb_device_list(output: &str) -> Vec<(String, String)> {
         .lines()
         .skip(1) // 跳过"List of devices attached"行
         .filter_map(|line| {
-            let parts: Vec<&str> = line.trim().split_whitespace().collect();
+            let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 2 {
                 Some((parts[0].to_string(), parts[1].to_string()))
             } else {

@@ -48,7 +48,7 @@ pub async fn execute_fastboot_command(
     }
     
     // 将字符串向量转换为字符串切片向量
-    let cmd_args_refs: Vec<&str> = cmd_args.iter().map(|s| *s).collect();
+    let cmd_args_refs: Vec<&str> = cmd_args.iter().copied().collect();
     
     log::info!("[fastboot_command_runner] 构建的命令参数: {:?}", cmd_args_refs);
     
