@@ -1,22 +1,19 @@
 /*
 在线资源-在线资源区域卡片页面
 */  
-import React, { useState, useEffect } from 'react';
+import React, { useState} from 'react';
 import {
   makeStyles,
-  Text,
   TabList,
   Tab,
 } from "@fluentui/react-components";
 import {
   CloudArrowUp24Regular,
-  Settings24Regular,
   LockOpen24Regular,
-  Code24Regular,
 } from "@fluentui/react-icons";
-import { useDeviceStore } from "../../stores/deviceStore";
 import { DownloadManagerPanel } from "./DownloadManagerPanel";
 import OnlineResourcesPanel from "./OnlineResourcesPanel";
+import RomDownloadPanel from './RomDownloadPanel';
 
 
 
@@ -149,7 +146,7 @@ const OnlineZonePanel: React.FC = () => {
   const tabs = [
     {
       id: "online-resources" as FlashZoneView,
-      label: "在线资源",
+      label: "软件商店",
       icon: <LockOpen24Regular />,
     },
     {

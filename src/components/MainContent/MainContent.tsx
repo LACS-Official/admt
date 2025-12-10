@@ -13,22 +13,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  DialogTrigger,
   Button,
 } from "@fluentui/react-components";
 import {
   Code24Regular,
   Settings24Regular,
-  Wrench24Regular,
   CloudArrowUp24Regular,
   CloudArrowDown24Regular,
-  Circle12Filled,
   Home24Regular,
-  Beaker24Regular,
   Tent24Regular,
   DocumentText24Regular,
   ChevronDown24Regular,
-  Warning16Regular,
   Warning24Regular,
 } from "@fluentui/react-icons";
 import DeviceSelectionDialog from './DeviceSelectionDialog';
@@ -852,24 +847,6 @@ const MainContent: React.FC = () => {
       case "offline": return "离线";
       default: return "未知模式";
     }
-  };
-
-  const getConnectionType = () => {
-    if (!selectedDevice) return "";
-
-    if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
-      return "Fastboot";
-    } else if (["sys", "rec", "sideload"].includes(selectedDevice.mode)) {
-      return "ADB";
-    }
-    return "未知";
-  };
-
-  const getStatusColor = () => {
-    if (!selectedDevice || !selectedDevice.connected) return "danger";
-    if (selectedDevice.mode === "unauthorized") return "warning";
-    if (selectedDevice.mode === "offline") return "warning";
-    return "success";
   };
 
 
