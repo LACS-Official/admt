@@ -38,7 +38,7 @@ pub async fn restart_adb_service() -> Result<CommandResult> {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         let mut check_cmd = Command::new("tasklist");
-        check_cmd.args(&["/FI", "IMAGENAME eq adb.exe", "/FO", "CSV"]);
+        check_cmd.args(["/FI", "IMAGENAME eq adb.exe", "/FO", "CSV"]);
         check_cmd.creation_flags(CREATE_NO_WINDOW);
 
         if let Ok(output) = check_cmd.output() {
@@ -54,7 +54,7 @@ pub async fn restart_adb_service() -> Result<CommandResult> {
             if adb_running {
                 log::warn!("ADB processes still running, attempting to force kill");
                 let mut force_kill = Command::new("taskkill");
-                force_kill.args(&["/F", "/IM", "adb.exe", "/T"]);
+                force_kill.args(["/F", "/IM", "adb.exe", "/T"]);
                 force_kill.creation_flags(CREATE_NO_WINDOW);
                 let _ = force_kill.output();
 
@@ -148,7 +148,7 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
             .join("Usb_fix.bat");
 
         let mut command = Command::new("cmd");
-        command.args(&["/C", &bat_path.to_string_lossy()]);
+        command.args(["/C", &bat_path.to_string_lossy()]);
         command.creation_flags(CREATE_NO_WINDOW);
 
         match command.output() {
@@ -218,7 +218,7 @@ pub async fn unfix_usb3_connection() -> Result<CommandResult> {
             .join("Usb_Unfix.bat");
 
         let mut command = Command::new("cmd");
-        command.args(&["/C", &bat_path.to_string_lossy()]);
+        command.args(["/C", &bat_path.to_string_lossy()]);
         command.creation_flags(CREATE_NO_WINDOW);
 
         match command.output() {

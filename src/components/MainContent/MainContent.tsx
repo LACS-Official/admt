@@ -47,10 +47,11 @@ import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
 import RootPanel from "../Root/RootPanel";
+import CommandExecutePanel from '../Others/CommandExecutePanel';
+import LogsPanel from '../Others/LogsPanel';
 
 import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 
 const useStyles = makeStyles({
@@ -574,6 +575,11 @@ const useStyles = makeStyles({
       transform: "scale(0.98)",
     },
   },
+  actionButtonSelected: {
+    backgroundColor: "var(--colorBrandBackground1)",
+    color: "var(--colorBrandForeground1)",
+    border: "1px solid var(--colorBrandStroke1)",
+  },
   content: {
     flex: 1,
     overflow: "hidden",
@@ -1048,7 +1054,10 @@ const MainContent: React.FC = () => {
         return <OnlineZonePanel />;
       case "settings":
         return <SettingsPanel />;
-
+      case "command-line":
+        return <CommandExecutePanel />;
+      case "logs":
+        return <LogsPanel />;
       default:
         return <HomePage />;
     }
@@ -1087,115 +1096,16 @@ const MainContent: React.FC = () => {
           <div className={styles.buttonGroupContainer}>
             {/* 打开命令行按钮 */}
             <div 
-              className={styles.actionButton}
-              onClick={async () => {
-                try {
-                  console.log('尝试创建或聚焦命令行窗口...');
-            
-                  // 先尝试获取已存在的窗口
-                  let existingWindow = await WebviewWindow.getByLabel('command_panel');
-                  
-                  if (!existingWindow) {
-                    // 如果窗口不存在，创建新窗口
-                    const commandWindow = new WebviewWindow('command_panel', {
-                      url: '/command_panel.html',
-                      width:  720,
-                      height: 720,
-                      minWidth:  600,
-                      minHeight: 720,
-                      resizable: true,
-                      center: true,
-                      decorations: false, // 启用窗口装饰，显示标题栏和按钮
-                      title: '命令行窗口',
-                      fullscreen: false,
-                      maximizable: true,
-                      minimizable: false, 
-                      closable: false, 
-                      alwaysOnTop: false,
-                      skipTaskbar: false,
-                      dragDropEnabled: false
-                    });
-                    
-                    console.log('命令行窗口创建请求已发送');
-                    
-                    // 监听窗口创建完成事件
-                    commandWindow.once('tauri://created', () => {
-                      console.log('命令行窗口创建完成');
-                    });
-                    
-                    // 监听窗口关闭事件
-                    commandWindow.once('tauri://closed', () => {
-                      console.log('命令行窗口已关闭');
-                    });
-                  } else {
-                    // 如果窗口已存在，尝试聚焦到该窗口
-                    console.log('命令行窗口已存在，尝试聚焦...');
-                    try {
-                      // 移除unminimize调用，只使用show方法
-                      await existingWindow.show();
-                    } catch (focusError) {
-                      console.error('聚焦命令行窗口失败:', focusError);
-                    }
-                  }
-                } catch (error) {
-                  console.error('命令行窗口操作失败:', error);
-                  // 如果操作窗口失败，回退到原来的方式
-                  setCurrentView("adb-zone");
-                }
-              }}
+              className={`${styles.actionButton} ${currentView === "command-line" ? styles.actionButtonSelected : ""}`}
+              onClick={() => setCurrentView("command-line")}
             >
               <Tent24Regular />
               命令行
             </div>
             {/* 打开日志窗口按钮 */}
             <div 
-              className={styles.actionButton}
-              onClick={async () => {
-                try {
-                  console.log('尝试创建日志窗口...');
-            
-                  // 创建新窗口显示日志面板
-                  const logWindow = new WebviewWindow('log_panel', {
-                    url: '/log_panel.html',
-                    width:  720,
-                    height: 720,
-                    minWidth:  720,
-                    minHeight: 720,
-                    resizable: true,
-                    center: true,
-                    decorations: false,
-                    title: '日志管理窗口',
-                    fullscreen: false,
-                    maximizable: true,
-                    minimizable: true, // 启用最小化按钮
-                    closable: true, // 启用关闭按钮
-                    alwaysOnTop: false,
-                    skipTaskbar: false,
-                    dragDropEnabled: false
-                  });
-                  
-                  console.log('日志窗口创建请求已发送');
-                  
-                  // 监听窗口创建完成事件
-                  logWindow.once('tauri://created', () => {
-                    console.log('日志窗口创建完成');
-                  });
-                  
-                  // 监听窗口关闭事件
-                  logWindow.once('tauri://closed', () => {
-                    console.log('日志窗口已关闭');
-                  });
-                  
-                  // 监听窗口错误事件
-                  logWindow.once('tauri://error', (e) => {
-                    console.error('日志窗口错误:', e);
-                  });
-                } catch (error) {
-                  console.error('创建日志窗口失败:', error);
-                  // 如果创建窗口失败，回退到原来的方式
-                  setCurrentView("adb-zone");
-                }
-              }}
+              className={`${styles.actionButton} ${currentView === "logs" ? styles.actionButtonSelected : ""}`}
+              onClick={() => setCurrentView("logs")}
             >
               <DocumentText24Regular />
               日志

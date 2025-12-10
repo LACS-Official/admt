@@ -17,7 +17,7 @@ fn main() {
 
     // 尝试获取Git提交哈希
     if let Ok(output) = Command::new("git")
-        .args(&["rev-parse", "--short", "HEAD"])
+        .args(["rev-parse", "--short", "HEAD"])
         .output()
     {
         if output.status.success() {

@@ -54,7 +54,7 @@ pub async fn execute_batch_file(
         );
 
         let mut cmd = Command::new("cmd");
-        cmd.args(&["/c", &batch_file_name])
+        cmd.args(["/c", &batch_file_name])
             .current_dir(&working_directory)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -162,7 +162,7 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
     {
         // 使用taskkill命令结束adb进程
         let mut cmd = Command::new("taskkill");
-        cmd.args(&["/F", "/IM", "adb.exe"])
+        cmd.args(["/F", "/IM", "adb.exe"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
@@ -240,7 +240,7 @@ pub async fn finish_adb5037() -> Result<CommandResult> {
     {
         // 使用netstat和taskkill命令结束占用5037端口的进程
         let mut cmd = Command::new("cmd");
-        cmd.args(&[
+        cmd.args([
             "/C",
             "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :5037 ^| findstr LISTENING') do taskkill /F /PID %a"
         ])
@@ -367,7 +367,7 @@ pub async fn execute_batch_file_stream(
         );
 
         let mut cmd = Command::new("cmd");
-        cmd.args(&["/c", &batch_file_name])
+        cmd.args(["/c", &batch_file_name])
             .current_dir(&working_directory)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect} from 'react';
 import { versionManager, useVersionInfo } from '../../utils/versionManager';
 import { admtbgIcon } from "../../assets/icons";
 import { lacsbgIcon } from "../../assets/icons";
 import VersionChecker from "../Common/VersionChecker";
 
-import { useAppStore } from "../../stores/appStore";
 import {
   makeStyles,
   mergeClasses,
@@ -283,7 +282,6 @@ const openUrl = (url: string) => {
 
 const AboutPanel: React.FC = () => {
   const styles = useStyles();
-  const { setStatusBarMessage } = useAppStore();
   const [isOpenSourceDialogOpen, setIsOpenSourceDialogOpen] = useState(false);
   const [isThanksDialogOpen, setIsThanksDialogOpen] = useState(false);
   const { versionInfo, loading: versionLoading } = useVersionInfo();
@@ -469,7 +467,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Heart24Regular />}
                 onClick={() => openUrl(links.otherapps)}
               >
-                旗下其它工具
+                旗下工具
               </Button>
               <Button 
                 appearance="secondary" 

@@ -5,6 +5,7 @@ import App from "./App";
 import { useThemeStore } from "./stores/themeStore";
 import { activationService } from "./services/activationService";
 import { useStartupFlowStore } from "./stores/startupFlowStore";
+import { usePrivacyConsentStore, shouldShowPrivacyConsent } from "./stores/privacyConsentStore";
 import "./styles/global.css";
 import "./styles/startup-animations.css";
 
@@ -15,7 +16,9 @@ import "./utils/devtools";
 function AppWithTheme() {
   const { isDarkMode, followSystemTheme, updateThemeBasedOnSystem, subscribeToStorageChanges } = useThemeStore();
   const [isActivationValid, setIsActivationValid] = useState(true);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(true);
   const { setCurrentPhase } = useStartupFlowStore();
+  const { hasCompletedPrivacySetup, hasAcceptedPrivacyPolicy, hasAcceptedUserAgreement } = usePrivacyConsentStore();
 
   // 监听系统主题变化
   useEffect(() => {
@@ -78,10 +81,78 @@ function AppWithTheme() {
     return () => clearInterval(intervalId);
   }, [setCurrentPhase]);
 
+  // 检查用户是否同意政策条款
+  useEffect(() => {
+    const checkTermsAcceptance = () => {
+      try {
+        // 检查是否需要显示隐私政策同意界面
+        const needsToShowConsent = shouldShowPrivacyConsent();
+        
+        // 或者直接检查是否已完成隐私设置且已同意所有必要条款
+        const hasAcceptedAllTerms = hasCompletedPrivacySetup && 
+                                  hasAcceptedPrivacyPolicy && 
+                                  hasAcceptedUserAgreement;
+        
+        console.log('检查政策条款同意状态:', {
+          needsToShowConsent,
+          hasCompletedPrivacySetup,
+          hasAcceptedPrivacyPolicy,
+          hasAcceptedUserAgreement,
+          hasAcceptedAllTerms
+        });
+        
+        if (needsToShowConsent || !hasAcceptedAllTerms) {
+          if (hasAcceptedTerms !== false) { // 只有状态发生变化时才更新并记录日志
+            console.log('状态更新: 用户未同意政策条款，显示政策条款页面');
+            setHasAcceptedTerms(false);
+          }
+          // 设置启动流程状态为隐私政策同意阶段
+          setCurrentPhase('privacy-consent');
+        } else {
+          if (hasAcceptedTerms !== true) { // 只有状态发生变化时才更新并记录日志
+            console.log('状态更新: 用户已同意政策条款，显示主应用界面');
+            setHasAcceptedTerms(true);
+          }
+        }
+      } catch (error) {
+        console.error('检查政策条款同意状态失败:', error);
+        // 如果检查失败，默认认为用户未同意
+        if (hasAcceptedTerms !== false) {
+          console.log('状态更新: 检查失败，默认用户未同意政策条款');
+          setHasAcceptedTerms(false);
+        }
+        setCurrentPhase('privacy-consent');
+      }
+    };
+
+    // 立即执行一次检查
+    checkTermsAcceptance();
+
+    // 由于隐私政策同意状态通常在用户交互后才会改变，这里不设置定时器
+    // 但会依赖相关状态的变化来重新检查
+  }, [setCurrentPhase, hasCompletedPrivacySetup, hasAcceptedPrivacyPolicy, hasAcceptedUserAgreement, hasAcceptedTerms]);
+
+  // 添加一个额外的useEffect来监听hasAcceptedTerms状态的变化
+  useEffect(() => {
+    console.log('监听状态变化: hasAcceptedTerms =', hasAcceptedTerms);
+    // 这里可以添加其他响应状态变化的逻辑
+  }, [hasAcceptedTerms]);
+
   // 如果激活码无效，显示激活页面
   if (!isActivationValid) {
     // 通过修改全局状态来控制显示激活页面
     // 这里我们仍然渲染App组件，但通过useStartupFlowStore来控制显示激活页面
+    return (
+      <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+        <App />
+      </FluentProvider>
+    );
+  }
+  
+  // 如果用户未同意政策条款，则显示政策条款页面
+  if (!hasAcceptedTerms) {
+    // 通过修改全局状态来控制显示政策条款页面
+    // 这里我们仍然渲染App组件，但通过useStartupFlowStore来控制显示政策条款页面
     return (
       <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
         <App />

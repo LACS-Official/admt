@@ -31,7 +31,9 @@ export type AppView =
   | "online-resources"
   | "settings"
   | "demo"
-  | "root";
+  | "root"
+  | "command-line"
+  | "logs";
 
 export type SettingsView =
   | "about"

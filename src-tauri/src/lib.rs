@@ -51,7 +51,7 @@ pub fn run() {
                 
                 // 显示提示对话框
                 tauri::async_runtime::spawn(async move {
-                    let _ = window.dialog()
+                    window.dialog()
                         .message("玩机管家已经在运行中，无需重新打开。")
                         .title("提示")
                         .show(|_| {});

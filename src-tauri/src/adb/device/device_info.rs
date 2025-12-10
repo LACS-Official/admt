@@ -208,7 +208,7 @@ fn parse_battery_level(output: &str) -> Option<i32> {
         if line.starts_with("level:") {
             if let Some(level_str) = line.split(':').nth(1) {
                 if let Ok(level) = level_str.trim().parse::<i32>() {
-                    if level >= 0 && level <= 100 {
+                    if (0..=100).contains(&level) {
                         return Some(level);
                     }
                 }

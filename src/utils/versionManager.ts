@@ -154,8 +154,6 @@ class VersionManager {
    */
   async checkForUpdates(): Promise<VersionCheckResult> {
     try {
-      const currentVersion = await this.getVersionString();
-      
       // 调用后端版本检查API
       const result = await invoke<{
         has_update: boolean;

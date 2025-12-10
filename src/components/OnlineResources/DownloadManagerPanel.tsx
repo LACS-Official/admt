@@ -337,7 +337,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
       gap: '8px'
     }}>
       <span style={{ color: '#F57F17', fontWeight: '600' }}>💡 提示：</span>
-      <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请在资源弹窗内点击Appfun下载进行资源获取</span>
+      <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，内点击“使用Appfun下载”进行资源获取</span>
     </div>
     
 

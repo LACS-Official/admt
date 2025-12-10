@@ -256,7 +256,7 @@ const FileManagerPanel: React.FC = () => {
       
       const result = await deviceService.listDeviceFiles(selectedDevice.serial, normalizedPath);
       if (Array.isArray(result)) {
-        let fileItems: FileItem[] = result
+        const fileItems: FileItem[] = result
           .filter(file => {
             // 过滤掉符号链接本身（如果它显示为文件）
             // 如果文件名包含 "->" 说明是符号链接的显示

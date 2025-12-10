@@ -12,9 +12,9 @@ interface ImportMetaEnv {
   readonly VITE_SIGNATURE_SECRET: string
   readonly VITE_DEBUG_MODE: string
   readonly VITE_ENABLE_DEBUG: string
-  readonly VITE_ENABLE_CONSOLE_LOGS: string
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }

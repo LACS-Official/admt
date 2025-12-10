@@ -14,8 +14,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        'command_panel': resolve(__dirname, 'command_panel.html'),
-        'log_panel': resolve(__dirname, 'log_panel.html'),
       },
     },
   },
@@ -24,7 +22,7 @@ export default defineConfig({
     strictPort: false, // 允许使用其他端口
     host: '127.0.0.1', // 强制使用 IPv4
   },
-  // @ts-ignore
+  // @ts-expect-error - Vite test configuration may have type issues
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

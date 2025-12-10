@@ -608,7 +608,7 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
                     let actual_capacity_mah = (actual_capacity_uah / 1000) as u32;
 
                     // 验证计算结果的合理性（容量范围 500-15000 mAh）
-                    if actual_capacity_mah >= 500 && actual_capacity_mah <= 15000 {
+                    if (500..=15000).contains(&actual_capacity_mah) {
                         battery_actual_capacity = Some(actual_capacity_mah);
                         log::info!("Calculated actual capacity from Charge counter: {} mAh (counter: {} μAh, level: {}%)",
                                  actual_capacity_mah, counter_uah, level);
@@ -1086,7 +1086,7 @@ pub async fn terminate_process(process_id: u32) -> Result<bool> {
         use std::process::Command;
         
         let mut cmd = Command::new("taskkill");
-        cmd.args(&["/F", "/PID", &process_id.to_string()]);
+        cmd.args(["/F", "/PID", &process_id.to_string()]);
         
         match cmd.output() {
             Ok(output) => {
@@ -1143,7 +1143,7 @@ pub async fn check_process_alive(process_id: u32) -> Result<bool> {
         use std::process::Command;
         
         let mut cmd = Command::new("tasklist");
-        cmd.args(&["/FI", &format!("PID eq {}", process_id), "/FO", "CSV", "/NH"]);
+        cmd.args(["/FI", &format!("PID eq {}", process_id), "/FO", "CSV", "/NH"]);
         
         match cmd.output() {
             Ok(output) => {
@@ -1789,7 +1789,7 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
             .unwrap_or("bypass.cmd");
 
         let mut cmd = Command::new("cmd");
-        cmd.args(&["/C", "start", script_name]);
+        cmd.args(["/C", "start", script_name]);
         cmd.current_dir(working_dir);
 
         match cmd.spawn() {
@@ -2025,11 +2025,9 @@ fn get_config_file_path() -> Result<PathBuf> {
         Some(PathBuf::from("./src-tauri/config/adbCommands.json")),
     ];
 
-    for path_option in possible_paths {
-        if let Some(path) = path_option {
-            if path.exists() {
-                return Ok(path);
-            }
+    for path in possible_paths.into_iter().flatten() {
+        if path.exists() {
+            return Ok(path);
         }
     }
 
@@ -2059,6 +2057,13 @@ pub async fn get_resource_path<R: tauri::Runtime>(
         if resource_path.exists() {
             log::info!("Resource found in app resources at: {:?}", resource_path);
             return Ok(resource_path.to_string_lossy().to_string());
+        }
+        // 检查资源目录下是否有resource子目录，用于兼容bundle.resources配置
+        let resource_path_with_subdir = resource_dir.join("resource").join(&path);
+        log::debug!("Checking app resource path with subdir: {:?}", resource_path_with_subdir);
+        if resource_path_with_subdir.exists() {
+            log::info!("Resource found in app resources subdir at: {:?}", resource_path_with_subdir);
+            return Ok(resource_path_with_subdir.to_string_lossy().to_string());
         }
     }
     
