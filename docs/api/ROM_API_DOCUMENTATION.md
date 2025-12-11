@@ -64,7 +64,7 @@ GET /api/v1/ls/?code={device_code}&token={token}
 
 或:
 ```
-GET /api/v1/ls/?code={device_code}
+POST /api/v1/ls/?code={device_code}
 Authorization: Bearer {token}
 ```
 
@@ -104,7 +104,7 @@ GET /api/v1/download/?code={device_code}&version={version}&type={file_type}&toke
 
 或:
 ```
-GET /api/v1/download/?code={device_code}&version={version}&type={file_type}
+POST /api/v1/download/?code={device_code}&version={version}&type={file_type}
 Authorization: Bearer {token}
 ```
 
@@ -155,7 +155,7 @@ GET /api/v1/pdownload/?name={package_name}&token={token}
 
 或:
 ```
-GET /api/v1/pdownload/?name={package_name}
+POST /api/v1/pdownload/?name={package_name}
 Authorization: Bearer {token}
 ```
 

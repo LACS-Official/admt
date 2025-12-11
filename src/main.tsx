@@ -13,6 +13,10 @@ import "./styles/startup-animations.css";
 import "./utils/securityProtection";
 import "./utils/devtools";
 
+// 在应用启动时清除 localStorage 中的 token
+localStorage.removeItem('rom-download-storage');
+console.log('已清除 localStorage 中的 rom-download-storage');
+
 function AppWithTheme() {
   const { isDarkMode, followSystemTheme, updateThemeBasedOnSystem, subscribeToStorageChanges } = useThemeStore();
   const [isActivationValid, setIsActivationValid] = useState(true);

@@ -59,7 +59,7 @@ pub async fn fetch_rom_list(device_code: String, token: Option<String>) -> Resul
     let client = Client::new();
     
     // 构建请求URL
-    let mut api_url = format!("https://rom.jilin9527.top/api/v1/ls/?code={}", device_code);
+    let mut api_url = format!("https://Rom.jilin9527.top/api/v1/ls/?code={}", device_code);
     
     // 如果有token，添加到URL
     if let Some(token_str) = &token {
@@ -168,7 +168,7 @@ pub async fn get_rom_download_url(
     
     // 构建请求URL
     let mut api_url = format!(
-        "https://Rom.jilin9527.top/api/v1/download/?code={}&version={}&type={}",
+        "https://rom.jilin9527.top/api/v1/download/?code={}&version={}&type={}",
         device_code, version, file_type
     );
 

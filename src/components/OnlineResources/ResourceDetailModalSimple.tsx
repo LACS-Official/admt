@@ -30,8 +30,9 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: '16px',
     minHeight: '400px',
-    maxHeight: '600px',
+    maxHeight: '70vh',
     overflowY: 'auto',
+    margin: '16px',
   },
   infoGrid: {
     display: 'grid',
@@ -58,6 +59,16 @@ const useStyles = makeStyles({
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '200px',
+  },
+  descriptionContainer: {
+    wordWrap: 'break-word',
+    overflowWrap: 'break-word',
+    whiteSpace: 'pre-wrap',
+  },
+  dialogSurface: {
+    maxHeight: '90vh',
+    display: 'flex',
+    flexDirection: 'column',
   },
 });
 
@@ -255,7 +266,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(_, data) => !data.open && onClose()}>
-      <DialogSurface>
+      <DialogSurface className={styles.dialogSurface}>
         <DialogTitle
         >
           资源：{currentData.name}
@@ -317,7 +328,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                   <Divider />
                   <div>
                     <Subtitle1 style={{ marginBottom: '8px' }}>软件描述</Subtitle1>
-                    <Body1>{currentData.description}</Body1>
+                    <Body1 className={styles.descriptionContainer}>{currentData.description}</Body1>
                   </div>
                 </>
               )}

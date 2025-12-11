@@ -336,6 +336,8 @@ class UserBehaviorService {
       if (!existingCache) return
 
       const cache: OfflineCacheItem[] = JSON.parse(existingCache)
+      if (cache.length === 0) return
+      
       const remainingCache: OfflineCacheItem[] = []
 
       for (const item of cache) {
