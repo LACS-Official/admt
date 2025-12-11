@@ -28,7 +28,7 @@ import {
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useRomDownloadStore } from '../../stores/romDownloadStore';
 import { RomInfo } from '../../types/rom';
-import { deviceService } from '../../services/deviceService';
+
 
 const useStyles = makeStyles({
   container: {
@@ -89,8 +89,9 @@ const useStyles = makeStyles({
   deviceInfo: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
+    gap: '8px',
     flex: 1,
+    
   },
   refreshButton: {
     flexShrink: 0,
@@ -208,6 +209,7 @@ const useStyles = makeStyles({
     height: 'auto',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
+    margin: '0 1px',
     '&:hover': {
       transform: 'translateY(-2px)',
       boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
@@ -307,7 +309,7 @@ const RomDownloadPanel: React.FC = () => {
   const { dispatchToast } = useToastController('rom-download-toast');
   
   // 设备状态
-  const { selectedDevice, selectDevice } = useDeviceStore();
+  const { selectedDevice } = useDeviceStore();
   
   // ROM下载状态
   const {
@@ -358,18 +360,24 @@ const RomDownloadPanel: React.FC = () => {
     }, 300);
   };
 
-  // 获取设备信息
+  // 获取设备代号的ROM列表
   const refreshDeviceInfo = async () => {
-    if (!selectedDevice) return;
+    if (!selectedDevice || !selectedDevice.properties?.deviceName) {
+      console.log('无法获取设备代号');
+      return;
+    }
     
     try {
-      const devices = await deviceService.scanDevices();
-      const updatedDevice = devices.find(d => d.serial === selectedDevice.serial);
-      if (updatedDevice) {
-        selectDevice(updatedDevice);
-      }
+      const deviceCode = selectedDevice.properties.deviceName;
+      console.log(`正在获取设备 ${deviceCode} 的ROM列表`);
+      console.log(`使用token: ${token}`);
+      
+      setDeviceCode(deviceCode);
+      await fetchRomList(deviceCode, token);
+      
+      console.log(`成功获取设备 ${deviceCode} 的ROM列表`);
     } catch (error) {
-      // 获取设备信息失败
+      console.error('获取ROM列表失败:', error);
     }
   };
   
@@ -626,7 +634,7 @@ const RomDownloadPanel: React.FC = () => {
       <div className={styles.deviceCard}>
         <Button
           className={styles.deviceCardToggle}
-          icon={<Phone24Regular />}
+          icon={<Edit24Regular />}
           onClick={toggleDeviceMode}
           appearance="subtle"
           size="small"
@@ -638,6 +646,7 @@ const RomDownloadPanel: React.FC = () => {
           <div className={styles.manualDeviceForm}>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
               <div className={styles.formField} style={{ flex: 1 }}>
+                <div className={styles.searchTitle}>手动输入设备信息</div>
                 <div className={styles.formLabel}>设备代号</div>
                 <Input
                   placeholder="请输入设备代号"
@@ -682,8 +691,9 @@ const RomDownloadPanel: React.FC = () => {
           />
           <Phone24Regular />
           <div className={styles.deviceInfo}>
-            <Body1>未检测到设备</Body1>
+            <div className={styles.searchTitle}>未检测到设备</div>
             <Caption1>请连接设备或手动输入设备代号</Caption1>
+            <Caption1>若需手动输入，请点击切换按钮</Caption1>
           </div>
         </div>
       );
@@ -721,7 +731,7 @@ const RomDownloadPanel: React.FC = () => {
   // 渲染ROM卡片
   const renderRomCard = (rom: RomInfo) => {
     const displayVersion = isSearchActive ? highlightText(rom.version) : rom.version;
-    const displayDescription = isSearchActive ? highlightText(rom.description || `${rom.codename} - ${rom.rom_type}`) : (rom.description || `${rom.codename} - ${rom.rom_type}`);
+    const displayDescription = isSearchActive ? highlightText(rom.description || `${rom.codename} -`) : (rom.description || `${rom.codename}`);
     
     return (
       <Card key={rom.id} className={styles.romCard}>

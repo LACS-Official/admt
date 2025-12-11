@@ -37,14 +37,14 @@ const initialState: RomDownloadState & {
   downloading: false,
   downloadProgress: 0,
   currentDownload: null,
-  token: 'pf33LFp8yXgb',
+  token: 'G4MJAYg33CQT',
   manualDeviceInfo: { deviceName: '' },
   isManualDeviceMode: false,
 };
 
 export const useRomDownloadStore = create<RomDownloadStore>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       ...initialState,
       
       // Setters
