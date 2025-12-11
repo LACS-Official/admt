@@ -41,6 +41,9 @@ export interface RomDownloadState {
   downloading: boolean;
   downloadProgress: number;
   currentDownload: string | null;
+  token: string;
+  manualDeviceInfo: { deviceName: string };
+  isManualDeviceMode: boolean;
 }
 
 export interface DeviceInfo {

@@ -2,13 +2,8 @@ import React, { useEffect, useRef, useState }  from 'react';
 import {
   makeStyles,
   Text,
-  Badge,
-  Button,
-  Spinner,
 } from "@fluentui/react-components";
 import {
-  Desktop24Regular,
-  Stop24Regular,
   Phone24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
@@ -88,17 +83,13 @@ const ScreenMirrorPanel: React.FC = () => {
     config,
     isLoading,
     error,
-    showSettings,
     setLoading,
     setError,
     selectDevice,
     addActiveSession,
     removeActiveSession,
-    toggleSettings,
-    getDeviceStatus,
     canStartMirroring,
     isDeviceStreaming,
-    isAnyDeviceStreaming,
   } = useScreenMirrorStore();
 
   const [supportedDevices, setSupportedDevices] = useState<ScreenMirrorDevice[]>([]);
@@ -241,27 +232,6 @@ const ScreenMirrorPanel: React.FC = () => {
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "disconnected": return "未连接";
-      case "connecting": return "连接中";
-      case "connected": return "已连接";
-      case "streaming": return "投屏中";
-      case "paused": return "已暂停";
-      case "error": return "错误";
-      default: return status;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "streaming": return "success";
-      case "connected": return "important";
-      case "connecting": return "warning";
-      case "error": return "danger";
-      default: return "subtle";
-    }
-  };
 
   return (
     <div className={styles.container}>

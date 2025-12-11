@@ -12,6 +12,7 @@ import {
   Caption1,
   Dropdown,
   Option,
+  Toaster,
 } from '@fluentui/react-components';
 import {
   CloudArrowDown24Regular,
@@ -383,6 +384,9 @@ const OnlineResourcesPanel: React.FC = () => {
           onDownload={handleDownloadFromModal}
         />
       )}
+
+      {/* Toast通知容器 */}
+      <Toaster />
     </div>
   );
 };

@@ -15,13 +15,11 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   makeStyles,
   Card,
-  CardHeader,
   Text,
   Button,
   Spinner,
 } from "@fluentui/react-components";
 import {
-  Shield24Regular,
   Warning24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
@@ -47,7 +45,6 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     borderRadius: "8px",
-    border: "1px solid var(--colorNeutralStroke2)",
   },
   content: {
     flex: 1,
@@ -64,7 +61,6 @@ const useStyles = makeStyles({
     padding: "12px",
     backgroundColor: "var(--colorNeutralBackground2)",
     borderRadius: "8px",
-    border: "1px solid var(--colorNeutralStroke2)",
   },
   warningSection: {
     display: "flex",

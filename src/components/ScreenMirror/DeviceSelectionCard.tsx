@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
   makeStyles,
   mergeClasses,
@@ -10,8 +10,6 @@ import {
 } from "@fluentui/react-components";
 import {
   Phone24Regular,
-  CheckmarkCircle24Regular,
-  Stop24Filled,
 } from "@fluentui/react-icons";
 import { ScreenMirrorDevice } from "../../types/screenMirror";
 
@@ -128,10 +126,6 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
     onSelectDevice(selectedDevice?.serial === device.serial ? null : device);
   };
 
-  const handleStreamingDeviceClick = (device: ScreenMirrorDevice) => {
-    // 专门处理投屏中设备的点击事件
-    onDeviceAction(device);
-  };
 
   const formatResolution = (resolution?: string) => {
     if (!resolution) return "";
