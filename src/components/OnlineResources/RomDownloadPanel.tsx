@@ -9,7 +9,6 @@ import {
   Spinner,
   Body1,
   Caption1,
-  Title2,
   Card,
   CardHeader,
   Badge,
@@ -24,10 +23,12 @@ import {
   ArrowDownload24Regular,
   ErrorCircle24Filled,
   Edit24Regular,
+  ArrowClockwise24Regular,
 } from '@fluentui/react-icons';
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useRomDownloadStore } from '../../stores/romDownloadStore';
 import { RomInfo } from '../../types/rom';
+import { deviceService } from '../../services/deviceService';
 
 const useStyles = makeStyles({
   container: {
@@ -44,11 +45,29 @@ const useStyles = makeStyles({
     alignItems: 'center',
     marginBottom: '8px',
   },
+  deviceInputRow: {
+    display: 'flex',
+    gap: '16px',
+    alignItems: 'flex-start',
+    marginBottom: '16px',
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      gap: '12px',
+    },
+  },
   deviceSection: {
+    flex: 1,
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
-    marginBottom: '16px',
+    minWidth: '0',
+  },
+  searchSection: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    minWidth: '0',
   },
   deviceCard: {
     display: 'flex',
@@ -58,26 +77,119 @@ const useStyles = makeStyles({
     backgroundColor: 'var(--colorNeutralBackground1)',
     borderRadius: '8px',
     border: '1px solid var(--colorNeutralStroke2)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  deviceCardToggle: {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    zIndex: 10,
   },
   deviceInfo: {
     display: 'flex',
     flexDirection: 'column',
     gap: '4px',
+    flex: 1,
+  },
+  refreshButton: {
+    flexShrink: 0,
+  },
+  cardTransition: {
+    transition: 'all 0.3s ease-in-out',
+    opacity: 1,
+    transform: 'translateX(0)',
+  },
+  cardTransitionExit: {
+    opacity: 0,
+    transform: 'translateX(-20px)',
+  },
+  cardTransitionEnter: {
+    opacity: 0,
+    transform: 'translateX(20px)',
   },
   inputSection: {
+    flex: 1,
     display: 'flex',
+    flexDirection: 'column',
     gap: '12px',
-    alignItems: 'center',
-    marginBottom: '16px',
+    minWidth: '0',
   },
   inputContainer: {
-    flex: 1,
     display: 'flex',
     gap: '8px',
     alignItems: 'center',
   },
   deviceInput: {
     flex: 1,
+  },
+  manualInputCard: {
+    padding: '12px',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    borderRadius: '8px',
+    border: '1px solid var(--colorNeutralStroke2)',
+  },
+  manualDeviceForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  formRow: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  formField: {
+    flex: 1,
+  },
+  formLabel: {
+    fontSize: '12px',
+    color: 'var(--colorNeutralForeground2)',
+    marginBottom: '4px',
+  },
+  searchCard: {
+    padding: '12px',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    borderRadius: '8px',
+    border: '1px solid var(--colorNeutralStroke2)',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  searchTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    marginBottom: '4px',
+  },
+  searchInput: {
+    marginBottom: '8px',
+  },
+  filterSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  filterTitle: {
+    fontSize: '12px',
+    color: 'var(--colorNeutralForeground2)',
+    marginBottom: '4px',
+  },
+  filterOptions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+  },
+  filterOption: {
+    fontSize: '11px',
+  },
+  searchButton: {
+    marginTop: '8px',
+  },
+  highlightedText: {
+    backgroundColor: 'var(--colorBrandBackground2)',
+    padding: '0 2px',
+    borderRadius: '2px',
   },
   content: {
     flex: 1,
@@ -195,7 +307,7 @@ const RomDownloadPanel: React.FC = () => {
   const { dispatchToast } = useToastController('rom-download-toast');
   
   // 设备状态
-  const { selectedDevice } = useDeviceStore();
+  const { selectedDevice, selectDevice } = useDeviceStore();
   
   // ROM下载状态
   const {
@@ -204,19 +316,29 @@ const RomDownloadPanel: React.FC = () => {
     romList,
     loading,
     error,
-    downloading,
-    downloadProgress,
-    currentDownload,
+    downloading: _downloading,
+    downloadProgress: _downloadProgress,
+    currentDownload: _currentDownload,
+    token,
+    manualDeviceInfo,
+    isManualDeviceMode,
     setDeviceCode,
     setManualInput,
     setError,
+    setManualDeviceInfo,
+    setIsManualDeviceMode,
     fetchRomList,
     downloadRom,
+    reset: _reset
   } = useRomDownloadStore();
   
   // 本地状态
   const [inputDeviceCode, setInputDeviceCode] = useState('');
-  const [token, setToken] = useState('');
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [excludeFeatures, setExcludeFeatures] = useState<string[]>([]);
+  const [filteredRomList, setFilteredRomList] = useState<RomInfo[]>([]);
+  const [isSearchActive, setIsSearchActive] = useState(false);
   
   // 初始化设备代号
   useEffect(() => {
@@ -227,20 +349,156 @@ const RomDownloadPanel: React.FC = () => {
     }
   }, [selectedDevice, isManualInput, setDeviceCode]);
   
-  // 搜索ROM列表
-  const handleSearch = async () => {
-    const codeToSearch = isManualInput ? inputDeviceCode.trim() : deviceCode;
-    if (!codeToSearch) {
-      setError('请输入设备代号');
+  // 切换设备信息获取模式
+  const toggleDeviceMode = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setIsManualDeviceMode(!isManualDeviceMode);
+      setIsTransitioning(false);
+    }, 300);
+  };
+
+  // 获取设备信息
+  const refreshDeviceInfo = async () => {
+    if (!selectedDevice) return;
+    
+    try {
+      const devices = await deviceService.scanDevices();
+      const updatedDevice = devices.find(d => d.serial === selectedDevice.serial);
+      if (updatedDevice) {
+        selectDevice(updatedDevice);
+      }
+    } catch (error) {
+      // 获取设备信息失败
+    }
+  };
+  
+  // 处理手动输入设备信息变化
+  const handleManualDeviceInfoChange = (field: string, value: string) => {
+    setManualDeviceInfo({
+      ...manualDeviceInfo,
+      [field]: value
+    });
+  };
+  
+  // 处理排除特性切换
+  const _handleExcludeFeatureToggle = (feature: string) => {
+    setExcludeFeatures(prev => {
+      if (prev.includes(feature)) {
+        return prev.filter(f => f !== feature);
+      } else {
+        return [...prev, feature];
+      }
+    });
+  };
+  
+  // 执行搜索和筛选
+  const handleSearchAndFilter = () => {
+    if (!searchQuery.trim() && excludeFeatures.length === 0) {
+      setFilteredRomList([]);
+      setIsSearchActive(false);
       return;
     }
     
+    let filtered = [...romList];
+    
+    // 按版本号搜索
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(rom => 
+        rom.version.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rom.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rom.codename?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // 排除特定功能
+    if (excludeFeatures.length > 0) {
+      filtered = filtered.filter(rom => {
+        return !excludeFeatures.some(feature => {
+          const featureLower = feature.toLowerCase();
+          return (
+            rom.description?.toLowerCase().includes(featureLower) ||
+            rom.version.toLowerCase().includes(featureLower) ||
+            rom.rom_type.toLowerCase().includes(featureLower)
+          );
+        });
+      });
+    }
+    
+    setFilteredRomList(filtered);
+    setIsSearchActive(true);
+  };
+  
+  // 重置搜索
+  const handleResetSearch = () => {
+    setSearchQuery('');
+    setExcludeFeatures([]);
+    setFilteredRomList([]);
+    setIsSearchActive(false);
+  };
+  
+  // 高亮搜索关键词
+  const highlightText = (text: string) => {
+    if (!searchQuery.trim()) return text;
+    
+    const regex = new RegExp(`(${searchQuery})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} className={styles.highlightedText}>{part}</span>
+      ) : part
+    );
+  };
+  
+  // 搜索ROM列表
+  const handleSearch = async () => {
+    let codeToSearch = '';
+    
+    if (isManualDeviceMode) {
+      // 使用手动输入的设备代号
+      codeToSearch = manualDeviceInfo.deviceName.trim();
+      
+      // 验证设备代号
+      if (!codeToSearch) {
+        setError('请输入设备代号');
+        return;
+      }
+      
+      if (codeToSearch.length < 3) {
+        setError('设备代号至少需要3个字符');
+        return;
+      }
+      
+      // 验证设备代号格式（只允许字母、数字和下划线）
+      if (!/^[a-zA-Z0-9_]+$/.test(codeToSearch)) {
+        setError('设备代号只能包含字母、数字和下划线');
+        return;
+      }
+    } else {
+      // 使用原有的逻辑
+      codeToSearch = isManualInput ? inputDeviceCode.trim() : deviceCode;
+      
+      if (!codeToSearch) {
+        setError('请输入设备代号');
+        return;
+      }
+    }
+    
+    // 清除之前的错误
+    setError(null);
     setDeviceCode(codeToSearch);
-    await fetchRomList(codeToSearch, token.trim());
+    
+    try {
+      await fetchRomList(codeToSearch, token.trim());
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '获取ROM列表失败';
+      setError(errorMsg);
+    }
   };
   
   // 切换到手动输入模式
-  const toggleManualInput = () => {
+  const _toggleManualInput = () => {
     const newManualState = !isManualInput;
     setManualInput(newManualState);
     
@@ -257,7 +515,8 @@ const RomDownloadPanel: React.FC = () => {
   };
   
   // 下载ROM
-  const handleDownloadRom = async (rom: RomInfo) => {
+  const _handleDownloadRom = async (rom: RomInfo) => {
+    // 验证token
     if (!token.trim()) {
       dispatchToast(
         <Toast>
@@ -269,25 +528,143 @@ const RomDownloadPanel: React.FC = () => {
       return;
     }
     
-    const success = await downloadRom(rom, token.trim());
-    
-    if (success) {
-      dispatchToast(
-        <Toast>
-          <ToastTitle>下载成功</ToastTitle>
-          <ToastBody>ROM已下载至 downloads/roms 目录</ToastBody>
-        </Toast>,
-        { intent: 'success', position: 'bottom-end' }
-      );
-    } else {
+    // 验证token格式（简单验证）
+    if (token.length < 8) {
       dispatchToast(
         <Toast>
           <ToastTitle>下载失败</ToastTitle>
-          <ToastBody>请检查网络连接和令牌是否有效</ToastBody>
+          <ToastBody>认证令牌格式不正确</ToastBody>
+        </Toast>,
+        { intent: 'error', position: 'bottom-end' }
+      );
+      return;
+    }
+    
+    try {
+      const success = await downloadRom(rom, token.trim());
+      
+      if (success) {
+        dispatchToast(
+          <Toast>
+            <ToastTitle>下载成功</ToastTitle>
+            <ToastBody>ROM已下载至 downloads/roms 目录</ToastBody>
+          </Toast>,
+          { intent: 'success', position: 'bottom-end' }
+        );
+      } else {
+        dispatchToast(
+          <Toast>
+            <ToastTitle>下载失败</ToastTitle>
+            <ToastBody>请检查网络连接和令牌是否有效</ToastBody>
+          </Toast>,
+          { intent: 'error', position: 'bottom-end' }
+        );
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : '下载过程中发生未知错误';
+      dispatchToast(
+        <Toast>
+          <ToastTitle>下载失败</ToastTitle>
+          <ToastBody>{errorMsg}</ToastBody>
         </Toast>,
         { intent: 'error', position: 'bottom-end' }
       );
     }
+  };
+  
+  // 渲染搜索卡片
+  const renderSearchCard = () => {
+    return (
+      <div className={styles.searchCard}>
+        <div className={styles.searchTitle}>版本搜索与筛选</div>
+        
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className={styles.searchInput} style={{ flex: 1 }}>
+            <Input
+              placeholder="输入ROM版本号或关键词搜索"
+              value={searchQuery}
+              onChange={(_, data) => setSearchQuery(data.value)}
+              size="medium"
+            />
+          </div>
+          
+          <Button
+            className={styles.searchButton}
+            icon={<Search24Regular />}
+            onClick={handleSearchAndFilter}
+            disabled={loading}
+            size="medium"
+            appearance="primary"
+          >
+            搜索
+          </Button>
+          
+          {isSearchActive && (
+            <Button
+              className={styles.searchButton}
+              onClick={handleResetSearch}
+              size="small"
+              appearance="subtle"
+            >
+              重置
+            </Button>
+          )}
+        </div>
+        
+        {isSearchActive && (
+          <div style={{ fontSize: '12px', color: 'var(--colorNeutralForeground2)' }}>
+            找到 {filteredRomList.length} 个结果
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // 渲染手动输入设备信息卡片
+  const renderManualDeviceCard = () => {
+    return (
+      <div className={styles.deviceCard}>
+        <Button
+          className={styles.deviceCardToggle}
+          icon={<Phone24Regular />}
+          onClick={toggleDeviceMode}
+          appearance="subtle"
+          size="small"
+          title="切换到自动获取"
+        />
+        
+        <Phone24Regular />
+        <div className={styles.deviceInfo}>
+          <div className={styles.manualDeviceForm}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+              <div className={styles.formField} style={{ flex: 1 }}>
+                <div className={styles.formLabel}>设备代号</div>
+                <Input
+                  placeholder="请输入设备代号"
+                  value={manualDeviceInfo.deviceName}
+                  onChange={(_, data) => handleManualDeviceInfoChange('deviceName', data.value)}
+                  size="small"
+                />
+                {manualDeviceInfo.deviceName && manualDeviceInfo.deviceName.trim().length < 3 && (
+                  <div style={{ fontSize: '12px', color: 'var(--colorPaletteRedForeground1)', marginTop: '4px' }}>
+                    设备代号至少需要3个字符
+                  </div>
+                )}
+              </div>
+              <Button
+                icon={<Search24Regular />}
+                onClick={handleSearch}
+                disabled={!manualDeviceInfo.deviceName.trim() || manualDeviceInfo.deviceName.trim().length < 3 || loading}
+                size="small"
+                appearance="primary"
+              >
+                获取ROM列表
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
   
   // 渲染设备信息卡片
@@ -295,6 +672,14 @@ const RomDownloadPanel: React.FC = () => {
     if (!selectedDevice || !selectedDevice.properties) {
       return (
         <div className={styles.deviceCard}>
+          <Button
+            className={styles.deviceCardToggle}
+            icon={<Edit24Regular />}
+            onClick={toggleDeviceMode}
+            appearance="subtle"
+            size="small"
+            title="切换到手动输入"
+          />
           <Phone24Regular />
           <div className={styles.deviceInfo}>
             <Body1>未检测到设备</Body1>
@@ -308,41 +693,51 @@ const RomDownloadPanel: React.FC = () => {
     
     return (
       <div className={styles.deviceCard}>
-        <Phone24Regular />
+        <Button
+          className={styles.deviceCardToggle}
+          icon={<Edit24Regular />}
+          onClick={toggleDeviceMode}
+          appearance="subtle"
+          size="small"
+          title="切换到手动输入"
+        />
         <div className={styles.deviceInfo}>
+          <div className={styles.searchTitle}>自动获取当前设备</div>
           <Body1>{properties.marketName || properties.productName || '未知设备'}</Body1>
           <Caption1>设备代号: {properties.deviceName || '未知'}</Caption1>
-          <Caption1>Android版本: {properties.androidVersion || '未知'}</Caption1>
-          <Caption1>MIUI版本: {properties.miuiVersion || '未知'}</Caption1>
         </div>
+        <Button
+          className={styles.refreshButton}
+          icon={<ArrowClockwise24Regular />}
+          onClick={refreshDeviceInfo}
+          appearance="subtle"
+          size="small"
+          title="获取设备信息"
+        />
       </div>
     );
   };
   
   // 渲染ROM卡片
   const renderRomCard = (rom: RomInfo) => {
+    const displayVersion = isSearchActive ? highlightText(rom.version) : rom.version;
+    const displayDescription = isSearchActive ? highlightText(rom.description || `${rom.codename} - ${rom.rom_type}`) : (rom.description || `${rom.codename} - ${rom.rom_type}`);
+    
     return (
       <Card key={rom.id} className={styles.romCard}>
         <CardHeader
           header={
             <div className={styles.romTitle}>
-              {rom.version}
+              {displayVersion}
             </div>
           }
           description={
             <div className={styles.romDescription}>
-              {rom.description || `${rom.codename} - ${rom.rom_type}`}
+              {displayDescription}
             </div>
           }
         />
         <div className={styles.romContent}>
-          <div className={styles.romInfo}>
-            <Badge appearance="outline" className={styles.versionBadge}>
-              {rom.rom_type}
-            </Badge>
-            <Caption1>大小: {rom.size}</Caption1>
-            <Caption1>日期: {rom.date}</Caption1>
-          </div>
           
           {(rom.android_version || rom.miui_version) && (
             <div className={styles.tagContainer}>
@@ -358,29 +753,7 @@ const RomDownloadPanel: React.FC = () => {
               )}
             </div>
           )}
-          
-          <div className={styles.downloadSection}>
-            <div className={styles.downloadProgress}>
-              {downloading && currentDownload === `${rom.version} (${rom.rom_type})` ? (
-                <>
-                  <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--colorNeutralBackground3)', borderRadius: '2px', overflow: 'hidden' }}>
-                    <div style={{ width: `${downloadProgress}%`, height: '100%', backgroundColor: 'var(--colorBrandBackground)', transition: 'width 0.3s ease' }} />
-                  </div>
-                  <Caption1>{downloadProgress}%</Caption1>
-                </>
-              ) : null}
-            </div>
-            
-            <Button
-              className={styles.downloadButton}
-              icon={<ArrowDownload24Regular />}
-              onClick={() => handleDownloadRom(rom)}
-              disabled={downloading}
-              size="small"
-            >
-              {downloading && currentDownload === `${rom.version} (${rom.rom_type})` ? '下载中...' : '下载'}
-            </Button>
-          </div>
+        
         </div>
       </Card>
     );
@@ -388,58 +761,19 @@ const RomDownloadPanel: React.FC = () => {
   
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <Title2>ROM下载</Title2>
-      </div>
-      
-      {/* 设备信息部分 */}
-      <div className={styles.deviceSection}>
-        {renderDeviceCard()}
-        
-        <Button
-          className={styles.toggleButton}
-          icon={<Edit24Regular />}
-          onClick={toggleManualInput}
-          appearance="subtle"
-          size="small"
-        >
-          {isManualInput ? '使用自动检测' : '手动输入设备代号'}
-        </Button>
-      </div>
-      
-      {/* 输入部分 */}
-      <div className={styles.inputSection}>
-        <div className={styles.inputContainer}>
-          <Input
-            className={styles.deviceInput}
-            placeholder="请输入设备代号"
-            value={isManualInput ? inputDeviceCode : deviceCode}
-            onChange={(_, data) => {
-              if (isManualInput) {
-                setInputDeviceCode(data.value);
-              } else {
-                setDeviceCode(data.value);
-              }
-            }}
-            disabled={!isManualInput && !!deviceCode}
-          />
+      {/* 设备信息与搜索水平行 */}
+      <div className={styles.deviceInputRow}>
+        {/* 左侧：设备信息部分 */}
+        <div className={styles.deviceSection}>
+          <div className={`${styles.cardTransition} ${isTransitioning ? styles.cardTransitionExit : ''}`}>
+            {!isManualDeviceMode ? renderDeviceCard() : renderManualDeviceCard()}
+          </div>
         </div>
         
-        <Input
-          placeholder="请输入认证令牌"
-          value={token}
-          onChange={(_, data) => setToken(data.value)}
-          type="password"
-          style={{ width: '200px' }}
-        />
-        
-        <Button
-          icon={<Search24Regular />}
-          onClick={handleSearch}
-          disabled={loading}
-        >
-          搜索
-        </Button>
+        {/* 右侧：搜索部分 */}
+        <div className={styles.searchSection}>
+          {renderSearchCard()}
+        </div>
       </div>
       
       {/* 内容部分 */}
@@ -455,6 +789,18 @@ const RomDownloadPanel: React.FC = () => {
           <div className={styles.loadingContainer}>
             <Spinner label="正在获取ROM列表..." />
           </div>
+        ) : isSearchActive ? (
+          filteredRomList.length === 0 ? (
+            <div className={styles.emptyContainer}>
+              <Search24Regular style={{ fontSize: '48px', color: 'var(--colorNeutralForeground3)' }} />
+              <Body1>未找到匹配的ROM版本</Body1>
+              <Caption1>请尝试调整搜索条件或重置筛选</Caption1>
+            </div>
+          ) : (
+            <div className={styles.romGrid}>
+              {filteredRomList.map(renderRomCard)}
+            </div>
+          )
         ) : romList.length === 0 ? (
           <div className={styles.emptyContainer}>
             <ArrowDownload24Regular style={{ fontSize: '48px', color: 'var(--colorNeutralForeground3)' }} />

@@ -1,19 +1,20 @@
 /*
 在线资源-在线资源区域卡片页面
 */  
-import React, { useState} from 'react';
+import React, { useState, useEffect} from 'react';
 import {
   makeStyles,
   TabList,
   Tab,
+  CounterBadge,
 } from "@fluentui/react-components";
 import {
   CloudArrowUp24Regular,
-  LockOpen24Regular,
 } from "@fluentui/react-icons";
 import { DownloadManagerPanel } from "./DownloadManagerPanel";
 import OnlineResourcesPanel from "./OnlineResourcesPanel";
 import RomDownloadPanel from './RomDownloadPanel';
+import { onlineResourcesService } from '../../services/onlineResourcesService';
 
 
 
@@ -135,11 +136,36 @@ const useStyles = makeStyles({
   },
 });
 
-type FlashZoneView =  "online-resources" | "download-manager";
+type FlashZoneView =  "online-resources" | "rom-download" | "download-manager";
 
 const OnlineZonePanel: React.FC = () => {
   const styles = useStyles();
   const [currentView, setCurrentView] = useState<FlashZoneView>("online-resources");
+  const [downloadStats, setDownloadStats] = useState({
+    total: 0,
+    downloading: 0,
+    extracting: 0,
+    completed: 0,
+    failed: 0,
+    cancelled: 0,
+    paused: 0,
+  });
+
+  // 更新下载统计信息
+  useEffect(() => {
+    const updateDownloadStats = () => {
+      const stats = onlineResourcesService.getDownloadStats();
+      setDownloadStats(stats);
+    };
+
+    // 初始加载
+    updateDownloadStats();
+
+    // 设置定时更新
+    const interval = setInterval(updateDownloadStats, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
 
 
@@ -147,7 +173,12 @@ const OnlineZonePanel: React.FC = () => {
     {
       id: "online-resources" as FlashZoneView,
       label: "软件商店",
-      icon: <LockOpen24Regular />,
+      icon: <CloudArrowUp24Regular />,
+    },
+    {
+      id: "rom-download" as FlashZoneView,
+      label: "ROM商店",
+      icon: <CloudArrowUp24Regular />,
     },
     {
       id: "download-manager" as FlashZoneView,
@@ -163,6 +194,8 @@ const OnlineZonePanel: React.FC = () => {
         return <OnlineResourcesPanel />;
       case "download-manager":
         return <DownloadManagerPanel onBack={() => {}}/>;
+      case "rom-download":
+        return <RomDownloadPanel/>;
       default:
        return <OnlineResourcesPanel />;
     }
@@ -184,6 +217,14 @@ const OnlineZonePanel: React.FC = () => {
                 icon={tab.icon}
               >
                 {tab.label}
+                {tab.id === "download-manager" && downloadStats.total > 0 && (
+                  <CounterBadge
+                    count={downloadStats.total}
+                    color="brand"
+                    size="small"
+                    style={{ marginLeft: '4px' }}
+                  />
+                )}
               </Tab>
             ))}
           </TabList>

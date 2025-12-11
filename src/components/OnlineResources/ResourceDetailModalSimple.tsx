@@ -19,7 +19,6 @@ import {
   Spinner,
 } from '@fluentui/react-components';
 import {
-  Dismiss24Regular,
   ArrowDownload24Regular,
 } from '@fluentui/react-icons';
 import { OnlineSoftware } from '../../types/app';
@@ -258,14 +257,6 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     <Dialog open={isOpen} onOpenChange={(_, data) => !data.open && onClose()}>
       <DialogSurface>
         <DialogTitle
-          action={
-            <Button
-              appearance="subtle"
-              aria-label="关闭"
-              icon={<Dismiss24Regular />}
-              onClick={onClose}
-            />
-          }
         >
           资源：{currentData.name}
               {/* 提示*/}
