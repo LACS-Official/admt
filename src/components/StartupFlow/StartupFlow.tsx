@@ -3,7 +3,6 @@ import { useAppStyles } from "../../styles/appStyles";
 import PrivacyConsentDialog from "../StartupFlow/PrivacyConsentDialog";
 import ActivationPage from "../StartupFlow/ActivationPage";
 import StartupTransition from "./StartupTransition";
-import StatusBar from "../Bar/StatusBar";
 import VersionChecker from "../Common/VersionChecker";
 
 interface StartupFlowProps {

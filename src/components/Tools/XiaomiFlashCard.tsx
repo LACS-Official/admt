@@ -1,41 +1,26 @@
-import React, { useRef, useState }  from 'react';
+import React, { useState }  from 'react';
 import {
   makeStyles,
   Card,
-  CardHeader,
   Text,
   Button,
   ProgressBar,
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogContent,
-  DialogBody,
-  DialogActions,
   Spinner,
   Badge,
-  Accordion,
-  AccordionItem,
-  AccordionHeader,
-  AccordionPanel,
-  Dropdown,
-  Option,
 } from "@fluentui/react-components";
 import {
-  Flash24Regular,
   Warning24Regular,
   Folder24Regular,
   Play24Regular,
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
-  Info24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 import BatchExecutorDialog from "../Common/BatchExecutorDialog";
-import { open } from "@tauri-apps/plugin-dialog";
+
 import { readDir } from "@tauri-apps/plugin-fs";
 
 
@@ -156,19 +141,15 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   useDeviceService();
   const { setFlashing } = useDeviceStore();
   const { config, updateConfig } = useAppStore();
-  const folderInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedPackage, setSelectedPackage] = useState<string>("");
-  const [packageInfo, setPackageInfo] = useState<any>(null);
+  const [packageInfo, setPackageInfo] = useState<Record<string, unknown> | null>(null);
   const [flashStatus, setFlashStatus] = useState<FlashStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [flashLog, setFlashLog] = useState("");
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [deviceCompatible, setDeviceCompatible] = useState<boolean | null>(null);
   const [mode, setMode] = useState<string>("miui");
-  const [riskAccepted, setRiskAccepted] = useState<boolean>(false);
-  const [showDisclaimerDialog, setShowDisclaimerDialog] = useState<boolean>(false);
   const [selectedFolderPath, setSelectedFolderPath] = useState<string>("");
   const [missingFiles, setMissingFiles] = useState<string[]>([]);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
@@ -221,12 +202,13 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
       setFlashLog("");
       setFlashStatus("idle");
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.error("读取目录失败", e);
       setMissingFiles(["读取目录失败"]);
     }
   };
 
-  const handlePackageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const _handlePackageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       const file = files[0];
@@ -257,13 +239,14 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
         setFlashStatus("idle");
         
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error("解析线刷包失败:", error);
         alert("解析线刷包失败，请检查文件完整性");
       }
     }
   };
 
-  const parsePackageInfo = async (files: FileList): Promise<any> => {
+  const parsePackageInfo = async (files: FileList): Promise<Record<string, unknown>> => {
     // 模拟解析线刷包信息
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -280,7 +263,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
     });
   };
 
-  const checkDeviceCompatibility = async (packageInfo: any, device: DeviceInfo): Promise<boolean> => {
+  const checkDeviceCompatibility = async (packageInfo: Record<string, unknown>, device: DeviceInfo): Promise<boolean> => {
     // 模拟设备兼容性检查
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -293,72 +276,12 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
     });
   };
 
-  const handleFlashStart = (fileName: string, title: string, clearData: boolean, relock: boolean) => {
-    if (!selectedFolderPath) return;
-    
-    setBatchDialogTitle(title);
-    setBatchFileName(fileName);
-    setBatchWorkingDirectory(selectedFolderPath);
-    setBatchDialogOpen(true);
-    
-    // 保存原始的自动检测状态，并关闭自动检测
-    setOriginalAutoDetect(config.autoDetectDevices);
-    if (config.autoDetectDevices) {
-      updateConfig({ autoDetectDevices: false });
-    }
+  const _handleFlashStart = (_fileName: string, _title: string, _clearData: boolean, _relock: boolean) => {
+    // 此函数不再使用，已由直接调用BatchExecutorDialog替代
   };
 
-  const handleFlashConfirm = async () => {
-    if (!selectedFolderPath) return;
-    // 这里保留模拟线刷逻辑；实际运行 .bat 使用下方三个专用按钮
-    setShowConfirmDialog(false);
-    setIsFlashing(true);
-    setFlashing(true); // 设置全局刷写状态
-    setFlashStatus("checking");
-    setProgress(0);
-    setFlashLog("开始小米线刷流程...\n");
-
-    try {
-      // 设备检查阶段
-      setFlashLog(prev => prev + "检查设备状态...\n");
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setFlashLog(prev => prev + "验证线刷包完整性...\n");
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 开始刷机
-      setFlashStatus("flashing");
-      setFlashLog(prev => prev + "开始执行线刷脚本...\n");
-      
-      const flashSteps = [
-        "清除用户数据分区...",
-        "刷入引导程序...",
-        "刷入基带固件...",
-        "刷入系统镜像...",
-        "刷入Vendor分区...",
-        "刷入Recovery...",
-        "刷入Boot镜像...",
-        "重启设备...",
-        "等待设备启动...",
-        "验证刷入结果..."
-      ];
-      
-      for (let i = 0; i < flashSteps.length; i++) {
-        setFlashLog(prev => prev + flashSteps[i] + "\n");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setProgress(((i + 1) / flashSteps.length) * 100);
-      }
-      
-      setFlashStatus("success");
-      setFlashLog(prev => prev + "线刷完成！设备将自动重启。\n");
-      
-    } catch (error) {
-      setFlashStatus("error");
-      setFlashLog(prev => prev + `线刷失败: ${error}\n`);
-    } finally {
-      setIsFlashing(false);
-      setFlashing(false); // 清除全局刷写状态
-    }
+  const _handleFlashConfirm = async () => {
+    // 此函数不再使用，已由BatchExecutorDialog组件处理
   };
 
   const getStatusBadge = () => {
@@ -374,83 +297,36 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
         }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
 
   return (
     <>
       <Card className={styles.card}>
-        <CardHeader
-          image={<Flash24Regular />}
-          header={<Text weight="semibold">线刷工具</Text>}
-          description={<Text size={200}>提供小米线刷模式；其他模式开发中</Text>}
-          action={
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              {getStatusBadge()}
-              <Dropdown
-                aria-label="选择模式"
-                selectedOptions={[mode]}
-                onOptionSelect={(_, data) => setMode((data.optionValue as string) ?? "miui")}
-                style={{ minWidth: 160 }}
-              >
-                <Option value="default">小米线刷</Option>
-                <Option value="wip" disabled>正在开发中</Option>
-              </Dropdown>
-            </div>
-          }
-        />
         
         <div className={styles.content}>
-          {/* 风险与步骤合并卡片 */}
-          <div className={styles.section}>
+          {/* 风险提示卡片 */}
+          <div className={styles.warningSection}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-              <Text weight="semibold">线刷风险与准备事项</Text>
+              <Text weight="semibold">线刷风险提示</Text>
             </div>
-
-            {!riskAccepted ? (
-              <>
-                <div className={styles.warningSection}>
-                  <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
-                    线刷将之前请同意《免责声明》和《风险提示》后才可以进行下一步操作。
-                  </Text>
-                  <Button appearance="primary" onClick={() => setShowDisclaimerDialog(true)}>
-                    阅读免责声明
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className={styles.infoSection}>
-                  <Text size={300}>
-                    你已同意《免责声明》和《风险提示》。可以继续进行线刷操作。
-                  </Text>
-                  <Button className="ml-2 mr-2" appearance="secondary" onClick={() => setShowDisclaimerDialog(true)}>
-                    查看详情
-                  </Button>
-                </div>
-              </>
-            )}
+            <Text size={300} style={{ marginTop: "8px" }}>
+              线刷可能导致数据丢失、设备不可用或失去保修。请确保您了解并自行承担相关风险。
+            </Text>
+            <Text size={300} style={{ marginTop: "4px" }}>
+              本工具按"现状"提供，不对因使用本工具进行线刷所造成的任何直接或间接损失负责。
+            </Text>
           </div>
 
-          {riskAccepted && (
-            <>
-
-              {/* 线刷包选择 */}
-              <div className={styles.section}>
-                <Text weight="semibold">1. 选择线刷包</Text>
+          {/* 线刷包选择 */}
+          <div className={styles.section}>
+            <Text weight="semibold">1. 选择线刷包</Text>
                 <div className={styles.packageSection}>
                   <div className={styles.packageInput}>
                     <Button
                       appearance="outline"
                       icon={<Folder24Regular />}
                       onClick={handlePackageSelect}
-                      disabled={isFlashing || !riskAccepted}
+                      disabled={isFlashing}
                     >
                       选择文件夹
                     </Button>
@@ -458,7 +334,6 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
                       <Text size={300}>选择包含 flash_all*.bat 的线刷包目录</Text>
                     ) : (
                       <>
-                        <Text size={300}>已选择：{selectedFolderPath}</Text>
                         <Button appearance="secondary" onClick={() => {
                           setSelectedFolderPath("");
                           setMissingFiles([]);
@@ -536,98 +411,9 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
                     线刷清数据并回锁
                   </Button>
                 </div>
-              )}
-            </>
           )}
         </div>
       </Card>
-
-      {/* 隐藏的文件夹输入 */}
-      <input
-        ref={folderInputRef}
-        type="file"
-        directory
-        style={{ display: "none" }}
-        onChange={handlePackageChange}
-      />
-
-
-      {/* 风险免责声明对话框 */}
-      <Dialog open={showDisclaimerDialog} onOpenChange={(_, data) => setShowDisclaimerDialog(data.open)}>
-        <DialogSurface>
-          <DialogTitle>风险提示与免责声明</DialogTitle>
-          <DialogContent>
-            <DialogBody>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div className={styles.warningSection}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                    <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-                    <Text weight="semibold">重要风险提示</Text>
-                  </div>
-                  <Text size={300}>
-                    线刷可能导致数据丢失、设备不可用或失去保修。请确保您了解并自行承担相关风险。
-                  </Text>
-                </div>
-                <div className={styles.infoSection}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                    <Info24Regular />
-                    <Text weight="semibold">免责声明</Text>
-                  </div>
-                  <Text size={300}>
-                    本工具按“现状”提供，不对因使用本工具进行线刷所造成的任何直接或间接损失负责。继续操作即表示您已充分理解并同意以上内容。
-                  </Text>
-                </div>
-                <Accordion collapsible>
-                  <AccordionItem value="steps">
-                    <AccordionHeader>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Info24Regular />
-                        <Text weight="semibold">线刷前准备步骤</Text>
-                      </div>
-                    </AccordionHeader>
-                    <AccordionPanel>
-                      <div className={styles.stepList}>
-                        <div className={styles.stepItem}>
-                          <Text>1.</Text>
-                          <Text size={300}>确保设备 Bootloader 已解锁</Text>
-                        </div>
-                        <div className={styles.stepItem}>
-                          <Text>2.</Text>
-                          <Text size={300}>设备电量保持在 50% 以上</Text>
-                        </div>
-                        <div className={styles.stepItem}>
-                          <Text>3.</Text>
-                          <Text size={300}>使用原装或高质量数据线</Text>
-                        </div>
-                        <div className={styles.stepItem}>
-                          <Text>4.</Text>
-                          <Text size={300}>关闭杀毒软件和防火墙</Text>
-                        </div>
-                        <div className={styles.stepItem}>
-                          <Text>5.</Text>
-                          <Text size={300}>备份重要数据（线刷会清除所有数据）</Text>
-                        </div>
-                      </div>
-                    </AccordionPanel>
-                  </AccordionItem>
-                </Accordion>
-              </div>
-
-
-            </DialogBody>
-            <DialogActions>              
-              <div style={{ height: "30px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>             
-              <Button appearance="secondary" onClick={() => { setRiskAccepted(false); setShowDisclaimerDialog(false); }}>
-                不同意
-              </Button>
-              <Button appearance="primary" onClick={() => { setRiskAccepted(true); setShowDisclaimerDialog(false); }}>
-                我已阅读并同意
-              </Button>
-              </div>
-            </DialogActions>
-          </DialogContent>
-        </DialogSurface>
-      </Dialog>
 
       {/* 批处理文件执行弹窗 */}
       <BatchExecutorDialog
