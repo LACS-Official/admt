@@ -4,7 +4,7 @@
  */
 
 import React, { useState }  from 'react';
-import { admtbgIcon } from '../../assets/icons';
+import { admtLogo512 } from '../../assets/icons';
 import {
   Button,
   Checkbox,
@@ -18,13 +18,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Field,
-  MessageBar,
-  MessageBarBody,
-  MessageBarTitle,
-  MessageBarActions,
-  Link,
 } from '@fluentui/react-components';
+import { ArrowLeft24Regular } from '@fluentui/react-icons';
 import { 
   Shield24Regular, 
   Document24Regular, 
@@ -32,52 +27,68 @@ import {
   Dismiss24Regular,
   CheckmarkCircle24Regular,
   DocumentBulletList24Regular,
-  ArrowLeft24Regular,
   ChevronRight24Regular,
-  Info24Regular
 } from '@fluentui/react-icons';
 import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
 
 const useStyles = makeStyles({
-    appIconContainer: {
-    width: "100%",
-    height: "50%",
-    maxHeight: "600px",
+    container: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: tokens.spacingHorizontalL,
-    boxSizing: 'border-box',
-  },
-  appIconImage: {
-    maxWidth: "90%",
-    maxHeight: "90%",
-    borderRadius: "16px",
-    objectFit: 'contain',
-  },
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
     minHeight: '100vh',
     width: '100%',
     backgroundColor: tokens.colorNeutralBackground1,
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
-  cardSection: {
-    height: '50%',
-    width: '100%',
+  leftPanel: {
+    width: '50%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: tokens.spacingHorizontalXXL,
+    boxSizing: 'border-box',
+  },
+  rightPanel: {
+    width: '50%',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    padding: tokens.spacingHorizontalXXL,
+    boxSizing: 'border-box',
+  },
+  appIconContainer: {
+    width: "256px",
+    height: "256px",
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: tokens.spacingHorizontalM,
-    boxSizing: 'border-box',
+    marginBottom: tokens.spacingVerticalXL,
+  },
+  appIconImage: {
+    width: "400px",
+    height: "400px",
+    borderRadius: "16px",
+    objectFit: 'contain',
+  },
+  appTitle: {
+    fontSize: tokens.fontSizeHero900,
+    fontWeight: tokens.fontWeightBold,
+    color: tokens.colorBrandForeground1,
+    marginBottom: tokens.spacingVerticalM,
+    textAlign: 'center',
+  },
+  appSubtitle: {
+    fontSize: tokens.fontSizeBase400,
+    color: tokens.colorNeutralForeground2,
+    textAlign: 'center',
+    maxWidth: '400px',
+    lineHeight: '1.6',
   },
   card: {
     width: '100%',
-
     border: `1px solid ${tokens.colorNeutralStroke1}`,
-    borderRadius: "8px",
+    borderRadius: "16px",
     padding: `${tokens.spacingVerticalXXL} ${tokens.spacingHorizontalXXL}`,
     boxShadow: tokens.shadow16,
     backgroundColor: tokens.colorNeutralBackground1,
@@ -138,7 +149,7 @@ const useStyles = makeStyles({
   policyButtonTitle: {
     fontWeight: tokens.fontWeightSemibold,
     color: tokens.colorNeutralForeground1,
-    fontSize: tokens.fontSizeBase400,
+    fontSize: tokens.fontSizeBase300,
   },
   policyButtonDesc: {
     fontSize: tokens.fontSizeBase200,
@@ -210,7 +221,6 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
   const styles = useStyles();
   const [acceptedAll, setAcceptedAll] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [activePolicy, setActivePolicy] = useState<'privacy' | 'agreement' | 'data' | null>(null);
 
   const {
     acceptPrivacyPolicy,
@@ -242,8 +252,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     try {
       const { exit } = await import('@tauri-apps/plugin-process');
       await exit(0);
-    } catch (error) {
-      console.error('退出应用失败:', error);
+    } catch (_error) {
       // 如果 Tauri API 失败，尝试其他方法
       if (window.close) {
         window.close();
@@ -251,166 +260,83 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     }
   };
 
-  const privacyPolicyContent = `我们非常重视您的隐私权。本隐私政策说明了我们如何收集、使用和保护您的个人信息。
-
-1. 信息收集
-
-我们可能收集以下类型的信息：
-• 设备信息：硬件配置、设备标识符
-• 使用数据：应用使用统计、功能使用频率、错误日志
-• 匿名分析数据：用于改进产品性能和用户体验
-
-2. 信息使用
-
-我们使用收集的信息用于：
-• 提供和改进我们的服务
-• 分析产品使用情况
-• 修复错误和提升性能
-• 提供技术支持
-
-3. 信息保护
-
-我们采用行业标准的安全措施保护您的信息：
-• 数据加密传输和存储
-• 访问控制和权限管理
-• 定期安全审计
-
-4. 信息共享
-
-我们不会向第三方出售、交易或转让您的个人信息，除非：
-• 获得您的明确同意
-• 法律要求或政府部门要求
-• 保护我们的权利和安全
-
-5. 您的权利
-
-您有权：
-• 要求删除您的个人信息`;
-
-  const userAgreementContent = `欢迎使用我们的软件。使用本软件即表示您同意以下条款：
-
-1. 软件许可
-
-本软件按"现状"提供，我们授予您有限的、非独占的、不可转让的使用许可。
-
-2. 使用限制
-
-您不得：
-• 逆向工程、反编译或反汇编软件
-• 移除或修改任何版权声明
-• 将软件用于非法目的
-• 干扰软件的正常运行
-
-3. 知识产权
-
-• 软件及其所有相关知识产权均归我们(领创工作室)所有。
-• 您不得复制、修改、分发、销售或使用本软件的任何部分，除非获得我们的明确许可。
-• 您不得将本软件用于任何商业目的，包括但不限于销售、出租或许可。
-
-
-4. 免责声明
-
-• 因本软件的服务类目特殊性，由于操作具有一定风险，若用户操作不当导致设备损坏、数据丢失或其他问题，本软件运营方不承担任何责任，请熟悉软件使用说明，谨慎操作。
-• 本软件运营方不承担因用户操作错误导致的任何损失或损害。
-• 若用户运行的非官方版本、非最新版软件导致的任何问题，本软件运营方不承担任何责任。
-
-
-5. 服务变更
-
-我们保留随时修改或终止服务的权利，恕不另行通知。
-`;
-
-  const dataCollectionContent = `为了提供更好的服务和用户体验，我们需要收集以下数据：
-
-1. 设备数据
-
-• 设备唯一标识符（匿名化处理）
-
-2. 使用行为数据
-
-• 应用启动（匿名化处理）
-
-3. 数据处理原则
-
-• 所有数据都经过匿名化处理
-• 不收集任何可识别个人身份的信息
-• 数据仅用于产品改进和技术支持
-• 严格遵循最小化原则，只收集必要数据
-
-4. 数据安全
-
-• 采用加密传输和存储
-• 定期删除过期数据
-• 严格的访问控制
-
-⚠️ 重要提示：
-这些数据收集对于软件的正常运行是必需的。如果您不同意，软件将无法正常工作。`;
-
   const policies = [
     {
       id: 'privacy',
       title: '隐私政策',
       description: '我们如何收集、使用和保护您的个人信息',
-      icon: <Shield24Regular />,
-      content: privacyPolicyContent
+      icon: <Shield24Regular />
     },
     {
       id: 'agreement',
       title: '用户协议',
       description: '使用本软件的服务条款和条件',
-      icon: <Document24Regular />,
-      content: userAgreementContent
+      icon: <Document24Regular />
     },
     {
       id: 'data',
       title: '数据收集说明',
       description: '详细说明我们需要收集的数据类型',
-      icon: <DocumentBulletList24Regular />,
-      content: dataCollectionContent
+      icon: <DocumentBulletList24Regular />
     }
   ];
 
-  const getPolicyTitle = () => {
-    const policy = policies.find(p => p.id === activePolicy);
-    return policy ? policy.title : '';
-  };
 
-  const getPolicyContent = () => {
-    const policy = policies.find(p => p.id === activePolicy);
-    return policy ? policy.content : '';
-  };
-
-  const getPolicyIcon = () => {
-    const policy = policies.find(p => p.id === activePolicy);
-    return policy ? policy.icon : null;
+  const handlePolicyClick = (policyId: string) => {
+    const policyUrls = {
+      'agreement': 'https://admt.lacs.cc/agreement#user',
+      'privacy': 'https://admt.lacs.cc/agreement#privacy', 
+      'data': 'https://admt.lacs.cc/agreement#collection'
+    };
+    
+    const url = policyUrls[policyId as keyof typeof policyUrls];
+    if (url) {
+      try {
+        // 使用 Tauri 的 shell 插件打开外部浏览器
+        import('@tauri-apps/plugin-shell').then(({ open }) => {
+          open(url);
+        }).catch(() => {
+          // 如果 Tauri 不可用，使用 window.open
+          window.open(url, '_blank');
+        });
+      } catch (_error) {
+        // 最后的备选方案
+        window.open(url, '_blank');
+      }
+    }
   };
 
   return (
     <>
       {open && (
         <div className={styles.container}>
-          <div className={styles.appIconContainer}>
-            <img src={admtbgIcon} alt="appIcon" className={styles.appIconImage}/>
+          <div className={styles.leftPanel}>
+            <div className={styles.appIconContainer}>
+              <img src={admtLogo512} alt="appIcon" className={styles.appIconImage}/>
+            </div>
           </div>
 
-          <div className={styles.cardSection}>
+          <div className={styles.rightPanel}>
             <div style={{
               animation: 'fadeInUp 0.3s ease-out forwards',
               opacity: 0,
               transform: 'translateY(20px)',
-              width: '100%'
+              width: '100%',
             }}>
               <Card className={styles.card}>
 
                 <div className={styles.content}>
+                  <div className={styles.header}>
+                    <Text className={styles.title}>欢迎使用玩机管家，请同意以下条款以继续使用</Text>
+                  </div>
 
-                  <div style={{ display: 'flex', gap: tokens.spacingHorizontalM }}>
+                  <div style={{ display: 'flex', gap: tokens.spacingHorizontalM, justifyContent: 'center' }}>
                     {policies.map((policy) => (
                       <Button
                         key={policy.id}
                         className={styles.policyButton}
                         appearance="subtle"
-                        onClick={() => setActivePolicy(policy.id as any)}
+                        onClick={() => handlePolicyClick(policy.id)}
                         style={{ flex: 1, marginBottom: 0 }}
                       >
                         <div className={styles.policyButtonContent}>
@@ -424,20 +350,17 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                     ))}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM, marginTop: tokens.spacingVerticalL }}>
-                    <Field className={styles.checkboxSection} style={{ margin: 0, flex: 2 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM }}>
-                        <Text>请仔细阅读并同意以上所有条款，以继续使用应用</Text>
-                        <Checkbox
-                          checked={acceptedAll}
-                          onChange={(_, data) => setAcceptedAll(data.checked === true)}
-                          label="我已阅读并同意以上所有条款"
-                          size="large"
-                          required
-                        />
-                      </div>
-                    </Field>
-                    <div className={styles.actions} style={{ margin: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: tokens.spacingVerticalL }}>
+                    <div style={{ flex: 1 }}>
+                      <Checkbox
+                        checked={acceptedAll}
+                        onChange={(_, data) => setAcceptedAll(data.checked === true)}
+                        label="我已阅读并同意以上所有条款"
+                        size="large"
+                        required
+                      />
+                    </div>
+                    <div className={styles.actions} style={{ margin: 0 }}>
                       <Button
                         appearance="secondary"
                         icon={<Dismiss24Regular />}
@@ -458,6 +381,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                       </Button>
                     </div>
                   </div>
+
+                  <Text className={styles.policyButtonDesc}>
+                    © 2020-2025 领创工作室. 保留所有权利。 
+                  </Text>
                 </div>
               </Card>
             </div>
@@ -465,48 +392,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
         </div>
       )}
 
-      {/* 协议内容弹窗 */}
-      <Dialog 
-        open={!!activePolicy} 
-        onOpenChange={(_, data) => !data.open && setActivePolicy(null)}
-        modalType="modal"
-      >
-        <DialogSurface style={{
-          animation: 'fadeIn 0.2s ease-out forwards'
-        }}>
-          <DialogBody>
-            <DialogTitle>
-              <div className={styles.dialogHeader}>
-                {getPolicyIcon()}
-                {getPolicyTitle()}
-              </div>
-            </DialogTitle>
-            <DialogContent className={styles.dialogContent}>
-              <div 
-                style={{ 
-                  whiteSpace: 'pre-line', 
-                  lineHeight: '1.8',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word',
-                  fontSize: '14px',
-                  fontFamily: 'system-ui, -apple-system, sans-serif'
-                }}
-              >
-                {getPolicyContent()}
-              </div>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                appearance="primary"
-                onClick={() => setActivePolicy(null)}
-                icon={<ArrowLeft24Regular />}
-              >
-                返回
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
+
 
       {/* 退出确认对话框 */}
       <Dialog open={showExitConfirm} modalType="modal">
