@@ -218,6 +218,8 @@ export class SystemTrayService {
    */
   private async handleTrayMenuClick(menuId: string): Promise<void> {
     try {
+      console.log(`📋 托盘菜单点击事件: ${menuId}`);
+      
       switch (menuId) {
         case 'show':
           await this.showWindow();
@@ -234,12 +236,27 @@ export class SystemTrayService {
           if (
             id === 'custom-退出应用' ||
             id === '退出应用' ||
-            id.toLowerCase() === 'exit' ||
-            id.startsWith('custom-')
+            id.toLowerCase() === 'exit'
           ) {
             await this.performGracefulExit(0);
+          } else if (
+            id === 'custom-显示窗口' ||
+            id === '显示窗口' ||
+            id.toLowerCase() === 'show'
+          ) {
+            await this.showWindow();
+          } else if (id.startsWith('custom-')) {
+            // 对于其他custom-*格式的ID，尝试提取关键信息
+            const cleanId = id.replace('custom-', '');
+            if (cleanId.includes('退出') || cleanId.includes('exit')) {
+              await this.performGracefulExit(0);
+            } else if (cleanId.includes('显示') || cleanId.includes('show')) {
+              await this.showWindow();
+            } else {
+              console.warn(`未识别的custom菜单ID: ${menuId}`);
+            }
           } else {
-            console.log(`未处理的托盘菜单点击: ${menuId}`);
+            console.warn(`未处理的托盘菜单点击: ${menuId}`);
           }
           break;
         }

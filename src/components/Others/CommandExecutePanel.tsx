@@ -19,16 +19,13 @@ import {
 } from "@fluentui/react-components";
 import {
   Play24Regular,
-  Stop24Regular,
   Delete24Regular,
   Copy24Regular,
   Search24Regular,
   ChevronDown24Regular,
-  ChevronUp24Regular,
   Edit24Regular,
   Add24Regular,
   Save24Regular,
-  Dismiss24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -320,18 +317,11 @@ const CommandExecutePanel : React.FC = () => {
     if (!device) return '未知设备';
     
     const { properties, mode, serial } = device;
-    const brand = properties?.brand || '';
-    const model = properties?.model || '';
-    const deviceName = properties?.deviceName || '';
     
     // 优先使用品牌+型号，其次使用设备代号，最后使用序列号
-    if (brand && model) {
-      return `${brand} ${model} (${serial})`;
-    } else if (deviceName) {
-      return `${deviceName} (${serial})`;
-    } else {
+
       return serial;
-    }
+    
   };
 
   // 获取设备模式显示文本
@@ -372,10 +362,10 @@ const CommandExecutePanel : React.FC = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [isQuickCommandDialogOpen, setIsQuickCommandDialogOpen] = useState(false);
-  const [dialogSearchTerm, setDialogSearchTerm] = useState("");
+  const [setIsQuickCommandDialogOpen] = useState(false);
+  const [dialogSearchTerm] = useState("");
   const [commandsConfig, setCommandsConfig] = useState<AdbCommandsConfig | null>(null);
-  const [configLoading, setConfigLoading] = useState(true);
+  const [, setConfigLoading] = useState(true);
   
   // 统一面板相关状态
   const [isUnifiedPanelOpen, setIsUnifiedPanelOpen] = useState(false);
@@ -723,12 +713,7 @@ const executeCommand = async (cmd: string) => {
   }
 };
 
-  // 处理快捷命令选择
-  const handleQuickCommandSelect = (cmd: string) => {
-    setIsQuickCommandDialogOpen(false);
-    executeCommand(cmd);
-  };
-  
+
   // 统一面板相关函数
   const openUnifiedPanel = () => {
     setIsUnifiedPanelOpen(true);
@@ -1048,20 +1033,22 @@ const executeCommand = async (cmd: string) => {
                       }}
                     >
                       {selectedDevice ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' }}>
-                          选择设备:
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' ,maxWidth: '200px' ,maxHeight: '32px'}}>
+                          <span style={{ fontSize: '14px', fontWeight: 'bold', minWidth: '80px' }}>选择设备：</span>
                           <div 
                             style={{ 
                               width: '8px', 
                               height: '8px', 
                               borderRadius: '50%', 
-                              backgroundColor: getDeviceStatusColor(selectedDevice) 
+                              backgroundColor: getDeviceStatusColor(selectedDevice), 
+                              minWidth: '8px',
+                              minHeight: '8px'
                             }} 
                           />
-                          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap',minWidth: '150px' }}>
                             {getDeviceDisplayName(selectedDevice)}
                           </span>
-                          <span style={{ fontSize: '12px', color: 'var(--colorNeutralForeground3)' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--colorNeutralForeground3)',minWidth: '50px' }}>
                             [{getDeviceModeText(selectedDevice.mode)}]
                           </span>
                         </div>
