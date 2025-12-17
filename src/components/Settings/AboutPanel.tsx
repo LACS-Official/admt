@@ -180,6 +180,9 @@ const useStyles = makeStyles({
     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
     gap: "16px",
     marginTop: "16px",
+    maxHeight: "400px",
+    overflowY: "auto",
+    paddingRight: "8px",
   },
 });
 

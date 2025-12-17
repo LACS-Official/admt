@@ -351,9 +351,14 @@ export const shouldShowPrivacyConsent = (): boolean => {
     userAgreementVersion: state.userAgreementVersion,
   });
 
-  // 强制始终显示隐私政策同意界面，确保用户必须同意
-  console.log('📋 强制显示隐私政策同意界面');
-  return true;
+  // 检查是否需要显示隐私政策界面
+  const needsShow = !state.hasCompletedPrivacySetup ||
+                   !state.hasAcceptedPrivacyPolicy ||
+                   !state.hasAcceptedUserAgreement ||
+                   state.checkVersionUpdates();
+
+  console.log('📋 隐私政策显示检查结果:', { needsShow });
+  return needsShow;
 };
 
 // 辅助函数：检查是否应该退出应用
