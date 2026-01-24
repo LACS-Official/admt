@@ -1,0 +1,1684 @@
+import React, { useEffect, useState } from "react";
+import ReactDOM from "react-dom/client";
+import { FluentProvider, webLightTheme, webDarkTheme } from "@fluentui/react-components";
+import App from "./App";
+import { useThemeStore } from "./stores/themeStore";
+import { activationService } from "./services/activationService";
+import { useStartupFlowStore } from "./stores/startupFlowStore";
+import { usePrivacyConsentStore, shouldShowPrivacyConsent } from "./stores/privacyConsentStore";
+import "./styles/global.css";
+import "./styles/startup-animations.css";
+
+// 导入安全保护模块，确保在应用启动时加载
+import "./utils/securityProtection";
+import "./utils/devtools";
+
+// 在应用启动时清除 localStorage 中的 token
+localStorage.removeItem('rom-download-storage');
+console.log('已清除 localStorage 中的 rom-download-storage');
+
+function AppWithTheme() {
+  const { isDarkMode, followSystemTheme, updateThemeBasedOnSystem, subscribeToStorageChanges } = useThemeStore();
+  const [isActivationValid, setIsActivationValid] = useState(true);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(true);
+  const { setCurrentPhase } = useStartupFlowStore();
+  const { hasCompletedPrivacySetup, hasAcceptedPrivacyPolicy, hasAcceptedUserAgreement } = usePrivacyConsentStore();
+
+  // 监听系统主题变化
+  useEffect(() => {
+    if (followSystemTheme) {
+      // 初始化时根据系统主题设置
+      updateThemeBasedOnSystem();
+      
+      // 监听系统主题变化
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => updateThemeBasedOnSystem();
+      
+      mediaQuery.addEventListener('change', handler);
+      
+      return () => mediaQuery.removeEventListener('change', handler);
+    }
+  }, [followSystemTheme, updateThemeBasedOnSystem]);
+
+  // 监听跨页面的主题变化
+  useEffect(() => {
+    const cleanup = subscribeToStorageChanges();
+    return cleanup;
+  }, [subscribeToStorageChanges]);
+
+  // 每隔1秒检测激活码是否过期
+  useEffect(() => {
+    const checkActivationStatus = () => {
+      try {
+        const activationStatus = activationService.checkActivationStatus();
+        
+        // 如果激活码过期或需要激活，则跳转到激活页面
+        if (activationStatus.isExpired || activationStatus.needsActivation) {
+          console.log('检测到激活码过期或需要激活:', activationStatus.expiredReason || '需要激活');
+          setIsActivationValid(false);
+          
+          // 设置启动流程状态为激活验证阶段
+          setCurrentPhase('activation-verification');
+          
+          // 如果是过期状态，清除过期数据
+          if (activationStatus.isExpired) {
+            activationService.handleExpiredActivation();
+          }
+        } else {
+          setIsActivationValid(true);
+        }
+      } catch (error) {
+        console.error('检查激活状态失败:', error);
+        // 如果检查失败，默认认为激活无效
+        setIsActivationValid(false);
+        setCurrentPhase('activation-verification');
+      }
+    };
+
+    // 立即执行一次检查
+    checkActivationStatus();
+
+    // 设置定时器，每隔1秒检查一次
+    const intervalId = setInterval(checkActivationStatus, 1000);
+
+    // 组件卸载时清除定时器
+    return () => clearInterval(intervalId);
+  }, [setCurrentPhase]);
+
+  // 检查用户是否同意政策条款
+  useEffect(() => {
+    const checkTermsAcceptance = () => {
+      try {
+        // 检查是否需要显示隐私政策同意界面
+        const needsToShowConsent = shouldShowPrivacyConsent();
+        
+        // 或者直接检查是否已完成隐私设置且已同意所有必要条款
+        const hasAcceptedAllTerms = hasCompletedPrivacySetup && 
+                                  hasAcceptedPrivacyPolicy && 
+                                  hasAcceptedUserAgreement;
+        
+        console.log('检查政策条款同意状态:', {
+          needsToShowConsent,
+          hasCompletedPrivacySetup,
+          hasAcceptedPrivacyPolicy,
+          hasAcceptedUserAgreement,
+          hasAcceptedAllTerms
+        });
+        
+        if (needsToShowConsent || !hasAcceptedAllTerms) {
+          if (hasAcceptedTerms !== false) { // 只有状态发生变化时才更新并记录日志
+            console.log('状态更新: 用户未同意政策条款，显示政策条款页面');
+            setHasAcceptedTerms(false);
+          }
+          // 设置启动流程状态为隐私政策同意阶段
+          setCurrentPhase('privacy-consent');
+        } else {
+          if (hasAcceptedTerms !== true) { // 只有状态发生变化时才更新并记录日志
+            console.log('状态更新: 用户已同意政策条款，显示主应用界面');
+            setHasAcceptedTerms(true);
+          }
+        }
+      } catch (error) {
+        console.error('检查政策条款同意状态失败:', error);
+        // 如果检查失败，默认认为用户未同意
+        if (hasAcceptedTerms !== false) {
+          console.log('状态更新: 检查失败，默认用户未同意政策条款');
+          setHasAcceptedTerms(false);
+        }
+        setCurrentPhase('privacy-consent');
+      }
+    };
+
+    // 立即执行一次检查
+    checkTermsAcceptance();
+
+    // 由于隐私政策同意状态通常在用户交互后才会改变，这里不设置定时器
+    // 但会依赖相关状态的变化来重新检查
+  }, [setCurrentPhase, hasCompletedPrivacySetup, hasAcceptedPrivacyPolicy, hasAcceptedUserAgreement, hasAcceptedTerms]);
+
+  // 添加一个额外的useEffect来监听hasAcceptedTerms状态的变化
+  useEffect(() => {
+    console.log('监听状态变化: hasAcceptedTerms =', hasAcceptedTerms);
+    // 这里可以添加其他响应状态变化的逻辑
+  }, [hasAcceptedTerms]);
+
+  // 如果激活码无效，显示激活页面
+  if (!isActivationValid) {
+    // 通过修改全局状态来控制显示激活页面
+    // 这里我们仍然渲染App组件，但通过useStartupFlowStore来控制显示激活页面
+    return (
+      <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+        <App />
+      </FluentProvider>
+    );
+  }
+  
+  // 如果用户未同意政策条款，则显示政策条款页面
+  if (!hasAcceptedTerms) {
+    // 通过修改全局状态来控制显示政策条款页面
+    // 这里我们仍然渲染App组件，但通过useStartupFlowStore来控制显示政策条款页面
+    return (
+      <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+        <App />
+      </FluentProvider>
+    );
+  }
+
+  return (
+    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+      <App />
+    </FluentProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <AppWithTheme />
+  </React.StrictMode>
+);
+
+//**  
+// 这是应用的主组件，负责渲染应用的主要内容和启动流程。
+// 主要流程
+// 1. 应用初始化
+//    - 加载配置
+//    - 初始化日志服务
+//    - 初始化 ADB 工具
+//    - 检查应用是否已激活
+// 2. 启动流程
+//    - 显示隐私政策对话框
+//    - 显示激活验证页面
+//    - 显示应用加载动画
+//    - 显示启动过渡效果
+// 3. 主内容渲染
+//    - 显示主内容区域
+//    - 显示状态条
+// 
+//  */
+
+import TitleBar from "./components/Bar/TitleBar";
+import MainContent from "./components/MainContent/MainContent";
+import StatusBar from "./components/Bar/StatusBar";
+import { ErrorNotification } from "./components/Common/ErrorNotification";
+import { StartupFlow } from "./components/StartupFlow/StartupFlow";
+import { useAppStyles } from "./styles/appStyles";
+import { useAppStartup } from "./hooks/useAppStartup";
+
+function App() {
+  const styles = useAppStyles();
+  const {
+    isLoading,
+    error,
+    showStartupFlow,
+    showErrorNotification,
+    countdown,
+    showTransition,
+    currentPhase,
+    handlePrivacyConsent,
+    handleActivationSuccess,
+    handleDataCollectionConsent,
+    handleStartupFlowError,
+    handleStartupFlowComplete
+  } = useAppStartup();
+
+
+
+
+  // 加载中状态
+  if (isLoading) {
+    return null;
+  }
+
+
+  // 显示错误通知
+  if (showErrorNotification && error) {
+    return <ErrorNotification error={error} countdown={countdown} />;
+  }
+
+  // 显示启动流程
+  if (showStartupFlow) {
+    return (
+      <StartupFlow
+        currentPhase={currentPhase}
+        showTransition={showTransition}
+        onPrivacyConsent={handlePrivacyConsent}
+        onActivationSuccess={handleActivationSuccess}
+        onDataCollectionConsent={handleDataCollectionConsent}
+        onStartupFlowError={handleStartupFlowError}
+        onStartupFlowComplete={handleStartupFlowComplete}
+        onTransitionComplete={() => {
+          // 过渡完成后的处理逻辑在 useAppStartup Hook 中已经处理
+        }}
+      />
+    );
+  }
+
+  // 显示主应用界面
+  return (
+    <div className={styles.app}>
+      <TitleBar />
+      <MainContent />
+      <StatusBar />
+    </div>
+  );
+}
+
+export default App;
+
+
+import React, { useEffect, useRef, useState }  from 'react';
+import {
+  makeStyles,
+  TabList,
+  Tab,
+  SelectTabEvent,
+  SelectTabData,
+  Text,
+  Badge,
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from "@fluentui/react-components";
+import {
+  Code24Regular,
+  Settings24Regular,
+  CloudArrowUp24Regular,
+  CloudArrowDown24Regular,
+  Home24Regular,
+  Tent24Regular,
+  DocumentText24Regular,
+  ChevronDown24Regular,
+  Warning24Regular,
+} from "@fluentui/react-icons";
+import DeviceSelectionDialog from './DeviceSelectionDialog';
+import { getDeviceIcon } from "../../assets/icons";
+import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
+import { useAppStore } from "../../stores/appStore";
+import { useDeviceStore } from "../../stores/deviceStore";
+import { useDeviceService } from "../../services/deviceService";
+import { AppView } from "../../types/app";
+import HomePage from "../Home/HomePage";
+import AdbZonePanel from "../AdbTools/AdbZonePanel";
+import FlashZonePanel from "../FlashZone/FlashZonePanel";
+import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
+import OnlineZonePanel from "../OnlineResources/OnlineZonePanel"; 
+import SettingsPanel from "../Settings/SettingsPanel";
+import CarouselComponent from "./CarouselComponent";
+import VersionChecker from "../Common/VersionChecker";
+import RootPanel from "../Root/RootPanel";
+import CommandExecutePanel from '../Others/CommandExecutePanel';
+import LogsPanel from '../Others/LogsPanel';
+
+import { usageTrackingService } from "../../services/usageTrackingService";
+import { systemTrayManager } from "../../services/systemTrayManager";
+
+
+const useStyles = makeStyles({
+  '@keyframes pulse': {
+    '&from': {
+      opacity: "1",
+    },
+    '&50%': {
+      opacity: "0.8",
+    },
+    '&to': {
+      opacity: "1",
+    },
+  },
+  container: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "row",
+    overflow: "hidden",
+    height: "100vh",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    gap: "1px", // 添加分隔线效果
+  },
+  sidebar: {
+    width: "180px", // 增加宽度
+    maxWidth: "250px",
+    backgroundColor: "var(--colorNeutralBackground2)", // 使用更深的背景色
+    borderRight: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    boxShadow: "2px 0 16px rgba(0, 0, 0, 0.08)", // 更现代的阴影
+    position: "relative",
+    zIndex: 10,
+    // 添加渐变背景
+    background: "linear-gradient(180deg, var(--colorNeutralBackground2) 0%, var(--colorNeutralBackground1) 100%)",
+  },
+  deviceInfo: {
+    padding: "5px", // 增加内边距
+    borderBottom: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
+    backdropFilter: "blur(10px)", // 毛玻璃效果
+    overflow: "hidden",
+    minHeight: "auto",
+    position: "relative",
+    boxSizing: "border-box",
+    margin: "8px", // 添加外边距
+  },
+  deviceInfoContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px", // 进一步减少间距
+    width: "100%",
+    overflow: "hidden",
+    boxSizing: "border-box",
+  },
+  deviceInfoTop: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "2px", // 进一步减少间距
+    width: "100%",
+    overflow: "hidden",
+    marginBottom: "4px", // 减少底部间距
+    border: "1px solid var(--colorNeutralStroke2)", // 更淡的边框
+    borderRadius: "8px", // 添加圆角
+    padding: "4px", // 添加内边距
+  },
+  deviceSelectorArea: {
+    width: "100%",
+    marginTop: "2px",
+  },
+  deviceSelectCard: {
+    width: "100%",
+    padding: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    '&:hover': {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      border: "1px solid var(--colorNeutralStroke1)",
+    },
+  },
+  deviceSelectCardContent: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    flex: 1,
+  },
+  deviceSelectCardText: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  deviceSelectCardTitle: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
+  },
+  deviceSelectCardSubtitle: {
+    fontSize: "10px",
+    color: "var(--colorNeutralForeground3)",
+  },
+  noDeviceCard: {
+    width: "100%",
+    padding: "12px",
+    border: "1px solid var(--colorNeutralStroke3)",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    cursor: "not-allowed",
+  },
+  noDeviceCardText: {
+    fontSize: "14px",
+    color: "var(--colorNeutralForeground3)",
+  },
+  deviceIconSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "40px",
+    height: "auto", // 改为自动高度
+    minHeight: "100px", // 设置最小高度以匹配文字信息区域
+    flexShrink: 0,
+    borderRadius: "6px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    position: "relative",
+    overflow: "hidden",
+    boxSizing: "border-box",
+    marginLeft: "4px", // 添加外边距
+  },
+  deviceSerialSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  deviceSerial: {
+    fontSize: "10px",
+    color: "var(--colorNeutralForeground3)",
+    fontFamily: "monospace",
+  },
+  deviceSelector: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+  },
+  deviceSelectorWrapper: {
+    width: "100%",
+  },
+  deviceSelectDropdown: {
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: "100%",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    gap: "4px",
+    minHeight: "20px",
+    textAlign: "center",
+    padding: "4px",
+    boxSizing: "border-box",
+    borderRadius: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    color: "var(--colorNeutralForeground1)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+
+  },
+  deviceTextInfo: {
+    marginTop: "8px",
+    marginLeft: "12px",
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px", // 进一步减少间距
+    overflow: "hidden",
+    minWidth: 0,
+    padding: "0", // 移除内边距
+    boxSizing: "border-box",
+  },
+  deviceNameSection: {
+    marginBottom: "4px",
+  },
+  deviceName: {
+    fontSize: "16px", // 进一步减小字体
+    fontWeight: "600",
+    color: "var (--colorNeutralForeground1)",
+    lineHeight: "1.2",
+    maxWidth: "100%",
+    wordBreak: "break-word",
+    overflowWrap: "break-word",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    marginBottom: "4px", // 移除底部间距
+  },
+  deviceCodename: {
+    fontSize: "12px", // 进一步减小字体
+    color: "var(--colorNeutralForeground3)",
+    lineHeight: "1.1",
+    maxWidth: "100%",
+    wordBreak: "break-word",
+    overflowWrap: "break-word",
+    display: "-webkit-box",
+    WebkitLineClamp: 1,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    fontFamily: "monospace",
+    marginTop: "4px", // 增加顶部间距
+  },
+  deviceStatusSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  statusBadgeRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    minWidth: 0,
+    marginTop: "4px", // 增加顶部间距
+  },
+  statusLabel: {
+    fontSize: "9px",
+    color: "var(--colorNeutralForeground2)",
+    minWidth: "24px",
+    flexShrink: 0,
+  },
+  compactBadge: {
+    fontSize: "10px", // 稍微增大字体
+    padding: "3px 6px", // 增加内边距
+    minHeight: "18px", // 增加高度
+    borderRadius: "8px", // 更圆润的边角
+    fontWeight: "500", // 增加字重
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)", // 添加微妙阴影
+    width: "80px", // 自适应宽度
+  },
+
+  deviceInfoHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "12px",
+    marginBottom: "0",
+  },
+  deviceIcon: {
+    color: "var(--colorBrandForeground1)",
+  },
+  deviceIconImage: {
+    width: "95px", // 增加宽度以更好地填充容器
+    height: "100%", // 高度填充整个容器
+    maxHeight: "88px", // 设置最大高度，留出容器内边距空间
+    borderRadius: "4px",
+    objectFit: "contain", // 保持图片比例
+    flexShrink: 0,
+  },
+
+  deviceTitle: {
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
+    lineHeight: "1.2",
+  },
+  deviceDetails: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  deviceRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+    minWidth: 0, // 允许收缩
+    overflow: "hidden",
+  },
+  deviceLabel: {
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground3)",
+    minWidth: "40px",
+    flexShrink: 0, // 防止标签被压缩
+  },
+  deviceValue: {
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground2)",
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    minWidth: 0, // 允许收缩
+    maxWidth: "120px", // 限制最大宽度
+  },
+  statusIndicator: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+  },
+  noDevice: {
+    padding: "12px",
+    borderBottom: "1px solid var(--colorNeutralStroke3)",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    textAlign: "center",
+  },
+  noDeviceIcon: {
+    color: "var(--colorNeutralForeground3)",
+    marginBottom: "4px",
+  },
+  noDeviceText: {
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground3)",
+  },
+  // 无设备状态的新样式
+  noDeviceBackgroundImage: {
+    width: "80px",
+    height: "80px",
+    objectFit: "contain",
+    opacity: 0.6,
+  },
+  noDeviceMessageSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    justifyContent: "center",
+    height: "100%",
+    minHeight: "80px", // 与图片高度保持一致
+  },
+  noDeviceTitle: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground2)",
+    lineHeight: "1.2",
+  },
+  noDeviceSubtitle: {
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground3)",
+    lineHeight: "1.3",
+    wordBreak: "break-word",
+  },
+  sidebarHeader: {
+    padding: "12px 16px 10px",
+    borderBottom: "1px solid var(--colorNeutralStroke2)",
+    marginBottom: "8px",
+    position: "relative",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxSizing: "border-box",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+    
+    // Add a subtle gradient overlay
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      bottom: "-8px",
+      left: 0,
+      right: 0,
+      height: "8px",
+      background: "linear-gradient(to bottom, var(--colorNeutralBackground1), transparent)",
+      pointerEvents: "none",
+      zIndex: 1,
+    }
+  },
+  tabList: {
+    backgroundColor: "transparent",
+    padding: "8px 10px 16px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px",
+    flex: 1,
+    overflowY: "auto",
+    overflowX: "hidden",
+    boxSizing: "border-box",
+    scrollBehavior: "smooth",
+    scrollPaddingTop: "8px",
+    scrollPaddingBottom: "16px",
+    
+    // Enhanced scrollbar styling
+    "&::-webkit-scrollbar": {
+      width: "4px",
+    },
+    "&::-webkit-scrollbar-track": {
+      background: "var(--colorNeutralBackground1)",
+      borderRadius: "4px",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      background: "var(--colorNeutralStroke2)",
+      borderRadius: "4px",
+      "&:hover": {
+        background: "var(--colorNeutralStroke1)",
+      },
+    },
+  },
+  tab: {
+    width: "100%",
+    justifyContent: "flex-start",
+    padding: "10px 12px", // Increased padding for better touch targets
+    borderRadius: "8px",
+    minHeight: "42px", // Increased height for better visibility
+    maxWidth: "92%",
+    fontSize: "12px",
+    fontWeight: "500",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)", // Smoother transition
+    position: "relative",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "var(--colorNeutralForeground2)",
+    cursor: "pointer",
+    overflow: "hidden",
+    boxSizing: "border-box",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)", // Subtle shadow for depth
+    
+    // Icon styles
+    "& .fui-Tab__icon": {
+      color: "var(--colorNeutralForeground3)",
+      fontSize: "16px", // Slightly larger icons
+      marginRight: "8px",
+      transition: "all 0.2s ease",
+      flexShrink: 0,
+    },
+
+    // Hover state
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2)",
+      color: "var(--colorNeutralForeground1)",
+      transform: "translateY(-1px)",
+      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+
+      "& .fui-Tab__icon": {
+        color: "var(--colorBrandForeground1)",
+        transform: "scale(1.05)",
+      },
+    },
+
+    // Selected state
+    "&[aria-selected='true']": {
+      backgroundColor: "var(--colorBrandBackground2)",
+      color: "var(--colorBrandForeground1)",
+      border: "1px solid var(--colorBrandStroke2)",
+      fontWeight: "600",
+      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+      paddingLeft: "16px", // Indent selected tab
+
+      "& .fui-Tab__icon": {
+        color: "var(--colorBrandForeground1)",
+        transform: "scale(1.1)",
+      },
+
+      // Left indicator for selected tab
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        left: "0",
+        top: "50%",
+        transform: "translateY(-50%)",
+        width: "4px",
+        height: "70%",
+        backgroundColor: "var(--colorBrandForeground1)",
+        borderRadius: "0 3px 3px 0",
+        transition: "all 0.3s ease",
+      },
+      
+      // Add subtle pulse animation on selection
+      "@media (prefers-reduced-motion: no-preference)": {
+        animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      }
+    },
+
+    // 简化活跃状态
+    "&:active": {
+      transform: "scale(0.98)",
+    },
+  },
+  carouselContainer: {
+    padding: "8px", // 减少内边距
+    marginTop: "auto",
+    borderTop: "1px solid var(--colorNeutralStroke2)", // 简化边框
+    backgroundColor: "var(--colorNeutralBackground1)",
+    position: "relative",
+    boxSizing: "border-box",
+  },
+  buttonGroupContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "8px",
+    padding: "8px",
+    maxHeight: "50px",
+    borderTop: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxSizing: "border-box",
+  },
+  actionButton: {
+    flex: 1,
+    height: "34px",
+    fontSize: "12px",
+    fontWeight: "500",
+    borderRadius: "6px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    color: "var(--colorNeutralForeground2)",
+    gap: "6px", // 添加图标和文字之间的间距
+    
+    "&:hover": {
+      backgroundColor: "var(--colorBrandBackground2)",
+      color: "var(--colorBrandForeground1)",
+    },
+    
+    "&:active": {
+      transform: "scale(0.98)",
+    },
+  },
+  actionButtonSelected: {
+    backgroundColor: "var(--colorBrandBackground1)",
+    color: "var(--colorBrandForeground1)",
+    border: "1px solid var(--colorBrandStroke1)",
+  },
+  content: {
+    flex: 1,
+    overflow: "hidden",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    position: "relative",
+
+    // 添加微妙的纹理效果
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: "radial-gradient(circle at 50% 50%, var(--colorNeutralBackground1) 0%, transparent 70%)",
+      opacity: 0.3,
+      pointerEvents: "none",
+    },
+  },
+});
+
+const tabs = [
+  {
+    id: "home" as AppView,
+    label: "主页",
+    icon: <Home24Regular />,
+  },
+  {
+    id: "adb-zone" as AppView,
+    label: "系统专区",
+    icon: <Code24Regular />,
+  },
+  {
+    id: "flash-zone" as AppView,
+    label: "刷机专区",
+    icon: <CloudArrowUp24Regular />,
+  },
+  {
+    id: "online-resources" as AppView,
+    label: "在线资源",
+    icon: <CloudArrowDown24Regular />,
+  },
+  {
+    id: "settings" as AppView,
+    label: "设置",
+    icon: <Settings24Regular />,
+  },
+
+];
+
+const MainContent: React.FC = () => {
+  const styles = useStyles();
+  const { currentView, setCurrentView, config, setStatusBarMessage } = useAppStore();
+  const { selectedDevice, devices, selectDevice } = useDeviceStore();
+  const { startScanning, stopScanning, refreshDeviceInfo } = useDeviceService();
+  const prevConnectedCount = useRef<number>(0);
+  
+  // 版本检查相关状态
+  const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
+  const [updateCheckCompleted, setUpdateCheckCompleted] = useState(false);
+  
+  // 设备选择弹窗状态
+  const [isDeviceSelectionDialogOpen, setIsDeviceSelectionDialogOpen] = useState(false);
+  
+  // 离线弹窗状态
+  const [isOfflineDialogOpen, setIsOfflineDialogOpen] = useState(false);
+  
+  // 未授权弹窗状态
+  const [isUnauthorizedDialogOpen, setIsUnauthorizedDialogOpen] = useState(false);
+
+  // 全局设备扫描 - 根据配置控制是否启用和扫描间隔
+  useEffect(() => {
+    if (config.autoDetectDevices) {
+      // 如果扫描间隔改变，需要重新启动扫描
+      stopScanning();
+      startScanning();
+    } else {
+      stopScanning();
+    }
+    return () => stopScanning();
+  }, [config.autoDetectDevices, config.scanInterval, startScanning, stopScanning]);
+
+  // 监听设备状态变化，检测离线和未授权设备
+  useEffect(() => {
+    if (selectedDevice) {
+      if (selectedDevice.mode === "offline") {
+        setIsOfflineDialogOpen(true);
+        setStatusBarMessage({
+          type: "warning",
+          message: "当前设备已离线，无法获取详细信息。",
+        });
+      } else if (selectedDevice.mode === "unauthorized") {
+        setIsUnauthorizedDialogOpen(true);
+        setStatusBarMessage({
+          type: "warning",
+          message: "当前设备未授权，无法获取详细信息。",
+        });
+      }
+    }
+  }, [selectedDevice]);
+
+  // 监听设备连接/断开，提示状态栏消息
+  useEffect(() => {
+    const connectedCount = devices.filter(d => d.connected).length;
+    const prev = prevConnectedCount.current;
+
+    if (prev === 0 && connectedCount > 0) {
+      // 首次检测到设备
+      setStatusBarMessage({
+        type: "success",
+        message: connectedCount === 1 ? "已检测到 1 台设备" : `已检测到 ${connectedCount} 台设备`,
+      });
+    } else if (prev > 0 && connectedCount === 0) {
+      // 所有设备断开
+      setStatusBarMessage({
+        type: "warning",
+        message: "设备已断开",
+      });
+    } else if (connectedCount < prev && connectedCount > 0) {
+      // 有设备断开但仍有设备连接
+      setStatusBarMessage({
+        type: "warning",
+        message: "有设备断开连接",
+      });
+    } else if (connectedCount > prev && prev > 0) {
+      // 新增设备连接
+      setStatusBarMessage({
+        type: "success",
+        message: "有新设备已连接",
+      });
+    }
+
+    prevConnectedCount.current = connectedCount;
+  }, [devices]);
+
+  // 当选择设备时自动获取设备属性
+  useEffect(() => {
+    if (selectedDevice && selectedDevice.connected && !selectedDevice.properties) {
+      setStatusBarMessage({ type: "info", message: "正在获取设备信息..." });
+      refreshDeviceInfo(selectedDevice.serial);
+    }
+  }, [selectedDevice, refreshDeviceInfo]);
+
+  // 调试设备属性变化
+  useEffect(() => {
+    if (selectedDevice?.properties) {
+      console.log('设备属性已更新:', {
+        marketName: selectedDevice.properties.marketName,
+        model: selectedDevice.properties.model,
+        brand: selectedDevice.properties.brand,
+        manufacturer: selectedDevice.properties.manufacturer,
+        deviceName: selectedDevice.properties.deviceName,
+        serial: selectedDevice.serial
+      });
+      setStatusBarMessage({ type: "success", message: "设备信息已获取" });
+    }
+  }, [selectedDevice?.properties]);
+
+  // 用户行为追踪 - 在MainContent组件挂载时发送使用数据（备用方案）
+  useEffect(() => {
+    const trackMainContentEntry = async () => {
+      try {
+        console.log('🏢 MainContent组件已挂载，开始备用追踪...');
+        console.log('🏢 当前时间:', new Date().toISOString());
+        console.log('🏢 组件挂载位置: MainContent.tsx useEffect');
+
+        // 延迟一段时间，确保HomePage组件有机会先执行
+        setTimeout(async () => {
+          try {
+            await usageTrackingService.trackMainPageEntry();
+            console.log('🏢 MainContent备用追踪调用完成');
+          } catch (error) {
+            console.error('❌ MainContent备用追踪失败:', error);
+          }
+        }, 2000); // 2秒延迟
+
+      } catch (error) {
+        console.error('❌ MainContent备用追踪设置失败:', error);
+      }
+    };
+
+    console.log('🏢 MainContent useEffect 被触发');
+    trackMainContentEntry();
+  }, []); // 空依赖数组，确保只在组件挂载时执行一次
+
+  // 系统托盘初始化 - 单例模式管理，确保只在应用启动时初始化一次
+  useEffect(() => {
+    const initializeSystemTray = async () => {
+      try {
+        // 检查是否已经初始化，避免重复初始化
+        if (!systemTrayManager.isReady() && !systemTrayManager.isInitializingNow()) {
+          await systemTrayManager.initialize({
+            systemTrayEnabled: config.systemTrayEnabled,
+            minimizeToTrayOnClose: config.minimizeToTrayOnClose
+          });
+        }
+      } catch (error) {
+        console.error('系统托盘初始化失败:', error);
+      }
+    };
+
+    initializeSystemTray();
+
+    // 清理函数
+    return () => {
+      // 注意：这里不清理托盘，因为托盘应该在应用生命周期内保持存在
+      // 只有在应用退出时才需要清理托盘
+    };
+  }, []); // 只在组件挂载时执行一次
+
+  // 监听配置变化，更新系统托盘行为
+  useEffect(() => {
+    const updateTrayConfig = async () => {
+      try {
+        await systemTrayManager.updateConfig({
+          systemTrayEnabled: config.systemTrayEnabled,
+          minimizeToTrayOnClose: config.minimizeToTrayOnClose
+        });
+      } catch (error) {
+        console.error('更新系统托盘配置失败:', error);
+      }
+    };
+
+    updateTrayConfig();
+  }, [config.systemTrayEnabled, config.minimizeToTrayOnClose]);
+
+  // 进入主页面时自动检测更新
+  useEffect(() => {
+    // 延迟执行版本检查，确保应用完全加载
+    const timer = setTimeout(() => {
+      if (!updateCheckCompleted) {
+        console.log('🔄 开始自动检测更新...');
+        setTriggerVersionCheck(true);
+      }
+    }, 10);
+
+    return () => clearTimeout(timer);
+  }, [updateCheckCompleted]);
+
+  // 处理版本检查完成
+  const handleUpdateCheckComplete = () => {
+    console.log('✅ 版本检查完成');
+    setUpdateCheckCompleted(true);
+    setTriggerVersionCheck(false);
+  };
+
+  const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
+    setCurrentView(data.value as AppView);
+  };
+
+
+
+  const handleDeviceSelect = (device: any) => {
+    selectDevice(device);
+  };
+
+
+
+  const getDeviceMode = () => {
+    if (!selectedDevice) return "";
+
+    switch (selectedDevice.mode) {
+      case "sys": return "系统模式";
+      case "rec": return "Recovery";
+      case "fastboot": return "Fastboot";
+      case "fastbootd": return "Fastbootd";
+      case "sideload": return "Sideload";
+      case "edl": return "EDL模式";
+      case "unauthorized": return "未授权";
+      case "offline": return "离线";
+      default: return "未知模式";
+    }
+  };
+
+
+
+  const connectedDevices = devices.filter(d => d.connected);
+
+  const renderDeviceInfo = () => {
+    if (connectedDevices.length === 0) {
+      return (
+        <div className={styles.deviceInfo}>
+          <div className={styles.deviceInfoContainer}>
+            {/* 上半部分：左侧背景图片 + 右侧无设备提示 */}
+            <div className={styles.deviceInfoTop}>
+            {/* 左侧：设备状态图片 */}
+            <div className={styles.deviceIconSection}>
+              <img
+                src={UnlinkIcon}
+                alt="UnlinkIcon"
+                className={styles.deviceIconImage}
+              />
+            </div>
+
+              {/* 右侧：无设备提示信息 */}
+              <div className={styles.deviceTextInfo}>
+                <div className={styles.noDeviceMessageSection}>
+                  <Text className={styles.noDeviceTitle}>未检测到设备</Text>
+                  <Text className={styles.noDeviceSubtitle}>
+                    请检查设备是否正常连接 对应驱动是否安装
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            {/* 下半部分：设备选择区域（保持一致性） */}
+                          <div 
+                className={styles.deviceSelectCard}
+              >
+                <div className={styles.deviceSelectCardContent}>
+                    <div className={styles.deviceSelectCardTitle}>
+                     暂无设备连接
+                  </div>
+                </div>
+                <Warning24Regular />
+              </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!selectedDevice) {
+      // 如果有设备但没有选中，自动选择第一个
+      handleDeviceSelect(connectedDevices[0]);
+      return null;
+    }
+
+    const deviceIcon = getDeviceIcon(selectedDevice.mode);
+
+    // 获取设备名称，对于fastboot模式，使用fastboot getvar product命令获取
+    const getDeviceName = () => {
+      // 对于fastboot模式，优先使用product_name
+      if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
+        return selectedDevice.properties?.productName || selectedDevice.serial;
+      }
+      // 对于其他模式，使用原有的逻辑
+      return selectedDevice.properties?.marketName ||
+             selectedDevice.properties?.model ||
+             selectedDevice.serial;
+    };
+
+    const getDeviceOptionText = (device: any) => {
+      // 直接返回设备序列号
+      return device.serial;
+    };
+    
+    const getDeviceCodeName = () => {
+      if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
+        // 对于fastboot模式，使用product_name作为设备代号
+        return selectedDevice.properties?.productName || selectedDevice.serial;
+      }
+      return selectedDevice.properties?.deviceName || "";
+    };
+
+    return (
+      <div className={styles.deviceInfo}>
+        <div className={styles.deviceInfoContainer}>
+          {/* 上半部分：左侧设备状态图片 + 右侧设备文字信息 */}
+          <div className={styles.deviceInfoTop}>
+            {/* 左侧：设备状态图片 */}
+            <div className={styles.deviceIconSection}>
+              <img
+                src={deviceIcon}
+                alt="Device Icon"
+                className={styles.deviceIconImage}
+              />
+            </div>
+
+            {/* 右侧：设备文字信息 */}
+            <div className={styles.deviceTextInfo}>
+              {/* 设备名称区域 */}
+              <div className={styles.deviceNameSection}>
+                {/* 设备序列号 */}
+                <Text className={styles.deviceName}>
+                  {getDeviceName()}
+                </Text>
+
+                {/* 设备代号 */}
+                {selectedDevice.properties?.deviceName && (
+                  <Badge                     appearance="outline"
+                    color="brand"
+                    size="medium"
+                    className={styles.compactBadge}
+                  >
+                    {getDeviceCodeName()}
+                  </Badge>
+                )}
+              </div>
+
+              {/* 状态信息区域 */}
+              <div className={styles.deviceStatusSection}>
+                {/* 设备模式 */}
+                <div className={styles.statusBadgeRow}>
+                  <Badge
+                    appearance="outline"
+                    color="brand"
+                    size="medium"
+                    className={styles.compactBadge}
+                  >
+                    {getDeviceMode()}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 下半部分：设备选择框 */}
+          <div className={styles.deviceSelectorArea}>
+            {connectedDevices.length > 0 ? (
+              <div 
+                className={styles.deviceSelectCard}
+                onClick={() => setIsDeviceSelectionDialogOpen(true)}
+              >
+                <div className={styles.deviceSelectCardContent}>
+                  
+                    <div className={styles.deviceSelectCardTitle}>
+                      选择设备:
+                     {getDeviceOptionText(selectedDevice)}
+                  </div>
+                </div>
+                <ChevronDown24Regular />
+              </div>
+            ) : (
+              <div 
+                className={styles.deviceSelectCard}
+              >
+                <div className={styles.deviceSelectCardContent}>
+                    <div className={styles.deviceSelectCardTitle}>
+                     暂无设备连接
+                  </div>
+                </div>
+                <Warning24Regular />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderContent = () => {
+    switch (currentView) {
+      case "home":
+        return <HomePage />;
+      case "adb-zone":
+        return <AdbZonePanel />;
+      case "flash-zone":
+        return <FlashZonePanel />;
+      case "root":
+        return <RootPanel />;
+      case "extended-features":
+        return <ExtendedFeaturesPanel />;
+      case "online-resources":
+        return <OnlineZonePanel />;
+      case "settings":
+        return <SettingsPanel />;
+      case "command-line":
+        return <CommandExecutePanel />;
+      case "logs":
+        return <LogsPanel />;
+      default:
+        return <HomePage />;
+    }
+  };
+
+  return (
+    <div className={`${styles.container} startup-optimized`}>
+      <div className={`${styles.sidebar} sidebar-enter`}>
+        {/* 设备信息区域 */}
+        {renderDeviceInfo()}
+
+        {/* 标签列表 */}
+        <TabList
+          selectedValue={currentView}
+          onTabSelect={handleTabSelect}
+          className={styles.tabList}
+          vertical // 设置为垂直模式
+        >
+          {tabs.map((tab) => (
+            <Tab
+              key={tab.id}
+              value={tab.id}
+              icon={tab.icon}
+              className={styles.tab}
+            >
+              {tab.label}
+            </Tab>
+          ))}
+        </TabList>
+
+
+        {/* 轮播图区域 */}
+        <div className={styles.carouselContainer}>
+          <CarouselComponent />
+        </div>
+          <div className={styles.buttonGroupContainer}>
+            {/* 打开命令行按钮 */}
+            <div 
+              className={`${styles.actionButton} ${currentView === "command-line" ? styles.actionButtonSelected : ""}`}
+              onClick={() => setCurrentView("command-line")}
+            >
+              <Tent24Regular />
+              命令行
+            </div>
+            {/* 打开日志窗口按钮 */}
+            <div 
+              className={`${styles.actionButton} ${currentView === "logs" ? styles.actionButtonSelected : ""}`}
+              onClick={() => setCurrentView("logs")}
+            >
+              <DocumentText24Regular />
+              日志
+            </div>
+          </div>
+      </div>
+
+      {/* 设备选择弹窗 */}
+      <DeviceSelectionDialog
+        open={isDeviceSelectionDialogOpen}
+        onOpenChange={(open) => setIsDeviceSelectionDialogOpen(open)}
+        devices={connectedDevices}
+        selectedDevice={selectedDevice}
+        onDeviceSelect={(device) => {
+          handleDeviceSelect(device);
+          setIsDeviceSelectionDialogOpen(false);
+        }}
+      />
+
+      <div className={`${styles.content} main-content-enter`}>
+        {renderContent()}
+      </div>
+
+      {/* 版本检查组件 - 隐藏但功能完整 */}
+      <VersionChecker
+        triggerCheck={triggerVersionCheck}
+        onCheckUpdate={() => console.log('🔄 开始检查更新...')}
+        onUpdateFound={(result) => {
+          console.log('🆕 发现新版本:', result);
+          handleUpdateCheckComplete();
+        }}
+        onNoUpdate={(currentVersion) => {
+          console.log('✅ 当前已是最新版本:', currentVersion);
+          handleUpdateCheckComplete();
+        }}
+        onError={(error) => {
+          console.error('❌ 版本检查失败:', error);
+          handleUpdateCheckComplete();
+        }}
+        showStatusMessage={false} // 不显示状态消息，避免干扰用户
+      />
+      
+      {/* 离线设备提示弹窗 */}
+      <Dialog
+        onOpenChange={
+          (isOpen) => setIsOfflineDialogOpen(!!isOpen)
+        }
+        open={isOfflineDialogOpen}
+      >
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>设备离线</DialogTitle>
+            <DialogContent>
+              <p>当前设备已离线，请重新连接设备后，重新插播数据线后重试</p>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsOfflineDialogOpen(false)}>我知道了</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+      
+      {/* 未授权设备提示弹窗 */}
+      <Dialog
+        onOpenChange={
+          (isOpen) => setIsUnauthorizedDialogOpen(!!isOpen)
+        }
+        open={isUnauthorizedDialogOpen}
+      >
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>设备未授权</DialogTitle>
+            <DialogContent>
+              <p>当前设备未授权，请在设备上允许USB调试授权后，重新插拔数据线。</p>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsUnauthorizedDialogOpen(false)}>我知道了</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+    </div>
+  );
+};
+
+export default MainContent;
+
+
+import React from "react";
+import {
+  makeStyles,
+  mergeClasses,
+  Text,
+
+  tokens,
+} from "@fluentui/react-components";
+import {
+  Home24Regular,
+
+} from "@fluentui/react-icons";
+import { useDeviceStore } from "../../stores/deviceStore";
+import { useAppStore } from "../../stores/appStore";
+
+// 导入新的组件
+import DeviceOverviewCard from "../DeviceInfo/DeviceOverviewCard";
+import DeviceRebootCard from "./DeviceRebootCard";
+import MiscellaneousCard from "./MiscellaneousCard";
+
+import NoDevicePrompt from "./NoDevicePrompt";
+
+const useStyles = makeStyles({
+  container: {
+    padding: "16px",
+    height: "100%",
+    overflow: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    position: "relative",
+    backgroundColor: "var(--colorNeutralBackground1)",
+  },
+  backgroundDecoration: {
+    position: "absolute",
+    top: "0",
+    right: "0",
+    width: "200px",
+    height: "200px",
+    background: `linear-gradient(135deg, ${tokens.colorBrandBackground2} 0%, transparent 70%)`,
+    borderRadius: "0 0 0 100%",
+    opacity: 0.1,
+    pointerEvents: "none",
+    zIndex: 0,
+  },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: "12px",
+    minHeight: "40px",
+  },
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  deviceSelector: {
+    minWidth: "180px",
+  },
+  mainContent: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    flex: 1,
+    height: "100%",
+  },
+  // 无设备状态下的全屏显示
+  noDeviceFullScreen: {
+    height: "100%",
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // 设备功能区域 - 新的上下两行布局结构
+  deviceSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  // 主要内容区域：上下两行布局
+  mainContentGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    flex: 1,
+    height: "100%",
+  },
+  // 第一行：设备概览信息区域 - 占据60%高度
+  deviceOverviewSection: {
+    flex: "0 0 50%", // 固定占据60%的高度
+    display: "flex",
+    flexDirection: "column",
+
+  },
+  deviceInfoCard: {
+    height: "100%",
+    overflow: "auto",
+  },
+  // 第二行：功能控制区域 - 占据40%高度
+  deviceActionsSection: {
+    flex: "1 1 50%", // 占据剩余高度（40%）
+    display: "flex",
+    flexDirection: "row", // 水平排列两个卡片
+    gap: "26px",
+    minHeight: "260px", // 增加最小高度以适应40%的空间
+  },
+  // 重启卡片 - 调整宽度
+  rebootCard: {
+    flex: "0 0 48%", // 稍微减少宽度
+    minHeight: "100%",
+    display: "flex",
+    flexDirection: "column",
+  },
+  // 杂项功能卡片 - 调整宽度
+  miscCard: {
+    flex: "0 0 48%", // 稍微减少宽度
+    minHeight: "100%",
+    display: "flex",
+    flexDirection: "column",
+  },
+  noDevice: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "16px",
+    padding: "48px 24px",
+    textAlign: "center",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "8px",
+    border: "2px dashed var(--colorNeutralStroke2)",
+  },
+});
+
+const HomePage: React.FC = () => {
+  const styles = useStyles();
+  const {
+    devices,
+    selectedDevice,
+    isScanning
+  } = useDeviceStore();
+  const { setStatusBarMessage } = useAppStore();
+
+  // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
+
+  const connectedDevices = devices.filter(d => d.connected);
+
+  // 手动刷新设备扫描
+  const handleManualRefresh = () => {
+    // 触发设备扫描刷新
+    setStatusBarMessage({
+      type: "info",
+      message: "正在刷新设备列表...",
+    });
+  };
+
+  return (
+    <div className={`${styles.container} startup-optimized`}>
+      {/* 背景装饰 */}
+      <div className={styles.backgroundDecoration} />
+
+      {/* 页面头部 */}
+
+      {/* 主要内容区域 - 动态布局切换 */}
+      <div className={styles.mainContent}>
+        {connectedDevices.length === 0 ? (
+          /* 无设备连接时：显示全屏设备提示界面 */
+          <div className="card-enter">
+            <NoDevicePrompt
+              isScanning={isScanning}
+              onRefresh={handleManualRefresh}
+            />
+          </div>
+        ) : (
+          /* 有设备连接时：显示优化后的主页布局 */
+          <div className={mergeClasses(styles.deviceSection)}>
+              {selectedDevice ? (
+                <>
+
+                  {/* 新的布局：上下两行布局 */}
+                  <div className={mergeClasses(styles.mainContentGrid)}>
+                    {/* 第一行：设备概览信息区域 - 占据60%高度 */}
+                    <div className={mergeClasses(styles.deviceOverviewSection, "card-enter")}>
+                      <div className={styles.deviceInfoCard}>
+                        <DeviceOverviewCard
+                          device={selectedDevice}
+                          onShowDetails={() => {
+                            // 处理显示详情的逻辑
+                          }}
+                          onCopyInfo={() => {
+                            // 处理复制信息的逻辑
+                            setStatusBarMessage({
+                              type: "success",
+                              message: "设备信息已复制到剪贴板",
+                            });
+                          }}
+                          onCustomize={() => {
+                            // 处理自定义设置的逻辑
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 第二行：功能控制区域 - 占据40%高度 */}
+                    <div className={mergeClasses(styles.deviceActionsSection)}>
+                      {/* 左侧：设备重启卡片 */}
+                      <div className={mergeClasses(styles.rebootCard, "card-enter-delayed")}>
+                        <DeviceRebootCard />
+                      </div>
+
+                      {/* 右侧：杂项功能卡片 */}
+                      <div className={mergeClasses(styles.miscCard, "card-enter-delayed")}>
+                        <MiscellaneousCard />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className={`${styles.noDevice} card-enter`}>
+                  <Home24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
+                  <Text size={400}>请选择一个设备</Text>
+                  <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
+                    从上方下拉菜单中选择要查看的设备
+                  </Text>
+                </div>
+              )}
+            </div>
+        )}
+      </div>
+
+    </div>
+  );
+};
+
+export default HomePage;
