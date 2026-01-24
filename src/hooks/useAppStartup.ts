@@ -5,7 +5,6 @@ import { usePrivacyConsentStore } from "../stores/privacyConsentStore";
 import { useStartupOptimization } from "./useStartupOptimization";
 import { logService } from "../services/logService";
 import { adbToolsManager } from "../services/adbToolsManager";
-import { activationService } from "../services/activationService";
 import { preloadService } from "../services/preloadService";
 import { SecurityConfigManager } from "../config/securityConfig";
 import { unifiedVersionService } from "../services/unifiedVersionService";
@@ -26,8 +25,7 @@ export const useAppStartup = () => {
     versionCheckResult,
     setVersionCheckResult, 
     setVersionCheckCompleted,
-    markPrivacyConsentCompleted,
-    markActivationCompleted
+    markPrivacyConsentCompleted
   } = useStartupFlowStore();
   const { 
     hasCompletedPrivacySetup, 
@@ -44,7 +42,6 @@ export const useAppStartup = () => {
   const versionCheckRef = useRef(false);
   const preloadRef = useRef(false);
   const securityConfigRef = useRef(false);
-  const activationCheckRef = useRef(false);
   const adbInitRef = useRef(false);
 
   // 禁用F5刷新功能
@@ -182,28 +179,6 @@ export const useAppStartup = () => {
           }
         })(),
 
-        // 激活状态检查
-        (async () => {
-          try {
-            console.log('🔑 检查激活状态...');
-            const isActivated = activationService.isActivated;
-            activationCheckRef.current = true;
-            
-            if (isActivated) {
-              console.log('✅ 应用已激活');
-              markActivationCompleted();
-            } else {
-              console.log('⚠️ 应用未激活，需要激活验证');
-              setStatusBarMessage({
-                message: '应用未激活，需要激活验证',
-                type: 'warning'
-              });
-              setCurrentPhase('activation-verification');
-            }
-          } catch (error) {
-            console.error('❌ 激活状态检查失败:', error);
-          }
-        })(),
         
         // ADB工具初始化
         (async () => {
@@ -230,9 +205,6 @@ export const useAppStartup = () => {
       if (!hasCompletedPrivacySetup) {
         console.log('📋 需要完成隐私政策设置，进入隐私政策同意阶段');
         setCurrentPhase('privacy-consent');
-      } else if (!activationCheckRef.current || !activationService.isActivated) {
-        console.log('🔑 需要激活验证，进入激活验证阶段');
-        setCurrentPhase('activation-verification');
       } else {
         // 检查版本是否最新
         console.log('🔄 检查版本是否最新...');
@@ -268,7 +240,6 @@ export const useAppStartup = () => {
     }
   }, [
     startPreload,
-    markActivationCompleted,
     setCurrentPhase,
     setVersionCheckResult,
     setVersionCheckCompleted,

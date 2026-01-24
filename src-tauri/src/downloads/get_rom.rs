@@ -23,23 +23,6 @@ fn get_app_downloads_dir() -> Result<std::path::PathBuf> {
     Ok(std::env::temp_dir().join("admt_downloads"))
 }
 
-/// ROM信息结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RomInfo {
-    pub id: String,
-    pub version: String,
-    pub codename: String,
-    pub size: String,
-    pub rom_type: String,
-    pub date: String,
-    pub url: String,
-    pub token: Option<String>,
-    pub device_code: Option<String>,
-    pub android_version: Option<String>,
-    pub miui_version: Option<String>,
-    pub description: Option<String>,
-}
 
 /// ROM列表响应
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,7 +1,6 @@
 import { AnimatePresence } from "framer-motion";
 import { useAppStyles } from "../../styles/appStyles";
 import PrivacyConsentDialog from "../StartupFlow/PrivacyConsentDialog";
-import ActivationPage from "../StartupFlow/ActivationPage";
 import StartupTransition from "./StartupTransition";
 import VersionChecker from "../Common/VersionChecker";
 
@@ -39,12 +38,6 @@ export const StartupFlow = ({
         />
       )}
       
-      {currentPhase === 'activation-verification' && (
-        <ActivationPage
-          onSuccess={onActivationSuccess}
-          onError={onStartupFlowError}
-        />
-      )}
       
       {currentPhase === 'data-collection' && (
         <PrivacyConsentDialog

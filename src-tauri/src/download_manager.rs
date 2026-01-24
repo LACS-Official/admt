@@ -39,14 +39,6 @@ pub struct DownloadRequest {
     pub download_dir: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExtractProgress {
-    pub id: String,
-    pub current_file: String,
-    pub total_files: usize,
-    pub extracted_files: usize,
-    pub percentage: f64,
-}
 
 pub struct DownloadManager;
 
