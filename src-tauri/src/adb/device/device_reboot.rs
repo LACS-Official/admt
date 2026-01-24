@@ -1,9 +1,7 @@
 use crate::adb::device::device_info::get_device_info;
 use crate::device::CommandResult;
 use crate::error::{AdmtError, Result};
-use crate::utils::{
-        execute_adb_command as utils_execute_adb_command, execute_fastboot_command,
-};
+use crate::utils::{execute_adb_command as utils_execute_adb_command, execute_fastboot_command};
 
 #[tauri::command]
 pub async fn reboot_device(serial: String, mode: String) -> Result<CommandResult> {
@@ -25,10 +23,18 @@ pub async fn reboot_device(serial: String, mode: String) -> Result<CommandResult
     } else if device.is_fastboot_available() {
         match mode.as_str() {
             "system" => execute_fastboot_command(&["-s", &serial, "reboot"], Some(10)).await,
-            "recovery" => execute_fastboot_command(&["-s", &serial, "reboot", "recovery"], Some(10)).await,
-            "bootloader" => execute_fastboot_command(&["-s", &serial, "reboot", "bootloader"], Some(10)).await,
-            "fastboot" => execute_fastboot_command(&["-s", &serial, "reboot", "fastboot"], Some(10)).await,
-            "sideload" => execute_fastboot_command(&["-s", &serial, "reboot", "sideload"], Some(10)).await,
+            "recovery" => {
+                execute_fastboot_command(&["-s", &serial, "reboot", "recovery"], Some(10)).await
+            }
+            "bootloader" => {
+                execute_fastboot_command(&["-s", &serial, "reboot", "bootloader"], Some(10)).await
+            }
+            "fastboot" => {
+                execute_fastboot_command(&["-s", &serial, "reboot", "fastboot"], Some(10)).await
+            }
+            "sideload" => {
+                execute_fastboot_command(&["-s", &serial, "reboot", "sideload"], Some(10)).await
+            }
             "edl" => execute_fastboot_command(&["-s", &serial, "oem", "edl"], Some(10)).await,
             "poweroff" => execute_fastboot_command(&["-s", &serial, "poweroff"], Some(10)).await,
             _ => Err(AdmtError::InvalidDeviceMode { mode }),

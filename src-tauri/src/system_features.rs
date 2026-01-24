@@ -22,7 +22,6 @@ pub struct TrayMenuItem {
     pub checked: Option<bool>,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoStartConfig {
     pub app_name: String,

@@ -8,7 +8,7 @@ fn main() {
         println!("cargo:warning=OUT_DIR not set, using default value");
         "target/build".to_string()
     });
-    
+
     // 设置构建时间
     let build_date = chrono::Utc::now()
         .format("%Y-%m-%d %H:%M:%S UTC")

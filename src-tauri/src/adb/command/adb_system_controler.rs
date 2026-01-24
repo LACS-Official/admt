@@ -136,8 +136,8 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
 
     #[cfg(windows)]
     {
-        use std::process::Command;
         use std::os::windows::process::CommandExt;
+        use std::process::Command;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         // 获取批处理文件的路径
@@ -155,9 +155,9 @@ pub async fn fix_usb3_connection() -> Result<CommandResult> {
             Ok(result) => {
                 let stdout = String::from_utf8_lossy(&result.stdout);
                 let stderr = String::from_utf8_lossy(&result.stderr);
-                
+
                 let output = format!("输出: {}\n错误: {}", stdout, stderr);
-                
+
                 if result.status.success() {
                     log::info!("USB 3.0 registry modifications completed");
                     Ok(CommandResult {
@@ -206,8 +206,8 @@ pub async fn unfix_usb3_connection() -> Result<CommandResult> {
 
     #[cfg(windows)]
     {
-        use std::process::Command;
         use std::os::windows::process::CommandExt;
+        use std::process::Command;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         // 获取批处理文件的路径
@@ -225,9 +225,9 @@ pub async fn unfix_usb3_connection() -> Result<CommandResult> {
             Ok(result) => {
                 let stdout = String::from_utf8_lossy(&result.stdout);
                 let stderr = String::from_utf8_lossy(&result.stderr);
-                
+
                 let output = format!("输出: {}\n错误: {}", stdout, stderr);
-                
+
                 if result.status.success() {
                     log::info!("USB 3.0 registry modifications reverted");
                     Ok(CommandResult {

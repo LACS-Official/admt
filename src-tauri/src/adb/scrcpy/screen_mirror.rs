@@ -1,8 +1,8 @@
 //! Scrcpy 屏幕镜像功能实现
 //! 包含设备诊断、分辨率获取、屏幕镜像启动等功能
 
-use serde::{Deserialize, Serialize};
 use crate::error::{AdmtError, Result};
+use serde::{Deserialize, Serialize};
 
 /// 屏幕镜像设备信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -212,7 +212,10 @@ pub async fn diagnose_scrcpy() -> Result<serde_json::Value> {
 /// 检查设备是否支持屏幕镜像
 #[tauri::command]
 pub async fn check_screen_mirror_support(device_serial: String) -> Result<ScreenMirrorDevice> {
-    log::info!("Checking screen mirror support for device: {}", device_serial);
+    log::info!(
+        "Checking screen mirror support for device: {}",
+        device_serial
+    );
 
     let mut device = ScreenMirrorDevice {
         serial: device_serial.clone(),
@@ -226,22 +229,24 @@ pub async fn check_screen_mirror_support(device_serial: String) -> Result<Screen
     }
 
     // 获取设备名称
-    let output = run_adb_command(&["-s", &device_serial, "shell", "getprop", "ro.product.model"]).await?;
+    let output =
+        run_adb_command(&["-s", &device_serial, "shell", "getprop", "ro.product.model"]).await?;
     device.model = output.trim().to_string();
 
     // 获取设备品牌
-    let output = run_adb_command(&["-s", &device_serial, "shell", "getprop", "ro.product.brand"]).await?;
+    let output =
+        run_adb_command(&["-s", &device_serial, "shell", "getprop", "ro.product.brand"]).await?;
     device.name = format!("{} {}", output.trim(), device.model);
 
     // 简化检测 - 只检查基本连接和名称，默认所有设备都支持投屏
     device.is_supported = !device.model.is_empty();
-    
+
     // 设置默认分辨率
     device.resolution = "1920x1080".to_string();
-    
+
     // 设置默认密度
     device.density = "480".to_string();
-    
+
     // 设置默认方向
     device.orientation = "0".to_string();
 
@@ -257,13 +262,7 @@ pub async fn check_screen_mirror_support(device_serial: String) -> Result<Screen
 pub async fn get_device_resolution(device_serial: String) -> Result<String> {
     log::info!("Getting device resolution for: {}", device_serial);
 
-    let output = run_adb_command(&[
-        "-s",
-        &device_serial,
-        "shell",
-        "wm",
-        "size",
-    ]).await?;
+    let output = run_adb_command(&["-s", &device_serial, "shell", "wm", "size"]).await?;
 
     let resolution = output
         .lines()
@@ -276,7 +275,9 @@ pub async fn get_device_resolution(device_serial: String) -> Result<String> {
         .to_string();
 
     if resolution.is_empty() {
-        Err(AdmtError::Device("Failed to get device resolution".to_string()))
+        Err(AdmtError::Device(
+            "Failed to get device resolution".to_string(),
+        ))
     } else {
         log::info!("Device resolution: {}", resolution);
         Ok(resolution)
@@ -456,11 +457,11 @@ pub async fn stop_screen_mirror(session_id: String) -> Result<bool> {
     // 1. 根据session_id查找对应的进程ID
     // 2. 终止scrcpy进程
     // 3. 清理资源
-    
+
     // 暂时返回成功，实际实现需要进程管理
     // 注意：这里需要实现会话管理器来跟踪会话和进程ID的映射关系
     log::warn!("stop_screen_mirror called but session management is not fully implemented");
-    
+
     Ok(true)
 }
 
@@ -612,7 +613,7 @@ async fn run_adb_command(args: &[&str]) -> Result<String> {
     // 由于当前代码结构，我们暂时简化实现
     // 实际项目中应该调用ADB模块的相关函数
     use std::process::Command;
-    
+
     let output = Command::new("adb")
         .args(args)
         .output()

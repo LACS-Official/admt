@@ -1,11 +1,9 @@
 use crate::activation::{ActivationRequest, ActivationResponse, ActivationValidator, AppConfig};
-  use crate::adb::device::device_info::{get_device_info, get_device_properties_batch};
+use crate::adb::device::device_info::{get_device_info, get_device_properties_batch};
 
 use crate::adb_commands::{AdbIntegrityReport, AdbToolsInfo};
 use crate::cache::get_cache_manager;
-use crate::device::{
-    CommandResult, DeviceInfo, DeviceMode, DeviceProperties,
-};
+use crate::device::{CommandResult, DeviceInfo, DeviceMode, DeviceProperties};
 use crate::download_manager::DownloadManager;
 use crate::error::{AdmtError, Result};
 use crate::utils::{
@@ -14,9 +12,9 @@ use crate::utils::{
 };
 
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use tauri::Emitter;
 use tauri::Manager;
-use std::path::PathBuf;
 
 /// 扫描连接的设备（使用缓存）
 #[tauri::command]
@@ -92,19 +90,23 @@ pub async fn scan_devices() -> Result<Vec<DeviceInfo>> {
 /// 获取Fastboot设备属性
 async fn get_fastboot_device_properties(serial: &str) -> Result<DeviceProperties> {
     log::info!("Getting properties for fastboot device: {}", serial);
-    
+
     // 使用新的fastboot设备信息获取实现
-    let fastboot_props = crate::fastboot::device::device_info::get_fastboot_device_properties(serial.to_string()).await?;
-    
+    let fastboot_props =
+        crate::fastboot::device::device_info::get_fastboot_device_properties(serial.to_string())
+            .await?;
+
     // 转换为通用的DeviceProperties
-    let properties = crate::fastboot::device::device_info::convert_to_device_properties(&fastboot_props);
-    
-    log::info!("Successfully got fastboot properties for device {}: product={:?}, serial={:?}", 
-        serial, 
-        properties.product_name, 
+    let properties =
+        crate::fastboot::device::device_info::convert_to_device_properties(&fastboot_props);
+
+    log::info!(
+        "Successfully got fastboot properties for device {}: product={:?}, serial={:?}",
+        serial,
+        properties.product_name,
         properties.serial_number
     );
-    
+
     Ok(properties)
 }
 
@@ -389,7 +391,6 @@ pub async fn check_fastboot_availability() -> Result<CommandResult> {
     }
 }
 
-
 /// 使用 Fastboot 刷入镜像到指定分区
 #[tauri::command]
 pub async fn fastboot_flash_image(
@@ -437,9 +438,6 @@ pub async fn execute_adb_command_with_path(
     crate::adb_commands::execute_adb_command_with_path(&adb_path, &serial, &command, &args, timeout)
         .await
 }
-
-
-
 
 /// 获取设备性能信息
 #[tauri::command]
@@ -833,8 +831,6 @@ pub async fn get_device_connection_info(serial: String) -> Result<serde_json::Va
     Ok(info)
 }
 
-
-
 /// 获取应用下载目录
 fn get_app_downloads_dir() -> Result<std::path::PathBuf> {
     // 尝试获取应用程序安装目录
@@ -1084,10 +1080,10 @@ pub async fn terminate_process(process_id: u32) -> Result<bool> {
     #[cfg(windows)]
     {
         use std::process::Command;
-        
+
         let mut cmd = Command::new("taskkill");
         cmd.args(["/F", "/PID", &process_id.to_string()]);
-        
+
         match cmd.output() {
             Ok(output) => {
                 let success = output.status.success();
@@ -1095,12 +1091,20 @@ pub async fn terminate_process(process_id: u32) -> Result<bool> {
                     log::info!("Successfully terminated process with ID: {}", process_id);
                 } else {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    log::error!("Failed to terminate process with ID: {}: {}", process_id, stderr);
+                    log::error!(
+                        "Failed to terminate process with ID: {}: {}",
+                        process_id,
+                        stderr
+                    );
                 }
                 Ok(success)
             }
             Err(e) => {
-                log::error!("Failed to execute taskkill command for process ID {}: {}", process_id, e);
+                log::error!(
+                    "Failed to execute taskkill command for process ID {}: {}",
+                    process_id,
+                    e
+                );
                 Ok(false)
             }
         }
@@ -1109,11 +1113,11 @@ pub async fn terminate_process(process_id: u32) -> Result<bool> {
     #[cfg(not(windows))]
     {
         use std::process::Command;
-        
+
         let mut cmd = Command::new("kill");
         cmd.arg("-9");
         cmd.arg(process_id.to_string());
-        
+
         match cmd.output() {
             Ok(output) => {
                 let success = output.status.success();
@@ -1121,12 +1125,20 @@ pub async fn terminate_process(process_id: u32) -> Result<bool> {
                     log::info!("Successfully terminated process with ID: {}", process_id);
                 } else {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    log::error!("Failed to terminate process with ID: {}: {}", process_id, stderr);
+                    log::error!(
+                        "Failed to terminate process with ID: {}: {}",
+                        process_id,
+                        stderr
+                    );
                 }
                 Ok(success)
             }
             Err(e) => {
-                log::error!("Failed to execute kill command for process ID {}: {}", process_id, e);
+                log::error!(
+                    "Failed to execute kill command for process ID {}: {}",
+                    process_id,
+                    e
+                );
                 Ok(false)
             }
         }
@@ -1141,10 +1153,16 @@ pub async fn check_process_alive(process_id: u32) -> Result<bool> {
     #[cfg(windows)]
     {
         use std::process::Command;
-        
+
         let mut cmd = Command::new("tasklist");
-        cmd.args(["/FI", &format!("PID eq {}", process_id), "/FO", "CSV", "/NH"]);
-        
+        cmd.args([
+            "/FI",
+            &format!("PID eq {}", process_id),
+            "/FO",
+            "CSV",
+            "/NH",
+        ]);
+
         match cmd.output() {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1153,7 +1171,11 @@ pub async fn check_process_alive(process_id: u32) -> Result<bool> {
                 Ok(is_alive)
             }
             Err(e) => {
-                log::error!("Failed to check process status for ID {}: {}", process_id, e);
+                log::error!(
+                    "Failed to check process status for ID {}: {}",
+                    process_id,
+                    e
+                );
                 Ok(false)
             }
         }
@@ -1162,11 +1184,11 @@ pub async fn check_process_alive(process_id: u32) -> Result<bool> {
     #[cfg(not(windows))]
     {
         use std::process::Command;
-        
+
         let mut cmd = Command::new("ps");
         cmd.arg("-p");
         cmd.arg(process_id.to_string());
-        
+
         match cmd.output() {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1175,7 +1197,11 @@ pub async fn check_process_alive(process_id: u32) -> Result<bool> {
                 Ok(is_alive)
             }
             Err(e) => {
-                log::error!("Failed to check process status for ID {}: {}", process_id, e);
+                log::error!(
+                    "Failed to check process status for ID {}: {}",
+                    process_id,
+                    e
+                );
                 Ok(false)
             }
         }
@@ -1350,8 +1376,6 @@ pub async fn save_app_config(config: AppConfig) -> Result<bool> {
     // 暂时返回true表示保存成功
     Ok(true)
 }
-
-
 
 // ==================== 安全配置相关命令 ====================
 
@@ -1536,7 +1560,11 @@ pub async fn set_window_always_on_top(window: tauri::Window, always_on_top: bool
         .map_err(|e| AdmtError::FileOperationFailed {
             message: format!("设置窗口置顶状态失败: {}", e),
         })?;
-    log::info!("窗口置顶状态已设置为: {}, 窗口标签: {}", always_on_top, window.label());
+    log::info!(
+        "窗口置顶状态已设置为: {}, 窗口标签: {}",
+        always_on_top,
+        window.label()
+    );
     Ok(())
 }
 
@@ -1607,10 +1635,10 @@ pub async fn download_and_extract_software<R: tauri::Runtime>(
 #[tauri::command]
 pub async fn get_apk_files() -> Result<Vec<String>> {
     use tokio::fs;
-    
+
     let downloads_dir = get_app_downloads_dir()?;
     let apk_dir = downloads_dir.join("apk");
-    
+
     // 确保APK目录存在
     if !apk_dir.exists() {
         fs::create_dir_all(&apk_dir)
@@ -1618,12 +1646,12 @@ pub async fn get_apk_files() -> Result<Vec<String>> {
             .map_err(|e| AdmtError::Io(format!("Failed to create APK directory: {}", e)))?;
         return Ok(Vec::new());
     }
-    
+
     let mut apk_files = Vec::new();
     let mut entries = fs::read_dir(&apk_dir)
         .await
         .map_err(|e| AdmtError::Io(format!("Failed to read APK directory: {}", e)))?;
-    
+
     while let Some(entry) = entries
         .next_entry()
         .await
@@ -1634,7 +1662,7 @@ pub async fn get_apk_files() -> Result<Vec<String>> {
             apk_files.push(path.to_string_lossy().to_string());
         }
     }
-    
+
     Ok(apk_files)
 }
 
@@ -1785,7 +1813,7 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
         // 使用简单的start命令在新窗口中启动脚本
         let script_name = script_absolute_path
             .file_name()
-            .and_then(|name| name.to_str())
+            .and_then(|name: &std::ffi::OsStr| name.to_str())
             .unwrap_or("bypass.cmd");
 
         let mut cmd = Command::new("cmd");
@@ -1867,7 +1895,7 @@ pub async fn write_json_file(path: String, content: String) -> Result<()> {
     use std::path::Path;
 
     let path = Path::new(&path);
-    
+
     // 确保父目录存在
     if let Some(parent) = path.parent() {
         if !parent.exists() {
@@ -1878,9 +1906,10 @@ pub async fn write_json_file(path: String, content: String) -> Result<()> {
     }
 
     // 验证内容是有效的JSON
-    let _json: serde_json::Value = serde_json::from_str(&content).map_err(|e| AdmtError::IoError {
-        message: format!("Invalid JSON content: {}", e),
-    })?;
+    let _json: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| AdmtError::IoError {
+            message: format!("Invalid JSON content: {}", e),
+        })?;
 
     // 写入文件
     fs::write(path, content).map_err(|e| AdmtError::IoError {
@@ -1893,15 +1922,12 @@ pub async fn write_json_file(path: String, content: String) -> Result<()> {
 
 /// 监听配置文件变化
 #[tauri::command]
-pub async fn watch_config_file(
-    _app_handle: tauri::AppHandle,
-    window: tauri::Window,
-) -> Result<()> {
-    use notify::{Watcher, RecursiveMode, Event, EventKind};
+pub async fn watch_config_file(_app_handle: tauri::AppHandle, window: tauri::Window) -> Result<()> {
+    use notify::{Event, EventKind, RecursiveMode, Watcher};
     use std::sync::mpsc;
-    use std::time::Duration;
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::time::Duration;
 
     // 确定配置文件路径
     let config_path = get_config_file_path().map_err(|e| AdmtError::IoError {
@@ -1920,9 +1946,11 @@ pub async fn watch_config_file(
         message: "Failed to get config directory".to_string(),
     })?;
 
-    watcher.watch(config_dir, RecursiveMode::NonRecursive).map_err(|e| AdmtError::IoError {
-        message: format!("Failed to watch config directory: {}", e),
-    })?;
+    watcher
+        .watch(config_dir, RecursiveMode::NonRecursive)
+        .map_err(|e| AdmtError::IoError {
+            message: format!("Failed to watch config directory: {}", e),
+        })?;
 
     log::info!("Started watching config file: {}", config_path.display());
 
@@ -1936,37 +1964,50 @@ pub async fn watch_config_file(
         // 添加防抖动机制，避免短时间内多次触发
         while let Ok(event) = rx.recv() {
             match event {
-                Ok(Event { kind: EventKind::Modify(_), paths, .. }) => {
+                Ok(Event {
+                    kind: EventKind::Modify(_),
+                    paths,
+                    ..
+                }) => {
                     // 检查是否是配置文件发生了变化
                     if paths.contains(&config_path_clone) {
                         // 获取文件修改时间
                         if let Ok(metadata) = std::fs::metadata(&config_path_clone) {
                             if let Ok(modified_time) = metadata.modified() {
                                 let mut last = last_modified_clone.lock().unwrap();
-                                
+
                                 // 检查是否是新的修改
                                 if Some(modified_time) != *last {
                                     *last = Some(modified_time);
                                     drop(last); // 释放锁
-                                    
-                                    log::info!("Config file modified: {}", config_path_clone.display());
-                                    
+
+                                    log::info!(
+                                        "Config file modified: {}",
+                                        config_path_clone.display()
+                                    );
+
                                     // 防抖动处理，延迟500ms再发送事件
                                     let timer = tokio::time::sleep(Duration::from_millis(500));
-                                    
+
                                     // 克隆窗口句柄用于异步任务
                                     let window_clone = window.clone();
-                                    let config_path_str = config_path_clone.to_string_lossy().to_string();
-                                    
+                                    let config_path_str =
+                                        config_path_clone.to_string_lossy().to_string();
+
                                     // 启动异步任务处理防抖动
                                     tokio::spawn(async move {
                                         timer.await;
-                                        
+
                                         // 再次检查文件是否仍然存在且有效
                                         if std::path::Path::new(&config_path_str).exists() {
                                             // 发送事件到前端
-                                            if let Err(e) = window_clone.emit("config-file-changed", &config_path_str) {
-                                                log::error!("Failed to emit config file changed event: {}", e);
+                                            if let Err(e) = window_clone
+                                                .emit("config-file-changed", &config_path_str)
+                                            {
+                                                log::error!(
+                                                    "Failed to emit config file changed event: {}",
+                                                    e
+                                                );
                                             }
                                         }
                                     });
@@ -1975,20 +2016,26 @@ pub async fn watch_config_file(
                         }
                     }
                 }
-                Ok(Event { kind: EventKind::Create(_), paths, .. }) => {
+                Ok(Event {
+                    kind: EventKind::Create(_),
+                    paths,
+                    ..
+                }) => {
                     // 处理文件创建事件（可能配置文件被重新创建）
                     if paths.contains(&config_path_clone) {
                         log::info!("Config file created: {}", config_path_clone.display());
-                        
+
                         let window_clone = window.clone();
                         let config_path_str = config_path_clone.to_string_lossy().to_string();
-                        
+
                         // 延迟发送事件，确保文件写入完成
                         tokio::spawn(async move {
                             tokio::time::sleep(Duration::from_millis(500)).await;
-                            
+
                             if std::path::Path::new(&config_path_str).exists() {
-                                if let Err(e) = window_clone.emit("config-file-changed", &config_path_str) {
+                                if let Err(e) =
+                                    window_clone.emit("config-file-changed", &config_path_str)
+                                {
                                     log::error!("Failed to emit config file created event: {}", e);
                                 }
                             }
@@ -2045,87 +2092,100 @@ fn get_config_file_path() -> Result<PathBuf> {
 #[tauri::command]
 pub async fn get_resource_path<R: tauri::Runtime>(
     app_handle: tauri::AppHandle<R>,
-    path: String
+    path: String,
 ) -> Result<String> {
     log::info!("Getting resource path for: {}", path);
-    
+
     // 1. 首先检查应用资源目录（适用于打包后的应用）
     if let Ok(resource_dir) = app_handle.path().resource_dir() {
         let resource_path = resource_dir.join(&path);
         log::debug!("Checking app resource path: {:?}", resource_path);
-        
+
         if resource_path.exists() {
             log::info!("Resource found in app resources at: {:?}", resource_path);
             return Ok(resource_path.to_string_lossy().to_string());
         }
         // 检查资源目录下是否有resource子目录，用于兼容bundle.resources配置
         let resource_path_with_subdir = resource_dir.join("resource").join(&path);
-        log::debug!("Checking app resource path with subdir: {:?}", resource_path_with_subdir);
+        log::debug!(
+            "Checking app resource path with subdir: {:?}",
+            resource_path_with_subdir
+        );
         if resource_path_with_subdir.exists() {
-            log::info!("Resource found in app resources subdir at: {:?}", resource_path_with_subdir);
+            log::info!(
+                "Resource found in app resources subdir at: {:?}",
+                resource_path_with_subdir
+            );
             return Ok(resource_path_with_subdir.to_string_lossy().to_string());
         }
     }
-    
+
     // 2. 检查src-tauri/resource目录（开发环境）
     let resource_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("resource")
         .join(&path);
-    
+
     log::debug!("Checking development resource path: {:?}", resource_path);
-    
+
     if resource_path.exists() {
         log::info!("Resource found at: {:?}", resource_path);
         return Ok(resource_path.to_string_lossy().to_string());
     }
-    
+
     // 3. 检查app data目录（备用方案）
     if let Ok(data_dir) = app_handle.path().app_data_dir() {
         let app_data_path = data_dir.join("resource").join(&path);
         log::debug!("Checking app data path: {:?}", app_data_path);
-        
+
         if app_data_path.exists() {
             log::info!("Resource found in app data at: {:?}", app_data_path);
             return Ok(app_data_path.to_string_lossy().to_string());
         }
     }
-    
+
     // 4. 检查当前可执行文件目录（适用于便携版）
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
             let exe_resource_path = parent.join("resource").join(&path);
             log::debug!("Checking exe directory path: {:?}", exe_resource_path);
-            
+
             if exe_resource_path.exists() {
-                log::info!("Resource found in exe directory at: {:?}", exe_resource_path);
+                log::info!(
+                    "Resource found in exe directory at: {:?}",
+                    exe_resource_path
+                );
                 return Ok(exe_resource_path.to_string_lossy().to_string());
             }
         }
     }
-    
+
     // 如果都找不到，返回错误
     log::error!("Resource not found: {}", path);
-    Err(AdmtError::FileNotFound { path: path.to_string() })
+    Err(AdmtError::FileNotFound {
+        path: path.to_string(),
+    })
 }
 
 /// 读取资源文件内容并返回为字节数组
 #[tauri::command]
 pub async fn read_resource_file<R: tauri::Runtime>(
     app_handle: tauri::AppHandle<R>,
-    path: String
+    path: String,
 ) -> Result<Vec<u8>> {
     log::info!("Reading resource file: {}", path);
-    
+
     // 使用get_resource_path获取文件路径
     let file_path = get_resource_path(app_handle, path.clone()).await?;
-    
+
     // 读取文件内容
-    let content = std::fs::read(&file_path)
-        .map_err(|e| AdmtError::IoError {
-            message: format!("Failed to read resource file {}: {}", file_path, e)
-        })?;
-    
-    log::info!("Successfully read resource file: {} ({} bytes)", file_path, content.len());
+    let content = std::fs::read(&file_path).map_err(|e| AdmtError::IoError {
+        message: format!("Failed to read resource file {}: {}", file_path, e),
+    })?;
+
+    log::info!(
+        "Successfully read resource file: {} ({} bytes)",
+        file_path,
+        content.len()
+    );
     Ok(content)
 }
-

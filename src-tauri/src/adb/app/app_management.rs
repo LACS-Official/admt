@@ -1,10 +1,10 @@
+use crate::adb::device::device_info::get_device_info;
 use crate::device::{
-    BatchOperation, BatchOperationItem, BatchOperationStatus, BatchOperationType, CommandResult,
-    InstallStatus, InstalledApp, ApkInfo,
+    ApkInfo, BatchOperation, BatchOperationItem, BatchOperationStatus, BatchOperationType,
+    CommandResult, InstallStatus, InstalledApp,
 };
 use crate::error::{AdmtError, Result};
 use crate::utils::execute_adb_command as utils_execute_adb_command;
-use crate::adb::device::device_info::get_device_info;
 use chrono::Utc;
 
 use uuid::Uuid;
@@ -12,10 +12,10 @@ use uuid::Uuid;
 /// 获取已安装应用列表（分批加载版本）
 #[tauri::command]
 pub async fn get_installed_apps_batch(
-    serial: String, 
+    serial: String,
     include_system: bool,
     batch_size: usize,
-    batch_index: usize
+    batch_index: usize,
 ) -> Result<(Vec<InstalledApp>, usize)> {
     let device = get_device_info(serial.clone()).await?;
 
@@ -44,13 +44,13 @@ pub async fn get_installed_apps_batch(
 
     let lines: Vec<&str> = result.output.lines().collect();
     let total_count = lines.len();
-    
+
     // 计算当前批次的起始和结束索引
     let start_index = batch_index * batch_size;
     let end_index = std::cmp::min(start_index + batch_size, total_count);
-    
+
     let mut apps = Vec::new();
-    
+
     // 处理当前批次的应用
     for i in start_index..end_index {
         let line = lines[i];
@@ -59,7 +59,7 @@ pub async fn get_installed_apps_batch(
             if let Some(last_equals_pos) = line.rfind('=') {
                 let package_name = line[last_equals_pos + 1..].to_string();
                 let apk_path = line["package:".len()..last_equals_pos].to_string();
-                
+
                 // 创建基本应用信息
                 let mut app = InstalledApp {
                     package_name: package_name.clone(),
@@ -74,10 +74,10 @@ pub async fn get_installed_apps_batch(
                     permissions: Vec::new(),
                 };
 
-                
                 // 批量获取应用详细信息，减少ADB命令调用次数
                 // 使用一个命令获取多个应用的详细信息
-                if i == start_index || i % 10 == 0 { // 每10个应用获取一次详细信息
+                if i == start_index || i % 10 == 0 {
+                    // 每10个应用获取一次详细信息
                     if let Ok(result) = utils_execute_adb_command(
                         &["-s", &serial, "shell", "dumpsys", "package", &package_name],
                         Some(5), // 减少超时时间
@@ -93,7 +93,7 @@ pub async fn get_installed_apps_batch(
                     // 这样可以大幅减少ADB命令调用次数
                     app.is_system_app = apk_path.starts_with("/system/");
                 }
-                
+
                 apps.push(app);
             }
         }
@@ -106,7 +106,7 @@ pub async fn get_installed_apps_batch(
 #[tauri::command]
 pub async fn get_batch_app_details(
     serial: String,
-    package_names: Vec<String>
+    package_names: Vec<String>,
 ) -> Result<Vec<InstalledApp>> {
     let device = get_device_info(serial.clone()).await?;
 
@@ -117,7 +117,7 @@ pub async fn get_batch_app_details(
     }
 
     let mut apps = Vec::new();
-    
+
     // 分批处理，每批最多10个应用
     for chunk in package_names.chunks(10) {
         // 构建一个命令来获取多个应用的详细信息
@@ -127,9 +127,9 @@ pub async fn get_batch_app_details(
             script.push_str(&format!("dumpsys package {}; ", pkg));
             script.push_str(&format!("echo '===END_DUMP:{}==='; ", pkg));
         }
-        
+
         let args = ["-s", &serial, "shell", &script];
-        
+
         if let Ok(result) = utils_execute_adb_command(&args, Some(15)).await {
             if result.success {
                 // 解析批量获取的应用信息
@@ -138,11 +138,11 @@ pub async fn get_batch_app_details(
                     // 查找当前应用的dump信息
                     let start_marker = format!("===START_DUMP:{}===", pkg);
                     let end_marker = format!("===END_DUMP:{}===", pkg);
-                    
+
                     if let Some(start) = output.find(&start_marker) {
                         if let Some(end) = output[start..].find(&end_marker) {
                             let dump_content = &output[start + start_marker.len()..start + end];
-                            
+
                             // 创建基本应用信息
                             let mut app = InstalledApp {
                                 package_name: pkg.clone(),
@@ -156,7 +156,7 @@ pub async fn get_batch_app_details(
                                 update_time: None,
                                 permissions: Vec::new(),
                             };
-                            
+
                             // 解析应用详细信息
                             parse_package_dump(dump_content, &mut app);
                             apps.push(app);
@@ -200,14 +200,14 @@ pub async fn get_installed_apps(serial: String, include_system: bool) -> Result<
 
     let mut apps = Vec::new();
     let mut package_names = Vec::new();
-    
+
     // 第一阶段：收集所有包名和基本信息
     for line in result.output.lines() {
         if line.starts_with("package:") {
             if let Some(last_equals_pos) = line.rfind('=') {
                 let package_name = line[last_equals_pos + 1..].to_string();
                 let apk_path = line["package:".len()..last_equals_pos].to_string();
-                
+
                 // 创建基本应用信息
                 let app = InstalledApp {
                     package_name: package_name.clone(),
@@ -221,19 +221,22 @@ pub async fn get_installed_apps(serial: String, include_system: bool) -> Result<
                     update_time: None,
                     permissions: Vec::new(),
                 };
-                
+
                 apps.push(app);
                 package_names.push(package_name);
             }
         }
     }
-    
+
     // 第二阶段：批量获取应用详细信息
     if !package_names.is_empty() {
         if let Ok(detailed_apps) = get_batch_app_details(serial, package_names).await {
             // 将详细信息合并到应用列表中
             for detailed_app in detailed_apps {
-                if let Some(app) = apps.iter_mut().find(|a| a.package_name == detailed_app.package_name) {
+                if let Some(app) = apps
+                    .iter_mut()
+                    .find(|a| a.package_name == detailed_app.package_name)
+                {
                     // 更新详细信息
                     app.version_name = detailed_app.version_name;
                     app.version_code = detailed_app.version_code;
@@ -317,7 +320,15 @@ pub async fn get_apk_info(serial: String, apk_path: String) -> Result<ApkInfo> {
     }
 
     // 获取APK信息
-    let dump_args = ["-s", &serial, "shell", "aapt", "dump", "badging", &remote_path];
+    let dump_args = [
+        "-s",
+        &serial,
+        "shell",
+        "aapt",
+        "dump",
+        "badging",
+        &remote_path,
+    ];
     let dump_result = utils_execute_adb_command(&dump_args, Some(30)).await?;
 
     // 清理临时文件
@@ -434,14 +445,9 @@ pub async fn batch_uninstall_apps(
     Ok(batch_operation)
 }
 
-
-
 /// 批量安装APK
 #[tauri::command]
-pub async fn batch_install_apks(
-    serial: String,
-    apk_paths: Vec<String>,
-) -> Result<BatchOperation> {
+pub async fn batch_install_apks(serial: String, apk_paths: Vec<String>) -> Result<BatchOperation> {
     let device = get_device_info(serial.clone()).await?;
 
     if !device.is_adb_available() {
@@ -616,7 +622,9 @@ fn parse_package_dump(output: &str, app: &mut InstalledApp) {
                     continue;
                 } else if perm_line.is_empty() && in_permissions {
                     break;
-                } else if in_permissions && perm_line.trim_start().starts_with("android.permission.") {
+                } else if in_permissions
+                    && perm_line.trim_start().starts_with("android.permission.")
+                {
                     let perm = perm_line.trim();
                     if !perm.is_empty() {
                         app.permissions.push(perm.to_string());
@@ -640,34 +648,47 @@ pub async fn get_frozen_apps(serial: String) -> Result<Vec<InstalledApp>> {
 
     // 尝试使用多种方法获取已冻结应用列表
     let mut result;
-    
+
     // 方法1: 使用 pm list packages -d (标准方法)
-    result = utils_execute_adb_command(&["-s", &serial, "shell", "pm list packages -d"], Some(30)).await?;
-    
+    result = utils_execute_adb_command(&["-s", &serial, "shell", "pm list packages -d"], Some(30))
+        .await?;
+
     // 如果方法1失败，尝试方法2: 使用 pm list packages | grep disabled
     if !result.success || result.output.is_empty() {
-        result = utils_execute_adb_command(&["-s", &serial, "shell", "pm list packages | grep disabled"], Some(30)).await?;
+        result = utils_execute_adb_command(
+            &["-s", &serial, "shell", "pm list packages | grep disabled"],
+            Some(30),
+        )
+        .await?;
     }
-    
+
     // 如果方法2也失败，尝试方法3: 直接查询所有应用然后检查状态
     if !result.success || result.output.is_empty() {
         // 先获取所有应用列表
-        let all_apps_result = utils_execute_adb_command(&["-s", &serial, "shell", "pm list packages"], Some(30)).await?;
-        
+        let all_apps_result =
+            utils_execute_adb_command(&["-s", &serial, "shell", "pm list packages"], Some(30))
+                .await?;
+
         if all_apps_result.success && !all_apps_result.output.is_empty() {
-            let all_packages: Vec<String> = all_apps_result.output
+            let all_packages: Vec<String> = all_apps_result
+                .output
                 .lines()
                 .map(|l| l.trim())
                 .filter(|l| l.starts_with("package:"))
                 .map(|l| l.replace("package:", ""))
                 .filter(|l| !l.is_empty())
                 .collect();
-            
+
             // 检查每个应用的状态
             let mut disabled_packages = Vec::new();
             for pkg in all_packages {
                 match utils_execute_adb_command(
-                    &["-s", &serial, "shell", &format!("dumpsys package {} | grep \"enabled=\"", pkg)],
+                    &[
+                        "-s",
+                        &serial,
+                        "shell",
+                        &format!("dumpsys package {} | grep \"enabled=\"", pkg),
+                    ],
                     Some(10),
                 )
                 .await
@@ -682,28 +703,33 @@ pub async fn get_frozen_apps(serial: String) -> Result<Vec<InstalledApp>> {
                     }
                 }
             }
-            
+
             // 构造模拟的 pm list packages -d 输出
             result = CommandResult {
                 success: true,
-                output: disabled_packages.iter().map(|pkg| format!("package:{}", pkg)).collect::<Vec<_>>().join("\n"),
+                output: disabled_packages
+                    .iter()
+                    .map(|pkg| format!("package:{}", pkg))
+                    .collect::<Vec<_>>()
+                    .join("\n"),
                 error: None,
                 exit_code: Some(0),
             };
         }
     }
-    
+
     if result.success && !result.output.is_empty() {
-        let packages: Vec<String> = result.output
+        let packages: Vec<String> = result
+            .output
             .lines()
             .map(|l| l.trim())
             .filter(|l| l.starts_with("package:"))
             .map(|l| l.replace("package:", ""))
             .filter(|l| !l.is_empty())
             .collect();
-        
+
         let mut apps = Vec::new();
-        
+
         for package_name in packages {
             // 获取应用详细信息
             match utils_execute_adb_command(
@@ -726,7 +752,7 @@ pub async fn get_frozen_apps(serial: String) -> Result<Vec<InstalledApp>> {
                             update_time: None,
                             permissions: Vec::new(),
                         };
-                        
+
                         parse_package_dump(&dump_result.output, &mut app);
                         apps.push(app);
                     } else {
@@ -762,7 +788,7 @@ pub async fn get_frozen_apps(serial: String) -> Result<Vec<InstalledApp>> {
                 }
             }
         }
-        
+
         Ok(apps)
     } else {
         Err(AdmtError::CommandFailed {
@@ -799,8 +825,10 @@ pub async fn get_current_app(serial: String) -> Result<Option<InstalledApp>> {
 
     let lines: Vec<&str> = activity_result.output.lines().collect();
     // 查找包含 ResumedActivity 的行
-    let resumed = lines.iter().find(|l| l.contains("ResumedActivity") || l.contains("mResumedActivity"));
-    
+    let resumed = lines
+        .iter()
+        .find(|l| l.contains("ResumedActivity") || l.contains("mResumedActivity"));
+
     if resumed.is_none() {
         return Ok(None);
     }
@@ -838,7 +866,7 @@ pub async fn get_current_app(serial: String) -> Result<Option<InstalledApp>> {
                     update_time: None,
                     permissions: Vec::new(),
                 };
-                
+
                 parse_package_dump(&dump_result.output, &mut app);
                 Ok(Some(app))
             } else {
@@ -885,14 +913,14 @@ fn parse_aapt_output(output: &str, apk_info: &mut ApkInfo) {
                     apk_info.package_name = Some(name.to_string());
                 }
             }
-            
+
             // 解析版本信息
             if let Some(version_part) = line.split("versionName=").nth(1) {
                 if let Some(version) = version_part.split('\'').nth(1) {
                     apk_info.version_name = Some(version.to_string());
                 }
             }
-            
+
             if let Some(code_part) = line.split("versionCode=").nth(1) {
                 if let Some(code) = code_part.split('\'').nth(1) {
                     apk_info.version_code = Some(code.to_string());
@@ -922,7 +950,6 @@ fn parse_aapt_output(output: &str, apk_info: &mut ApkInfo) {
                     apk_info.features.push(feat.to_string());
                 }
             }
-        
         } else if line.starts_with("application-debuggable") {
             // 检查是否可调试
             apk_info.is_debuggable = true;

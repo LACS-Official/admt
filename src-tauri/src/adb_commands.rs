@@ -393,7 +393,6 @@ pub async fn execute_fastboot_command_with_path(
 
 #[cfg(test)]
 mod tests {
-    
 
     #[test]
     fn test_parse_adb_version() {
