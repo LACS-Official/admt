@@ -63,7 +63,7 @@ const useStyles = makeStyles({
     borderRadius: '8px',
     padding: '16px',
     marginBottom: '16px',
-        minHeight: '80px',
+    minHeight: '80px',
   },
   statsGrid: {
     display: 'grid',
@@ -223,24 +223,24 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
   const setupProgressListener = async () => {
     try {
       const { listen } = await import('@tauri-apps/api/event');
-      
+
       // 监听下载进度事件
       const unlisten = await listen('download-progress', (event: any) => {
         const progressData = event.payload;
         console.log('📊 收到下载进度更新:', progressData);
-        
+
         // 重新加载任务列表以获取最新进度
         const updatedTasks = onlineResourcesService.getAllDownloadTasks();
         setTasks(updatedTasks);
       });
-      
+
       console.log('✅ 下载进度监听器设置成功');
-      
+
       // 返回清理函数
       return unlisten;
     } catch (error) {
       console.error('❌ 设置下载进度监听器失败:', error);
-      return () => {}; // 返回空的清理函数
+      return () => { }; // 返回空的清理函数
     }
   };
 
@@ -253,17 +253,17 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
   useEffect(() => {
     loadTasks();
     loadDownloadDirectory();
-    
+
     let unlistenProgress: (() => void) | null = null;
-    
+
     // 设置进度监听器
     setupProgressListener().then((unlisten) => {
       unlistenProgress = unlisten;
     });
-    
+
     // 定期刷新任务状态（作为备用机制）
     const interval = setInterval(loadTasks, 5000); // 减少到5秒，因为有事件监听器
-    
+
     return () => {
       clearInterval(interval);
       if (unlistenProgress) {
@@ -325,20 +325,20 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
   return (
     <div className={styles.container}>
 
-    {/* 提示*/}
-    <div style={{ 
-      backgroundColor: '#FFF9C4', 
-      border: '1px solid #FFD600', 
-      borderRadius: '8px', 
-      padding: '12px 16px', 
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <span style={{ color: '#F57F17', fontWeight: '600' }}>💡 提示：</span>
-      <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，内点击“使用Appfun下载”进行资源获取</span>
-    </div>
-    
+      {/* 提示*/}
+      <div style={{
+        backgroundColor: '#FFF9C4',
+        border: '1px solid #FFD600',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        <span style={{ color: '#F57F17', fontWeight: '600' }}>💡 提示：</span>
+        <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请在指定资源详情弹窗内点击“使用Appfun下载”进行资源获取</span>
+      </div>
+
 
       {/* 统计信息 */}
       <Card className={styles.statsCard}>
@@ -395,17 +395,17 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
             if (downloadDirectory) {
               try {
                 const { invoke } = await import('@tauri-apps/api/core');
-                
+
                 // 检查是否有APK文件，如果有则优先打开APK目录
                 const hasApkFiles = tasks.some(task => {
                   return task.fileName && task.fileName.toLowerCase().endsWith('.apk');
                 });
-                
+
                 // 如果有APK文件，则打开APK目录，否则打开默认下载目录
-                const targetDir = hasApkFiles 
-                  ? `${downloadDirectory}/apk` 
+                const targetDir = hasApkFiles
+                  ? `${downloadDirectory}/apk`
                   : downloadDirectory;
-                
+
                 await invoke('open_folder', { path: targetDir });
               } catch (error) {
                 console.error('❌ 打开下载目录失败:', error);
@@ -445,7 +445,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
       </div>
     </div>
   );
-}; 
+};
 
 // 任务行组件
 interface TaskRowProps {
