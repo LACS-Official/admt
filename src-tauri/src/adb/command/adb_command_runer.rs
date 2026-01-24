@@ -4,7 +4,6 @@ use crate::utils::execute_adb_command as utils_execute_adb_command;
 use std::process::{Command, Stdio};
 use tauri::Emitter;
 
-
 /// 执行批处理文件（用于线刷等操作）
 #[tauri::command]
 pub async fn execute_batch_file(

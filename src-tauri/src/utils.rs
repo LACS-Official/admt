@@ -117,10 +117,15 @@ pub async fn execute_fastboot_command(
     timeout_secs: Option<u64>,
 ) -> Result<crate::device::CommandResult> {
     let fastboot_path = get_cached_fastboot_path();
-    log::info!("[utils] execute_fastboot_command called with args: {:?}, timeout: {:?}, fastboot_path: {}", args, timeout_secs, fastboot_path.display());
+    log::info!(
+        "[utils] execute_fastboot_command called with args: {:?}, timeout: {:?}, fastboot_path: {}",
+        args,
+        timeout_secs,
+        fastboot_path.display()
+    );
     record_path_cache_hit().await;
     let result = execute_command(fastboot_path, args, timeout_secs).await;
-    
+
     // 特殊处理fastboot命令的输出 - fastboot通常将输出放在stderr中
     let result = match result {
         Ok(mut cmd_result) => {
@@ -129,7 +134,10 @@ pub async fn execute_fastboot_command(
                 if let Some(stderr_content) = &cmd_result.error {
                     cmd_result.output = stderr_content.clone();
                     cmd_result.error = None;
-                    log::info!("[utils] Fastboot output moved from stderr to stdout: {}", cmd_result.output);
+                    log::info!(
+                        "[utils] Fastboot output moved from stderr to stdout: {}",
+                        cmd_result.output
+                    );
                 }
             }
             log::info!("[utils] execute_fastboot_command final result: success={}, output_len={}, error={:?}, exit_code={:?}", 
@@ -144,7 +152,7 @@ pub async fn execute_fastboot_command(
             Err(e)
         }
     };
-    
+
     result
 }
 
@@ -162,23 +170,19 @@ pub async fn execute_command(
         } else {
             "Fastboot"
         };
-        return Err(AdmtError::IoError {
-            message: format!(
-                "{} executable not found in tools directory. Please ensure {}.exe is placed in src-tauri/tools/adb/",
-                tool_name,
-                tool_name.to_lowercase()
-            ),
-        });
+        return Err(AdmtError::Io(format!(
+            "{} executable not found in tools directory. Please ensure {}.exe is placed in src-tauri/tools/adb/",
+            tool_name,
+            tool_name.to_lowercase()
+        )));
     }
 
     // 检查程序文件是否存在
     if !program.exists() {
-        return Err(AdmtError::IoError {
-            message: format!(
-                "Program not found: {}. Please ensure the executable is placed in src-tauri/tools/adb/",
-                program.display()
-            ),
-        });
+        return Err(AdmtError::Io(format!(
+            "Program not found: {}. Please ensure the executable is placed in src-tauri/tools/adb/",
+            program.display()
+        )));
     }
 
     let mut cmd = TokioCommand::new(program);
@@ -249,7 +253,7 @@ pub async fn execute_command(
             };
 
             log::error!("命令执行IO错误: {}", error_msg);
-            Err(AdmtError::IoError { message: error_msg })
+            Err(AdmtError::Io(error_msg))
         }
         Err(_) => {
             let timeout_error = format!("命令执行超时: {} {}", program.display(), args.join(" "));

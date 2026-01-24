@@ -17,16 +17,41 @@ use crate::commands::{get_resource_path, read_resource_file};
 
 use activation::check_activation_expiry;
 use adb::app::app_management::*;
-use adb::command::adb_system_controler::{restart_adb_service, fix_usb3_connection, unfix_usb3_connection};
-use adb::command::adb_command_runer::{execute_batch_file, execute_batch_file_stream, finish_adb_service, finish_adb5037, execute_adb_command};
+use adb::command::adb_command_runer::{
+    execute_adb_command, execute_batch_file, execute_batch_file_stream, finish_adb5037,
+    finish_adb_service,
+};
+use adb::command::adb_system_controler::{
+    fix_usb3_connection, restart_adb_service, unfix_usb3_connection,
+};
 use adb::device::device_reboot::reboot_device;
-use adb::file::file::{push_file, pull_file, list_device_files};
-use adb::scrcpy::screen_mirror::{check_screen_mirror_support, diagnose_scrcpy, start_screen_mirror, stop_screen_mirror};
+use adb::file::file::{list_device_files, pull_file, push_file};
+use adb::scrcpy::screen_mirror::{
+    check_screen_mirror_support, diagnose_scrcpy, start_screen_mirror, stop_screen_mirror,
+};
 use cache::cache_cleanup_task;
-use commands::{scan_devices, execute_adb_command_with_path, get_adb_tools_info, verify_adb_tools_integrity, get_device_properties, check_adb_availability, check_fastboot_availability, fastboot_flash_image, diagnose_adb_fastboot_paths, get_device_performance_info, get_device_memory_storage_info, check_device_connection, get_device_connection_info, download_apk, get_download_size, download_file, cancel_download, get_downloads_directory, cleanup_downloads, validate_activation_code_format, activate_application, check_activation_status, validate_local_activation_data, get_device_fingerprint, get_app_config, save_app_config, get_security_config, validate_security_config, get_platform_info, get_system_arch, open_devtools, is_debug_mode, set_window_always_on_top, get_window_always_on_top, get_app_environment, download_and_extract_software, get_default_download_directory, open_folder, check_file_exists, delete_file, read_json_file, write_json_file, watch_config_file, execute_script_in_new_window, get_cache_stats, clear_all_cache, invalidate_device_cache, get_detailed_device_fingerprint, exit_app, terminate_process, check_process_alive, get_apk_files};
-use downloads::get_rom::{fetch_rom_list, download_rom};
-use fastboot::command::fastboot_command_runner::{execute_fastboot_command, execute_fastboot_command_with_path, switch_ab_partition, get_current_active_slot, get_slot_info};
+use commands::{
+    activate_application, cancel_download, check_activation_status, check_adb_availability,
+    check_device_connection, check_fastboot_availability, check_file_exists, check_process_alive,
+    cleanup_downloads, clear_all_cache, delete_file, diagnose_adb_fastboot_paths,
+    download_and_extract_software, download_apk, download_file, execute_adb_command_with_path,
+    execute_script_in_new_window, exit_app, fastboot_flash_image, get_adb_tools_info,
+    get_apk_files, get_app_config, get_app_environment, get_cache_stats,
+    get_default_download_directory, get_detailed_device_fingerprint, get_device_connection_info,
+    get_device_fingerprint, get_device_memory_storage_info, get_device_performance_info,
+    get_device_properties, get_download_size, get_downloads_directory, get_platform_info,
+    get_security_config, get_system_arch, get_window_always_on_top, invalidate_device_cache,
+    is_debug_mode, open_devtools, open_folder, read_json_file, save_app_config, scan_devices,
+    set_window_always_on_top, terminate_process, validate_activation_code_format,
+    validate_local_activation_data, validate_security_config, verify_adb_tools_integrity,
+    watch_config_file, write_json_file,
+};
 use core::log::*;
+use downloads::get_rom::{download_rom, fetch_rom_list};
+use fastboot::command::fastboot_command_runner::{
+    execute_fastboot_command, execute_fastboot_command_with_path, get_current_active_slot,
+    get_slot_info, switch_ab_partition,
+};
 use sys::sys_tool_opener::{open_device_manager, open_task_manager};
 use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
@@ -34,7 +59,10 @@ use tauri_plugin_dialog::DialogExt;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -44,16 +72,17 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             // 当第二个实例启动时，显示提示信息
             println!("检测到第二个实例尝试启动");
-            
+
             // 获取主窗口
             if let Some(window) = app.get_webview_window("main") {
                 // 将主窗口置于前台
                 let _ = window.show();
                 let _ = window.set_focus();
-                
+
                 // 显示提示对话框
                 tauri::async_runtime::spawn(async move {
-                    window.dialog()
+                    window
+                        .dialog()
                         .message("玩机管家已经在运行中，无需重新打开。")
                         .title("提示")
                         .show(|_| {});

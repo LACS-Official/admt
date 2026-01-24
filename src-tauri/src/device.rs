@@ -68,8 +68,6 @@ pub struct DeviceProperties {
     pub build_host: Option<String>,      // ro.build.host
     pub miui_version: Option<String>,    // ro.mi.ui.version.name
 
-
-
     // 硬件信息
     pub cpu_abi: Option<String>,           // ro.product.cpu.abi
     pub cpu_abi_list: Option<String>,      // ro.product.cpu.abilist
@@ -99,15 +97,15 @@ pub struct DeviceProperties {
     pub vndk_version: Option<String>,    // ro.vndk.version
 
     // 运行时信息
-    pub imei: Option<String>,              // 需要特殊权限获取
-    pub battery_level: Option<i32>,        // dumpsys battery
-    pub screen_resolution: Option<String>, // wm size
-    pub total_memory: Option<String>,      // /proc/meminfo
-    pub available_storage: Option<String>, // df /data
+    pub imei: Option<String>,                  // 需要特殊权限获取
+    pub battery_level: Option<i32>,            // dumpsys battery
+    pub screen_resolution: Option<String>,     // wm size
+    pub total_memory: Option<String>,          // /proc/meminfo
+    pub available_storage: Option<String>,     // df /data
     pub parallel_download_flash: Option<bool>, // 并行刷写支持
-    pub off_mode_charge: Option<bool>,     // 关机充电模式
-    pub anti_rollback: Option<bool>,       // 防回滚保护
-    pub cpuid: Option<String>,             // CPU唯一ID
+    pub off_mode_charge: Option<bool>,         // 关机充电模式
+    pub anti_rollback: Option<bool>,           // 防回滚保护
+    pub cpuid: Option<String>,                 // CPU唯一ID
 
     // 详细内存和存储信息
     pub memory_total: Option<u64>,      // 总内存 (MB)
@@ -125,7 +123,6 @@ pub struct CommandResult {
     pub error: Option<String>,
     pub exit_code: Option<i32>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstalledApp {
@@ -157,7 +154,6 @@ pub struct ApkInfo {
     pub is_test_only: bool,
     pub icon_path: Option<String>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

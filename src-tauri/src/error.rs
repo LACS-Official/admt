@@ -24,9 +24,6 @@ pub enum AdmtError {
     #[error("Parse error: {message}")]
     ParseError { message: String },
 
-    #[error("IO error: {message}")]
-    IoError { message: String },
-
     #[error("Configuration error: {message}")]
     ConfigError { message: String },
 
@@ -66,6 +63,9 @@ pub enum AdmtError {
     #[error("IO error: {0}")]
     Io(String),
 
+    #[error("IO error: {message}")]
+    IoError { message: String },
+
     #[error("Device error: {0}")]
     Device(String),
 
@@ -77,9 +77,6 @@ pub enum AdmtError {
 
     #[error("Tauri error: {0}")]
     Tauri(String),
-
-    #[error("Network error: {0}")]
-    NetworkError(String),
 
     #[error("Extraction error: {0}")]
     ExtractionError(String),
@@ -99,9 +96,7 @@ pub enum AdmtError {
 
 impl From<std::io::Error> for AdmtError {
     fn from(err: std::io::Error) -> Self {
-        AdmtError::IoError {
-            message: err.to_string(),
-        }
+        AdmtError::Io(err.to_string())
     }
 }
 

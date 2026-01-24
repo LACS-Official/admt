@@ -167,7 +167,11 @@ async fn check_version_from_api(
             has_update,
             current_version: current_version.to_string(),
             latest_version: Some(latest_version.to_string()),
-            download_url: if clean_download_url.is_empty() { None } else { Some(clean_download_url.to_string()) },
+            download_url: if clean_download_url.is_empty() {
+                None
+            } else {
+                Some(clean_download_url.to_string())
+            },
             release_notes: None,
             updated_at: Some(updated_at.to_string()),
             error: None,
@@ -181,26 +185,30 @@ fn compare_versions(current: &str, latest: &str) -> bool {
     // 清理版本号，移除可能的前缀（如 'v'）
     let clean_current = current.trim_start_matches('v').trim();
     let clean_latest = latest.trim_start_matches('v').trim();
-    
+
     // 分割版本号并转换为数字数组
-    let current_parts: Vec<u32> = clean_current.split('.')
+    let current_parts: Vec<u32> = clean_current
+        .split('.')
         .filter_map(|s| s.parse().ok())
         .collect();
-    let latest_parts: Vec<u32> = clean_latest.split('.')
+    let latest_parts: Vec<u32> = clean_latest
+        .split('.')
         .filter_map(|s| s.parse().ok())
         .collect();
-    
+
     // 确保两个版本号长度一致，不足的部分补0
     let max_len = std::cmp::max(current_parts.len(), latest_parts.len());
-    let current_padded: Vec<u32> = current_parts.iter()
+    let current_padded: Vec<u32> = current_parts
+        .iter()
         .cloned()
         .chain(std::iter::repeat(0).take(max_len - current_parts.len()))
         .collect();
-    let latest_padded: Vec<u32> = latest_parts.iter()
+    let latest_padded: Vec<u32> = latest_parts
+        .iter()
         .cloned()
         .chain(std::iter::repeat(0).take(max_len - latest_parts.len()))
         .collect();
-    
+
     // 逐位比较版本号
     for i in 0..max_len {
         if latest_padded[i] > current_padded[i] {
@@ -209,7 +217,7 @@ fn compare_versions(current: &str, latest: &str) -> bool {
             return false;
         }
     }
-    
+
     false
 }
 
@@ -246,19 +254,19 @@ mod tests {
         assert_eq!(compare_versions("1.0.0", "1.0.0"), false);
         assert_eq!(compare_versions("1.0.0", "2.0.0"), true);
         assert_eq!(compare_versions("2.0.0", "1.0.0"), false);
-        
+
         // 带前缀的版本比较
         assert_eq!(compare_versions("v1.0.0", "1.0.1"), true);
         assert_eq!(compare_versions("1.0.0", "v1.0.1"), true);
         assert_eq!(compare_versions("v1.0.0", "v1.0.1"), true);
         assert_eq!(compare_versions("v1.0.1", "v1.0.0"), false);
-        
+
         // 不同长度版本号比较
         assert_eq!(compare_versions("1.0", "1.0.1"), true);
         assert_eq!(compare_versions("1.0.1", "1.0"), false);
         assert_eq!(compare_versions("1", "1.0.1"), true);
         assert_eq!(compare_versions("1.0.1", "1"), false);
-        
+
         // 复杂版本号比较
         assert_eq!(compare_versions("1.2.3", "1.2.4"), true);
         assert_eq!(compare_versions("1.2.3", "1.3.0"), true);

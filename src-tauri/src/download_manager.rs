@@ -39,7 +39,6 @@ pub struct DownloadRequest {
     pub download_dir: String,
 }
 
-
 pub struct DownloadManager;
 
 impl DownloadManager {
@@ -120,13 +119,10 @@ impl DownloadManager {
             .get(&request.url)
             .send()
             .await
-            .map_err(|e| AdmtError::NetworkError(e.to_string()))?;
+            .map_err(|e| AdmtError::Network(e.to_string()))?;
 
         if !response.status().is_success() {
-            return Err(AdmtError::NetworkError(format!(
-                "HTTP {}",
-                response.status()
-            )));
+            return Err(AdmtError::Network(format!("HTTP {}", response.status())));
         }
 
         let total_size = response.content_length().unwrap_or(0);
@@ -137,35 +133,29 @@ impl DownloadManager {
         // 构建文件名
         let file_extension = request.file_extension.as_deref().unwrap_or("bin");
         let filename = format!("{}.{}", request.software_name, file_extension);
-        
+
         // 根据文件扩展名确定下载目录
         let target_dir = if file_extension == "apk" {
             // APK文件保存到 downloads/apk/ 目录
             let apk_dir = app_downloads_dir.join("apk");
             // 确保apk目录存在
-            fs::create_dir_all(&apk_dir).map_err(|e| AdmtError::IoError {
-                message: e.to_string(),
-            })?;
+            fs::create_dir_all(&apk_dir).map_err(|e| AdmtError::Io(e.to_string()))?;
             apk_dir
         } else {
             // 其他文件保存到默认下载目录
             app_downloads_dir.clone()
         };
-        
+
         let file_path = target_dir.join(&filename);
 
         // 确保下载目录存在
         if let Some(parent) = file_path.parent() {
             println!("📁 创建下载目录: {}", parent.display());
-            fs::create_dir_all(parent).map_err(|e| AdmtError::IoError {
-                message: e.to_string(),
-            })?;
+            fs::create_dir_all(parent).map_err(|e| AdmtError::Io(e.to_string()))?;
         }
 
         println!("📁 创建下载文件: {}", file_path.display());
-        let mut file = fs::File::create(&file_path).map_err(|e| AdmtError::IoError {
-            message: e.to_string(),
-        })?;
+        let mut file = fs::File::create(&file_path).map_err(|e| AdmtError::Io(e.to_string()))?;
 
         let mut downloaded = 0u64;
         let mut stream = response.bytes_stream();
@@ -186,10 +176,9 @@ impl DownloadManager {
         let _ = app_handle.emit("download-progress", &progress);
 
         while let Some(chunk) = stream.next().await {
-            let chunk = chunk.map_err(|e| AdmtError::NetworkError(e.to_string()))?;
-            file.write_all(&chunk).map_err(|e| AdmtError::IoError {
-                message: e.to_string(),
-            })?;
+            let chunk = chunk.map_err(|e| AdmtError::Network(e.to_string()))?;
+            file.write_all(&chunk)
+                .map_err(|e| AdmtError::Io(e.to_string()))?;
 
             downloaded += chunk.len() as u64;
             let elapsed = start_time.elapsed().as_secs_f64();
@@ -257,9 +246,7 @@ impl DownloadManager {
         request: &DownloadRequest,
     ) -> Result<PathBuf> {
         let extract_dir = archive_path.parent().unwrap().join(&request.software_name);
-        fs::create_dir_all(&extract_dir).map_err(|e| AdmtError::IoError {
-            message: e.to_string(),
-        })?;
+        fs::create_dir_all(&extract_dir).map_err(|e| AdmtError::Io(e.to_string()))?;
 
         // 发送解压开始事件
         let progress = DownloadProgress {
@@ -311,9 +298,7 @@ impl DownloadManager {
 
     /// 解压ZIP文件
     async fn extract_zip(&self, archive_path: &Path, extract_dir: &Path) -> Result<()> {
-        let file = fs::File::open(archive_path).map_err(|e| AdmtError::IoError {
-            message: e.to_string(),
-        })?;
+        let file = fs::File::open(archive_path).map_err(|e| AdmtError::Io(e.to_string()))?;
         let mut archive =
             zip::ZipArchive::new(file).map_err(|e| AdmtError::ExtractionError(e.to_string()))?;
 
@@ -328,23 +313,16 @@ impl DownloadManager {
             };
 
             if file.name().ends_with('/') {
-                fs::create_dir_all(&outpath).map_err(|e| AdmtError::IoError {
-                    message: e.to_string(),
-                })?;
+                fs::create_dir_all(&outpath).map_err(|e| AdmtError::Io(e.to_string()))?;
             } else {
                 if let Some(p) = outpath.parent() {
                     if !p.exists() {
-                        fs::create_dir_all(p).map_err(|e| AdmtError::IoError {
-                            message: e.to_string(),
-                        })?;
+                        fs::create_dir_all(p).map_err(|e| AdmtError::Io(e.to_string()))?;
                     }
                 }
-                let mut outfile = fs::File::create(&outpath).map_err(|e| AdmtError::IoError {
-                    message: e.to_string(),
-                })?;
-                io::copy(&mut file, &mut outfile).map_err(|e| AdmtError::IoError {
-                    message: e.to_string(),
-                })?;
+                let mut outfile =
+                    fs::File::create(&outpath).map_err(|e| AdmtError::Io(e.to_string()))?;
+                io::copy(&mut file, &mut outfile).map_err(|e| AdmtError::Io(e.to_string()))?;
             }
         }
 
@@ -377,9 +355,7 @@ impl DownloadManager {
             &json_config_path,
             serde_json::to_string_pretty(&json_config).unwrap(),
         )
-        .map_err(|e| AdmtError::IoError {
-            message: e.to_string(),
-        })?;
+        .map_err(|e| AdmtError::Io(e.to_string()))?;
 
         Ok(())
     }

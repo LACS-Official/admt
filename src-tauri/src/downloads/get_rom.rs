@@ -12,17 +12,16 @@ fn get_app_downloads_dir() -> Result<std::path::PathBuf> {
             return Ok(downloads_dir);
         }
     }
-    
+
     // 如果无法获取可执行文件目录，使用用户文档目录
     if let Some(home_dir) = dirs::document_dir() {
         let downloads_dir = home_dir.join("ADMT").join("downloads");
         return Ok(downloads_dir);
     }
-    
+
     // 最后使用临时目录
     Ok(std::env::temp_dir().join("admt_downloads"))
 }
-
 
 /// ROM列表响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,16 +39,17 @@ pub async fn fetch_rom_list(device_code: String, token: Option<String>) -> Resul
     log::info!("正在获取设备 {} 的ROM列表", device_code);
 
     let client = Client::new();
-    
+
     // 构建请求URL
     let mut api_url = format!("https://Rom.jilin9527.top/api/v1/ls/?code={}", device_code);
-    
+
     // 如果有token，添加到URL
     if let Some(token_str) = &token {
         api_url.push_str(&format!("&token={}", token_str));
     }
-    
-    match client.get(&api_url)
+
+    match client
+        .get(&api_url)
         .timeout(std::time::Duration::from_secs(30))
         .send()
         .await
@@ -59,16 +59,16 @@ pub async fn fetch_rom_list(device_code: String, token: Option<String>) -> Resul
                 match response.json::<serde_json::Value>().await {
                     Ok(data) => {
                         log::info!("成功获取ROM列表数据");
-                        
+
                         // 解析API响应
                         if let (Some(status), Some(code), Some(count), Some(data_map)) = (
                             data["status"].as_str(),
                             data["code"].as_str(),
                             data["count"].as_str(),
-                            data["data"].as_object()
+                            data["data"].as_object(),
                         ) {
                             let mut rom_data = std::collections::HashMap::new();
-                            
+
                             // 转换为HashMap<String, String>
                             for (key, value) in data_map {
                                 if let Some(value_str) = value.as_str() {
@@ -145,10 +145,15 @@ pub async fn get_rom_download_url(
     file_type: String,
     token: Option<String>,
 ) -> Result<RomDownloadResponse> {
-    log::info!("正在获取ROM下载链接: {} {} ({})", device_code, version, file_type);
+    log::info!(
+        "正在获取ROM下载链接: {} {} ({})",
+        device_code,
+        version,
+        file_type
+    );
 
     let client = Client::new();
-    
+
     // 构建请求URL
     let mut api_url = format!(
         "https://rom.jilin9527.top/api/v1/download/?code={}&version={}&type={}",
@@ -159,8 +164,9 @@ pub async fn get_rom_download_url(
     if let Some(token_str) = &token {
         api_url.push_str(&format!("&token={}", token_str));
     }
-    
-    match client.get(&api_url)
+
+    match client
+        .get(&api_url)
         .timeout(std::time::Duration::from_secs(30))
         .send()
         .await
@@ -170,14 +176,20 @@ pub async fn get_rom_download_url(
                 match response.json::<serde_json::Value>().await {
                     Ok(data) => {
                         log::info!("成功获取ROM下载链接");
-                        
+
                         // 解析API响应
-                        if let (Some(status), Some(device), Some(ver), Some(ftype), Some(download_url)) = (
+                        if let (
+                            Some(status),
+                            Some(device),
+                            Some(ver),
+                            Some(ftype),
+                            Some(download_url),
+                        ) = (
                             data["status"].as_str(),
                             data["device_code"].as_str(),
                             data["version"].as_str(),
                             data["file_type"].as_str(),
-                            data["download_url"].as_str()
+                            data["download_url"].as_str(),
                         ) {
                             Ok(RomDownloadResponse {
                                 status: status.to_string(),
@@ -186,7 +198,9 @@ pub async fn get_rom_download_url(
                                 file_type: ftype.to_string(),
                                 download_url: Some(download_url.to_string()),
                                 expires_in: data["expires_in"].as_str().map(|s| s.to_string()),
-                                remaining_access: data["remaining_access"].as_i64().map(|n| n as i32),
+                                remaining_access: data["remaining_access"]
+                                    .as_i64()
+                                    .map(|n| n as i32),
                             })
                         } else {
                             log::error!("API响应格式不正确");
@@ -257,13 +271,14 @@ pub async fn download_rom(
         device_code.clone(),
         version.clone(),
         file_type.clone(),
-        token.clone()
-    ).await?;
-    
+        token.clone(),
+    )
+    .await?;
+
     if download_response.status != "200" {
         return Ok(download_response);
     }
-    
+
     if let Some(download_url) = &download_response.download_url {
         // 创建下载目录
         let downloads_dir = get_app_downloads_dir()?;
@@ -278,8 +293,9 @@ pub async fn download_rom(
 
         // 开始下载
         let client = Client::new();
-        
-        match client.get(download_url)
+
+        match client
+            .get(download_url)
             .timeout(std::time::Duration::from_secs(300)) // 5分钟超时
             .send()
             .await
@@ -287,7 +303,8 @@ pub async fn download_rom(
             Ok(response) => {
                 if response.status().is_success() {
                     // 保存文件
-                    let bytes = response.bytes()
+                    let bytes = response
+                        .bytes()
                         .await
                         .map_err(|e| AdmtError::Network(format!("下载文件失败: {}", e)))?;
 
