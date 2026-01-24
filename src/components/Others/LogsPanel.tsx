@@ -24,38 +24,7 @@ import {
 } from "@fluentui/react-icons";
 import { StructuredLogEntry, LogLevel, LogCategory, LogFilter } from "../../services/logTypes";
 
-// 创建与console.xx一样的日志记录方法
-const consoleLogger = {
-  // 信息日志
-  info: (message: string, ...args: any[]) => {
-    console.info(message, ...args);
-    // 这里可以添加额外的日志记录逻辑
-  },
-  
-  // 错误日志
-  error: (message: string, ...args: any[]) => {
-    console.error(message, ...args);
-    // 这里可以添加额外的日志记录逻辑
-  },
-  
-  // 警告日志
-  warn: (message: string, ...args: any[]) => {
-    console.warn(message, ...args);
-    // 这里可以添加额外的日志记录逻辑
-  },
-  
-  // 调试日志
-  debug: (message: string, ...args: any[]) => {
-    console.debug(message, ...args);
-    // 这里可以添加额外的日志记录逻辑
-  },
-  
-  // 日志
-  log: (message: string, ...args: any[]) => {
-    console.log(message, ...args);
-    // 这里可以添加额外的日志记录逻辑
-  }
-};
+import logService from "../../services/logService";
 
 const useStyles = makeStyles({
   container: {
@@ -156,9 +125,8 @@ const useStyles = makeStyles({
 
 const LogsPanel: React.FC = () => {
   const styles = useStyles();
+  // 保持状态定义用于UI展示
   const [logs, setLogs] = useState<StructuredLogEntry[]>([]);
-  const [fileLogs, setFileLogs] = useState<StructuredLogEntry[]>([]);
-  const [combinedLogs, setCombinedLogs] = useState<StructuredLogEntry[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<StructuredLogEntry[]>([]);
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -166,97 +134,28 @@ const LogsPanel: React.FC = () => {
   const [deviceFilter, setDeviceFilter] = useState<string>("");
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [logSource, setLogSource] = useState<string>("combined"); // combined, memory, file
   const logContentRef = useRef<HTMLDivElement>(null);
 
-  // 订阅日志数据（内存日志）
+  // 订阅日志服务
   useEffect(() => {
-    // 由于我们使用console.xx风格的日志记录，这里暂时不订阅
-    // 可以添加其他日志收集逻辑
-    consoleLogger.info('LogsPanel组件已挂载');
+    // 订阅日志更新
+    const unsubscribe = logService.subscribe((updatedLogs) => {
+        // 由于日志量可能很大，这里可以做一些优化，比如只取最后N条
+        // logService已经在内部限制了maxLogs，所以这里直接设置即可
+        setLogs(updatedLogs);
+    });
+
+    logService.info('LogsPanel组件已挂载', 'LogsPanel', { category: 'system' });
     
     return () => {
-      consoleLogger.info('LogsPanel组件已卸载');
+      unsubscribe();
+      // 不要在卸载时记录日志，因为可能导致更新已卸载的组件（如果logService同步回调）
     };
   }, []);
 
-  // 加载文件日志
+  // 过滤日志 - 当logs或过滤条件变化时执行
   useEffect(() => {
-    const loadFileLogs = async () => {
-      try {
-        setIsLoading(true);
-        consoleLogger.info('开始加载文件日志');
-        
-        // 由于使用console.xx风格的日志记录，这里暂时模拟文件日志加载
-        // 在实际应用中，可以从文件系统或其他存储中加载日志
-        const mockFileLogs: StructuredLogEntry[] = [
-          {
-            id: 'file-log-1',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            level: 'info' as LogLevel,
-            category: 'system' as LogCategory,
-            message: '系统启动完成',
-            source: 'System',
-            context: { sessionId: 'mock-session' },
-            metadata: { version: '1.0.0', platform: 'windows' }
-          }
-        ];
-        
-        setFileLogs(mockFileLogs);
-        consoleLogger.info('文件日志加载完成', { count: mockFileLogs.length });
-        
-      } catch (error) {
-        consoleLogger.error("加载文件日志失败:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadFileLogs();
-    
-    // 设置定时器定期刷新文件日志
-    const interval = setInterval(loadFileLogs, 30000); // 每30秒刷新一次
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  // 合并内存日志和文件日志
-  useEffect(() => {
-    const mergeLogs = () => {
-      let mergedLogs: StructuredLogEntry[] = [];
-      
-      switch (logSource) {
-        case "memory":
-          mergedLogs = [...logs];
-          break;
-        case "file":
-          mergedLogs = [...fileLogs];
-          break;
-        case "combined":
-        default:
-          // 合并并去重（基于ID）
-          const allLogs = [...logs, ...fileLogs];
-          const uniqueLogs = allLogs.reduce((acc, log) => {
-            if (!acc.find(l => l.id === log.id)) {
-              acc.push(log);
-            }
-            return acc;
-          }, [] as StructuredLogEntry[]);
-          mergedLogs = uniqueLogs;
-          break;
-      }
-      
-      // 按时间戳排序
-      mergedLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      setCombinedLogs(mergedLogs);
-    };
-
-    mergeLogs();
-  }, [logs, fileLogs, logSource]);
-
-  // 过滤日志
-  useEffect(() => {
-    const applyFilters = async () => {
+    const applyFilters = () => {
       setIsLoading(true);
       try {
         const filter: LogFilter = {
@@ -266,8 +165,9 @@ const LogsPanel: React.FC = () => {
           deviceId: deviceFilter || undefined,
         };
 
-        // 使用本地过滤而不是调用服务
-        const filtered = combinedLogs.filter(log => {
+        // 使用 logService 的过滤逻辑或本地过滤
+        // 这里使用本地过滤，因为 logs 已经是内存中的全量数据
+        const filtered = logs.filter(log => {
           // 级别过滤
           if (filter.level && log.level !== filter.level) return false;
           
@@ -279,7 +179,7 @@ const LogsPanel: React.FC = () => {
           
           // 搜索过滤
           if (filter.search) {
-            const searchLower = filter.search.toLowerCase();
+            const searchLower = filter.search!.toLowerCase();
             const messageMatch = log.message.toLowerCase().includes(searchLower);
             const sourceMatch = log.source.toLowerCase().includes(searchLower);
             const contextMatch = JSON.stringify(log.context).toLowerCase().includes(searchLower);
@@ -298,8 +198,11 @@ const LogsPanel: React.FC = () => {
       }
     };
 
-    applyFilters();
-  }, [combinedLogs, levelFilter, categoryFilter, searchFilter, deviceFilter]);
+    // 使用 debounce 或 requestAnimationFrame 优化性能
+    const timer = setTimeout(applyFilters, 100);
+    return () => clearTimeout(timer);
+
+  }, [logs, levelFilter, categoryFilter, searchFilter, deviceFilter]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -310,11 +213,10 @@ const LogsPanel: React.FC = () => {
 
   const handleClearLogs = async () => {
     try {
-      // 由于使用console.xx风格的日志记录，这里清除本地状态
-      setLogs([]);
-      consoleLogger.info("清空日志", "LogsPanel");
+      logService.clearLogs();
+      // logs状态会在subscribe回调中更新
     } catch (error) {
-      consoleLogger.error("清空日志失败:", error);
+      console.error("清空日志失败:", error);
     }
   };
 
@@ -327,10 +229,7 @@ const LogsPanel: React.FC = () => {
         deviceId: deviceFilter || undefined,
       };
 
-      // 由于使用console.xx风格的日志记录，这里手动生成日志内容
-      const logContent = filteredLogs.map(log => 
-        `${new Date(log.timestamp).toISOString()} [${log.level.toUpperCase()}] [${log.source}] ${log.message}`
-      ).join('\n');
+      const logContent = logService.exportLogs(filter);
       
       const blob = new Blob([logContent], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
@@ -342,58 +241,16 @@ const LogsPanel: React.FC = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      consoleLogger.info("导出日志", "LogsPanel", { filter });
+      logService.info("导出日志", "LogsPanel", { category: 'user', filter });
     } catch (error) {
-      consoleLogger.error("导出日志失败:", error);
+      logService.error("导出日志失败", "LogsPanel", { error: String(error) });
     }
   };
 
   const handleRefreshLogs = async () => {
-    try {
-      setIsLoading(true);
-      
-      // 由于使用console.xx风格的日志记录，这里模拟刷新文件日志
-      const mockFileLogs: StructuredLogEntry[] = [
-        {
-          id: 'file-log-1',
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          level: 'info' as LogLevel,
-          category: 'system' as LogCategory,
-          message: '系统启动完成',
-          source: 'System',
-          context: { sessionId: 'mock-session' },
-          metadata: { version: '1.0.0', platform: 'windows' }
-        },
-        {
-          id: 'file-log-2',
-          timestamp: new Date().toISOString(),
-          level: 'info' as LogLevel,
-          category: 'system' as LogCategory,
-          message: '日志刷新完成',
-          source: 'LogsPanel',
-          context: { action: 'refresh' },
-          metadata: { version: '1.0.0', platform: 'windows' }
-        }
-      ];
-      
-      setFileLogs(mockFileLogs);
-      
-      // 记录用户操作
-      consoleLogger.info("refresh_logs", "LogsPanel", {
-        logSource,
-        fileLogsCount: mockFileLogs.length,
-        memoryLogsCount: logs.length
-      });
-      
-    } catch (error) {
-      consoleLogger.error("刷新日志失败:", error);
-      consoleLogger.error("刷新日志失败", "LogsPanel", { 
-        error: error instanceof Error ? error.message : String(error),
-        logSource 
-      });
-    } finally {
-      setIsLoading(false);
-    }
+     // 内存日志是实时的，这个按钮现在主要用于强制重渲染或调试
+     // 我们可以手动触发一次过滤
+     logService.info("手动刷新日志视图", "LogsPanel", { category: 'user' });
   };
 
 
@@ -453,20 +310,8 @@ const LogsPanel: React.FC = () => {
         <Text size={400} weight="semibold">日志查看器</Text>
         <div className={styles.controls}>
           <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-            显示 {filteredLogs.length} / {combinedLogs.length} 条日志
-            (内存: {logs.length}, 文件: {fileLogs.length})
+            显示 {filteredLogs.length} / {logs.length} 条日志
           </Text>
-          <Field label="日志源:" style={{ minWidth: "120px" }}>
-            <Select
-              value={logSource}
-              onChange={(_, data) => setLogSource(data.value)}
-              size="small"
-            >
-              <option value="combined">合并显示</option>
-              <option value="memory">仅内存日志</option>
-              <option value="file">仅文件日志</option>
-            </Select>
-          </Field>
         </div>
       </div>
 

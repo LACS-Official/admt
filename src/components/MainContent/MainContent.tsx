@@ -645,6 +645,7 @@ const MainContent: React.FC = () => {
   // 未授权弹窗状态
   const [isUnauthorizedDialogOpen, setIsUnauthorizedDialogOpen] = useState(false);
 
+
   // 全局设备扫描 - 根据配置控制是否启用和扫描间隔
   useEffect(() => {
     if (config.autoDetectDevices) {

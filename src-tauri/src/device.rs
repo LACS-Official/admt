@@ -126,23 +126,6 @@ pub struct CommandResult {
     pub exit_code: Option<i32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdbCommand {
-    pub command: String,
-    pub args: Vec<String>,
-    pub timeout: Option<u64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FileTransferProgress {
-    pub id: String,
-    pub file_name: String,
-    pub total_size: u64,
-    pub transferred: u64,
-    pub progress: f64,
-    pub speed: Option<String>,
-    pub eta: Option<String>,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstalledApp {
@@ -175,17 +158,6 @@ pub struct ApkInfo {
     pub icon_path: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstallProgress {
-    pub id: String,
-    pub file_name: String,
-    pub package_name: Option<String>,
-    pub status: InstallStatus,
-    pub progress: f64,
-    pub message: Option<String>,
-    pub start_time: chrono::DateTime<chrono::Utc>,
-    pub end_time: Option<chrono::DateTime<chrono::Utc>>,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

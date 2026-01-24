@@ -26,7 +26,6 @@ import {
   DismissCircle24Regular,
 } from '@fluentui/react-icons';
 import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
-import { ActivationService } from '../../services/activationService';
 import { clearPreservedUserConfig } from '../Common/UserConfigPreserver';
 
 const useStyles = makeStyles({
@@ -141,11 +140,7 @@ const PrivacyManagementPanel: React.FC = () => {
       // 1. 撤销所有隐私同意
       revokeAll();
 
-      // 2. 清除激活码数据
-      const activationService = ActivationService.getInstance();
-      activationService.clearActivationData();
-
-      // 3. 清除保留的用户配置
+      // 2. 清除保留的用户配置
       clearPreservedUserConfig();
 
       // 4. 清除所有localStorage数据
@@ -312,7 +307,6 @@ const PrivacyManagementPanel: React.FC = () => {
                 <Text>• 清除所有用户数据和设置</Text><br />
                 <Text>• 撤销所有已同意的条款和政策</Text><br />
                 <Text>• 将应用恢复到首次安装时的状态</Text><br />
-                <Text>• 删除本地激活码数据并不再支持使用本地储存的激活码</Text><br />
                 <Text>• 下次启动时显示欢迎页面和首次使用流程</Text>
               </div>
               <Text style={{ marginTop: tokens.spacingVerticalS, fontWeight: tokens.fontWeightSemibold }}>
@@ -367,7 +361,6 @@ const PrivacyManagementPanel: React.FC = () => {
                 <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 永久删除所有应用数据</Text><br />
                 <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 清除所有用户设置和偏好</Text><br />
                 <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 撤销所有隐私政策同意</Text><br />
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 删除激活码和许可证信息</Text><br />
                 <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 应用将自动退出并重启</Text>
               </div>
               <Text style={{
