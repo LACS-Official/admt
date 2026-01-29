@@ -17,6 +17,8 @@ import {
   CheckmarkCircle24Regular,
   Wifi2Regular,
 } from "@fluentui/react-icons";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   dialogSurface: {
@@ -29,7 +31,7 @@ const useStyles = makeStyles({
     gap: '8px',
     maxHeight: '300px',
     overflowY: 'auto',
-    padding: '8px 0',
+    padding: '8px 4px', // Add horizontal padding for shadow/outline visibility
   },
   deviceItem: {
     display: 'flex',
@@ -39,10 +41,8 @@ const useStyles = makeStyles({
     border: '1px solid var(--colorNeutralStroke2)',
     borderRadius: '6px',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      backgroundColor: 'var(--colorNeutralBackground1Hover)',
-    },
+    backgroundColor: 'var(--colorNeutralBackground1)', // Ensure background for animation
+    // transition: 'all 0.2s ease', // Handled by motion
     flexWrap: 'wrap',
   },
   selectedDevice: {
@@ -155,6 +155,34 @@ interface DeviceSelectionDialogProps {
   onToggleWirelessDebugging?: (deviceSerial: string, enabled: boolean) => void; // 添加无线调试切换回调
 }
 
+const listVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -20, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    x: 0, 
+    scale: 1,
+    transition: { type: "spring", stiffness: 300, damping: 24 }
+  },
+  hover: { 
+    scale: 1.02, 
+    backgroundColor: "var(--colorNeutralBackground1Hover)",
+    borderColor: "var(--colorNeutralStroke1Hover)",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    transition: { type: "spring", stiffness: 400, damping: 10 }
+  },
+  tap: { scale: 0.98 }
+};
+
 const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
   open,
   onOpenChange,
@@ -164,6 +192,7 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
   onToggleWirelessDebugging,
 }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [wirelessDebuggingStates, setWirelessDebuggingStates] = useState<Record<string, boolean>>({});
 
   // 切换无线调试状态
@@ -195,15 +224,15 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
 
   const getDeviceModeText = (mode: string) => {
     switch (mode) {
-      case 'sys': return '系统模式';
-      case 'rec': return 'Recovery';
-      case 'fastboot': return 'Fastboot';
-      case 'fastbootd': return 'Fastbootd';
-      case 'sideload': return 'Sideload';
-      case 'edl': return 'EDL模式';
-      case 'unauthorized': return '未授权';
-      case 'offline': return '离线';
-      default: return '未知模式';
+      case 'sys': return t('device_mode.system');
+      case 'rec': return t('device_mode.recovery');
+      case 'fastboot': return t('device_mode.fastboot');
+      case 'fastbootd': return t('device_mode.fastbootd');
+      case 'sideload': return t('device_mode.sideload');
+      case 'edl': return t('device_mode.edl');
+      case 'unauthorized': return t('device_mode.unauthorized');
+      case 'offline': return t('device_mode.offline');
+      default: return t('device_mode.unknown');
     }
   };
 
@@ -229,50 +258,55 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
   };
 
       // 获取设备名称，对于fastboot模式，使用fastboot getvar product命令获取
-    const getDeviceName = () => {
+    const getDeviceName = (device: Device) => { // Fixed: pass device as arg
       // 对于fastboot模式，优先使用product_name
-      if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
-        return selectedDevice.properties?.productName || selectedDevice.serial;
+      if (device.mode === "fastboot" || device.mode === "fastbootd") {
+        return device.properties?.productName || device.serial;
       }
       // 对于其他模式，使用原有的逻辑
-      return selectedDevice.properties?.marketName ||
-             selectedDevice.properties?.model ||
-             selectedDevice.serial;
+      return device.properties?.marketName ||
+             device.properties?.model ||
+             device.serial;
     };
 
-    const getDeviceOptionText = (device: any) => {
-      // 直接返回设备序列号
-      return device.serial;
-    };
-    
-    const getDeviceCodeName = () => {
-      if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
+    const getDeviceCodeName = (device: Device) => { // Fixed: pass device as arg
+      if (device.mode === "fastboot" || device.mode === "fastbootd") {
         // 对于fastboot模式，使用product_name作为设备代号
-        return selectedDevice.properties?.productName || selectedDevice.serial;
+        return device.properties?.productName || device.serial;
       }
-      return selectedDevice.properties?.deviceName || "";
+      return device.properties?.deviceName || "";
     };
 
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogSurface className={styles.dialogSurface}>
-        <DialogTitle>选择设备</DialogTitle>
+        <DialogTitle>{t('device_selection.title')}</DialogTitle>
         <DialogBody>
           <DialogContent>
             {devices.length === 0 ? (
               <div className={styles.noDevices}>
                 <Phone24Regular style={{ fontSize: '32px', color: 'var(--colorNeutralForeground3)' }} />
-                <Text size={300}>没有可用的设备</Text>
+                <Text size={300}>{t('device_selection.no_devices')}</Text>
                 <Text size={200} style={{ color: 'var(--colorNeutralForeground2)' }}>
-                  请确保设备已连接并启用 USB 调试模式
+                  {t('device_selection.no_devices_hint')}
                 </Text>
               </div>
             ) : (
-              <div className={styles.deviceList}>
+              <motion.div 
+                className={styles.deviceList}
+                variants={listVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <AnimatePresence mode="popLayout">
                 {devices.map((device) => (
-                  <div
+                  <motion.div
+                    layout
                     key={device.serial}
+                    variants={itemVariants}
+                    whileHover="hover"
+                    whileTap="tap"
                     className={mergeClasses(
                       styles.deviceItem,
                       selectedDevice?.serial === device.serial && styles.selectedDevice
@@ -288,14 +322,14 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
                       />
                       <div className={styles.deviceDetails}>
                         <Text className={styles.deviceName}>
-                          {getDeviceModeText(device.mode)}的设备：{getDeviceDisplayName(device)}
+                          {t('device_selection.device_item_title', { mode: getDeviceModeText(device.mode), name: getDeviceDisplayName(device) })}
                         </Text>
                         <div className={styles.deviceModelInfo}>
                           <Text size={200} style={{ color: 'var(--colorNeutralForeground2)' }}>
-                            机型名称：{getDeviceName()}
+                            {t('device_selection.model_name', { name: getDeviceName(device) })}
                           </Text>
                           <Text size={200} style={{ color: 'var(--colorNeutralForeground2)' }}>
-                            代号：{getDeviceCodeName()}
+                            {t('device_selection.codename', { codename: getDeviceCodeName(device) })}
                           </Text>
                         </div>
                       </div>
@@ -319,14 +353,15 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
                     {selectedDevice?.serial === device.serial && (
                       <CheckmarkCircle24Regular style={{ color: 'var(--colorBrandForeground1)' }} />
                     )}
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+                </AnimatePresence>
+              </motion.div>
             )}
           </DialogContent>
           <DialogActions>
             <Button appearance="secondary" onClick={() => onOpenChange(false)}>
-              取消
+              {t('common.cancel')}
             </Button>
           </DialogActions>
         </DialogBody>

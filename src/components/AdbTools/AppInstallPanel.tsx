@@ -21,6 +21,7 @@ import { useAppStore } from "../../stores/appStore";
 import { open } from "@tauri-apps/plugin-dialog";
 import ErrorDialog from "../Common/ErrorDialog";
 import { ErrorInfo } from "../../utils/errorHandler";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
@@ -178,6 +179,7 @@ const AppInstallPanel: React.FC = () => {
   const { selectedDevice } = useDeviceStore();
   const { deviceService } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
+  const { t } = useTranslation();
 
   // 无需状态管理，已移除标签页相关状态
   const [errorInfo] = useState<ErrorInfo | null>(null);
@@ -200,7 +202,7 @@ const AppInstallPanel: React.FC = () => {
       const selected = await open({
         multiple: true,
         filters: [{
-          name: 'APK Files',
+          name: t('app_install.apk_files'),
           extensions: ['apk']
         }]
       });
@@ -222,13 +224,13 @@ const AppInstallPanel: React.FC = () => {
         
         setStatusBarMessage({
           type: "info",
-          message: `已选择 ${filePaths.length} 个APK文件: ${fileInfo}`,
+          message: t('app_install.selected_files', { count: filePaths.length, info: fileInfo }),
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `无法选择文件: ${error}`,
+        message: t('app_install.select_file_fail', { error }),
       });
     }
   }, [setStatusBarMessage]);
@@ -242,7 +244,7 @@ const AppInstallPanel: React.FC = () => {
       
       const apkFiles: ApkFile[] = apkPaths.map(path => ({
         path,
-        name: path.split(/[/\\]/).pop() || "未知文件.apk"
+        name: path.split(/[/\\]/).pop() || t('app_install.unknown_file')
       }));
       
       setLocalApkFiles(apkFiles);
@@ -250,7 +252,7 @@ const AppInstallPanel: React.FC = () => {
       console.error('加载本地APK文件列表失败:', error);
       setStatusBarMessage({
         type: "error",
-        message: `加载本地APK文件列表失败: ${error}`,
+        message: t('app_install.load_local_fail', { error }),
       });
     } finally {
       setIsLoadingLocalApks(false);
@@ -262,18 +264,18 @@ const AppInstallPanel: React.FC = () => {
     if (!selectedDevice) {
       setStatusBarMessage({
         type: "warning",
-        message: "请先选择一个设备",
+        message: t('app_install.select_device_first'),
       });
       return;
     }
 
+    const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
     try {
       setIsInstalling(true);
       
-      const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
       setStatusBarMessage({
         type: "info",
-        message: `开始安装 ${fileName}`,
+        message: t('app_install.start_install_info', { count: 1, info: fileName }),
       });
 
       const newStatus: InstallStatus = {
@@ -303,14 +305,14 @@ const AppInstallPanel: React.FC = () => {
               ...item, 
               status: "success", 
               progress: 100,
-              message: "安装成功"
+              message: t('app_install.install_success')
             } : item
           )
         );
         
         setStatusBarMessage({
           type: "success",
-          message: `${fileName} 安装成功`,
+          message: t('app_install.success', { fileName }),
         });
       } else {
         setInstallHistory(prev => 
@@ -318,14 +320,14 @@ const AppInstallPanel: React.FC = () => {
             index === 0 ? { 
               ...item, 
               status: "failed", 
-              message: result.error || "安装失败"
+              message: result.error || t('common.fail')
             } : item
           )
         );
         
         setStatusBarMessage({
           type: "error",
-          message: result.error || "APK安装失败",
+          message: result.error || t('app_install.failed', { fileName, error: t('common.fail') }),
         });
       }
     } catch (error) {
@@ -334,14 +336,14 @@ const AppInstallPanel: React.FC = () => {
           index === 0 ? { 
             ...item, 
             status: "failed", 
-            message: `安装失败: ${error}`
+            message: t('app_install.install_failed_with_error', { error })
           } : item
         )
       );
       
       setStatusBarMessage({
         type: "error",
-        message: `APK安装失败: ${error}`,
+        message: t('app_install.failed', { fileName, error }),
       });
     } finally {
       setIsInstalling(false);
@@ -357,7 +359,7 @@ const AppInstallPanel: React.FC = () => {
     if (!selectedDevice) {
       setStatusBarMessage({
         type: "warning",
-        message: "请先选择一个设备",
+        message: t('app_install.select_device_first'),
       });
       return;
     }
@@ -368,7 +370,7 @@ const AppInstallPanel: React.FC = () => {
     if (pathsToInstall.length === 0) {
       setStatusBarMessage({
         type: "warning",
-        message: "请选择要安装的APK文件",
+        message: t('app_install.select_apk_first'),
       });
       return;
     }
@@ -388,7 +390,7 @@ const AppInstallPanel: React.FC = () => {
       if (validPaths.length === 0) {
         setStatusBarMessage({
           type: "error",
-          message: "没有有效的APK文件路径",
+          message: t('app_install.no_valid_path'),
         });
         return;
       }
@@ -400,7 +402,7 @@ const AppInstallPanel: React.FC = () => {
         .join(', ');
       setStatusBarMessage({
         type: "info",
-        message: `开始安装 ${validPaths.length} 个APK文件: ${fileInfo}`,
+        message: t('app_install.start_install_info', { count: validPaths.length, info: fileInfo }),
       });
 
       if (validPaths.length > 1) {
@@ -414,7 +416,7 @@ const AppInstallPanel: React.FC = () => {
       console.error('安装APK时出错:', error);
       setStatusBarMessage({
         type: "error",
-        message: `安装APK时出错: ${error instanceof Error ? error.message : String(error)}`,
+        message: t('app_install.error_occured', { error: error instanceof Error ? error.message : String(error) }),
       });
     } finally {
       setIsInstalling(false);
@@ -435,7 +437,7 @@ const AppInstallPanel: React.FC = () => {
       // 这里应该有批量操作的处理逻辑，但为了简化只保留状态更新
       setStatusBarMessage({
         type: "success",
-        message: `开始批量安装 ${paths.length} 个APK文件`,
+        message: t('app_install.batch_start', { count: paths.length }),
       });
 
       // 清空路径
@@ -445,7 +447,7 @@ const AppInstallPanel: React.FC = () => {
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `批量安装操作失败: ${error}`,
+        message: t('app_install.batch_fail', { error }),
       });
     } finally {
       setIsInstalling(false);
@@ -486,14 +488,14 @@ const AppInstallPanel: React.FC = () => {
               ...item, 
               status: "success", 
               progress: 100,
-              message: "安装成功"
+              message: t('app_install.install_success')
             } : item
           )
         );
         
         setStatusBarMessage({
           type: "success",
-          message: `${fileName} 安装成功`,
+          message: t('app_install.success', { fileName }),
         });
       } else {
         setInstallHistory(prev => 
@@ -501,14 +503,14 @@ const AppInstallPanel: React.FC = () => {
             index === 0 ? { 
               ...item, 
               status: "failed", 
-              message: result.error || "安装失败"
+              message: result.error || t('common.fail')
             } : item
           )
         );
         
         setStatusBarMessage({
           type: "error",
-          message: result.error || "APK安装失败",
+          message: result.error || t('app_install.failed', { fileName, error: t('common.fail') }),
         });
       }
     } catch (error) {
@@ -517,14 +519,14 @@ const AppInstallPanel: React.FC = () => {
           index === 0 ? { 
             ...item, 
             status: "failed", 
-            message: `安装失败: ${error}`
+            message: t('app_install.install_failed_with_error', { error })
           } : item
         )
       );
       
       setStatusBarMessage({
         type: "error",
-        message: `APK安装失败: ${error}`,
+        message: t('app_install.failed', { fileName, error }),
       });
     } finally {
       setIsInstalling(false);
@@ -540,18 +542,18 @@ const AppInstallPanel: React.FC = () => {
         <Card className={styles.card}>
           <CardHeader
             image={<DocumentAdd24Regular />}
-            header={<Text weight="semibold">APK安装</Text>}
-            description={<Text size={200}>安装Android应用程序包</Text>}
+            header={<Text weight="semibold">{t('app_install.card_title')}</Text>}
+            description={<Text size={200}>{t('app_install.card_desc')}</Text>}
           />
           
           <div className={styles.content}>
             <div className={styles.installSection}>
               <div className={styles.pathInput}>
-                <Field label="APK文件路径:" style={{ flex: 1 }}>
+                <Field label={t('app_install.path_label')} style={{ flex: 1 }}>
                   <Input
                     value={apkPath}
                     onChange={(_, data) => setApkPath(data.value)}
-                    placeholder="选择要安装的APK文件"
+                    placeholder={t('app_install.path_placeholder')}
                     disabled={isInstalling}
                   />
                 </Field>
@@ -561,12 +563,12 @@ const AppInstallPanel: React.FC = () => {
                   disabled={isInstalling}
                   className={styles.selectButton}
                 >
-                  选择文件
+                  {t('app_install.select_file')}
                 </Button>
               </div>
 
               <Checkbox
-                label="替换已存在的应用"
+                label={t('app_install.replace_existing')}
                 checked={replaceExisting}
                 onChange={(_, data) => setReplaceExisting(data.checked === true)}
                 disabled={isInstalling}
@@ -579,7 +581,7 @@ const AppInstallPanel: React.FC = () => {
                 disabled={!selectedDevice || (apkPaths.length === 0 && !apkPath) || isInstalling}
                 className={styles.installButton}
               >
-                {isInstalling ? "安装中..." : `开始安装 (${apkPaths.length || (apkPath ? 1 : 0)}个文件)`}
+                {isInstalling ? t('app_install.installing') : t('app_install.start_install', { count: apkPaths.length || (apkPath ? 1 : 0) })}
               </Button>
             </div>
 
@@ -592,7 +594,7 @@ const AppInstallPanel: React.FC = () => {
             <div className={styles.apkListHeader}>
               <div className={styles.apkListTitle}>
                 <Folder24Regular />
-                <Text weight="semibold">本地已下载APK</Text>
+                <Text weight="semibold">{t('app_install.local_apks')}</Text>
               </div>
               <Button
                 appearance="secondary"
@@ -602,7 +604,7 @@ const AppInstallPanel: React.FC = () => {
                 className={styles.refreshButton}
               >
                 {isLoadingLocalApks ? <Spinner size="tiny" /> : null}
-                刷新
+                {t('app_install.refresh')}
               </Button>
             </div>
 
@@ -610,14 +612,14 @@ const AppInstallPanel: React.FC = () => {
               <div className={styles.apkList}>
                 <div className={styles.emptyState}>
                   <Spinner size="medium" />
-                  <Text className={styles.emptyStateText}>加载中...</Text>
+                  <Text className={styles.emptyStateText}>{t('app_install.loading')}</Text>
                 </div>
               </div>
             ) : localApkFiles.length === 0 ? (
               <div className={styles.apkList}>
                 <div className={styles.emptyState}>
                   <Folder24Regular />
-                  <Text className={styles.emptyStateText}>未找到本地APK文件</Text>
+                  <Text className={styles.emptyStateText}>{t('app_install.no_apks_found')}</Text>
                 </div>
               </div>
             ) : (
@@ -635,7 +637,7 @@ const AppInstallPanel: React.FC = () => {
                         onClick={() => handleInstallLocalApk(apk.path)}
                         disabled={!selectedDevice || isInstalling}
                       >
-                        安装
+                        {t('app_install.install')}
                       </Button>
                     </div>
                   </div>

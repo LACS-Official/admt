@@ -29,6 +29,7 @@ import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
+import { useTranslation } from "react-i18next";
 
 
 const useStyles = makeStyles({
@@ -114,6 +115,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
   const { deviceService } = useDeviceService();
   const { setFlashing } = useDeviceStore();
   const { config, updateConfig } = useAppStore();
+  const { t } = useTranslation();
   
   // 选择的镜像文件（使用 Tauri 原生文件选择，保留真实路径）
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
@@ -130,16 +132,16 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
 
   // 常见分区列表
   const partitions = [
-    { value: "boot", label: "Boot (启动分区)" },
-    { value: "recovery", label: "Recovery (恢复分区)" },
-    { value: "system", label: "System (系统分区)" },
-    { value: "vendor", label: "Vendor (厂商分区)" },
-    { value: "userdata", label: "Userdata (用户数据)" },
-    { value: "cache", label: "Cache (缓存分区)" },
-    { value: "persist", label: "Persist (持久化分区)" },
-    { value: "modem", label: "Modem (基带分区)" },
-    { value: "aboot", label: "Aboot (引导程序)" },
-    { value: "splash", label: "Splash (开机画面)" },
+    { value: "boot", label: "Boot" },
+    { value: "recovery", label: "Recovery" },
+    { value: "system", label: "System" },
+    { value: "vendor", label: "Vendor" },
+    { value: "userdata", label: "Userdata" },
+    { value: "cache", label: "Cache" },
+    { value: "persist", label: "Persist" },
+    { value: "modem", label: "Modem" },
+    { value: "aboot", label: "Aboot" },
+    { value: "splash", label: "Splash" },
   ];
 
   const handleFileSelect = async () => {
@@ -155,7 +157,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
       const lower = path.toLowerCase();
       const valid = [".img", ".bin", ".raw", ".sparse"].some(ext => lower.endsWith(ext));
       if (!valid) {
-        alert("不支持的文件格式。请选择 .img, .bin, .raw 或 .sparse 文件。");
+        alert(t('flash.unsupported_format'));
         return;
       }
       const name = path.split(/[/\\]/).pop() || path;
@@ -180,7 +182,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
   setFlashing(true); // 设置全局刷写状态
   setFlashStatus("preparing");
   setProgress(0);
-  setFlashLog("准备刷入镜像...\n");
+  setFlashLog(t('flash.log_preparing'));
   
   // 保存原始的自动检测状态，并关闭自动检测
   setOriginalAutoDetect(config.autoDetectDevices);
@@ -192,15 +194,17 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
     // 实际刷入逻辑（fastboot）
     setFlashStatus("flashing");
     setProgress(10);
-    setFlashLog(prev => prev + `开始刷入 ${selectedFileName} 到 ${selectedPartition} 分区，模式：${
-      flashMode === 'ab' ? 'A/B 同时' : flashMode === 'a' ? '仅 A' : flashMode === 'b' ? '仅 B' : '直接分区'
-    }...\n`);
+    setFlashLog(prev => prev + t('flash.log_start', { 
+      file: selectedFileName, 
+      partition: selectedPartition, 
+      mode: flashMode === 'ab' ? t('flash.mode_ab') : flashMode === 'a' ? t('flash.mode_a') : flashMode === 'b' ? t('flash.mode_b') : t('flash.mode_direct') 
+    }));
 
     // 可选：检查 fastboot 可用
     try {
       const chk = await deviceService.checkFastbootAvailability();
       if (!chk.success) {
-        setFlashLog(prev => prev + `Fastboot 不可用: ${chk.error || chk.output}\n`);
+        setFlashLog(prev => prev + `${t('flash.log_fastboot_unavailable')}: ${chk.error || chk.output}\n`);
       }
     } catch (_) {}
 
@@ -215,7 +219,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
     let overallSuccess = true;
     for (let i = 0; i < targets.length; i++) {
       const target = targets[i];
-      setFlashLog(prev => prev + `\n>>> 正在刷入分区：${target}\n`);
+      setFlashLog(prev => prev + t('flash.log_flashing_target', { target }));
       const stepStart = 10 + Math.floor((80 / targets.length) * i);
       setProgress(stepStart);
 
@@ -228,7 +232,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
       setFlashLog(prev => prev + (result.output || "") + "\n");
       if (!result.success) {
         overallSuccess = false;
-        setFlashLog(prev => prev + `分区 ${target} 刷入失败: ${result.error || '未知错误'}\n`);
+        setFlashLog(prev => prev + t('flash.log_flash_failed', { target, error: result.error || t('unlock.unknown_error') }));
         // A/B 同时模式下，若一个失败，继续尝试后续目标，但最终判定失败
       }
     }
@@ -236,15 +240,15 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
     setProgress(100);
     if (overallSuccess) {
       setFlashStatus("success");
-      setFlashLog(prev => prev + "\n所有目标分区刷入完成！\n");
+      setFlashLog(prev => prev + t('flash.log_all_success'));
     } else {
       setFlashStatus("error");
-      setFlashLog(prev => prev + "\n刷入过程中发生错误，请检查日志。\n");
+      setFlashLog(prev => prev + t('flash.log_error_check'));
     }
     
   } catch (error) {
     setFlashStatus("error");
-    setFlashLog(prev => prev + `刷入失败: ${error}\n`);
+    setFlashLog(prev => prev + t('flash.log_failed', { error }));
   } finally {
     setIsFlashing(false);
     setFlashing(false); // 清除全局刷写状态
@@ -274,17 +278,17 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
               <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
               <Text weight="semibold" style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                刷入风险警告
+                {t('flash.risk_warning_title')}
               </Text>
             </div>
             <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
-              错误的镜像文件或分区选择可能导致设备无法启动。请确保镜像文件与设备型号匹配，并已备份原始分区。
+              {t('flash.risk_warning_desc')}
             </Text>
           </div>
 
           {/* 文件选择 */}
           <div className={styles.section}>
-            <Text weight="semibold">1. 选择镜像文件</Text>
+            <Text weight="semibold">{t('flash.step1_title')}</Text>
             <div className={styles.fileSection}>
               <div className={styles.fileInput}>
                 <Button
@@ -293,18 +297,18 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
                   onClick={handleFileSelect}
                   disabled={isFlashing}
                 >
-                  选择文件
+                  {t('flash.select_file_btn')}
                 </Button>
-                <Text size={300}>支持格式: .img, .bin, .raw, .sparse</Text>
+                <Text size={300}>{t('flash.supported_formats')}</Text>
               </div>
               
               {selectedFilePath && (
                 <div className={styles.fileInfo}>
-                  <div>文件名: {selectedFileName}</div>
+                  <div>{t('flash.file_name')}{selectedFileName}</div>
                   {selectedFileSize != null && (
-                    <div>大小: {formatFileSize(selectedFileSize)}</div>
+                    <div>{t('flash.file_size')}{formatFileSize(selectedFileSize)}</div>
                   )}
-                  <div>路径: {selectedFilePath}</div>
+                  <div>{t('flash.file_path')}{selectedFilePath}</div>
                 </div>
               )}
             </div>
@@ -312,11 +316,11 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
 
           {/* 分区选择 */}
           <div className={styles.section}>
-            <Text weight="semibold">2. 选择目标分区</Text>
-            <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>选择基础分区名称，A/B 模式会自动附加后缀 _a / _b</Text>
+            <Text weight="semibold">{t('flash.step2_title')}</Text>
+            <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('flash.step2_desc')}</Text>
             <Field>
               <Dropdown
-                placeholder="选择要刷入的分区"
+                placeholder={t('flash.select_partition_placeholder')}
                 value={selectedPartition}
                 onOptionSelect={(_, data) => setSelectedPartition(data.optionValue || "")}
                 disabled={isFlashing}
@@ -332,22 +336,22 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
 
           {/* 刷入模式 */}
           <div className={styles.section}>
-            <Text weight="semibold">3. 选择刷入模式（四选一）</Text>
+            <Text weight="semibold">{t('flash.step3_title')}</Text>
             <RadioGroup
               value={flashMode}
               onChange={(_, data) => setFlashMode((data.value as 'ab' | 'a' | 'b' | 'direct'))}
             >
-              <Radio value="ab" label="同时刷入 A/B 分区（例如：boot_a 与 boot_b）" disabled={isFlashing} />
-              <Radio value="a" label="仅刷入 A 分区（例如：boot_a）" disabled={isFlashing} />
-              <Radio value="b" label="仅刷入 B 分区（例如：boot_b）" disabled={isFlashing} />
-              <Radio value="direct" label="直接刷入所选分区（不加 _a/_b 后缀）" disabled={isFlashing} />
+              <Radio value="ab" label={t('flash.mode_ab')} disabled={isFlashing} />
+              <Radio value="a" label={t('flash.mode_a')} disabled={isFlashing} />
+              <Radio value="b" label={t('flash.mode_b')} disabled={isFlashing} />
+              <Radio value="direct" label={t('flash.mode_direct')} disabled={isFlashing} />
             </RadioGroup>
           </div>
 
           {/* 刷入进度 */}
           {flashStatus !== "idle" && (
             <div className={styles.section}>
-              <Text weight="semibold">刷入进度</Text>
+              <Text weight="semibold">{t('flash.progress_title')}</Text>
               <div className={styles.progressSection}>
                 <ProgressBar value={progress / 100} />
                 <Text size={300}>{progress}%</Text>
@@ -358,7 +362,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
           {/* 日志输出 */}
           {flashLog && (
             <div className={styles.section}>
-              <Text weight="semibold">操作日志</Text>
+              <Text weight="semibold">{t('flash.log_title')}</Text>
               <div className={styles.logOutput}>
                 {flashLog}
               </div>
@@ -373,7 +377,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
               onClick={handleFlashStart}
               disabled={!selectedFilePath || !selectedPartition || isFlashing}
             >
-              {isFlashing ? "刷入中..." : "开始刷入"}
+              {isFlashing ? t('flash.flashing_btn') : t('flash.start_flash_btn')}
             </Button>
           </div>
         </div>
@@ -382,34 +386,34 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
       {/* 确认对话框 */}
       <Dialog open={showConfirmDialog} onOpenChange={(_, data) => setShowConfirmDialog(data.open)}>
         <DialogSurface>
-          <DialogTitle>确认刷入操作</DialogTitle>
+          <DialogTitle>{t('flash.confirm_dialog_title')}</DialogTitle>
           <DialogContent>
             <DialogBody>
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-                  <Text weight="semibold">请仔细确认以下信息：</Text>
+                  <Text weight="semibold">{t('flash.confirm_dialog_desc')}</Text>
                 </div>
                 
                 <div style={{ padding: "12px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "4px" }}>
-                  <div>设备: {device?.properties?.model || '未知设备'} ({device?.serial || '未知序列号'})</div>
-                  <div>文件: {selectedFileName || '未选择'}</div>
-                  <div>分区: {partitions.find(p => p.value === selectedPartition)?.label}</div>
-                  <div>模式: {flashMode === 'ab' ? '同时刷入 A/B' : flashMode === 'a' ? '仅 A' : flashMode === 'b' ? '仅 B' : '直接分区'}</div>
+                  <div>{t('flash.device_label')}{device?.properties?.model || t('mirror.unknown_device')} ({device?.serial || t('mirror.unknown_device')})</div>
+                  <div>{t('flash.file_label')}{selectedFileName || '未选择'}</div>
+                  <div>{t('flash.partition_label')}{partitions.find(p => p.value === selectedPartition)?.label}</div>
+                  <div>{t('flash.mode_label')}{flashMode === 'ab' ? t('flash.mode_ab') : flashMode === 'a' ? t('flash.mode_a') : flashMode === 'b' ? t('flash.mode_b') : t('flash.mode_direct')}</div>
                 </div>
                 
                 <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  此操作不可逆转，错误的操作可能导致设备无法启动。确定要继续吗？
+                  {t('flash.confirm_warning')}
                 </Text>
               </div>
             </DialogBody>
           </DialogContent>
           <DialogActions>
             <Button appearance="secondary" onClick={() => setShowConfirmDialog(false)}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button appearance="primary" onClick={handleFlashConfirm}>
-              确认刷入
+              {t('flash.confirm_btn')}
             </Button>
           </DialogActions>
         </DialogSurface>

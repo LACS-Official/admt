@@ -1,6 +1,6 @@
 export interface AppConfig {
   theme: "light" | "dark" | "auto";
-  language: "zh-CN" | "en-US";
+  language: "zh-CN" | "zh-TW" | "en-US";
   autoDetectDevices: boolean;
   scanInterval: number;
   deviceDetectionInterval: number;
@@ -12,6 +12,7 @@ export interface AppConfig {
   minimizeToTrayOnClose: boolean;
   startMinimizedToTray: boolean;
   soundEnabled: boolean;
+  carouselInterval: number;
 }
 
 export interface AppState {

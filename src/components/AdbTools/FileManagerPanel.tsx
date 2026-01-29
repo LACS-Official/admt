@@ -54,6 +54,7 @@ import {
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
@@ -215,6 +216,7 @@ interface FileItem {
 
 const FileManagerPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { selectedDevice } = useDeviceStore();
   const { deviceService } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
@@ -230,8 +232,8 @@ const FileManagerPanel: React.FC = () => {
 
   // Quick navigation paths
   const quickPaths = [
-    { label: '根目录', path: '/' },
-    { label: '内部存储', path: '/storage/emulated/0' },
+    { label: t('file_manager.root_dir'), path: '/' },
+    { label: t('file_manager.internal_storage'), path: '/storage/emulated/0' },
     { label: 'data', path: '/data' },
     { label: 'system', path: '/system' },
     { label: 'Download', path: '/storage/emulated/0/Download' },
@@ -323,19 +325,19 @@ const FileManagerPanel: React.FC = () => {
           const pathInfo = realPath !== normalizedPath ? `${normalizedPath} -> ${realPath}` : normalizedPath;
           setStatusBarMessage({
             type: "success",
-            message: `已加载 ${fileItems.length} 个项目 (${pathInfo})`,
+            message: t('file_manager.msg_list_success', { count: fileItems.length, path: pathInfo }),
           });
         });
       } else {
         setStatusBarMessage({
           type: "error",
-          message: `无法访问目录: 未知错误`,
+          message: t('file_manager.msg_access_fail', { error: t('common.unknown_error') }),
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `加载文件列表失败: ${error}`,
+        message: t('file_manager.msg_list_fail', { error }),
       });
     } finally {
       setIsLoading(false);
@@ -560,7 +562,7 @@ const FileManagerPanel: React.FC = () => {
     if (selectedDevice.mode === 'offline') {
       setStatusBarMessage({
         type: "error",
-        message: "设备处于离线状态，无法进行文件导出。请确保设备已连接并处于正常模式。",
+        message: t('file_manager.msg_offline'),
       });
       return;
     }
@@ -581,7 +583,7 @@ const FileManagerPanel: React.FC = () => {
       
       setStatusBarMessage({
         type: "info",
-        message: `正在传出文件: ${file.name}...`,
+        message: t('file_manager.msg_pulling', { name: file.name }),
       });
 
       console.log('尝试拉取单个文件:', file.path, '到:', localPath, '设备状态:', selectedDevice.mode);
@@ -589,21 +591,21 @@ const FileManagerPanel: React.FC = () => {
       if (result.success) {
         setStatusBarMessage({
           type: "success",
-          message: `文件传出成功: ${file.name}，已保存到: ${downloadDir}`,
+          message: t('file_manager.msg_pull_success', { name: file.name, dir: downloadDir }),
         });
       } else {
         setStatusBarMessage({
           type: "error",
-          message: `文件传出失败: ${result.error || '未知错误'}`,
+          message: t('file_manager.msg_pull_fail', { error: result.error || t('common.unknown_error') }),
         });
       }
     } catch (error) {
       console.error('单文件传出失败:', error, '设备状态:', selectedDevice.mode);
       setStatusBarMessage({
         type: "error",
-        message: `文件传出失败: ${error}`,
+        message: t('file_manager.msg_pull_fail', { error }),
       });
-    }
+    } finally { };
   };
 
   const handleBatchDownload = async () => {
@@ -614,7 +616,7 @@ const FileManagerPanel: React.FC = () => {
     if (selectedDevice.mode === 'offline') {
       setStatusBarMessage({
         type: "error",
-        message: "设备处于离线状态，无法进行文件导出。请确保设备已连接并处于正常模式。",
+        message: t('file_manager.msg_offline'),
       });
       return;
     }
@@ -630,7 +632,7 @@ const FileManagerPanel: React.FC = () => {
       
       setStatusBarMessage({
         type: "info",
-        message: `正在传出 ${selectedFiles.size} 个文件到 ${downloadDir}，请稍候...`,
+        message: t('file_manager.msg_batch_pulling', { count: selectedFiles.size, dir: downloadDir }),
       });
 
       // 检查并创建传出目录
@@ -660,13 +662,13 @@ const FileManagerPanel: React.FC = () => {
 
       setStatusBarMessage({
         type: successCount > 0 ? "success" : "error",
-        message: `批量导出完成 - 成功: ${successCount}个, 失败: ${failCount}个，文件已保存到: ${downloadDir}`,
+        message: t('file_manager.msg_batch_pull_result', { success: successCount, fail: failCount, dir: downloadDir }),
       });
     } catch (error) {
       console.error('导出文件失败:', error);
       setStatusBarMessage({
         type: "error",
-        message: `导出文件失败: ${error}`,
+        message: t('file_manager.msg_pull_fail', { error }),
       });
     }
 
@@ -691,13 +693,13 @@ const FileManagerPanel: React.FC = () => {
       await invoke('open_folder', { path: exportDir });
       setStatusBarMessage({
         type: "success",
-        message: "已打开导出目录",
+        message: t('file_manager.msg_open_dir_success'),
       });
     } catch (error) {
       console.error('打开导出目录失败:', error);
       setStatusBarMessage({
         type: "error",
-        message: `打开导出目录失败: ${error}`,
+        message: t('file_manager.msg_open_dir_fail', { error }),
       });
     }
   };
@@ -710,7 +712,7 @@ const FileManagerPanel: React.FC = () => {
       const selected = await open({
         multiple: false,
         filters: [{
-          name: 'All Files',
+          name: t('file_manager.all_files'),
           extensions: ['*']
         }]
       });
@@ -719,27 +721,27 @@ const FileManagerPanel: React.FC = () => {
         setIsUploading(true);
         setStatusBarMessage({
           type: "info",
-          message: "正在上传文件...",
+          message: t('file_manager.msg_uploading'),
         });
 
         const result = await deviceService.pushFile(selectedDevice.serial, selected, currentPath);
         if (result.success) {
           setStatusBarMessage({
             type: "success",
-            message: "文件上传成功",
+            message: t('file_manager.msg_upload_success'),
           });
           loadFiles(currentPath); // Refresh file list
         } else {
           setStatusBarMessage({
             type: "error",
-            message: `文件上传失败: ${result.error || '未知错误'}`,
+            message: t('file_manager.msg_upload_fail', { error: result.error || t('common.unknown_error') }),
           });
         }
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `文件上传失败: ${error}`,
+        message: t('file_manager.msg_upload_fail', { error }),
       });
     } finally {
       setIsUploading(false);
@@ -758,7 +760,7 @@ const FileManagerPanel: React.FC = () => {
             icon={<Home24Regular />}
             onClick={() => handleNavigateToPath('/')}
           >
-            根目录
+            {t('file_manager.root_dir')}
           </Button>
         </BreadcrumbItem>
         {pathParts.map((part, index) => {
@@ -789,7 +791,7 @@ const FileManagerPanel: React.FC = () => {
       <div className={styles.container}>
         <div className={styles.emptyState}>
           <Storage24Regular style={{ fontSize: "48px" }} />
-          <Text>请先选择一个设备</Text>
+          <Text>{t('file_manager.select_device_first')}</Text>
         </div>
       </div>
     );
@@ -807,7 +809,7 @@ const FileManagerPanel: React.FC = () => {
               icon={<ArrowUp24Regular />}
               onClick={handleNavigateUp}
               disabled={currentPath === '/'}
-              title="返回上级目录"
+              title={t('file_manager.nav_up_title')}
             />
             {/*  文件路径输入框 */}
             <div className={styles.pathInput}>
@@ -815,16 +817,16 @@ const FileManagerPanel: React.FC = () => {
             </div>
             {/* 排序选择 */}
             <div className={styles.sortContainer}>
-              <Text size={200}>排序</Text>
+              <Text size={200}>{t('file_manager.sort_label')}</Text>
               <Dropdown
                 size="small"
                 selectedOptions={[sortMode]}
                 onOptionSelect={handleSortChange}
               >
-                <Option value="name_asc">名称 A-Z</Option>
-                <Option value="name_desc">名称 Z-A</Option>
-                <Option value="date_desc">日期 新-旧</Option>
-                <Option value="date_asc">日期 旧-新</Option>
+                <Option value="name_asc">{t('file_manager.sort_name_asc')}</Option>
+                <Option value="name_desc">{t('file_manager.sort_name_desc')}</Option>
+                <Option value="date_desc">{t('file_manager.sort_date_desc')}</Option>
+                <Option value="date_asc">{t('file_manager.sort_date_asc')}</Option>
               </Dropdown>
             </div>
 
@@ -851,7 +853,7 @@ const FileManagerPanel: React.FC = () => {
               onClick={handleUploadFile}
               disabled={isUploading}
             >
-              {isUploading ? '上传中...' : '上传文件'}
+              {isUploading ? t('file_manager.uploading') : t('file_manager.upload_file')}
             </Button>
 
             <Button
@@ -859,19 +861,19 @@ const FileManagerPanel: React.FC = () => {
               icon={<Folder24Regular />}
               onClick={handleOpenExportDirectory}
             >
-              打开导出目录
+              {t('file_manager.open_export_dir')}
             </Button>
             {selectedFiles.size > 0 && (
               <>
                 <div className={styles.selectedInfo}>
-                  已选择 {selectedFiles.size} 个文件
+                  {t('file_manager.selected_count', { count: selectedFiles.size })}
                 </div>
                 <Button
                   appearance="primary"
                   icon={<ArrowDownload24Regular />}
                   onClick={handleBatchDownload}
                 >
-                  批量导出
+                  {t('file_manager.batch_export')}
                 </Button>
               </>
             )}
@@ -880,13 +882,13 @@ const FileManagerPanel: React.FC = () => {
           {/* File List */}
           {isLoading ? (
             <div className={styles.loadingContainer}>
-              <Spinner size="large" label="正在加载文件列表..." />
+              <Spinner size="large" label={t('file_manager.loading_files')} />
             </div>
           ) : files.length === 0 ? (
             <div className={styles.emptyState}>
               <Folder24Regular style={{ fontSize: "48px" }} />
-              <Text>目录为空</Text>
-              <Text size={200}>此目录中没有文件或文件夹</Text>
+              <Text>{t('file_manager.empty_dir')}</Text>
+              <Text size={200}>{t('file_manager.empty_dir_desc')}</Text>
             </div>
           ) : (
             <div className={styles.tableContainer}>
@@ -899,9 +901,9 @@ const FileManagerPanel: React.FC = () => {
                         onChange={(_, data) => handleSelectAll(data.checked === true)}
                       />
                     </TableHeaderCell>
-                    <TableHeaderCell>名称</TableHeaderCell>
-                    <TableHeaderCell>大小</TableHeaderCell>
-                    <TableHeaderCell>操作</TableHeaderCell>
+                    <TableHeaderCell>{t('file_manager.header_name')}</TableHeaderCell>
+                    <TableHeaderCell>{t('file_manager.header_size')}</TableHeaderCell>
+                    <TableHeaderCell>{t('file_manager.header_actions')}</TableHeaderCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -944,7 +946,7 @@ const FileManagerPanel: React.FC = () => {
                                   icon={<ArrowDownload24Regular />}
                                   onClick={() => handleDownloadFile(file)}
                                 >
-                                  传出文件
+                                  {t('file_manager.pull_file')}
                                 </MenuItem>
                               )}
                               <MenuItem
@@ -953,11 +955,11 @@ const FileManagerPanel: React.FC = () => {
                                   navigator.clipboard.writeText(file.path);
                                   setStatusBarMessage({
                                     type: "success",
-                                    message: "文件路径已复制到剪贴板",
+                                    message: t('file_manager.msg_copied'),
                                   });
                                 }}
                               >
-                                复制路径
+                                {t('file_manager.copy_path')}
                               </MenuItem>
                             </MenuList>
                           </MenuPopover>

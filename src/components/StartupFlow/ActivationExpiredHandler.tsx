@@ -24,6 +24,7 @@ import {
   Info24Regular,
 } from '@fluentui/react-icons';
 import { ActivationStatus } from '../../stores/startupFlowStore';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { formatActivationExpiryDate } from '../../utils/dateFormatter';
 
@@ -207,8 +208,6 @@ const ActivationExpiredHandler: React.FC<ActivationExpiredHandlerProps> = ({
     setShowActivationInput(true);
   };
 
-
-
   // TODO: 添加激活码验证器组件
   if (showActivationInput) {
     return null;
@@ -218,144 +217,189 @@ const ActivationExpiredHandler: React.FC<ActivationExpiredHandlerProps> = ({
 
   return (
     <div className={styles.container}>
-      <Card className={styles.card}>
-        <div className={styles.header}>
-          <div className={styles.warningIcon}>
-            <Warning24Filled />
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", duration: 0.6, bounce: 0.3 }}
+        style={{ width: '100%', maxWidth: '600px', display: 'flex', justifyContent: 'center' }}
+      >
+        <Card className={styles.card}>
+          <div className={styles.header}>
+            <motion.div 
+              className={styles.warningIcon}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+            >
+              <Warning24Filled />
+            </motion.div>
+            <Title1>激活已过期</Title1>
+            <Body1>您的激活码已过期，需要重新激活才能继续使用完整功能</Body1>
           </div>
-          <Title1>激活已过期</Title1>
-          <Body1>您的激活码已过期，需要重新激活才能继续使用完整功能</Body1>
-        </div>
 
-        {/* 激活状态详情 */}
-        <div className={styles.statusSection}>
-          <div className={styles.statusHeader}>
-            <Clock24Regular style={{ fontSize: '20px', color: '#d83b01' }} />
-            <Text weight="semibold">激活状态详情</Text>
-          </div>
-          
-          <div className={styles.statusDetails}>
-            <div className={styles.statusItem}>
-              <Caption1>激活码</Caption1>
-              <Text weight="semibold">{activationStatus.code || '未知'}</Text>
+          {/* 激活状态详情 */}
+          <motion.div 
+            className={styles.statusSection}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className={styles.statusHeader}>
+              <Clock24Regular style={{ fontSize: '20px', color: '#d83b01' }} />
+              <Text weight="semibold">激活状态详情</Text>
             </div>
-            <div className={styles.statusItem}>
-              <Caption1>过期时间</Caption1>
-              <Text weight="semibold">
-                {activationStatus.expiresAt ? formatDate(activationStatus.expiresAt) : '未知'}
-              </Text>
-            </div>
-            <div className={styles.statusItem}>
-              <Caption1>激活时间</Caption1>
-              <Text weight="semibold">
-                {activationStatus.activatedAt ? formatDate(activationStatus.activatedAt) : '未知'}
-              </Text>
-            </div>
-            <div className={styles.statusItem}>
-              <Caption1>状态</Caption1>
-              <Badge appearance="filled" color="danger">已过期</Badge>
-            </div>
-          </div>
-        </div>
-
-        {/* 宽限期倒计时 */}
-        {isInGracePeriod && timeRemaining && (
-          <div className={styles.gracePeriodSection}>
-            <div className={styles.gracePeriodHeader}>
-              <Info24Regular style={{ fontSize: '16px', color: '#ffb900' }} />
-              <Text weight="semibold">宽限期剩余时间</Text>
-            </div>
-            <Body1>
-              在宽限期内，您仍可以使用基本功能。宽限期结束后，功能将受到限制。
-            </Body1>
             
-            <div className={styles.countdownSection}>
-              <div className={styles.countdownItem}>
-                <Text weight="bold" size={500}>{timeRemaining.days}</Text>
-                <Caption1>天</Caption1>
+            <div className={styles.statusDetails}>
+              <div className={styles.statusItem}>
+                <Caption1>激活码</Caption1>
+                <Text weight="semibold">{activationStatus.code || '未知'}</Text>
               </div>
-              <div className={styles.countdownItem}>
-                <Text weight="bold" size={500}>{timeRemaining.hours}</Text>
-                <Caption1>时</Caption1>
+              <div className={styles.statusItem}>
+                <Caption1>过期时间</Caption1>
+                <Text weight="semibold">
+                  {activationStatus.expiresAt ? formatDate(activationStatus.expiresAt) : '未知'}
+                </Text>
               </div>
-              <div className={styles.countdownItem}>
-                <Text weight="bold" size={500}>{timeRemaining.minutes}</Text>
-                <Caption1>分</Caption1>
+              <div className={styles.statusItem}>
+                <Caption1>激活时间</Caption1>
+                <Text weight="semibold">
+                  {activationStatus.activatedAt ? formatDate(activationStatus.activatedAt) : '未知'}
+                </Text>
               </div>
-              <div className={styles.countdownItem}>
-                <Text weight="bold" size={500}>{timeRemaining.seconds}</Text>
-                <Caption1>秒</Caption1>
+              <div className={styles.statusItem}>
+                <Caption1>状态</Caption1>
+                <Badge appearance="filled" color="danger">已过期</Badge>
               </div>
             </div>
-          </div>
-        )}
+          </motion.div>
 
-        {/* 解决方案选项 */}
-        <div className={styles.optionsSection}>
-          <Title2 style={{ marginBottom: '16px' }}>解决方案</Title2>
-          
-          <div className={styles.optionCard} onClick={handleNewActivationCode}>
-            <div className={styles.optionHeader}>
-              <Key24Regular className={styles.optionIcon} />
-              <Text weight="semibold">输入新的激活码</Text>
-            </div>
-            <Caption1>
-              如果您有新的激活码，请点击此处输入以重新激活
-            </Caption1>
-          </div>
+          {/* 宽限期倒计时 */}
+          <AnimatePresence>
+            {isInGracePeriod && timeRemaining && (
+              <motion.div 
+                className={styles.gracePeriodSection}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+              >
+                <div className={styles.gracePeriodHeader}>
+                  <Info24Regular style={{ fontSize: '16px', color: '#ffb900' }} />
+                  <Text weight="semibold">宽限期剩余时间</Text>
+                </div>
+                <Body1>
+                  在宽限期内，您仍可以使用基本功能。宽限期结束后，功能将受到限制。
+                </Body1>
+                
+                <div className={styles.countdownSection}>
+                  <div className={styles.countdownItem}>
+                    <Text weight="bold" size={500}>{timeRemaining.days}</Text>
+                    <Caption1>天</Caption1>
+                  </div>
+                  <div className={styles.countdownItem}>
+                    <Text weight="bold" size={500}>{timeRemaining.hours}</Text>
+                    <Caption1>时</Caption1>
+                  </div>
+                  <div className={styles.countdownItem}>
+                    <Text weight="bold" size={500}>{timeRemaining.minutes}</Text>
+                    <Caption1>分</Caption1>
+                  </div>
+                  <div className={styles.countdownItem}>
+                    <Text weight="bold" size={500}>{timeRemaining.seconds}</Text>
+                    <Caption1>秒</Caption1>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {onPurchase && (
-            <div className={styles.optionCard} onClick={onPurchase}>
+          {/* 解决方案选项 */}
+          <motion.div 
+            className={styles.optionsSection}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Title2 style={{ marginBottom: '16px' }}>解决方案</Title2>
+            
+            <motion.div 
+              className={styles.optionCard} 
+              onClick={handleNewActivationCode}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
               <div className={styles.optionHeader}>
-                <StoreMicrosoft24Regular className={styles.optionIcon} />
-                <Text weight="semibold">购买新的激活码</Text>
+                <Key24Regular className={styles.optionIcon} />
+                <Text weight="semibold">输入新的激活码</Text>
               </div>
               <Caption1>
-                前往官方网站购买新的激活码以继续使用完整功能
+                如果您有新的激活码，请点击此处输入以重新激活
               </Caption1>
-            </div>
-          )}
-        </div>
+            </motion.div>
 
-        {/* 操作按钮 */}
-        <div className={styles.actionSection}>
-          <Button
-            appearance="primary"
-            className={styles.primaryButton}
-            icon={<Key24Regular />}
-            onClick={handleNewActivationCode}
+            {onPurchase && (
+              <motion.div 
+                className={styles.optionCard} 
+                onClick={onPurchase}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className={styles.optionHeader}>
+                  <StoreMicrosoft24Regular className={styles.optionIcon} />
+                  <Text weight="semibold">购买新的激活码</Text>
+                </div>
+                <Caption1>
+                  前往官方网站购买新的激活码以继续使用完整功能
+                </Caption1>
+              </motion.div>
+            )}
+          </motion.div>
+
+          {/* 操作按钮 */}
+          <motion.div 
+            className={styles.actionSection}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
           >
-            重新激活
-          </Button>
-          
-          {onPurchase && (
             <Button
-              appearance="secondary"
-              className={styles.secondaryButton}
-              icon={<StoreMicrosoft24Regular />}
-              onClick={onPurchase}
+              appearance="primary"
+              className={styles.primaryButton}
+              icon={<Key24Regular />}
+              onClick={handleNewActivationCode}
             >
-              购买激活码
+              重新激活
             </Button>
-          )}
-          
-          {onContinueWithLimitations && isInGracePeriod && (
-            <Button
-              appearance="subtle"
-              className={styles.secondaryButton}
-              onClick={onContinueWithLimitations}
-            >
-              继续使用
-            </Button>
-          )}
-        </div>
+            
+            {onPurchase && (
+              <Button
+                appearance="secondary"
+                className={styles.secondaryButton}
+                icon={<StoreMicrosoft24Regular />}
+                onClick={onPurchase}
+              >
+                购买激活码
+              </Button>
+            )}
+            
+            {onContinueWithLimitations && isInGracePeriod && (
+              <Button
+                appearance="subtle"
+                className={styles.secondaryButton}
+                onClick={onContinueWithLimitations}
+              >
+                继续使用
+              </Button>
+            )}
+          </motion.div>
 
-        {!isInGracePeriod && (
-          <MessageBar intent="error" style={{ marginTop: '16px' }}>
-            宽限期已结束，部分功能将受到限制。请尽快重新激活以恢复完整功能。
-          </MessageBar>
-        )}
-      </Card>
+          {!isInGracePeriod && (
+            <MessageBar intent="error" style={{ marginTop: '16px' }}>
+              宽限期已结束，部分功能将受到限制。请尽快重新激活以恢复完整功能。
+            </MessageBar>
+          )}
+        </Card>
+      </motion.div>
     </div>
   );
 };

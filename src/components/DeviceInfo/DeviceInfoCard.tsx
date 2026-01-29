@@ -18,6 +18,7 @@ import {
   DesktopPulse24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -72,6 +73,7 @@ interface DeviceInfoCardProps {
 
 const DeviceInfoCard: React.FC<DeviceInfoCardProps> = ({ device }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
 
   const getDeviceModeColor = (mode: string) => {
     switch (mode) {
@@ -92,59 +94,59 @@ const DeviceInfoCard: React.FC<DeviceInfoCardProps> = ({ device }) => {
   const getDeviceModeText = (mode: string) => {
     switch (mode) {
       case "sys":
-        return "系统模式";
+        return t('device_info.mode_sys');
       case "rec":
-        return "Recovery模式";
+        return t('device_info.mode_rec');
       case "fastboot":
-        return "Fastboot模式";
+        return t('device_info.mode_fastboot');
       case "fastbootd":
-        return "Fastbootd模式";
+        return t('device_info.mode_fastbootd');
       case "sideload":
-        return "Sideload模式";
+        return t('device_info.mode_sideload');
       case "unauthorized":
-        return "未授权";
+        return t('device_info.mode_unauthorized');
       default:
         return mode;
     }
   };
 
   const formatLastSeen = (lastSeen?: string | Date) => {
-    if (!lastSeen) return "未知";
+    if (!lastSeen) return t('device_info.unknown');
 
     const date = typeof lastSeen === 'string' ? new Date(lastSeen) : lastSeen;
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffSecs = Math.floor(diffMs / 1000);
     
-    if (diffSecs < 60) return "刚刚";
-    if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}分钟前`;
-    if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}小时前`;
-    return date.toLocaleDateString("zh-CN");
+    if (diffSecs < 60) return t('device_info.just_now');
+    if (diffSecs < 3600) return t('device_info.minutes_ago', { count: Math.floor(diffSecs / 60) });
+    if (diffSecs < 86400) return t('device_info.hours_ago', { count: Math.floor(diffSecs / 3600) });
+    return date.toLocaleDateString();
   };
 
   return (
     <Card className={styles.card}>
       <CardHeader
         image={<Phone24Regular />}
-        header={<Text weight="semibold">设备状态</Text>}
+        header={<Text weight="semibold">{t('device_info.device_status')}</Text>}
         action={
           <Badge 
             appearance="filled" 
             color={device.connected ? "success" : "danger"}
           >
-            {device.connected ? "已连接" : "已断开"}
+            {device.connected ? t('device_info.connected') : t('device_info.disconnected')}
           </Badge>
         }
       />
       
       <div className={styles.content}>
         <div className={styles.infoRow}>
-          <Text className={styles.label}>设备序列号</Text>
+          <Text className={styles.label}>{t('device_info.serial_number')}</Text>
           <Text className={styles.value}>{device.serial}</Text>
         </div>
         
         <div className={styles.infoRow}>
-          <Text className={styles.label}>设备模式</Text>
+          <Text className={styles.label}>{t('device_info.device_mode')}</Text>
           <Badge 
             appearance="filled" 
             color={getDeviceModeColor(device.mode)}
@@ -154,36 +156,36 @@ const DeviceInfoCard: React.FC<DeviceInfoCardProps> = ({ device }) => {
         </div>
         
         <div className={styles.infoRow}>
-          <Text className={styles.label}>最后检测</Text>
+          <Text className={styles.label}>{t('device_info.last_seen')}</Text>
           <Text className={styles.value}>{formatLastSeen(device.lastSeen)}</Text>
         </div>
         
         {device.properties && (
           <>
             <div className={styles.infoRow}>
-              <Text className={styles.label}>设备品牌</Text>
+              <Text className={styles.label}>{t('device_info.brand')}</Text>
               <Text className={styles.value}>
-                {device.properties.brand || "未知"}
+                {device.properties.brand || t('device_info.unknown')}
               </Text>
             </div>
             
             <div className={styles.infoRow}>
-              <Text className={styles.label}>设备型号</Text>
+              <Text className={styles.label}>{t('device_info.model')}</Text>
               <Text className={styles.value}>
-                {device.properties.marketName || device.properties.model || "未知"}
+                {device.properties.marketName || device.properties.model || t('device_info.unknown')}
               </Text>
             </div>
             
             <div className={styles.infoRow}>
-              <Text className={styles.label}>Android版本</Text>
+              <Text className={styles.label}>{t('device_info.android_version')}</Text>
               <Text className={styles.value}>
-                {device.properties.androidVersion || "未知"}
+                {device.properties.androidVersion || t('device_info.unknown')}
               </Text>
             </div>
 
             {device.properties.securityPatchLevel && (
               <div className={styles.infoRow}>
-                <Text className={styles.label}>安全补丁</Text>
+                <Text className={styles.label}>{t('device_info.security_patch')}</Text>
                 <Text className={styles.value}>
                   {device.properties.securityPatchLevel}
                 </Text>
@@ -194,7 +196,7 @@ const DeviceInfoCard: React.FC<DeviceInfoCardProps> = ({ device }) => {
               {device.properties.batteryLevel !== undefined && (
                 <div className={styles.statusRow}>
                   <Battery024Regular />
-                  <Text>电池电量: {device.properties.batteryLevel}%</Text>
+                  <Text>{t('device_info.battery_level', { level: device.properties.batteryLevel })}</Text>
                 </div>
               )}
 
@@ -202,7 +204,7 @@ const DeviceInfoCard: React.FC<DeviceInfoCardProps> = ({ device }) => {
                 <div className={styles.statusRow}>
                   <Shield24Regular />
                   <Text>
-                    Bootloader: {device.properties.bootloaderLocked ? "已锁定" : "已解锁"}
+                    {t('device_info.bootloader')}: {device.properties.bootloaderLocked ? t('device_info.locked') : t('device_info.unlocked')}
                   </Text>
                 </div>
               )}
@@ -210,21 +212,21 @@ const DeviceInfoCard: React.FC<DeviceInfoCardProps> = ({ device }) => {
               {device.properties.screenResolution && (
                 <div className={styles.statusRow}>
                   <Wifi124Regular />
-                  <Text>屏幕分辨率: {device.properties.screenResolution}</Text>
+                  <Text>{t('device_info.screen_resolution', { resolution: device.properties.screenResolution })}</Text>
                 </div>
               )}
 
               {device.properties.cpuAbi && (
                 <div className={styles.statusRow}>
                   <DesktopPulse24Regular />
-                  <Text>CPU架构: {device.properties.cpuAbi}</Text>
+                  <Text>{t('device_info.cpu_architecture', { arch: device.properties.cpuAbi })}</Text>
                 </div>
               )}
 
               {device.properties.totalMemory && (
                 <div className={styles.statusRow}>
                   <Storage24Regular />
-                  <Text>总内存: {device.properties.totalMemory}</Text>
+                  <Text>{t('device_info.total_memory', { memory: device.properties.totalMemory })}</Text>
                 </div>
               )}
             </div>
@@ -232,13 +234,13 @@ const DeviceInfoCard: React.FC<DeviceInfoCardProps> = ({ device }) => {
         )}
         
         <div className={styles.actions}>
-          <Tooltip content="查看详细信息" relationship="label">
+          <Tooltip content={t('device_info.view_details')} relationship="label">
             <Button
               appearance="secondary"
               icon={<Info24Regular />}
               size="small"
             >
-              详细信息
+              {t('device_info.details')}
             </Button>
           </Tooltip>
         </div>

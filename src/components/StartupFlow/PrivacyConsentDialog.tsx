@@ -3,7 +3,7 @@
  * 用于显示隐私政策和用户协议，要求用户同意
  */
 
-import React, { useState }  from 'react';
+import React, { useState } from 'react';
 import { admtLogo512 } from '../../assets/icons';
 import {
   Button,
@@ -18,9 +18,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Link,
+  Divider,
 } from '@fluentui/react-components';
-import { ArrowLeft24Regular } from '@fluentui/react-icons';
 import { 
+  ArrowLeft24Regular,
   Shield24Regular, 
   Document24Regular, 
   Warning24Regular,
@@ -28,173 +30,154 @@ import {
   CheckmarkCircle24Regular,
   DocumentBulletList24Regular,
   ChevronRight24Regular,
+  Open24Regular,
 } from '@fluentui/react-icons';
 import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
-    container: {
+  container: {
     display: 'flex',
     minHeight: '100vh',
     width: '100%',
-    backgroundColor: tokens.colorNeutralBackground1,
-    boxSizing: 'border-box',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: `linear-gradient(135deg, ${tokens.colorBrandBackground2} 0%, ${tokens.colorNeutralBackground1} 50%, ${tokens.colorBrandBackground2} 100%)`,
+    backgroundSize: '400% 400%',
+    animation: 'gradientBG 15s ease infinite',
+    position: 'relative',
     overflow: 'hidden',
   },
+  glassCard: {
+    width: '900px',
+    maxWidth: '90%',
+    maxHeight: '85vh',
+    display: 'flex', 
+    flexDirection: 'row',
+    borderRadius: '24px',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backdropFilter: 'blur(20px)',
+    border: `1px solid rgba(255, 255, 255, 0.5)`,
+    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+    overflow: 'hidden',
+    
+    // Dark mode support
+    '@media (prefers-color-scheme: dark)': {
+      backgroundColor: 'rgba(30, 30, 30, 0.7)',
+      border: `1px solid rgba(255, 255, 255, 0.1)`,
+    }
+  },
   leftPanel: {
-    width: '50%',
+    width: '40%',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: tokens.spacingHorizontalXXL,
-    boxSizing: 'border-box',
+    padding: tokens.spacingHorizontalXL,
+    borderRight: `1px solid rgba(0, 0, 0, 0.05)`,
+    position: 'relative',
+    
+    '@media (prefers-color-scheme: dark)': {
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        borderRight: `1px solid rgba(255, 255, 255, 0.05)`,
+    }
   },
   rightPanel: {
-    width: '50%',
+    flex: 1,
+    padding: tokens.spacingHorizontalXXL,
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
-    padding: tokens.spacingHorizontalXXL,
-    boxSizing: 'border-box',
-  },
-  appIconContainer: {
-    width: "256px",
-    height: "256px",
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: tokens.spacingVerticalXL,
+    overflowY: 'auto',
   },
   appIconImage: {
-    width: "400px",
-    height: "400px",
-    borderRadius: "16px",
-    objectFit: 'contain',
+    width: "128px",
+    height: "128px",
+    borderRadius: "24px",
+    boxShadow: tokens.shadow8,
+    marginBottom: tokens.spacingVerticalL,
   },
-  appTitle: {
-    fontSize: tokens.fontSizeHero900,
+  welcomeTitle: {
+    fontSize: tokens.fontSizeHero800,
     fontWeight: tokens.fontWeightBold,
-    color: tokens.colorBrandForeground1,
-    marginBottom: tokens.spacingVerticalM,
-    textAlign: 'center',
-  },
-  appSubtitle: {
-    fontSize: tokens.fontSizeBase400,
-    color: tokens.colorNeutralForeground2,
-    textAlign: 'center',
-    maxWidth: '400px',
-    lineHeight: '1.6',
-  },
-  card: {
-    width: '100%',
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    borderRadius: "16px",
-    padding: `${tokens.spacingVerticalXXL} ${tokens.spacingHorizontalXXL}`,
-    boxShadow: tokens.shadow16,
-    backgroundColor: tokens.colorNeutralBackground1,
-  },
-  header: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: tokens.fontSizeBase400,
-    fontWeight: tokens.fontWeightSemibold,
-    marginBottom: tokens.spacingVerticalS,
     color: tokens.colorNeutralForeground1,
-  },
-  subtitle: {
-    fontSize: tokens.fontSizeBase300,
-    color: tokens.colorNeutralForeground2,
-    maxWidth: '500px',
-  },
-  content: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalL,
-  },
-  policyButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalL}`,
-    borderRadius: "8px",
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    backgroundColor: tokens.colorNeutralBackground1,
-    width: '100%',
     marginBottom: tokens.spacingVerticalM,
-    transition: 'border-color 0.2s ease',
-    '&:hover': {
-      backgroundColor: tokens.colorNeutralBackground2,
-    },
-  },
-  policyButtonContent: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalM,
-    maxHeight: "30px",
-  },
-  policyButtonIcon: {
-    color: tokens.colorBrandForeground1,
-    flexShrink: 0,
-  },
-  policyButtonText: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
     textAlign: 'left',
   },
-  policyButtonTitle: {
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
+  welcomeSubtitle: {
     fontSize: tokens.fontSizeBase300,
-  },
-  policyButtonDesc: {
-    fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground2,
-    marginTop: tokens.spacingVerticalXS,
+    marginBottom: tokens.spacingVerticalXL,
+    lineHeight: '1.5',
   },
-  policyButtonArrow: {
-    color: tokens.colorBrandForeground1,
-    flexShrink: 0,
-  },
-  checkboxSection: {
-    marginTop: tokens.spacingVerticalL,
+  policyList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalM,
     marginBottom: tokens.spacingVerticalXL,
   },
-  actions: {
+  policyItem: {
     display: 'flex',
-    justifyContent: 'space-between',
-    gap: tokens.spacingHorizontalM,
-    marginTop: tokens.spacingVerticalXL,
+    alignItems: 'center',
+    padding: tokens.spacingHorizontalM,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px solid transparent`,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    textDecoration: 'none',
+    
+    ':hover': {
+        border: `1px solid ${tokens.colorBrandStroke1}`,
+        backgroundColor: tokens.colorNeutralBackground2Hover,
+        transform: 'translateY(-2px)',
+        boxShadow: tokens.shadow4,
+    }
   },
-  dialogContent: {
-    maxHeight: '60vh',
-    overflowY: 'auto',
-    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalL}`,
-    fontSize: tokens.fontSizeBase300,
+  policyIconBox: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '12px',
+    backgroundColor: tokens.colorBrandBackground2,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: tokens.spacingHorizontalM,
+    color: tokens.colorBrandForeground1,
+  },
+  policyInfo: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  policyTitle: {
+    fontWeight: tokens.fontWeightSemibold,
     color: tokens.colorNeutralForeground1,
-    textAlign: 'left',
-    '& p': {
-      marginBottom: tokens.spacingVerticalM,
-      marginTop: 0,
-    },
-    '& ul, & ol': {
-      paddingLeft: tokens.spacingHorizontalL,
-      marginBottom: tokens.spacingVerticalM,
-    },
-    '& li': {
-      marginBottom: tokens.spacingVerticalXS,
-      lineHeight: '1.6',
-    },
-    '& h1, & h2, & h3, & h4, & h5, & h6': {
-      marginTop: tokens.spacingVerticalL,
-      marginBottom: tokens.spacingVerticalM,
-      fontWeight: tokens.fontWeightSemibold,
-      color: tokens.colorBrandForeground1,
-    },
+  },
+  policyDesc: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+  },
+  footer: {
+    marginTop: 'auto',
+    paddingTop: tokens.spacingVerticalL,
+  },
+  checkboxWrapper: {
+    marginBottom: tokens.spacingVerticalL,
+    padding: tokens.spacingHorizontalM,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    
+    '@media (prefers-color-scheme: dark)': {
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    }
+  },
+  actionButtons: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalM,
+    justifyContent: 'flex-end',
   },
   dialogHeader: {
     display: 'flex',
@@ -202,8 +185,11 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalS,
     color: tokens.colorBrandForeground1,
   },
-  infoBanner: {
-    marginBottom: tokens.spacingVerticalL,
+  versionTag: {
+    marginTop: tokens.spacingVerticalL,
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground4,
+    textAlign: 'center',
   },
 });
 
@@ -219,6 +205,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
   onReject,
 }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [acceptedAll, setAcceptedAll] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
@@ -232,11 +219,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
 
   const handleAccept = () => {
     if (!acceptedAll) {
-      setShowExitConfirm(true);
+      // Shake animation trigger could go here
       return;
     }
 
-    // 更新状态
     acceptPrivacyPolicy();
     acceptUserAgreement();
     acceptDataCollection();
@@ -248,12 +234,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     setShouldExitApp(true);
     onReject();
 
-    // 尝试退出应用
     try {
       const { exit } = await import('@tauri-apps/plugin-process');
       await exit(0);
     } catch (_error) {
-      // 如果 Tauri API 失败，尝试其他方法
       if (window.close) {
         window.close();
       }
@@ -263,171 +247,186 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
   const policies = [
     {
       id: 'privacy',
-      title: '隐私政策',
-      description: '我们如何收集、使用和保护您的个人信息',
-      icon: <Shield24Regular />
+      title: t('legal.privacy_policy'),
+      description: t('legal.privacy_desc'),
+      icon: <Shield24Regular />,
+      url: 'https://admt.lacs.cc/agreement#privacy'
     },
     {
       id: 'agreement',
-      title: '用户协议',
-      description: '使用本软件的服务条款和条件',
-      icon: <Document24Regular />
+      title: t('legal.user_agreement'),
+      description: t('legal.agreement_desc'),
+      icon: <Document24Regular />,
+      url: 'https://admt.lacs.cc/agreement#user'
     },
     {
       id: 'data',
-      title: '数据收集说明',
-      description: '详细说明我们需要收集的数据类型',
-      icon: <DocumentBulletList24Regular />
+      title: t('legal.data_collection'),
+      description: t('legal.data_desc'),
+      icon: <DocumentBulletList24Regular />,
+      url: 'https://admt.lacs.cc/agreement#collection'
     }
   ];
 
-
-  const handlePolicyClick = (policyId: string) => {
-    const policyUrls = {
-      'agreement': 'https://admt.lacs.cc/agreement#user',
-      'privacy': 'https://admt.lacs.cc/agreement#privacy', 
-      'data': 'https://admt.lacs.cc/agreement#collection'
-    };
-    
-    const url = policyUrls[policyId as keyof typeof policyUrls];
-    if (url) {
-      try {
-        // 使用 Tauri 的 shell 插件打开外部浏览器
-        import('@tauri-apps/plugin-shell').then(({ open }) => {
-          open(url);
-        }).catch(() => {
-          // 如果 Tauri 不可用，使用 window.open
-          window.open(url, '_blank');
-        });
-      } catch (_error) {
-        // 最后的备选方案
+  const handlePolicyClick = (url: string) => {
+    try {
+      import('@tauri-apps/plugin-shell').then(({ open }) => {
+        open(url);
+      }).catch(() => {
         window.open(url, '_blank');
-      }
+      });
+    } catch (_error) {
+      window.open(url, '_blank');
     }
   };
 
   return (
     <>
-      {open && (
-        <div className={styles.container}>
-          <div className={styles.leftPanel}>
-            <div className={styles.appIconContainer}>
-              <img src={admtLogo512} alt="appIcon" className={styles.appIconImage}/>
-            </div>
-          </div>
+      <AnimatePresence>
+        {open && (
+          <div className={styles.container}>
+            {/* Background Animations */}
+            <style>
+              {`
+                @keyframes gradientBG {
+                  0% { background-position: 0% 50%; }
+                  50% { background-position: 100% 50%; }
+                  100% { background-position: 0% 50%; }
+                }
+              `}
+            </style>
+            
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.6, bounce: 0.3 }}
+              className={styles.glassCard}
+            >
+              <div className={styles.leftPanel}>
+                 <motion.img 
+                    src={admtLogo512} 
+                    alt="Logo" 
+                    className={styles.appIconImage}
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                 />
+                 <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                 >
+                     <Text weight="bold" size={600} align="center" block>{t('welcome.app_name')}</Text>
+                     <Text size={200} align="center" style={{ color: tokens.colorNeutralForeground3, marginTop: '8px' }} block>
+                         {t('welcome.app_subtitle')}
+                     </Text>
+                 </motion.div>
+                 
+                 <div className={styles.versionTag}>
+                    v1.2.0
+                 </div>
+              </div>
 
-          <div className={styles.rightPanel}>
-            <div style={{
-              animation: 'fadeInUp 0.3s ease-out forwards',
-              opacity: 0,
-              transform: 'translateY(20px)',
-              width: '100%',
-            }}>
-              <Card className={styles.card}>
+              <div className={styles.rightPanel}>
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Text className={styles.welcomeTitle} block>{t('welcome.title')}</Text>
+                     <Text className={styles.welcomeSubtitle} block>
+                         {t('welcome.subtitle')}
+                     </Text>
 
-                <div className={styles.content}>
-                  <div className={styles.header}>
-                    <Text className={styles.title}>欢迎使用玩机管家，请同意以下条款以继续使用</Text>
-                  </div>
+                    <div className={styles.policyList}>
+                        {policies.map((p, index) => (
+                            <motion.div 
+                                key={p.id}
+                                className={styles.policyItem}
+                                onClick={() => handlePolicyClick(p.url)}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.4 + (index * 0.1) }}
+                            >
+                                <div className={styles.policyIconBox}>
+                                    {p.icon}
+                                </div>
+                                <div className={styles.policyInfo}>
+                                    <span className={styles.policyTitle}>{p.title}</span>
+                                    <span className={styles.policyDesc}>{p.description}</span>
+                                </div>
+                                <Open24Regular style={{ color: tokens.colorNeutralForeground3 }} />
+                            </motion.div>
+                        ))}
+                    </div>
 
-                  <div style={{ display: 'flex', gap: tokens.spacingHorizontalM, justifyContent: 'center' }}>
-                    {policies.map((policy) => (
-                      <Button
-                        key={policy.id}
-                        className={styles.policyButton}
-                        appearance="subtle"
-                        onClick={() => handlePolicyClick(policy.id)}
-                        style={{ flex: 1, marginBottom: 0 }}
-                      >
-                        <div className={styles.policyButtonContent}>
-                          <div className={styles.policyButtonIcon}>{policy.icon}</div>
-                          <div className={styles.policyButtonText}>
-                            <div className={styles.policyButtonTitle}>{policy.title}</div>
-                          </div>
+                    <div className={styles.footer}>
+                        <div className={styles.checkboxWrapper}>
+                            <Checkbox
+                                checked={acceptedAll}
+                                onChange={(_, data) => setAcceptedAll(data.checked === true)}
+                                label={<Text weight="medium">{t('legal.consent_checkbox')}</Text>}
+                            />
                         </div>
-                        <ChevronRight24Regular className={styles.policyButtonArrow} />
-                      </Button>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: tokens.spacingVerticalL }}>
-                    <div style={{ flex: 1 }}>
-                      <Checkbox
-                        checked={acceptedAll}
-                        onChange={(_, data) => setAcceptedAll(data.checked === true)}
-                        label="我已阅读并同意以上所有条款"
-                        size="large"
-                        required
-                      />
+                        
+                        <div className={styles.actionButtons}>
+                            <Button 
+                                appearance="secondary"
+                                onClick={() => setShowExitConfirm(true)}
+                            >
+                                {t('legal.exit_browse')}
+                            </Button>
+                            <Button 
+                                appearance="primary"
+                                size="large"
+                                onClick={handleAccept}
+                                disabled={!acceptedAll}
+                                icon={<CheckmarkCircle24Regular />}
+                            >
+                                {t('legal.agree_continue')}
+                            </Button>
+                        </div>
                     </div>
-                    <div className={styles.actions} style={{ margin: 0 }}>
-                      <Button
-                        appearance="secondary"
-                        icon={<Dismiss24Regular />}
-                        onClick={() => setShowExitConfirm(true)}
-                        size="large"
-                        style={{ marginRight: tokens.spacingHorizontalS }}
-                      >
-                        不同意
-                      </Button>
-                      <Button
-                        appearance="primary"
-                        onClick={handleAccept}
-                        disabled={!acceptedAll}
-                        size="large"
-                        icon={<CheckmarkCircle24Regular />}
-                      >
-                        同意
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Text className={styles.policyButtonDesc}>
-                    © 2020-2025 领创工作室. 保留所有权利。 
-                  </Text>
-                </div>
-              </Card>
-            </div>
+                </motion.div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
-
-
+        )}
+      </AnimatePresence>
 
       {/* 退出确认对话框 */}
       <Dialog open={showExitConfirm} modalType="modal">
-        <DialogSurface style={{
-          animation: 'fadeIn 0.2s ease-out forwards'
-        }}>
+        <DialogSurface>
           <DialogBody>
             <DialogTitle>
               <div className={styles.dialogHeader}>
                 <Warning24Regular style={{ color: tokens.colorPaletteRedForeground1 }} />
-                确认退出
+                {t('legal.confirm_exit_title')}
               </div>
             </DialogTitle>
             <DialogContent>
               <Text>
-                您选择不同意必需的条款。这意味着软件无法正常运行，将会退出应用。
+                {t('legal.confirm_exit_desc')}
               </Text>
-              <Text>
-                如果您改变主意，可以点击"返回"重新考虑。
+              <br />
+              <Text style={{ marginTop: '10px', display: 'block' }}>
+                {t('legal.data_promise')}
               </Text>
             </DialogContent>
             <DialogActions>
               <Button
                 appearance="secondary"
                 onClick={() => setShowExitConfirm(false)}
-                icon={<ArrowLeft24Regular />}
               >
-                返回重新考虑
+                {t('common.think_again')}
               </Button>
               <Button
                 appearance="primary"
                 onClick={handleReject}
-                icon={<Dismiss24Regular />}
+                style={{ backgroundColor: tokens.colorPaletteRedBackground3, color: tokens.colorNeutralForegroundOnBrand }}
               >
-                确认退出应用
+                {t('common.confirm_exit')}
               </Button>
             </DialogActions>
           </DialogBody>
@@ -436,30 +435,5 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     </>
   );
 };
-
-// 添加全局动画样式
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-`;
-document.head.appendChild(style);
 
 export default PrivacyConsentDialog;

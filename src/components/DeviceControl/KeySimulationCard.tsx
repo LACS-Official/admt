@@ -24,6 +24,7 @@ import {
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from '@/stores/appStore';
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -68,6 +69,7 @@ interface KeySimulationCardProps {
 
 const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { deviceService } = useDeviceService();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
   const [wifiEnabled, setWifiEnabled] = useState<boolean>(false);
@@ -79,7 +81,7 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
     if (!device.connected) {
       setStatusBarMessage({
         type: "error",
-        message: "请确保设备已连接并启用USB调试",
+        message: t('device_control.msg_check_connection'),
       });
       return;
     }
@@ -93,15 +95,15 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
       if (commandId === "wifi_toggle") {
         const wifiState = wifiEnabled ? "disable" : "enable";
         actualCommand = ["shell", "svc", "wifi", wifiState];
-        actualDescription = wifiEnabled ? "关闭WiFi" : "开启WiFi";
+        actualDescription = wifiEnabled ? t('device_control.desc_wifi_off') : t('device_control.desc_wifi_on');
       } else if (commandId === "mobile_data_toggle") {
         const dataState = mobileDataEnabled ? "disable" : "enable";
         actualCommand = ["shell", "svc", "data", dataState];
-        actualDescription = mobileDataEnabled ? "关闭移动数据" : "开启移动数据";
+        actualDescription = mobileDataEnabled ? t('device_control.desc_mobile_data_off') : t('device_control.desc_mobile_data_on');
       } else if (commandId === "airplane_mode") {
         const airplaneState = airplaneModeEnabled ? "0" : "1";
         actualCommand = ["shell", "settings", "put", "global", "airplane_mode_on", airplaneState];
-        actualDescription = airplaneModeEnabled ? "关闭飞行模式" : "开启飞行模式";
+        actualDescription = airplaneModeEnabled ? t('device_control.desc_airplane_mode_off') : t('device_control.desc_airplane_mode_on');
       }
       
       // 检查是否为需要特殊权限的命令
@@ -129,27 +131,27 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
           }
         } else {
           // 针对不同类型的权限错误提供不同的错误提示
-          if (result.error?.includes('SecurityException')) {
+            if (result.error?.includes('SecurityException')) {
             if (isKeyEventCommand) {
               setStatusBarMessage({
                 type: "error",
-                message: `执行${description}失败：需要设备USB调试安全设置权限或无障碍服务权限`,
+                message: t('device_control.msg_exec_failed_perm', { desc: description }),
               });
             } else if (isSettingsCommand && result.error?.includes('WRITE_SECURE_SETTINGS')) {
               setStatusBarMessage({
                 type: "error",
-                message: `执行${description}失败：需要设备WRITE_SECURE_SETTINGS权限（通常需要root权限）`,
+                message: t('device_control.msg_exec_failed_root', { desc: description }),
               });
             } else {
               setStatusBarMessage({
                 type: "error",
-                message: `执行${description}失败：需要设备特殊权限`,
+                message: t('device_control.msg_exec_failed_special', { desc: description }),
               });
             }
           } else {
             setStatusBarMessage({
               type: "error",
-              message: result.error || "未知错误",
+              message: result.error || t('device_control.msg_unknown_error'),
             });
           }
         }
@@ -157,13 +159,13 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
         // 捕获执行过程中的其他错误
         setStatusBarMessage({
           type: "error",
-          message: `${description}失败: ${error}`,
+          message: t('device_control.msg_exec_failed', { desc: description, error: error }),
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `${description}失败: ${error}`,
+        message: t('device_control.msg_exec_failed', { desc: description, error: error }),
       });
     } finally {
       setExecutingCommand(null);
@@ -173,87 +175,87 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
   const systemCommands = [
     {
       id: "screenshot",
-      label: "截屏",
+      label: t('device_control.screenshot'),
       icon: <Screenshot24Regular />,
       command: ["shell", "screencap", "/sdcard/screenshot.png"],
-      description: "截取屏幕截图",
+      description: t('device_control.desc_screenshot'),
     },
     {
       id: "lock_screen",
-      label: "锁屏",
+      label: t('device_control.lock_screen'),
       icon: <LockClosed24Regular />,
       command: ["shell", "input", "keyevent", "26"],
-      description: "锁定屏幕",
+      description: t('device_control.desc_lock_screen'),
     },
     {
       id: "home",
-      label: "返回主屏",
+      label: t('device_control.home'),
       icon: <Home24Regular />,
       command: ["shell", "input", "keyevent", "3"],
-      description: "返回主屏幕",
+      description: t('device_control.desc_home'),
     },
     {
       id: "back",
-      label: "返回",
+      label: t('device_control.back'),
       icon: <ArrowLeft24Regular />,
       command: ["shell", "input", "keyevent", "4"],
-      description: "模拟返回键",
+      description: t('device_control.desc_back'),
     },
     {
       id: "recent_apps",
-      label: "最近应用",
+      label: t('device_control.recent_apps'),
       icon: <Apps24Regular />,
       command: ["shell", "input", "keyevent", "187"],
-      description: "打开最近应用",
+      description: t('device_control.desc_recent_apps'),
     },
     {
       id: "wake_up",
-      label: "唤醒屏幕",
+      label: t('device_control.wake_up'),
       icon: <Power24Regular />,
       command: ["shell", "input", "keyevent", "224"],
-      description: "唤醒设备屏幕",
+      description: t('device_control.desc_wake_up'),
     },
     {
       id: "brightness_up",
-      label: "增加亮度",
+      label: t('device_control.brightness_up'),
       icon: <WeatherSunny24Regular />,
       command: ["shell", "settings", "put", "system", "screen_brightness", "255"],
-      description: "增加屏幕亮度",
+      description: t('device_control.desc_brightness_up'),
     },
     {
       id: "brightness_down",
-      label: "降低亮度",
+      label: t('device_control.brightness_down'),
       icon: <WeatherSunny24Regular />,
       command: ["shell", "settings", "put", "system", "screen_brightness", "50"],
-      description: "降低屏幕亮度",
+      description: t('device_control.desc_brightness_down'),
     },
     {
       id: "wifi_toggle",
-      label: wifiEnabled ? "关闭WiFi" : "开启WiFi",
+      label: wifiEnabled ? t('device_control.wifi_toggle_off') : t('device_control.wifi_toggle_on'),
       icon: <Wifi124Regular />,
       command: ["shell", "svc", "wifi", "disable"],
-      description: wifiEnabled ? "关闭WiFi" : "开启WiFi",
+      description: wifiEnabled ? t('device_control.desc_wifi_off') : t('device_control.desc_wifi_on'),
     },
     {
       id: "mobile_data_toggle",
-      label: mobileDataEnabled ? "关闭数据" : "开启数据",
+      label: mobileDataEnabled ? t('device_control.mobile_data_off') : t('device_control.mobile_data_on'),
       icon: <Cellular4GRegular />,
       command: ["shell", "svc", "data", "disable"],
-      description: mobileDataEnabled ? "关闭移动数据" : "开启移动数据",
+      description: mobileDataEnabled ? t('device_control.desc_mobile_data_off') : t('device_control.desc_mobile_data_on'),
     },
     {
       id: "airplane_mode",
-      label: airplaneModeEnabled ? "关闭飞行" : "开启飞行",
+      label: airplaneModeEnabled ? t('device_control.airplane_mode_off') : t('device_control.airplane_mode_on'),
       icon: <Airplane24Regular />,
       command: ["shell", "settings", "put", "global", "airplane_mode_on", "1"],
-      description: airplaneModeEnabled ? "关闭飞行模式" : "开启飞行模式",
+      description: airplaneModeEnabled ? t('device_control.desc_airplane_mode_off') : t('device_control.desc_airplane_mode_on'),
     },
     {
       id: "developer_options",
-      label: "开发者选项",
+      label: t('device_control.developer_options'),
       icon: <WrenchScrewdriver24Regular />,
       command: ["shell", "am", "start", "-a", "android.settings.APPLICATION_DEVELOPMENT_SETTINGS"],
-      description: "打开开发者选项",
+      description: t('device_control.desc_developer_options'),
     },
   ];
 
@@ -263,7 +265,7 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
     <Card className={styles.card}>
       <CardHeader
         image={<Settings24Regular />}
-        header={<Text weight="semibold">按键模拟</Text>}
+        header={<Text weight="semibold">{t('device_control.key_simulation')}</Text>}
       />
       
       <div className={styles.content}>
@@ -288,7 +290,7 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
 
         {!isDeviceAvailable && (
           <Text size={200} style={{ textAlign: "center", color: "var(--colorNeutralForeground3)" }}>
-            设备未连接或不在系统模式
+            {t('device_control.device_unavailable')}
           </Text>
         )}
       </div>

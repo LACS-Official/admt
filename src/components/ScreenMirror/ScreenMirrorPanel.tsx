@@ -13,6 +13,7 @@ import ScreenMirrorService from "../../services/screenMirrorService";
 import DeviceSelectionCard from "./DeviceSelectionCard";
 import MirrorDisplayCard from "./MirrorDisplayCard";
 import SettingsCard from "./SettingsCard";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
@@ -76,6 +77,7 @@ const useStyles = makeStyles({
 
 const ScreenMirrorPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { devices } = useDeviceStore();
   const {
     activeSessions,
@@ -126,8 +128,8 @@ const ScreenMirrorPanel: React.FC = () => {
         // 简化处理：直接将所有连接的设备转换为支持投屏的设备
         const supported = connectedDevices.map(device => ({
           serial: device.serial,
-          name: device.properties?.marketName || device.properties?.productName || `设备 ${device.serial.substring(0, 8)}`,
-          model: device.properties?.model || "未知型号",
+          name: device.properties?.marketName || device.properties?.productName || t('mirror.default_dev_name', { serial: device.serial.substring(0, 8) }),
+          model: device.properties?.model || t('mirror.unknown_model'),
           resolution: "1920x1080", // 默认分辨率
           density: 480, // 默认密度
           orientation: "portrait", // 默认方向
@@ -144,7 +146,7 @@ const ScreenMirrorPanel: React.FC = () => {
         }
       } catch (error) {
         console.error("Failed to prepare devices for mirroring:", error);
-        setError("准备设备时出错");
+        setError(t('mirror.error_preparing'));
       } finally {
         setLoading(false);
         isCheckingRef.current = false;
@@ -160,7 +162,7 @@ const ScreenMirrorPanel: React.FC = () => {
     // 检查设备是否已经有正在投屏的会话
     const existingSession = activeSessions.find(s => s.deviceSerial === device.serial && s.status === 'streaming');
     if (existingSession) {
-      setError(`设备 ${device.name || device.serial} 已经在投屏中`);
+      setError(t('mirror.device_already_mirroring', { name: device.name || device.serial }));
       return;
     }
 
@@ -173,7 +175,7 @@ const ScreenMirrorPanel: React.FC = () => {
       console.log("Screen mirror started:", session);
     } catch (error) {
       console.error("Failed to start screen mirror:", error);
-      setError(`启动投屏失败: ${error}`);
+      setError(t('mirror.start_failed', { error }));
     } finally {
       setLoading(false);
     }
@@ -183,7 +185,7 @@ const ScreenMirrorPanel: React.FC = () => {
   const handleDeviceSelect = async (device: ScreenMirrorDevice | null) => {
     // 如果设备正在投屏，则不执行任何操作
     if (device && isDeviceStreaming(device.serial)) {
-      setError(`设备 ${device.name || device.serial} 已经在投屏中`);
+      setError(t('mirror.device_already_mirroring', { name: device.name || device.serial }));
       return;
     }
     
@@ -208,7 +210,7 @@ const ScreenMirrorPanel: React.FC = () => {
       // 检查设备是否已经有正在投屏的会话
       const existingSession = activeSessions.find(s => s.deviceSerial === device.serial && s.status === 'streaming');
       if (existingSession) {
-        setError(`设备 ${device.name || device.serial} 已经在投屏中`);
+        setError(t('mirror.device_already_mirroring', { name: device.name || device.serial }));
         return;
       }
       await handleStartMirror(device);
@@ -226,7 +228,7 @@ const ScreenMirrorPanel: React.FC = () => {
       console.log("Screen mirror stopped");
     } catch (error) {
       console.error("Failed to stop screen mirror:", error);
-      setError(`停止投屏失败: ${error}`);
+      setError(t('mirror.stop_failed', { error }));
     } finally {
       setLoading(false);
     }
@@ -250,9 +252,9 @@ const ScreenMirrorPanel: React.FC = () => {
       {connectedDevices.length === 0 ? (
         <div className={styles.noDevice}>
           <Phone24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>未检测到设备</Text>
+          <Text size={400}>{t('mirror.no_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备已连接并启用USB调试
+            {t('mirror.no_device_hint')}
           </Text>
         </div>
       ) : (

@@ -24,6 +24,7 @@ import {
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -138,6 +139,7 @@ interface RebootOption {
 
 const DeviceRebootCard: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { selectedDevice } = useDeviceStore();
   const { setStatusBarMessage } = useAppStore();
   const [isRebooting, setIsRebooting] = useState(false);
@@ -149,42 +151,42 @@ const DeviceRebootCard: React.FC = () => {
   const rebootOptions: RebootOption[] = [
     {
       id: "normal",
-      label: "系统模式 System",
-      description: "重启到Android系统",
+      label: t('reboot.system'),
+      description: t('reboot.system_desc'),
       command: "system", 
     },
     {
       id: "recovery",
-      label: "恢复模式 Recovery",
-      description: "进入恢复模式",
+      label: t('reboot.recovery'),
+      description: t('reboot.recovery_desc'),
       command: "recovery", 
       warning: true,
     },
     {
       id: "bootloader",
-      label: "引导  Bootloader",
-      description: "进入引导加载程序模式",
+      label: t('reboot.bootloader'),
+      description: t('reboot.bootloader_desc'),
       command: "bootloader", 
       warning: true,
     },
     {
       id: "fastboot",
-      label: "快速引导 Fastboot",
-      description: "进入快速启动模式",
+      label: t('reboot.fastboot'),
+      description: t('reboot.fastboot_desc'),
       command: "fastboot", 
       warning: true,  
     },
     {
       id: "edl",
-      label: "高通深刷 9008",
-      description: "重启到9008模式",
+      label: t('reboot.edl'),
+      description: t('reboot.edl_desc'),
       command: "edl", 
       warning: true,
     },
     {
       id: "poweroff",
-      label: "关机模式 poweroff",
-      description: "关机",
+      label: t('reboot.poweroff'),
+      description: t('reboot.poweroff_desc'),
       command: "poweroff",
       warning: true,
     },
@@ -227,7 +229,7 @@ const DeviceRebootCard: React.FC = () => {
     if (!selectedDevice) {
       setStatusBarMessage({
         type: "error",
-        message: "请先连接一个设备",
+        message: t('error.no_device'),
         duration: 3000,
       });
       return;
@@ -236,7 +238,7 @@ const DeviceRebootCard: React.FC = () => {
     if (!selectedDevice.connected) {
       setStatusBarMessage({
         type: "error",
-        message: "设备未连接，无法执行重启操作",
+        message: t('error.device_not_connected'),
         duration: 3000,
       });
       return;
@@ -269,7 +271,7 @@ const DeviceRebootCard: React.FC = () => {
     // 在状态栏显示确认提示
     setStatusBarMessage({
       type: "warning",
-      message: `请再次点击 ${option.label} 确认执行重启操作`,
+      message: t('reboot.confirm_click', { label: option.label }),
       icon: <Warning24Regular />,
       duration: 5000,
     });
@@ -286,7 +288,7 @@ const DeviceRebootCard: React.FC = () => {
     setRebootCountdown(2);
     setStatusBarMessage({
       type: "warning",
-      message: `正在重启到 ${option.label}... (2秒)`,
+      message: t('reboot.rebooting_countdown', { label: option.label, seconds: 2 }),
       icon: <Power24Regular />,
     });
 
@@ -299,7 +301,7 @@ const DeviceRebootCard: React.FC = () => {
       if (countdown > 0) {
         setStatusBarMessage({
           type: "warning",
-          message: `正在重启到 ${option.label}... (${countdown}秒)`,
+          message: t('reboot.rebooting_countdown', { label: option.label, seconds: countdown }),
           icon: <Power24Regular />,
         });
       } else {
@@ -319,7 +321,7 @@ const DeviceRebootCard: React.FC = () => {
     try {
       setStatusBarMessage({
         type: "info",
-        message: `正在发送重启命令...`,
+        message: t('reboot.sending_command'),
         icon: <Power24Regular />,
       });
 
@@ -330,18 +332,18 @@ const DeviceRebootCard: React.FC = () => {
 
       setStatusBarMessage({
         type: "success",
-        message: `重启命令已发送，设备正在${option.label}`,
+        message: t('reboot.command_sent', { label: option.label }),
         duration: 3000,
       });
     } catch (error) {
-      let errorMessage = "重启失败：未知错误";
+      let errorMessage = t('reboot.failed_unknown');
 
       if (error instanceof Error) {
-        errorMessage = `重启失败：${error.message}`;
+        errorMessage = t('reboot.failed_message', { message: error.message });
       } else if (typeof error === 'string') {
-        errorMessage = `重启失败：${error}`;
+        errorMessage = t('reboot.failed_message', { message: error });
       } else if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage = `重启失败：${(error as { message: string }).message}`;
+        errorMessage = t('reboot.failed_message', { message: (error as { message: string }).message });
       }
 
       setStatusBarMessage({
@@ -375,7 +377,7 @@ const DeviceRebootCard: React.FC = () => {
         header={
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <ArrowClockwise24Regular />
-            <Text weight="semibold">将设备重启到</Text>
+            <Text weight="semibold">{t('reboot.title')}</Text>
           </div>
         }
       />

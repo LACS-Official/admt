@@ -31,6 +31,7 @@ import {
   Radio,
   RadioGroup,
 } from "@fluentui/react-components";
+import { useTranslation } from "react-i18next";
 import { Apps24Regular,
   ArrowClockwise24Regular,
   Delete24Regular,
@@ -259,6 +260,7 @@ const AppManagerPanel: React.FC = () => {
   const { selectedDevice } = useDeviceStore();
   const { deviceService } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
+  const { t } = useTranslation();
 
   // 无需状态管理，已移除标签页相关状态
   const [errorInfo] = useState<ErrorInfo | null>(null);
@@ -307,7 +309,7 @@ const AppManagerPanel: React.FC = () => {
       setViewSource("apps");
       setStatusBarMessage({
         type: "success",
-        message: `已获取 ${cached.apps.length} 个已安装应用（缓存）`,
+        message: t('app_manager.success_get_apps', { count: cached.apps.length }),
       });
       return;
     }
@@ -364,12 +366,12 @@ const AppManagerPanel: React.FC = () => {
 
       setStatusBarMessage({
         type: "success",
-        message: `成功获取 ${appsWithVersion.length} 个已安装应用（耗时 ${loadTime}ms）`,
+        message: t('app_manager.success_get_apps_time', { count: appsWithVersion.length, time: loadTime }),
       });
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `无法获取已安装应用列表: ${error}`,
+        message: t('app_manager.fail_get_apps', { error }),
       });
       setApps([]);
       
@@ -396,7 +398,7 @@ const AppManagerPanel: React.FC = () => {
       setViewSource("apps");
       setStatusBarMessage({
         type: "success",
-        message: `已获取 ${cached.apps.length} 个已安装应用（缓存）`,
+        message: t('app_manager.success_get_apps', { count: cached.apps.length }),
       });
       return;
     }
@@ -493,12 +495,12 @@ const AppManagerPanel: React.FC = () => {
 
       setStatusBarMessage({
         type: "success",
-        message: `成功获取 ${allApps.length} 个已安装应用（耗时 ${loadTime}ms）`,
+        message: t('app_manager.success_get_apps_time', { count: allApps.length, time: loadTime }),
       });
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `无法获取已安装应用列表: ${error}`,
+        message: t('app_manager.fail_get_apps', { error }),
       });
       setApps([]);
       
@@ -539,7 +541,7 @@ const AppManagerPanel: React.FC = () => {
           // 这里的版本信息会在loadCurrentApp函数中获取并更新
           source = [{
             packageName: currentApp,
-            versionName: "正在获取版本信息...",
+            versionName: t('app_manager.getting_version'),
             isEnabled: true,
             isSystemApp: false,
           } as unknown as InstalledApp];
@@ -588,7 +590,7 @@ const AppManagerPanel: React.FC = () => {
         if (result.output && (result.output.includes('Success') || result.output.includes('成功'))) {
           setStatusBarMessage({
             type: "success",
-            message: `${appToUninstall.packageName} 已成功卸载`,
+            message: t('app_manager.uninstall_success', { packageName: appToUninstall.packageName }),
           });
           loadAppsBatch(); // 重新加载应用列表
         } else {
@@ -600,13 +602,13 @@ const AppManagerPanel: React.FC = () => {
       } else {
         setStatusBarMessage({
           type: "error",
-          message: result.error || "应用卸载失败",
+          message: result.error || t('app_manager.uninstall_fail'),
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `应用卸载失败: ${error}`,
+        message: t('app_manager.uninstall_fail') + `: ${error}`,
       });
     }
     setAppToUninstall(null);
@@ -642,7 +644,7 @@ const AppManagerPanel: React.FC = () => {
     try {
       setStatusBarMessage({
         type: "info",
-        message: `开始卸载 ${packageNames.length} 个应用...`,
+        message: t('app_manager.batch_start_uninstall', { count: packageNames.length }),
       });
 
       // 逐个卸载应用
@@ -671,7 +673,7 @@ const AppManagerPanel: React.FC = () => {
       // 显示批量卸载结果
       setStatusBarMessage({
         type: successCount > 0 ? "success" : "error",
-        message: `成功: ${successCount}个, 失败: ${failCount}个`,
+        message: t('app_manager.batch_result', { success: successCount, fail: failCount }),
       });
 
       // 创建批量操作结果对象
@@ -704,7 +706,7 @@ const AppManagerPanel: React.FC = () => {
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `批量卸载操作失败: ${error}`,
+        message: t('common.fail') + `: ${error}`,
       });
     }
   };
@@ -721,7 +723,7 @@ const AppManagerPanel: React.FC = () => {
     try {
       setStatusBarMessage({
         type: "info",
-        message: `开始${freeze ? '冻结' : '解冻'} ${packageNames.length} 个应用...`,
+        message: freeze ? t('app_manager.batch_start_freeze', { count: packageNames.length }) : t('app_manager.batch_start_unfreeze', { count: packageNames.length }),
       });
 
       // 逐个冻结/解冻应用
@@ -755,7 +757,7 @@ const AppManagerPanel: React.FC = () => {
       // 显示批量操作结果
       setStatusBarMessage({
         type: successCount > 0 ? "success" : "error",
-        message: `成功: ${successCount}个, 失败: ${failCount}个`,
+        message: t('app_manager.batch_result', { success: successCount, fail: failCount }),
       });
 
       // 创建批量操作结果对象
@@ -826,7 +828,7 @@ const AppManagerPanel: React.FC = () => {
     try {
       setStatusBarMessage({
         type: "info",
-        message: `开始强制停止 ${packageNames.length} 个应用...`,
+        message: t('app_manager.batch_start_stop', { count: packageNames.length }),
       });
 
       // 逐个强制停止应用
@@ -854,7 +856,7 @@ const AppManagerPanel: React.FC = () => {
       // 显示批量操作结果
       setStatusBarMessage({
         type: successCount > 0 ? "success" : "error",
-        message: `成功: ${successCount}个, 失败: ${failCount}个`,
+        message: t('app_manager.batch_result', { success: successCount, fail: failCount }),
       });
 
       // 创建批量操作结果对象
@@ -902,13 +904,13 @@ const AppManagerPanel: React.FC = () => {
       // 选择保存目录
       const targetDir = await openDialog({ directory: true, multiple: false });
       if (!targetDir || typeof targetDir !== "string") {
-        setStatusBarMessage({ type: "info", message: "已取消批量导出" });
+        setStatusBarMessage({ type: "info", message: t('app_manager.export_cancelled') });
         return;
       }
 
       setStatusBarMessage({
         type: "info",
-        message: `开始导出 ${packageNames.length} 个应用的安装包...`,
+        message: t('app_manager.batch_start_export', { count: packageNames.length }),
       });
 
       // 逐个导出应用安装包
@@ -950,7 +952,7 @@ const AppManagerPanel: React.FC = () => {
       // 显示批量操作结果
       setStatusBarMessage({
         type: successCount > 0 ? "success" : "error",
-        message: `成功: ${successCount}个, 失败: ${failCount}个`,
+        message: t('app_manager.batch_result', { success: successCount, fail: failCount }),
       });
 
       // 创建批量操作结果对象
@@ -1009,13 +1011,13 @@ const AppManagerPanel: React.FC = () => {
       
       // 打开对话框让用户选择保存目录（但不选择文件名）
       const directory = await openDialog({
-        title: "选择保存目录",
+        title: t('app_manager.select_save_dir'),
         directory: true,
         multiple: false,
       });
 
       if (!directory || typeof directory !== "string") {
-        setStatusBarMessage({ type: "info", message: "已取消导出" });
+        setStatusBarMessage({ type: "info", message: t('app_manager.export_cancelled') });
         return;
       }
 
@@ -1024,9 +1026,9 @@ const AppManagerPanel: React.FC = () => {
 
       // 写入文件
       await writeTextFile(targetPath, JSON.stringify(exportData, null, 2));
-      setStatusBarMessage({ type: "success", message: `应用列表已导出到：${targetPath}` });
+      setStatusBarMessage({ type: "success", message: t('app_manager.export_success', { path: targetPath }) });
     } catch (error) {
-      setStatusBarMessage({ type: "error", message: `导出失败：${error}` });
+      setStatusBarMessage({ type: "error", message: t('app_manager.export_fail', { error }) });
     }
   };
 
@@ -1035,7 +1037,7 @@ const AppManagerPanel: React.FC = () => {
     try {
       // 选择文件
       const filePath = await openDialog({
-        title: "选择应用列表文件",
+        title: t('app_manager.select_import_file'),
         multiple: false,
         filters: [
           { name: "JSON Files", extensions: ["json"] },
@@ -1044,7 +1046,7 @@ const AppManagerPanel: React.FC = () => {
       });
 
       if (!filePath || typeof filePath !== "string") {
-        setStatusBarMessage({ type: "info", message: "已取消导入" });
+        setStatusBarMessage({ type: "info", message: t('app_manager.import_cancelled') });
         return;
       }
 
@@ -1054,7 +1056,7 @@ const AppManagerPanel: React.FC = () => {
 
       // 验证文件格式
       if (!importData.apps || !Array.isArray(importData.apps)) {
-        throw new Error("无效的应用列表文件格式");
+        throw new Error(t('app_manager.error_parse_list'));
       }
 
       // 设置选中的应用
@@ -1063,10 +1065,10 @@ const AppManagerPanel: React.FC = () => {
 
       setStatusBarMessage({ 
         type: "success", 
-        message: `成功导入 ${importedPackageNames.size} 个应用到选择列表` 
+        message: t('app_manager.import_success', { count: importedPackageNames.size }) 
       });
     } catch (error) {
-      setStatusBarMessage({ type: "error", message: `导入失败：${error}` });
+      setStatusBarMessage({ type: "error", message: t('app_manager.import_fail', { error }) });
     }
   };
 
@@ -1082,7 +1084,7 @@ const AppManagerPanel: React.FC = () => {
     try {
       setStatusBarMessage({
         type: "info",
-        message: `开始清除 ${packageNames.length} 个应用的数据...`,
+        message: t('app_manager.batch_start_clear', { count: packageNames.length }),
       });
 
       // 逐个清除应用数据
@@ -1095,7 +1097,7 @@ const AppManagerPanel: React.FC = () => {
             results.push(`✓ ${packageName}: 数据清除成功`);
           } else {
             failCount++;
-            results.push(`✗ ${packageName}: ${result.output || result.error || '清除数据失败'}`);
+            results.push(`✗ ${packageName}: ${result.output || result.error || t('app_manager.clear_data_fail')}`);
           }
         } catch (error) {
           failCount++;
@@ -1106,7 +1108,7 @@ const AppManagerPanel: React.FC = () => {
       // 显示批量操作结果
       setStatusBarMessage({
         type: successCount > 0 ? "success" : "error",
-        message: `成功: ${successCount}个, 失败: ${failCount}个`,
+        message: t('app_manager.batch_result', { success: successCount, fail: failCount }),
       });
 
       // 创建批量操作结果对象
@@ -1136,7 +1138,7 @@ const AppManagerPanel: React.FC = () => {
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `批量清除数据操作失败: ${error}`,
+        message: t('app_manager.batch_fail', { error }),
       });
     }
   };
@@ -1153,7 +1155,7 @@ const AppManagerPanel: React.FC = () => {
       );
       
       if (!activityResult.success || !activityResult.output) {
-        setStatusBarMessage({ type: "error", message: activityResult.error || "获取当前应用失败" });
+        setStatusBarMessage({ type: "error", message: activityResult.error || t('app_manager.fail_get_apps') });
         return;
       }
 
@@ -1162,7 +1164,7 @@ const AppManagerPanel: React.FC = () => {
       const resumed = lines.find(l => /ResumedActivity|mResumedActivity/.test(l));
       
       if (!resumed) {
-        setStatusBarMessage({ type: "info", message: "未解析到当前前台应用" });
+        setStatusBarMessage({ type: "info", message: t('app_manager.error_no_current_app') });
         return;
       }
 
@@ -1301,7 +1303,7 @@ const AppManagerPanel: React.FC = () => {
   // 格式化版本名称，处理各种格式问题
   const formatVersionName = (versionName: string): string => {
     if (!versionName || versionName.trim() === '') {
-      return '未知';
+      return t('common.unknown');
     }
     
     // 处理常见的版本格式问题
@@ -1356,15 +1358,15 @@ const AppManagerPanel: React.FC = () => {
         // 更新frozenAppsWithVersion状态
         setFrozenAppsWithVersion(frozenAppsWithVersion);
         setViewSource("frozen");
-        setStatusBarMessage({ type: "success", message: `已冻结应用：${frozenApps.length} 个` });
+        setStatusBarMessage({ type: "success", message: t('app_manager.msg_frozen_apps', { count: frozenApps.length }) });
       } else {
         setFrozenAppsWithVersion([]);
         setViewSource("frozen");
-        setStatusBarMessage({ type: "info", message: "没有找到已冻结的应用" });
+        setStatusBarMessage({ type: "info", message: t('app_manager.no_apps_found') });
       }
     } catch (e) {
       console.error('获取冻结应用失败:', e);
-      setStatusBarMessage({ type: "error", message: `获取冻结应用失败：${e}` });
+      setStatusBarMessage({ type: "error", message: t('app_manager.fail_get_apps', { error: e }) });
     }
   }, [selectedDevice, deviceService, setStatusBarMessage]);
 
@@ -1375,7 +1377,10 @@ const AppManagerPanel: React.FC = () => {
       const cmd = isEnabled ? `pm disable-user ${pkg}` : `pm enable ${pkg}`;
       const result = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [cmd]);
       if (result.success) {
-        setStatusBarMessage({ type: "success", message: `${isEnabled ? "已冻结" : "已解冻"} ${pkg}` });
+        setStatusBarMessage({ 
+          type: "success", 
+          message: t(isEnabled ? 'app_manager.msg_frozen' : 'app_manager.msg_unfrozen', { packageName: pkg }) 
+        });
         
         // 更新apps数组中的应用状态
         setApps(prev => 
@@ -1497,7 +1502,7 @@ const AppManagerPanel: React.FC = () => {
                 <Field className={styles.searchField}>
                   <Input
                     contentBefore={<Search24Regular />}
-                    placeholder="搜索应用名称或包名..."
+                    placeholder={t('app_manager.search_placeholder')}
                     value={searchQuery}
                     onChange={(_, data) => setSearchQuery(data.value)}
                   />
@@ -1505,16 +1510,16 @@ const AppManagerPanel: React.FC = () => {
                 
                 {/* 添加多选单选选择框 */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Text>类型:</Text>
+                  <Text>{t('common.info')}:</Text>
                   <div className={styles.buttonGroup}>
                     <Button
                       appearance={useBatchLoading ? "primary" : "secondary"}
                       size="small"
                       onClick={() => setUseBatchLoading(!useBatchLoading)}
                       disabled={isLoadingApps}
-                      title={useBatchLoading ? "当前使用分批加载（快速显示）" : "当前使用传统加载（一次性显示）"}
+                      title={useBatchLoading ? t('app_manager.batch_loading_tip') : t('app_manager.traditional_loading_tip')}
                     >
-                      {useBatchLoading ? "分批加载" : "传统加载"}
+                      {useBatchLoading ? t('app_manager.batch_loading') : t('app_manager.traditional_loading')}
                     </Button>
                     <Button
                       appearance={viewSource === "apps" && !includeSystemApps ? "primary" : "secondary"}
@@ -1530,7 +1535,7 @@ const AppManagerPanel: React.FC = () => {
                       }}
                       disabled={isLoadingApps}
                     >
-                      三方
+                      {t('app_manager.tab_apps')}
                     </Button>
                     <Button
                       appearance={viewSource === "apps" && includeSystemApps ? "primary" : "secondary"}
@@ -1546,7 +1551,7 @@ const AppManagerPanel: React.FC = () => {
                       }}
                       disabled={isLoadingApps}
                     >
-                      系统
+                      {t('app_manager.system_app')}
                     </Button>
                     <Button
                       appearance={viewSource === "current" ? "primary" : "secondary"}
@@ -1554,7 +1559,7 @@ const AppManagerPanel: React.FC = () => {
                       onClick={loadCurrentApp}
                       disabled={isLoadingApps}
                     >
-                      当前
+                      {t('app_manager.tab_current')}
                     </Button>
                     <Button
                       appearance={viewSource === "frozen" ? "primary" : "secondary"}
@@ -1562,7 +1567,7 @@ const AppManagerPanel: React.FC = () => {
                       onClick={loadFrozenApps}
                       disabled={isLoadingApps}
                     >
-                      已冻结
+                      {t('app_manager.tab_frozen')}
                     </Button>
                   </div>
                 </div>
@@ -1578,42 +1583,42 @@ const AppManagerPanel: React.FC = () => {
               onClick={handleBatchUninstall}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
-            卸载 {selectedApps.size > 0 && `(${selectedApps.size})`}
+            {t('app_manager.uninstall')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
               appearance="primary"
               onClick={() => handleBatchFreezeToggle(true)}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
-              冻结 {selectedApps.size > 0 && `(${selectedApps.size})`}
+              {t('app_manager.freeze')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
               appearance="primary"
               onClick={() => handleBatchFreezeToggle(false)}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
-              解冻 {selectedApps.size > 0 && `(${selectedApps.size})`}
+              {t('app_manager.unfreeze')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
               appearance="primary"
               onClick={handleBatchForceStop}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
-              强制停止 {selectedApps.size > 0 && `(${selectedApps.size})`}
+              {t('app_manager.force_stop')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
               appearance="primary"
               onClick={handleBatchExportApk}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
-              提取安装包 {selectedApps.size > 0 && `(${selectedApps.size})`}
+              {t('app_manager.export_apk')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
               appearance="primary"
               onClick={handleBatchClearData}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
-              清除数据 {selectedApps.size > 0 && `(${selectedApps.size})`}
+              {t('app_manager.clear_data')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
               appearance="primary"
@@ -1621,7 +1626,7 @@ const AppManagerPanel: React.FC = () => {
               onClick={handleExportAppList}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
-              导出列表 {selectedApps.size > 0 && `(${selectedApps.size})`}
+              {t('app_manager.export_list')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
               appearance="primary"
@@ -1629,25 +1634,25 @@ const AppManagerPanel: React.FC = () => {
               onClick={handleImportAppList}
               disabled={isLoadingApps}
             >
-              导入列表
+              {t('app_manager.import_list')}
             </Button>
           </div>
           <div className={styles.content}>
 
             {isLoadingApps ? (
               <div className={styles.loadingContainer}>
-                <Spinner size="large" label="正在加载应用列表..." />
+                <Spinner size="large" label={t('app_manager.loading')} />
               </div>
             ) : filteredApps.length === 0 ? (
               <div className={styles.emptyState}>
                 <Apps24Regular style={{ fontSize: "48px" }} />
-                <Text>未找到应用</Text>
-                <Text size={200}>尝试调整搜索条件或刷新列表</Text>
+                <Text>{t('app_manager.no_apps_found')}</Text>
+                <Text size={200}>{t('unlock.select_device_hint')}</Text>
 
               </div>
             ) : (
               <div className={styles.tableContainer}>
-                <Table arial-label="已安装应用列表" style={{ tableLayout: 'fixed', width: '100%' }}>
+                <Table arial-label={t('app_manager.card_title')} style={{ tableLayout: 'fixed', width: '100%' }}>
                   <colgroup>
                     {/* 选择框列：固定较小宽度 */}
                     <col style={{ width: 48 }} />
@@ -1666,10 +1671,10 @@ const AppManagerPanel: React.FC = () => {
                           onChange={(_, data) => handleSelectAll(data.checked === true)}
                         />
                       </TableHeaderCell>
-                      <TableHeaderCell>应用</TableHeaderCell>
-                      <TableHeaderCell>版本</TableHeaderCell>
-                      <TableHeaderCell>状态</TableHeaderCell>
-                      <TableHeaderCell>更多</TableHeaderCell>
+                      <TableHeaderCell>{t('app_manager.card_title')}</TableHeaderCell>
+                      <TableHeaderCell>{t('app_manager.version')}</TableHeaderCell>
+                      <TableHeaderCell>{t('app_manager.status')}</TableHeaderCell>
+                      <TableHeaderCell>{t('app_manager.actions')}</TableHeaderCell>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1690,11 +1695,11 @@ const AppManagerPanel: React.FC = () => {
                         </TableCell>
                         <TableCell className={styles.compactCell}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <Text size={200} weight="semibold" title={app.versionName || "未知版本"}>
-                              {app.versionName ? formatVersionName(app.versionName) : "未知"}
+                            <Text size={200} weight="semibold" title={app.versionName || t('app_manager.unknown_version')}>
+                              {app.versionName ? formatVersionName(app.versionName) : t('common.unknown')}
                             </Text>
                             {app.versionCode && (
-                              <Text size={100} style={{ color: "var(--colorNeutralForeground3)" }} title={`版本代码: ${app.versionCode}`}>
+                              <Text size={100} style={{ color: "var(--colorNeutralForeground3)" }} title={t('app_manager.version_code_tip', { code: app.versionCode })}>
                                 v{app.versionCode}
                               </Text>
                             )}
@@ -1702,7 +1707,7 @@ const AppManagerPanel: React.FC = () => {
                         </TableCell>
                         <TableCell className={styles.compactCell}>
                           <Badge appearance={app.isEnabled ? "filled" : "outline"} color={app.isEnabled ? "success" : "warning"} size="small">
-                            {app.isEnabled ? "已启用" : "已禁用"}
+                            {app.isEnabled ? t('app_manager.enabled') : t('app_manager.disabled')}
                           </Badge>
                         </TableCell>
                         <TableCell className={styles.compactCell}>
@@ -1722,7 +1727,7 @@ const AppManagerPanel: React.FC = () => {
                                     // 可以在这里显示应用详细信息对话框
                                   }}
                                 >
-                                  查看详情
+                                  {t('app_properties.detail_info')}
                                 </MenuItem>
                                 {!app.isSystemApp && [
                                   <MenuItem
@@ -1730,25 +1735,25 @@ const AppManagerPanel: React.FC = () => {
                                     icon={<Delete24Regular />}
                                     onClick={() => handleUninstallClick(app)}
                                   >
-                                    卸载应用
+                                    {t('app_manager.uninstall')}
                                   </MenuItem>,
                                   <MenuItem
                                     key={`freeze-${app.packageName}`}
                                     onClick={() => handleFreezeToggle(app.packageName, app.isEnabled)}
                                   >
-                                    {app.isEnabled ? "冻结（禁用）" : "解冻（启用）"}
+                                    {app.isEnabled ? t('app_manager.freeze') : t('app_manager.unfreeze')}
                                   </MenuItem>,
                                   <MenuItem
                                     key={`clear-${app.packageName}`}
                                     onClick={() => handleClearData(app.packageName)}
                                   >
-                                    清除应用数据
+                                    {t('app_manager.clear_data')}
                                   </MenuItem>,
                                   <MenuItem
                                     key={`export-${app.packageName}`}
                                     onClick={() => handleExportApk(app.packageName)}
                                   >
-                                    导出 APK
+                                    {t('app_manager.export_apk')}
                                   </MenuItem>
                                 ]}
                               </MenuList>
@@ -1787,24 +1792,24 @@ const AppManagerPanel: React.FC = () => {
       {/* 应用卸载确认对话框 */}
       <Dialog open={confirmUninstallDialogOpen} onOpenChange={(_, data) => setConfirmUninstallDialogOpen(data.open)}>
         <DialogSurface>
-          <DialogTitle>确认卸载应用</DialogTitle>
+          <DialogTitle>{t('app_manager.uninstall_confirm_title')}</DialogTitle>
           <DialogContent>
             <DialogBody>
               <Text>
-                确定要卸载应用 <strong>{appToUninstall?.packageName}</strong> 吗？
+                {t('app_manager.uninstall_confirm_desc', { packageName: appToUninstall?.packageName })}
               </Text>
               <br />
               <Text size={200} style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                ⚠️ 此操作将删除应用及其数据，无法撤销
+                ⚠️ {t('app_manager.uninstall_confirm_desc', { packageName: '' }).includes('撤销') ? '此操作将删除应用及其数据，无法撤销' : 'This action is irreversible.'}
               </Text>
             </DialogBody>
           </DialogContent>
           <DialogActions>
             <DialogTrigger disableButtonEnhancement>
-              <Button appearance="secondary">取消</Button>
+              <Button appearance="secondary">{t('common.cancel')}</Button>
             </DialogTrigger>
             <Button appearance="primary" onClick={confirmUninstall}>
-              确认卸载
+              {t('app_manager.confirm')}
             </Button>
           </DialogActions>
         </DialogSurface>

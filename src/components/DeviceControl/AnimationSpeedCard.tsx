@@ -16,6 +16,7 @@ import {
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from '@/stores/appStore';
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -81,6 +82,7 @@ interface AnimationSpeedCardProps {
 
 const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { deviceService } = useDeviceService();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
   const { setStatusBarMessage } = useAppStore();
@@ -100,13 +102,13 @@ const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
 
   // 动画速度选项
   const animationScaleOptions = [
-    { value: "0", label: "关闭动画" },
-    { value: "0.5", label: "动画速度 .5x" },
-    { value: "1", label: "动画速度 1x (默认)" },
-    { value: "1.5", label: "动画速度 1.5x" },
-    { value: "2", label: "动画速度 2x" },
-    { value: "5", label: "动画速度 5x" },
-    { value: "10", label: "动画速度 10x" },
+    { value: "0", label: t('device_control.anim_off') },
+    { value: "0.5", label: t('device_control.anim_speed', { scale: '.5' }) },
+    { value: "1", label: t('device_control.anim_speed_default') },
+    { value: "1.5", label: t('device_control.anim_speed', { scale: '1.5' }) },
+    { value: "2", label: t('device_control.anim_speed', { scale: '2' }) },
+    { value: "5", label: t('device_control.anim_speed', { scale: '5' }) },
+    { value: "10", label: t('device_control.anim_speed', { scale: '10' }) },
   ];
 
   // 获取动画设置
@@ -165,20 +167,20 @@ const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
         setAnimationSettings(prev => ({ ...prev, windowAnimationScale: scale }));
         setStatusBarMessage({
           type: "success",
-          message: `窗口动画速度已设置为 ${scale}`,
+          message: t('device_control.msg_window_anim_success', { scale: scale }),
         });
         // 重新获取设置以确保更新
         setTimeout(fetchAnimationSettings, 500);
       } else {
         setStatusBarMessage({
           type: "error",
-          message: "设置窗口动画速度失败",
+          message: t('device_control.msg_window_anim_failed'),
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `设置窗口动画速度失败: ${error}`,
+        message: `${t('device_control.msg_window_anim_failed')}: ${error}`,
       });
     } finally {
       setExecutingCommand(null);
@@ -196,20 +198,20 @@ const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
         setAnimationSettings(prev => ({ ...prev, transitionAnimationScale: scale }));
         setStatusBarMessage({
           type: "success",
-          message: `过渡动画速度已设置为 ${scale}`,
+          message: t('device_control.msg_transition_anim_success', { scale: scale }),
         });
         // 重新获取设置以确保更新
         setTimeout(fetchAnimationSettings, 500);
       } else {
         setStatusBarMessage({
           type: "error",
-          message: "设置过渡动画速度失败",
+          message: t('device_control.msg_transition_anim_failed'),
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `设置过渡动画速度失败: ${error}`,
+        message: `${t('device_control.msg_transition_anim_failed')}: ${error}`,
       });
     } finally {
       setExecutingCommand(null);
@@ -227,20 +229,20 @@ const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
         setAnimationSettings(prev => ({ ...prev, animatorDurationScale: scale }));
         setStatusBarMessage({
           type: "success",
-          message: `程序动画速度已设置为 ${scale}`,
+          message: t('device_control.msg_animator_duration_success', { scale: scale }),
         });
         // 重新获取设置以确保更新
         setTimeout(fetchAnimationSettings, 500);
       } else {
         setStatusBarMessage({
           type: "error",
-          message: "设置程序动画速度失败",
+          message: t('device_control.msg_animator_duration_failed'),
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `设置程序动画速度失败: ${error}`,
+        message: `${t('device_control.msg_animator_duration_failed')}: ${error}`,
       });
     } finally {
       setExecutingCommand(null);
@@ -269,14 +271,14 @@ const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
   return (
     <Card className={styles.card}>
       <CardHeader
-        image={<Timer24Regular />}
-        header={<Text weight="semibold">动画速度</Text>}
+         image={<Timer24Regular />}
+        header={<Text weight="semibold">{t('device_control.animation_speed')}</Text>}
       />
       
       <div className={styles.content}>
         {/* 窗口动画控制 */}
         <div className={styles.controlRow}>
-          <Text className={styles.controlLabel}>窗口动画:</Text>
+          <Text className={styles.controlLabel}>{t('device_control.window_animation')}:</Text>
           <Text className={styles.controlValue}>
             {isNaN(animationSettings.windowAnimationScale) ? "0" : animationSettings.windowAnimationScale}
           </Text>
@@ -308,7 +310,7 @@ const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
 
         {/* 过渡动画控制 */}
         <div className={styles.controlRow}>
-          <Text className={styles.controlLabel}>过渡动画:</Text>
+          <Text className={styles.controlLabel}>{t('device_control.transition_animation')}:</Text>
           <Text className={styles.controlValue}>
             {isNaN(animationSettings.transitionAnimationScale) ? "0" : animationSettings.transitionAnimationScale}
           </Text>
@@ -340,7 +342,7 @@ const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
 
         {/* 程序动画控制 */}
         <div className={styles.controlRow}>
-          <Text className={styles.controlLabel}>程序动画:</Text>
+          <Text className={styles.controlLabel}>{t('device_control.animator_duration')}:</Text>
           <Text className={styles.controlValue}>
             {isNaN(animationSettings.animatorDurationScale) ? "0" : animationSettings.animatorDurationScale}
           </Text>
@@ -372,7 +374,7 @@ const AnimationSpeedCard: React.FC<AnimationSpeedCardProps> = ({ device }) => {
 
         {!isDeviceAvailable && (
           <Text size={200} style={{ textAlign: "center", color: "var(--colorNeutralForeground3)" }}>
-            设备未连接或不在系统模式
+            {t('device_control.device_unavailable')}
           </Text>
         )}
       </div>

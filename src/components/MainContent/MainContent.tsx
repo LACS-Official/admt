@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState }  from 'react';
+import { motion, AnimatePresence } from "framer-motion";
 import {
   makeStyles,
   TabList,
@@ -26,6 +27,7 @@ import {
   ChevronDown24Regular,
   Warning24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import DeviceSelectionDialog from './DeviceSelectionDialog';
 import { getDeviceIcon } from "../../assets/icons";
 import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
@@ -596,39 +598,39 @@ const useStyles = makeStyles({
   },
 });
 
-const tabs = [
-  {
-    id: "home" as AppView,
-    label: "主页",
-    icon: <Home24Regular />,
-  },
-  {
-    id: "adb-zone" as AppView,
-    label: "系统专区",
-    icon: <Code24Regular />,
-  },
-  {
-    id: "flash-zone" as AppView,
-    label: "刷机专区",
-    icon: <CloudArrowUp24Regular />,
-  },
-  {
-    id: "online-resources" as AppView,
-    label: "在线资源",
-    icon: <CloudArrowDown24Regular />,
-  },
-  {
-    id: "settings" as AppView,
-    label: "设置",
-    icon: <Settings24Regular />,
-  },
-
-];
-
 const MainContent: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { currentView, setCurrentView, config, setStatusBarMessage } = useAppStore();
   const { selectedDevice, devices, selectDevice } = useDeviceStore();
+
+  const tabs = [
+    {
+      id: "home" as AppView,
+      label: t('sidebar.home'),
+      icon: <Home24Regular />,
+    },
+    {
+      id: "adb-zone" as AppView,
+      label: t('sidebar.system_zone'),
+      icon: <Code24Regular />,
+    },
+    {
+      id: "flash-zone" as AppView,
+      label: t('sidebar.flash_zone'),
+      icon: <CloudArrowUp24Regular />,
+    },
+    {
+      id: "online-resources" as AppView,
+      label: t('sidebar.online_resources'),
+      icon: <CloudArrowDown24Regular />,
+    },
+    {
+      id: "settings" as AppView,
+      label: t('sidebar.settings'),
+      icon: <Settings24Regular />,
+    },
+  ];
   const { startScanning, stopScanning, refreshDeviceInfo } = useDeviceService();
   const prevConnectedCount = useRef<number>(0);
   
@@ -665,13 +667,13 @@ const MainContent: React.FC = () => {
         setIsOfflineDialogOpen(true);
         setStatusBarMessage({
           type: "warning",
-          message: "当前设备已离线，无法获取详细信息。",
+          message: t('status.device_offline'),
         });
       } else if (selectedDevice.mode === "unauthorized") {
         setIsUnauthorizedDialogOpen(true);
         setStatusBarMessage({
           type: "warning",
-          message: "当前设备未授权，无法获取详细信息。",
+          message: t('status.device_unauthorized'),
         });
       }
     }
@@ -686,25 +688,25 @@ const MainContent: React.FC = () => {
       // 首次检测到设备
       setStatusBarMessage({
         type: "success",
-        message: connectedCount === 1 ? "已检测到 1 台设备" : `已检测到 ${connectedCount} 台设备`,
+        message: connectedCount === 1 ? t('status.device_detected_single') : t('status.device_detected_multiple', { count: connectedCount }),
       });
     } else if (prev > 0 && connectedCount === 0) {
       // 所有设备断开
       setStatusBarMessage({
         type: "warning",
-        message: "设备已断开",
+        message: t('status.device_disconnected'),
       });
     } else if (connectedCount < prev && connectedCount > 0) {
       // 有设备断开但仍有设备连接
       setStatusBarMessage({
         type: "warning",
-        message: "有设备断开连接",
+        message: t('status.device_disconnected_some'),
       });
     } else if (connectedCount > prev && prev > 0) {
       // 新增设备连接
       setStatusBarMessage({
         type: "success",
-        message: "有新设备已连接",
+        message: t('status.device_new_connected'),
       });
     }
 
@@ -714,7 +716,7 @@ const MainContent: React.FC = () => {
   // 当选择设备时自动获取设备属性
   useEffect(() => {
     if (selectedDevice && selectedDevice.connected && !selectedDevice.properties) {
-      setStatusBarMessage({ type: "info", message: "正在获取设备信息..." });
+      setStatusBarMessage({ type: "info", message: t('status.fetching_device_info') });
       refreshDeviceInfo(selectedDevice.serial);
     }
   }, [selectedDevice, refreshDeviceInfo]);
@@ -730,7 +732,7 @@ const MainContent: React.FC = () => {
         deviceName: selectedDevice.properties.deviceName,
         serial: selectedDevice.serial
       });
-      setStatusBarMessage({ type: "success", message: "设备信息已获取" });
+      setStatusBarMessage({ type: "success", message: t('status.device_info_fetched') });
     }
   }, [selectedDevice?.properties]);
 
@@ -838,15 +840,15 @@ const MainContent: React.FC = () => {
     if (!selectedDevice) return "";
 
     switch (selectedDevice.mode) {
-      case "sys": return "系统模式";
-      case "rec": return "Recovery";
-      case "fastboot": return "Fastboot";
-      case "fastbootd": return "Fastbootd";
-      case "sideload": return "Sideload";
-      case "edl": return "EDL模式";
-      case "unauthorized": return "未授权";
-      case "offline": return "离线";
-      default: return "未知模式";
+      case "sys": return t('device_mode.system');
+      case "rec": return t('device_mode.recovery');
+      case "fastboot": return t('device_mode.fastboot');
+      case "fastbootd": return t('device_mode.fastbootd');
+      case "sideload": return t('device_mode.sideload');
+      case "edl": return t('device_mode.edl');
+      case "unauthorized": return t('device_mode.unauthorized');
+      case "offline": return t('device_mode.offline');
+      default: return t('device_mode.unknown');
     }
   };
 
@@ -873,9 +875,9 @@ const MainContent: React.FC = () => {
               {/* 右侧：无设备提示信息 */}
               <div className={styles.deviceTextInfo}>
                 <div className={styles.noDeviceMessageSection}>
-                  <Text className={styles.noDeviceTitle}>未检测到设备</Text>
+                  <Text className={styles.noDeviceTitle}>{t('main.no_device_title')}</Text>
                   <Text className={styles.noDeviceSubtitle}>
-                    请检查设备是否正常连接 对应驱动是否安装
+                    {t('main.no_device_desc')}
                   </Text>
                 </div>
               </div>
@@ -886,8 +888,8 @@ const MainContent: React.FC = () => {
                 className={styles.deviceSelectCard}
               >
                 <div className={styles.deviceSelectCardContent}>
-                    <div className={styles.deviceSelectCardTitle}>
-                     暂无设备连接
+                  <div className={styles.deviceSelectCardTitle}>
+                     {t('main.no_device_connected')}
                   </div>
                 </div>
                 <Warning24Regular />
@@ -992,7 +994,7 @@ const MainContent: React.FC = () => {
                 <div className={styles.deviceSelectCardContent}>
                   
                     <div className={styles.deviceSelectCardTitle}>
-                      选择设备:
+                       {t('main.select_device_label')}
                      {getDeviceOptionText(selectedDevice)}
                   </div>
                 </div>
@@ -1004,7 +1006,7 @@ const MainContent: React.FC = () => {
               >
                 <div className={styles.deviceSelectCardContent}>
                     <div className={styles.deviceSelectCardTitle}>
-                     暂无设备连接
+                     {t('main.no_device_connected')}
                   </div>
                 </div>
                 <Warning24Regular />
@@ -1069,7 +1071,7 @@ const MainContent: React.FC = () => {
 
         {/* 轮播图区域 */}
         <div className={styles.carouselContainer}>
-          <CarouselComponent />
+          <CarouselComponent autoPlayInterval={config.carouselInterval} />
         </div>
           <div className={styles.buttonGroupContainer}>
             {/* 打开命令行按钮 */}
@@ -1078,7 +1080,7 @@ const MainContent: React.FC = () => {
               onClick={() => setCurrentView("command-line")}
             >
               <Tent24Regular />
-              命令行
+              {t('main.command_line')}
             </div>
             {/* 打开日志窗口按钮 */}
             <div 
@@ -1086,7 +1088,7 @@ const MainContent: React.FC = () => {
               onClick={() => setCurrentView("logs")}
             >
               <DocumentText24Regular />
-              日志
+              {t('main.logs')}
             </div>
           </div>
       </div>
@@ -1104,7 +1106,23 @@ const MainContent: React.FC = () => {
       />
 
       <div className={`${styles.content} main-content-enter`}>
-        {renderContent()}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, x: 20, filter: "blur(5px)" }}
+            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, x: -20, filter: "blur(5px)" }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 30,
+              opacity: { duration: 0.2 }
+            }}
+            style={{ width: '100%', height: '100%', overflow: 'hidden' }}
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* 版本检查组件 - 隐藏但功能完整 */}
@@ -1135,12 +1153,12 @@ const MainContent: React.FC = () => {
       >
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>设备离线</DialogTitle>
+            <DialogTitle>{t('main.device_offline_title')}</DialogTitle>
             <DialogContent>
-              <p>当前设备已离线，请重新连接设备后，重新插播数据线后重试</p>
+              <p>{t('main.device_offline_desc')}</p>
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setIsOfflineDialogOpen(false)}>我知道了</Button>
+              <Button appearance="secondary" onClick={() => setIsOfflineDialogOpen(false)}>{t('main.i_know')}</Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
@@ -1155,12 +1173,12 @@ const MainContent: React.FC = () => {
       >
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>设备未授权</DialogTitle>
+            <DialogTitle>{t('main.device_unauthorized_title')}</DialogTitle>
             <DialogContent>
-              <p>当前设备未授权，请在设备上允许USB调试授权后，重新插拔数据线。</p>
+              <p>{t('main.device_unauthorized_desc')}</p>
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setIsUnauthorizedDialogOpen(false)}>我知道了</Button>
+              <Button appearance="secondary" onClick={() => setIsUnauthorizedDialogOpen(false)}>{t('main.i_know')}</Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>

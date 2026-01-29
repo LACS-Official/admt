@@ -20,6 +20,7 @@ import { useDeviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 import BatchExecutorDialog from "../Common/BatchExecutorDialog";
+import { useTranslation } from "react-i18next";
 
 import { readDir } from "@tauri-apps/plugin-fs";
 
@@ -141,6 +142,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   useDeviceService();
   const { setFlashing } = useDeviceStore();
   const { config, updateConfig } = useAppStore();
+  const { t } = useTranslation();
   
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [packageInfo, setPackageInfo] = useState<Record<string, unknown> | null>(null);
@@ -174,7 +176,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: '选择线刷包目录'
+        title: t('flash.xiaomi_step1')
       }) as string | string[] | null;
       
       if (!selected) return;
@@ -239,9 +241,8 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
         setFlashStatus("idle");
         
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error("解析线刷包失败:", error);
-        alert("解析线刷包失败，请检查文件完整性");
+        alert(t('flash.package_incomplete') + " " + (error instanceof Error ? error.message : String(error)));
       }
     }
   };
@@ -269,7 +270,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
       setTimeout(() => {
         // 简单的兼容性检查逻辑
         const deviceModel = device?.properties?.model?.toLowerCase() || '';
-        const packageCodename = packageInfo.codename.toLowerCase();
+        const packageCodename = (packageInfo.codename as string || "").toLowerCase();
         
         resolve(deviceModel.includes(packageCodename) || packageCodename.includes("star"));
       }, 500);
@@ -287,13 +288,13 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   const getStatusBadge = () => {
     switch (flashStatus) {
       case "checking":
-        return <Badge appearance="outline" color="brand" icon={<Spinner size="tiny" />} style={{ display: 'flex', flexDirection: 'row' }}>检查中</Badge>;
+        return <Badge appearance="outline" color="brand" icon={<Spinner size="tiny" />} style={{ display: 'flex', flexDirection: 'row' }}>{t('flash.status_checking')}</Badge>;
       case "flashing":
-        return <Badge appearance="outline" color="important" icon={<Spinner size="tiny" />} style={{ display: 'flex', flexDirection: 'row' }}>刷入中</Badge>;
+        return <Badge appearance="outline" color="important" icon={<Spinner size="tiny" />} style={{ display: 'flex', flexDirection: 'row' }}>{t('flash.status_flashing')}</Badge>;
       case "success":
-        return <Badge appearance="outline" color="success" icon={<CheckmarkCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>成功</Badge>;
+        return <Badge appearance="outline" color="success" icon={<CheckmarkCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>{t('flash.status_success')}</Badge>;
       case "error":
-        return <Badge appearance="outline" color="danger" icon={<ErrorCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>失败</Badge>;
+        return <Badge appearance="outline" color="danger" icon={<ErrorCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>{t('flash.status_failed')}</Badge>;
         }
   };
 
@@ -307,53 +308,53 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
           <div className={styles.warningSection}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-              <Text weight="semibold">线刷风险提示</Text>
+              <Text weight="semibold">{t('flash.xiaomi_risk_title')}</Text>
             </div>
             <Text size={300} style={{ marginTop: "8px" }}>
-              线刷可能导致数据丢失、设备不可用或失去保修。请确保您了解并自行承担相关风险。
+              {t('flash.xiaomi_risk_desc1')}
             </Text>
             <Text size={300} style={{ marginTop: "4px" }}>
-              本工具按"现状"提供，不对因使用本工具进行线刷所造成的任何直接或间接损失负责。
+              {t('flash.xiaomi_risk_desc2')}
             </Text>
           </div>
 
           {/* 线刷包选择 */}
           <div className={styles.section}>
-            <Text weight="semibold">1. 选择线刷包</Text>
-                <div className={styles.packageSection}>
-                  <div className={styles.packageInput}>
-                    <Button
-                      appearance="outline"
-                      icon={<Folder24Regular />}
-                      onClick={handlePackageSelect}
-                      disabled={isFlashing}
-                    >
-                      选择文件夹
-                    </Button>
-                    {!selectedFolderPath ? (
-                      <Text size={300}>选择包含 flash_all*.bat 的线刷包目录</Text>
-                    ) : (
-                      <>
-                        <Button appearance="secondary" onClick={() => {
+            <Text weight="semibold">{t('flash.xiaomi_step1')}</Text>
+            <div className={styles.packageSection}>
+              <div className={styles.packageInput}>
+                <Button
+                  appearance="outline"
+                  icon={<Folder24Regular />}
+                  onClick={handlePackageSelect}
+                  disabled={isFlashing}
+                >
+                  {t('flash.select_folder')}
+                </Button>
+                {!selectedFolderPath ? (
+                  <Text size={300}>{t('flash.xiaomi_select_hint')}</Text>
+                ) : (
+                  <>
+                    <Button appearance="secondary" onClick={() => {
                           setSelectedFolderPath("");
                           setMissingFiles([]);
                           setSelectedPackage("");
                           setPackageInfo(null);
                           setDeviceCompatible(null);
-                        }}>清除</Button>
+                        }}>{t('common.clear')}</Button>
                       </>
                     )}
                   </div>
                   {selectedFolderPath && (
                     <div className={styles.packageInfo}>
-                      <div>目录: {selectedFolderPath}</div>
+                      <div>{t('flash.directory')}{selectedFolderPath}</div>
                       {missingFiles.length > 0 ? (
                         <div style={{ color: "var(--colorPaletteRedForeground2)", fontWeight: 600 }}>
-                          当前包体不完整，缺少: {missingFiles.join(", ")}
+                          {t('flash.package_incomplete')}{missingFiles.join(", ")}
                         </div>
                       ) : (
                         <div style={{ color: "var(--colorPaletteGreenForeground1)", fontWeight: 600 }}>
-                          已检测到必要脚本：flash_all.bat / flash_all_except_storage.bat / flash_all_lock.bat
+                          {t('flash.package_valid')}flash_all.bat / flash_all_except_storage.bat / flash_all_lock.bat
                         </div>
                       )}
                     </div>
@@ -364,7 +365,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
               {/* 刷入进度 */}
               {flashStatus !== "idle" && (
                 <div className={styles.section}>
-                  <Text weight="semibold">线刷进度</Text>
+                  <Text weight="semibold">{t('flash.xiaomi_progress')}</Text>
                   <div className={styles.progressSection}>
                     <ProgressBar value={progress / 100} />
                     <Text size={300}>{progress.toFixed(1)}%</Text>
@@ -375,7 +376,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
               {/* 日志输出 */}
               {flashLog && (
                 <div className={styles.section}>
-                  <Text weight="semibold">线刷日志</Text>
+                  <Text weight="semibold">{t('flash.xiaomi_log')}</Text>
                   <div className={styles.logOutput}>
                     {flashLog}
                   </div>
@@ -385,30 +386,30 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
               {/* 操作按钮（仅当三个脚本都存在时显示） */}
               {selectedFolderPath && missingFiles.length === 0 && (
                 <div className={styles.actions}>
-                  <Text>2. 开始线刷</Text>
+                  <Text>{t('flash.xiaomi_step2')}</Text>
                   <Button appearance="primary" icon={<Play24Regular />} onClick={() => {
-                    setBatchDialogTitle("线刷清数据 (flash_all.bat)");
+                    setBatchDialogTitle(`${t('flash.flash_clean')} (flash_all.bat)`);
                     setBatchFileName("flash_all.bat");
                     setBatchWorkingDirectory(selectedFolderPath);
                     setBatchDialogOpen(true);
                   }}>
-                    线刷清数据
+                    {t('flash.flash_clean')}
                   </Button>
                   <Button appearance="secondary" icon={<Play24Regular />} onClick={() => {
-                    setBatchDialogTitle("线刷不清数据 (flash_all_except_storage.bat)");
+                    setBatchDialogTitle(`${t('flash.flash_keep')} (flash_all_except_storage.bat)`);
                     setBatchFileName("flash_all_except_storage.bat");
                     setBatchWorkingDirectory(selectedFolderPath);
                     setBatchDialogOpen(true);
                   }}>
-                    线刷不清数据
+                    {t('flash.flash_keep')}
                   </Button>
                   <Button appearance="outline" icon={<Play24Regular />} onClick={() => {
-                    setBatchDialogTitle("线刷回锁 (flash_all_lock.bat)");
+                    setBatchDialogTitle(`${t('flash.flash_lock')} (flash_all_lock.bat)`);
                     setBatchFileName("flash_all_lock.bat");
                     setBatchWorkingDirectory(selectedFolderPath);
                     setBatchDialogOpen(true);
                   }}>
-                    线刷清数据并回锁
+                    {t('flash.flash_lock')}
                   </Button>
                 </div>
           )}

@@ -14,6 +14,7 @@ import {
 import {
   ArrowReset24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
 import { SCREEN_MIRROR_QUALITY_PRESETS } from "../../types/screenMirror";
 
@@ -80,6 +81,7 @@ const useStyles = makeStyles({
 
 const SettingsCard: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { config, updateConfig, resetConfig, applyQualityPreset } = useScreenMirrorStore();
 
   const handleQualityPresetChange = (preset: string) => {
@@ -129,7 +131,7 @@ const SettingsCard: React.FC = () => {
   };
 
   const resolutionOptions = [
-    { value: "auto", label: "自动" },
+    { value: "auto", label: t('mirror.auto') },
     { value: "1920x1080", label: "1920x1080 (FHD)" },
     { value: "1280x720", label: "1280x720 (HD)" },
     { value: "854x480", label: "854x480 (WVGA)" },
@@ -150,17 +152,17 @@ const SettingsCard: React.FC = () => {
   return (
     <Card className={styles.card}>
       <CardHeader
-        header={<Text weight="semibold">投屏设置</Text>}
-        description="调整投屏质量和行为选项"
+        header={<Text weight="semibold">{t('mirror.settings_title')}</Text>}
+        description={t('mirror.settings_desc')}
       />
       
       <div className={styles.content}>
         {/* 质量预设 */}
         <div className={styles.section}>
-          <Text className={styles.sectionTitle}>质量预设</Text>
-          <Field label="选择预设">
+          <Text className={styles.sectionTitle}>{t('mirror.quality_preset')}</Text>
+          <Field label={t('mirror.select_preset')}>
             <Dropdown
-              placeholder="选择质量预设"
+              placeholder={t('mirror.select_quality_placeholder')}
               value="high"
               onOptionSelect={(_, data) => handleQualityPresetChange(data.optionValue as string)}
             >
@@ -175,9 +177,9 @@ const SettingsCard: React.FC = () => {
 
         {/* 视频质量 */}
         <div className={styles.section}>
-          <Text className={styles.sectionTitle}>视频质量</Text>
+          <Text className={styles.sectionTitle}>{t('mirror.video_quality')}</Text>
           
-          <Field label="分辨率">
+          <Field label={t('mirror.resolution')}>
             <Dropdown
               value={config.quality.resolution}
               onOptionSelect={(_, data) => handleResolutionChange(data.optionValue as string)}
@@ -192,7 +194,7 @@ const SettingsCard: React.FC = () => {
 
           <div className={styles.sliderContainer}>
             <div className={styles.sliderRow}>
-              <Text className={styles.sliderLabel}>比特率:</Text>
+              <Text className={styles.sliderLabel}>{t('mirror.bitrate')}</Text>
               <Slider
                 min={1}
                 max={20}
@@ -205,7 +207,7 @@ const SettingsCard: React.FC = () => {
             </div>
 
             <div className={styles.sliderRow}>
-              <Text className={styles.sliderLabel}>帧率:</Text>
+              <Text className={styles.sliderLabel}>{t('mirror.framerate')}</Text>
               <Slider
                 min={15}
                 max={60}
@@ -218,7 +220,7 @@ const SettingsCard: React.FC = () => {
             </div>
           </div>
 
-          <Field label="编码格式">
+          <Field label={t('mirror.codec')}>
             <Dropdown
               value={config.quality.codec}
               onOptionSelect={(_, data) => handleCodecChange(data.optionValue as "h264" | "h265")}
@@ -234,10 +236,10 @@ const SettingsCard: React.FC = () => {
 
         {/* 行为选项 */}
         <div className={styles.section}>
-          <Text className={styles.sectionTitle}>行为选项</Text>
+          <Text className={styles.sectionTitle}>{t('mirror.behavior_options')}</Text>
           
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>显示触摸点</Text>
+            <Text className={styles.fieldLabel}>{t('mirror.show_touches')}</Text>
             <Switch
               checked={config.showTouches}
               onChange={(_, data) => handleSwitchChange('showTouches', data.checked)}
@@ -245,7 +247,7 @@ const SettingsCard: React.FC = () => {
           </div>
 
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>保持屏幕常亮</Text>
+            <Text className={styles.fieldLabel}>{t('mirror.stay_awake')}</Text>
             <Switch
               checked={config.stayAwake}
               onChange={(_, data) => handleSwitchChange('stayAwake', data.checked)}
@@ -253,7 +255,7 @@ const SettingsCard: React.FC = () => {
           </div>
 
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>投屏时关闭设备屏幕</Text>
+            <Text className={styles.fieldLabel}>{t('mirror.turn_screen_off')}</Text>
             <Switch
               checked={config.turnScreenOff}
               onChange={(_, data) => handleSwitchChange('turnScreenOff', data.checked)}
@@ -261,7 +263,7 @@ const SettingsCard: React.FC = () => {
           </div>
 
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>关闭时关机</Text>
+            <Text className={styles.fieldLabel}>{t('mirror.power_off_on_close')}</Text>
             <Switch
               checked={config.powerOffOnClose}
               onChange={(_, data) => handleSwitchChange('powerOffOnClose', data.checked)}
@@ -269,7 +271,7 @@ const SettingsCard: React.FC = () => {
           </div>
 
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>启动时不开机</Text>
+            <Text className={styles.fieldLabel}>{t('mirror.no_power_on')}</Text>
             <Switch
               checked={config.noPowerOn}
               onChange={(_, data) => handleSwitchChange('noPowerOn', data.checked)}
@@ -278,7 +280,7 @@ const SettingsCard: React.FC = () => {
 
 
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>全屏模式</Text>
+            <Text className={styles.fieldLabel}>{t('mirror.fullscreen_mode')}</Text>
             <Switch
               checked={config.fullscreen}
               onChange={(_, data) => handleSwitchChange('fullscreen', data.checked)}
@@ -294,7 +296,7 @@ const SettingsCard: React.FC = () => {
             icon={<ArrowReset24Regular />}
             onClick={resetConfig}
           >
-            重置为默认
+            {t('mirror.reset_to_default')}
           </Button>
         </div>
       </div>
