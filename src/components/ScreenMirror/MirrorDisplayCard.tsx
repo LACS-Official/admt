@@ -20,6 +20,7 @@ import {
 } from "@fluentui/react-icons";
 import { ScreenMirrorSession } from "../../types/screenMirror";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -151,6 +152,7 @@ interface MirrorDisplayCardProps {
 
 const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMirror }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const { isFullscreen, toggleFullscreen } = useScreenMirrorStore();
@@ -171,7 +173,7 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
 
   const handleOpenScrcpyWindow = () => {
     // 提示用户查找scrcpy窗口
-    alert('请在任务栏或桌面上查找scrcpy投屏窗口');
+    alert(t('mirror.scrcpy_hint'));
   };
 
   const formatDuration = (startTime?: Date) => {
@@ -189,42 +191,42 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
         {session.status === 'streaming' ? (
           <div className={styles.mirrorPlaceholder}>
             <Desktop24Regular style={{ fontSize: "48px", color: "var(--colorBrandBackground)" }} />
-            <Text size={500} weight="semibold">投屏已启动</Text>
+            <Text size={500} weight="semibold">{t('mirror.mirror_started')}</Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-              投屏窗口已在独立窗口中打开
+              {t('mirror.mirror_new_window')}
             </Text>
 
             <div className={styles.infoCard}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Text size={300} weight="semibold">设备信息</Text>
-                <Badge appearance="filled" color="success">已连接</Badge>
+                <Text size={300} weight="semibold">{t('mirror.device_info')}</Text>
+                <Badge appearance="filled" color="success">{t('mirror.connected')}</Badge>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>设备名称:</Text>
-                  <Text size={200}>{session.deviceName || "未知设备"}</Text>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.device_name_label')}</Text>
+                  <Text size={200}>{session.deviceName || t('mirror.unknown_device')}</Text>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>设备序列号:</Text>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.device_serial_label')}</Text>
                   <Text size={200}>{session.deviceSerial}</Text>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>投屏时长:</Text>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.duration_label')}</Text>
                   <Text size={200}>{formatDuration(session.startTime)}</Text>
                 </div>
                 {session.config.quality && (
                   <>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>分辨率:</Text>
+                      <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.resolution_label')}</Text>
                       <Text size={200}>{session.config.quality.resolution}</Text>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>帧率:</Text>
+                      <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.framerate')}:</Text>
                       <Text size={200}>{session.config.quality.framerate}fps</Text>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>码率:</Text>
+                      <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.bitrate_label')}</Text>
                       <Text size={200}>{session.config.quality.bitrate}Mbps</Text>
                     </div>
                   </>
@@ -239,7 +241,7 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
                 onClick={handleOpenScrcpyWindow}
                 size="small"
               >
-                查找投屏窗口
+                {t('mirror.find_window')}
               </Button>
               <Button
                 appearance="subtle"
@@ -247,7 +249,7 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
                 onClick={handleTakeScreenshot}
                 size="small"
               >
-                截图
+                {t('mirror.screenshot')}
               </Button>
               <Button
                 appearance="subtle"
@@ -255,7 +257,7 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
                 onClick={handleToggleRecording}
                 size="small"
               >
-                {isRecording ? '停止录制' : '录制'}
+                {isRecording ? t('mirror.stop_record') : t('mirror.record')}
               </Button>
               <Button
                 appearance="subtle"
@@ -263,29 +265,29 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
                 onClick={() => setShowDetails(!showDetails)}
                 size="small"
               >
-                {showDetails ? '隐藏详情' : '显示详情'}
+                {showDetails ? t('mirror.hide_details') : t('mirror.show_details')}
               </Button>
             </div>
 
             {showDetails && (
               <div className={styles.detailsCard}>
-                <Text size={300} weight="semibold" style={{ marginBottom: "8px" }}>投屏配置</Text>
+                <Text size={300} weight="semibold" style={{ marginBottom: "8px" }}>{t('mirror.mirror_config')}</Text>
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>显示触摸:</Text>
-                    <Text size={200}>{session.config.showTouches ? '开启' : '关闭'}</Text>
+                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.show_touches_label')}</Text>
+                    <Text size={200}>{session.config.showTouches ? t('common.on') : t('common.off')}</Text>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>保持唤醒:</Text>
-                    <Text size={200}>{session.config.stayAwake ? '开启' : '关闭'}</Text>
+                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.stay_awake_label')}</Text>
+                    <Text size={200}>{session.config.stayAwake ? t('common.on') : t('common.off')}</Text>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>音频传输:</Text>
-                    <Text size={200}>{session.config.audioEnabled ? '开启' : '关闭'}</Text>
+                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.audio_label')}</Text>
+                    <Text size={200}>{session.config.audioEnabled ? t('common.on') : t('common.off')}</Text>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>触摸控制:</Text>
-                    <Text size={200}>{session.config.controlEnabled ? '开启' : '关闭'}</Text>
+                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('mirror.control_label')}</Text>
+                    <Text size={200}>{session.config.controlEnabled ? t('common.on') : t('common.off')}</Text>
                   </div>
                 </div>
               </div>
@@ -294,9 +296,9 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
         ) : (
           <div className={styles.mirrorPlaceholder}>
             <Spinner size="medium" />
-            <Text size={400}>正在连接设备...</Text>
+            <Text size={400}>{t('mirror.connecting_device')}</Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-              请稍候，正在建立投屏连接
+              {t('mirror.connecting_hint')}
             </Text>
           </div>
         )}
@@ -306,7 +308,7 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
         <div className={styles.controlsLeft}>
           <div className={styles.statusInfo}>
             <Badge appearance="filled" color="success">
-              {session.status === 'streaming' ? '投屏中' : '连接中'}
+              {session.status === 'streaming' ? t('mirror.mirroring') : t('mirror.connecting')}
             </Badge>
             <Text size={200}>
               {formatDuration(session.startTime)}
@@ -320,33 +322,33 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
         </div>
 
         <div className={styles.controlsRight}>
-          <Button
-            appearance="subtle"
-            icon={isRecording ? <RecordStop24Regular /> : <Record24Regular />}
-            onClick={handleToggleRecording}
-          >
-            {isRecording ? '停止录制' : '开始录制'}
-          </Button>
-          
-          {onStopMirror && (
             <Button
               appearance="subtle"
-              icon={<Stop24Regular />}
-              onClick={onStopMirror}
+              icon={isRecording ? <RecordStop24Regular /> : <Record24Regular />}
+              onClick={handleToggleRecording}
             >
-              停止投屏
+              {isRecording ? t('mirror.stop_record') : t('mirror.start_record')}
             </Button>
-          )}
-          
-          {!isFullscreen && (
-            <Button
-              appearance="subtle"
-              icon={<FullScreenMaximize24Regular />}
-              onClick={toggleFullscreen}
-            >
-              全屏
-            </Button>
-          )}
+            
+            {onStopMirror && (
+              <Button
+                appearance="subtle"
+                icon={<Stop24Regular />}
+                onClick={onStopMirror}
+              >
+                {t('mirror.stop_mirror')}
+              </Button>
+            )}
+            
+            {!isFullscreen && (
+              <Button
+                appearance="subtle"
+                icon={<FullScreenMaximize24Regular />}
+                onClick={toggleFullscreen}
+              >
+                {t('mirror.fullscreen')}
+              </Button>
+            )}
         </div>
       </div>
     </>

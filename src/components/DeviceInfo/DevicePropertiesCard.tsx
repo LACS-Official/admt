@@ -8,6 +8,7 @@ import {
 import {
   Settings24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import { DeviceInfo } from "../../types/device";
 
 const useStyles = makeStyles({
@@ -84,6 +85,7 @@ interface DevicePropertiesCardProps {
 
 const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
 
   const getPropertyCategories = () => {
     if (!device.properties) return [];
@@ -93,82 +95,82 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
 
     // 设备基本信息
     const basicInfo = [];
-    if (props.marketName) basicInfo.push({ property: "商品名称", value: props.marketName });
-    if (props.brand) basicInfo.push({ property: "品牌", value: props.brand });
-    if (props.model) basicInfo.push({ property: "型号", value: props.model });
-    if (props.manufacturer) basicInfo.push({ property: "制造商", value: props.manufacturer });
-    if (props.deviceName) basicInfo.push({ property: "设备代号", value: props.deviceName });
-    if (props.serialNumber) basicInfo.push({ property: "序列号", value: props.serialNumber });
+    if (props.marketName) basicInfo.push({ property: t('device_properties.market_name'), value: props.marketName });
+    if (props.brand) basicInfo.push({ property: t('device_overview.brand'), value: props.brand });
+    if (props.model) basicInfo.push({ property: t('device_overview.model'), value: props.model });
+    if (props.manufacturer) basicInfo.push({ property: t('device_properties.manufacturer'), value: props.manufacturer });
+    if (props.deviceName) basicInfo.push({ property: t('device_overview.device_code'), value: props.deviceName });
+    if (props.serialNumber) basicInfo.push({ property: t('device_overview.serial_number'), value: props.serialNumber });
     if (basicInfo.length > 0) {
-      categories.push({ title: "设备信息", items: basicInfo });
+      categories.push({ title: t('device_properties.category_device'), items: basicInfo });
     }
 
     // 系统版本信息
     const systemInfo = [];
-    if (props.androidVersion) systemInfo.push({ property: "Android版本", value: `Android ${props.androidVersion}` });
-    if (props.sdkVersion) systemInfo.push({ property: "SDK版本", value: `API ${props.sdkVersion}` });
-    if (props.buildId) systemInfo.push({ property: "构建ID", value: props.buildId });
-    if (props.buildDisplayId) systemInfo.push({ property: "构建显示ID", value: props.buildDisplayId });
-    if (props.securityPatchLevel) systemInfo.push({ property: "安全补丁", value: props.securityPatchLevel });
-    if (props.buildDate) systemInfo.push({ property: "构建日期", value: props.buildDate });
-    if (props.firstApiLevel) systemInfo.push({ property: "首次API级别", value: props.firstApiLevel });
+    if (props.androidVersion) systemInfo.push({ property: t('device_overview.android_version'), value: `Android ${props.androidVersion}` });
+    if (props.sdkVersion) systemInfo.push({ property: t('device_overview.sdk_version'), value: `API ${props.sdkVersion}` });
+    if (props.buildId) systemInfo.push({ property: t('device_overview.build_id'), value: props.buildId });
+    if (props.buildDisplayId) systemInfo.push({ property: t('device_overview.build_display_id'), value: props.buildDisplayId });
+    if (props.securityPatchLevel) systemInfo.push({ property: t('device_properties.security_patch'), value: props.securityPatchLevel });
+    if (props.buildDate) systemInfo.push({ property: t('device_overview.build_date'), value: props.buildDate });
+    if (props.firstApiLevel) systemInfo.push({ property: t('device_overview.first_api'), value: props.firstApiLevel });
     if (systemInfo.length > 0) {
-      categories.push({ title: "系统版本", items: systemInfo });
+      categories.push({ title: t('device_properties.category_system'), items: systemInfo });
     }
 
     // 硬件信息
     const hardwareInfo = [];
-    if (props.cpuAbi) hardwareInfo.push({ property: "CPU架构", value: props.cpuAbi });
-    if (props.cpuAbiList) hardwareInfo.push({ property: "支持架构", value: props.cpuAbiList });
-    if (props.socManufacturer) hardwareInfo.push({ property: "SoC制造商", value: props.socManufacturer });
-    if (props.socModel) hardwareInfo.push({ property: "SoC型号", value: props.socModel });
-    if (props.hardware) hardwareInfo.push({ property: "硬件平台", value: props.hardware });
-    if (props.boardPlatform) hardwareInfo.push({ property: "主板平台", value: props.boardPlatform });
-    if (props.lcdDensity) hardwareInfo.push({ property: "屏幕密度", value: `${props.lcdDensity} DPI` });
+    if (props.cpuAbi) hardwareInfo.push({ property: t('device_overview.cpu_arch'), value: props.cpuAbi });
+    if (props.cpuAbiList) hardwareInfo.push({ property: t('device_properties.supported_arch'), value: props.cpuAbiList });
+    if (props.socManufacturer) hardwareInfo.push({ property: t('device_overview.soc_manufacturer'), value: props.socManufacturer });
+    if (props.socModel) hardwareInfo.push({ property: t('device_overview.soc_model'), value: props.socModel });
+    if (props.hardware) hardwareInfo.push({ property: t('device_properties.hardware_platform'), value: props.hardware });
+    if (props.boardPlatform) hardwareInfo.push({ property: t('device_overview.board_platform'), value: props.boardPlatform });
+    if (props.lcdDensity) hardwareInfo.push({ property: t('device_overview.lcd_density'), value: `${props.lcdDensity} DPI` });
     if (hardwareInfo.length > 0) {
-      categories.push({ title: "硬件信息", items: hardwareInfo });
+      categories.push({ title: t('device_properties.category_hardware'), items: hardwareInfo });
     }
 
     // 安全信息
     const securityInfo = [];
     if (props.bootloaderLocked !== undefined) {
       securityInfo.push({
-        property: "Bootloader",
-        value: props.bootloaderLocked ? "🔒 已锁定" : "🔓 已解锁"
+        property: t('device_info.bootloader'),
+        value: props.bootloaderLocked ? `🔒 ${t('device_info.locked')}` : `🔓 ${t('device_info.unlocked')}`
       });
     }
-    if (props.verifiedBootState) securityInfo.push({ property: "验证启动", value: props.verifiedBootState });
-    if (props.verityMode) securityInfo.push({ property: "完整性验证", value: props.verityMode });
+    if (props.verifiedBootState) securityInfo.push({ property: t('device_overview.verified_boot'), value: props.verifiedBootState });
+    if (props.verityMode) securityInfo.push({ property: t('device_overview.integrity_verity'), value: props.verityMode });
     if (props.debuggable !== undefined) {
       securityInfo.push({
-        property: "调试模式",
-        value: props.debuggable ? "✅ 已启用" : "❌ 已禁用"
+        property: t('device_overview.debug_mode'),
+        value: props.debuggable ? `✅ ${t('device_overview.enabled')}` : `❌ ${t('device_overview.disabled')}`
       });
     }
     if (props.secure !== undefined) {
       securityInfo.push({
-        property: "安全模式",
-        value: props.secure ? "✅ 已启用" : "❌ 已禁用"
+        property: t('device_overview.secure_mode'),
+        value: props.secure ? `✅ ${t('device_overview.enabled')}` : `❌ ${t('device_overview.disabled')}`
       });
     }
     if (props.adbSecure !== undefined) {
       securityInfo.push({
-        property: "ADB安全",
-        value: props.adbSecure ? "✅ 已启用" : "❌ 已禁用"
+        property: t('device_overview.adb_secure'),
+        value: props.adbSecure ? `✅ ${t('device_overview.enabled')}` : `❌ ${t('device_overview.disabled')}`
       });
     }
     if (securityInfo.length > 0) {
-      categories.push({ title: "安全信息", items: securityInfo });
+      categories.push({ title: t('device_properties.category_security'), items: securityInfo });
     }
 
     // 系统配置
     const configInfo = [];
-    if (props.locale) configInfo.push({ property: "语言区域", value: props.locale });
-    if (props.timezone) configInfo.push({ property: "时区", value: props.timezone });
-    if (props.defaultNetwork) configInfo.push({ property: "默认网络", value: props.defaultNetwork });
-    if (props.vndkVersion) configInfo.push({ property: "VNDK版本", value: props.vndkVersion });
+    if (props.locale) configInfo.push({ property: t('device_overview.locale'), value: props.locale });
+    if (props.timezone) configInfo.push({ property: t('device_overview.timezone'), value: props.timezone });
+    if (props.defaultNetwork) configInfo.push({ property: t('device_overview.default_network'), value: props.defaultNetwork });
+    if (props.vndkVersion) configInfo.push({ property: t('device_overview.vndk_version'), value: props.vndkVersion });
     if (configInfo.length > 0) {
-      categories.push({ title: "系统配置", items: configInfo });
+      categories.push({ title: t('device_properties.category_config'), items: configInfo });
     }
 
     return categories;
@@ -180,12 +182,15 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
     <Card className={styles.card}>
       <CardHeader
         image={<Settings24Regular />}
-        header={<Text weight="semibold">设备属性</Text>}
+        header={<Text weight="semibold">{t('device_properties.card_title')}</Text>}
         description={
           <Text size={200}>
             {propertyCategories.length > 0
-              ? `${propertyCategories.reduce((total, cat) => total + cat.items.length, 0)} 个属性，${propertyCategories.length} 个分类`
-              : "无属性数据"
+              ? t('device_properties.properties_summary', { 
+                  count: propertyCategories.reduce((total, cat) => total + cat.items.length, 0),
+                  categories: propertyCategories.length 
+                })
+              : t('device_properties.no_properties')
             }
           </Text>
         }
@@ -209,8 +214,8 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
         ) : (
           <div className={styles.noData}>
             <Settings24Regular style={{ fontSize: "32px" }} />
-            <Text size={300}>暂无设备属性数据</Text>
-            <Text size={200}>请确保设备已连接并授权</Text>
+            <Text size={300}>{t('device_properties.no_data')}</Text>
+            <Text size={200}>{t('device_properties.ensure_connected')}</Text>
           </div>
         )}
       </div>

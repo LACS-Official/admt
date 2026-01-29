@@ -10,6 +10,7 @@ import {
   Home24Regular,
 
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 
@@ -147,6 +148,7 @@ const HomePage: React.FC = () => {
     selectedDevice,
     isScanning
   } = useDeviceStore();
+  const { t } = useTranslation();
   const { setStatusBarMessage } = useAppStore();
 
   // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
@@ -158,7 +160,7 @@ const HomePage: React.FC = () => {
     // 触发设备扫描刷新
     setStatusBarMessage({
       type: "info",
-      message: "正在刷新设备列表...",
+      message: t('status.refreshing_device_list'),
     });
   };
 
@@ -199,7 +201,7 @@ const HomePage: React.FC = () => {
                             // 处理复制信息的逻辑
                             setStatusBarMessage({
                               type: "success",
-                              message: "设备信息已复制到剪贴板",
+                              message: t('status.info_copied'),
                             });
                           }}
                           onCustomize={() => {
@@ -226,9 +228,9 @@ const HomePage: React.FC = () => {
               ) : (
                 <div className={`${styles.noDevice} card-enter`}>
                   <Home24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-                  <Text size={400}>请选择一个设备</Text>
+                  <Text size={400}>{t('home.select_device_title')}</Text>
                   <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-                    从上方下拉菜单中选择要查看的设备
+                    {t('home.select_device_desc')}
                   </Text>
                 </div>
               )}

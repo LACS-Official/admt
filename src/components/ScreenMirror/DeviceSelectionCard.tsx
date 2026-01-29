@@ -11,6 +11,7 @@ import {
 import {
   Phone24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import { ScreenMirrorDevice } from "../../types/screenMirror";
 
 const useStyles = makeStyles({
@@ -114,6 +115,7 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
   streamingDevices,
 }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
 
   const handleDeviceClick = (device: ScreenMirrorDevice) => {
     // 如果设备正在投屏，则停止投屏
@@ -144,21 +146,21 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
   return (
     <Card className={styles.card}>
       <CardHeader
-        header={<Text weight="semibold">设备选择</Text>}
-        description={`${devices.length} 台设备可用`}
+        header={<Text weight="semibold">{t('mirror.device_selection_title')}</Text>}
+        description={t('mirror.devices_available', { count: devices.length })}
       />
       
       {isLoading ? (
         <div className={styles.loadingContainer}>
           <Spinner size="small" />
-          <Text size={300}>检查设备支持...</Text>
+          <Text size={300}>{t('mirror.checking_support')}</Text>
         </div>
       ) : devices.length === 0 ? (
         <div className={styles.noDevices}>
           <Phone24Regular style={{ fontSize: "32px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={300}>没有可用的设备</Text>
+          <Text size={300}>{t('mirror.no_devices')}</Text>
           <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备已连接并启用 USB 调试模式
+            {t('mirror.no_devices_hint')}
           </Text>
         </div>
       ) : (

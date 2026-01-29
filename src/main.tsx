@@ -6,8 +6,11 @@ import { useThemeStore } from "./stores/themeStore";
 import { activationService } from "./services/activationService";
 import { useStartupFlowStore } from "./stores/startupFlowStore";
 import { usePrivacyConsentStore, shouldShowPrivacyConsent } from "./stores/privacyConsentStore";
+import { useAppStore } from "./stores/appStore";
+import { useTranslation } from "react-i18next";
 import "./styles/global.css";
 import "./styles/startup-animations.css";
+import "./i18n/config";
 
 // 导入安全保护模块，确保在应用启动时加载
 import "./utils/securityProtection";
@@ -19,10 +22,19 @@ console.log('已清除 localStorage 中的 rom-download-storage');
 
 function AppWithTheme() {
   const { isDarkMode, followSystemTheme, updateThemeBasedOnSystem, subscribeToStorageChanges } = useThemeStore();
+  const { config } = useAppStore();
+  const { i18n } = useTranslation();
   const [isActivationValid, setIsActivationValid] = useState(true);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(true);
   const { setCurrentPhase } = useStartupFlowStore();
   const { hasCompletedPrivacySetup, hasAcceptedPrivacyPolicy, hasAcceptedUserAgreement } = usePrivacyConsentStore();
+
+  // 同步配置中的语言设置到 i18n
+  useEffect(() => {
+    if (config.language && i18n.language !== config.language) {
+       i18n.changeLanguage(config.language);
+    }
+  }, [config.language, i18n]);
 
   // 监听系统主题变化
   useEffect(() => {

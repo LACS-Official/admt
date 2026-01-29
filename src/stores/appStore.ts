@@ -39,6 +39,7 @@ const defaultConfig: AppConfig = {
   minimizeToTrayOnClose: true,
   startMinimizedToTray: false,
   soundEnabled: true,
+  carouselInterval: 8000,
 };
 
 export const useAppStore = create<AppStoreState>()(

@@ -28,6 +28,7 @@ import {
   Building24Regular,
   ArrowUpload24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 
 
 
@@ -285,6 +286,7 @@ const openUrl = (url: string) => {
 
 const AboutPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [isOpenSourceDialogOpen, setIsOpenSourceDialogOpen] = useState(false);
   const [isThanksDialogOpen, setIsThanksDialogOpen] = useState(false);
   const { versionInfo, loading: versionLoading } = useVersionInfo();
@@ -364,20 +366,20 @@ const AboutPanel: React.FC = () => {
         <Card className={mergeClasses(styles.card)}>
           <CardHeader
             image={<Info24Regular />}
-            header={<Text weight="semibold">关于软件</Text>}
+            header={<Text weight="semibold">{t('settings.about_app')}</Text>}
           />
 
           <div className={styles.aboutContent}>
             <img src={admtbgIcon} alt="appIcon" className={styles.appIconImage}/>
             
             <Text size={600} weight="bold">
-              玩机管家
+              {t('settings.app_name')}
             </Text>
             <Text size={400} weight="bold">
               {versionLoading ? 'v1.0.0' : fullVersionString}
             </Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
-              基于Tauri2框架开发的现代化Android设备免费玩机工具，体积小，功能强大
+              {t('settings.app_desc')}
             </Text>
 
             <div className={styles.buttonGroup}>
@@ -388,7 +390,7 @@ const AboutPanel: React.FC = () => {
                 onClick={handleCheckUpdate}
                 disabled={isCheckingUpdate}
               >
-                {isCheckingUpdate ? '检查中...' : '检查更新'}
+                {isCheckingUpdate ? t('settings.checking_update') : t('settings.check_update')}
               </Button>
               <Button 
                 appearance="secondary" 
@@ -396,7 +398,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Globe24Regular />}
                 onClick={handleOpenManual}
               >
-                用户手册
+                {t('settings.user_manual')}
               </Button>
               <Button 
                 appearance="secondary" 
@@ -404,7 +406,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Heart24Regular />}
                 onClick={handleFeedback}
               >
-                问题反馈
+                {t('settings.feedback')}
               </Button>
               <Button 
                 appearance="secondary" 
@@ -412,7 +414,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Code24Regular />}
                 onClick={OpenofficialADMTWeb}
               >
-                官方网站
+                {t('settings.official_website')}
               </Button>
             </div>
             
@@ -432,18 +434,18 @@ const AboutPanel: React.FC = () => {
         <Card className={mergeClasses(styles.card)}>
           <CardHeader
             image={<Building24Regular />}
-            header={<Text weight="semibold">开发团队信息</Text>}
+            header={<Text weight="semibold">{t('settings.team_info')}</Text>}
           />
 
           <div className={styles.aboutContent}>
             <img src={lacsbgIcon} alt="appIcon" className={styles.appIconImage}/>
             
-            <Text size={600} weight="bold">领创工作室 LACS</Text>
+            <Text size={600} weight="bold">{t('settings.team_name')}</Text>
             <Text size={400} weight="bold">
               Lead And Creative Studio
             </Text>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
-              致力于为用户提供高质量的工具和技术解决方案，全网粉丝1w+
+              {t('settings.team_desc')}
             </Text>
 
 
@@ -454,7 +456,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Globe24Regular />}
                 onClick={() => openUrl(links.officialWebsite)}
               >
-                官方网站
+                {t('settings.official_website')}
               </Button>
               <Button 
                 appearance="secondary" 
@@ -462,7 +464,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Person24Regular />}
                 onClick={() => openUrl(links.officialGroup)}
               >
-                官方群聊
+                {t('settings.official_group')}
               </Button>
               <Button 
                 appearance="secondary" 
@@ -470,7 +472,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Heart24Regular />}
                 onClick={() => openUrl(links.otherapps)}
               >
-                旗下工具
+                {t('settings.our_products')}
               </Button>
               <Button 
                 appearance="secondary" 
@@ -478,7 +480,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Code24Regular />}
                 onClick={() => openUrl(links.contact)}
               >
-                联系方式
+                {t('settings.contact_us')}
               </Button>
             </div>
           </div>
@@ -488,11 +490,11 @@ const AboutPanel: React.FC = () => {
         <Card className={styles.card}>
           <CardHeader
             image={<Code24Regular />}
-            header={<Text weight="semibold">开源/致谢</Text>}
+            header={<Text weight="semibold">{t('settings.opensource_thanks')}</Text>}
           />
           <div className={styles.cardContent}>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
-              本项目基于多个优秀的开源项目构建，感谢所有开源贡献者
+              {t('settings.opensource_desc')}
             </Text>
             
             <div style={{ textAlign: "center" , display: "flex", gap: "12px", justifyContent: "center" }}>
@@ -502,7 +504,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Code24Regular />}
                 onClick={handleOpenSourceInfo}
               >
-                开源项目
+                {t('settings.opensource_projects')}
               </Button>
               <Button 
                 appearance="primary" 
@@ -510,7 +512,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Code24Regular />}
                 onClick={handleThanksInfo}
               >
-                致谢列表
+                {t('settings.thanks_list')}
               </Button>
             </div>
           </div>
@@ -520,10 +522,10 @@ const AboutPanel: React.FC = () => {
         <Dialog open={isOpenSourceDialogOpen} onOpenChange={(_e, data) => setIsOpenSourceDialogOpen(data.open)}>
           <DialogSurface className={styles.openSourceDialog}>
             <DialogBody>
-              <DialogTitle>开源项目详情</DialogTitle>
+              <DialogTitle>{t('settings.opensource_details')}</DialogTitle>
               <DialogContent>
                 <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
-                  本项目基于以下优秀的开源项目构建，感谢所有开源贡献者
+                  {t('settings.opensource_desc')}
                 </Text>
                 
                 <div className={styles.openSourceGrid}>
@@ -540,7 +542,7 @@ const AboutPanel: React.FC = () => {
               </DialogContent>
               <DialogActions>
                 <Button appearance="secondary" onClick={() => setIsOpenSourceDialogOpen(false)}>
-                  关闭
+                  {t('settings.close')}
                 </Button>
               </DialogActions>
             </DialogBody>
@@ -550,15 +552,15 @@ const AboutPanel: React.FC = () => {
         <Dialog open={isThanksDialogOpen} onOpenChange={(_e, data) => setIsThanksDialogOpen(data.open)}>
           <DialogSurface className={styles.openSourceDialog}>
             <DialogBody>
-              <DialogTitle>致谢列表</DialogTitle>
+              <DialogTitle>{t('settings.thanks_details')}</DialogTitle>
               <DialogActions>
                 <Button appearance="secondary" onClick={() => setIsThanksDialogOpen(false)}>
-                  关闭
+                  {t('settings.close')}
                 </Button>
               </DialogActions>
               <DialogContent>
                 <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
-                  感谢以下所有开贡献者与大佬
+                  {t('settings.thanks_header')}
                 </Text>
                 <div className={styles.openSourceGrid}>
                   {Object.entries(GROUPED_PROJECTS).map(([category, projects]) => (
@@ -575,7 +577,7 @@ const AboutPanel: React.FC = () => {
                             size="medium"
                             onClick={() => openUrl(project.url)}
                           >
-                            查看
+                            {t('settings.view')}
                           </Button>
                         </div>
                       ))}
@@ -593,11 +595,11 @@ const AboutPanel: React.FC = () => {
         <Card className={styles.card}>
           <CardHeader
             image={<Code24Regular />}
-            header={<Text weight="semibold">捐赠/支持</Text>}
+            header={<Text weight="semibold">{t('settings.donate_support')}</Text>}
           />
           <div className={styles.cardContent}>
             <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
-              为了更好的维护和更新，我们希望您能支持我们，您的支持是我们最大的动力
+              {t('settings.donate_desc')}
             </Text>
             <div className={styles.buttonGroup}>
               <Button 
@@ -606,7 +608,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Code24Regular />}
                 onClick={handleDonate}
               >
-                捐赠我们
+                {t('settings.donate_us')}
               </Button>
               <Button 
                 appearance="primary" 
@@ -614,7 +616,7 @@ const AboutPanel: React.FC = () => {
                 icon={<Code24Regular />}
                 onClick={handleDonate}
               >
-                支持列表
+                {t('settings.support_list')}
               </Button>
             </div>
           </div>

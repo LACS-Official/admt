@@ -22,6 +22,7 @@ import {
   Warning24Regular,
 } from "@fluentui/react-icons";
 import MiscellaneousCard from './MiscellaneousCard';
+import { motion } from "framer-motion";
 
 
 const useStyles = makeStyles({
@@ -240,7 +241,6 @@ const useStyles = makeStyles({
   connectionIcon: {
     fontSize: "48px",
     color: tokens.colorNeutralForeground3,
-    animation: "pulse 2s infinite",
     marginBottom: "16px",
   },
   
@@ -295,23 +295,7 @@ const useStyles = makeStyles({
     fontWeight: "500",
   },
   
-  // 动画关键帧
-  "@keyframes pulse": {
-    "0%": { opacity: "1" },
-    "50%": { opacity: "0.4" },
-    "100%": { opacity: "1" },
-  },
-  
-  "@keyframes float": {
-    "0%": { transform: "translateY(0px)" },
-    "50%": { transform: "translateY(-6px)" },
-    "100%": { transform: "translateY(0px)" },
-  },
-  
-  // 浮动图标样式
-  floatingIcon: {
-    animation: "float 4s ease-in-out infinite",
-  }
+  // 动画关键帧 - Removed CSS keyframes in favor of Framer Motion
 });
 
 interface NoDevicePromptProps {
@@ -328,13 +312,34 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.backgroundDecoration}></div>
+      <motion.div 
+        className={styles.backgroundDecoration}
+        animate={{ 
+          scale: [1, 1.1, 1],
+          opacity: [0.5, 0.8, 0.5]
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      ></motion.div>
       
       <div className={styles.content}>
         {/* 上部分容器 */}
-        <div className={styles.upperSection}>
+        <motion.div 
+          className={styles.upperSection}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
             <div className={styles.iconContainer}>
-              <PlugDisconnected24Regular className={styles.connectionIcon} />
+              <motion.div
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                  <PlugDisconnected24Regular className={styles.connectionIcon} />
+              </motion.div>
               <Text className={styles.title}>
                 暂未检测到设备连接
               </Text>
@@ -354,7 +359,11 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
               
               {/* 刷新按钮 */}
               {!isScanning && onRefresh && (
-                <div className={styles.refreshButton}>
+                <motion.div 
+                  className={styles.refreshButton}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   <Button 
                     appearance="primary" 
                     icon={<ArrowClockwise24Regular />}
@@ -362,13 +371,18 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
                   >
                     手动刷新
                   </Button>
-                </div>
+                </motion.div>
               )}
             </div>
-        </div>
+        </motion.div>
         
         {/* 下部分容器 */}
-        <div className={styles.lowerSection}>
+        <motion.div 
+          className={styles.lowerSection}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
           {/* 连接指南卡片 */}
           <Card className={`${styles.unifiedCard} ${styles.guideCard}`}>
             <div className={styles.cardHeader}>
@@ -377,36 +391,31 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
               <Text className={styles.cardTitle}>连接指南</Text>
             </div>
             <div className={styles.linkGrid}>
-              <a href="https://admt.lacs.cc/docs" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
-                <Text className={styles.linkText}>文档中心</Text>
-              </a>
-              
-              <a href="https://space.bilibili.com/1779662818/lists/4978116?type=series" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
-                <Text className={styles.linkText}>视频教程</Text>
-              </a>
-              
-              <a href="https://admt.lacs.cc/docs/device/linksys" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
-                <Text className={styles.linkText}>系统模式</Text>
-              </a>
-              
-              <a href="https://admt.lacs.cc/docs/device/linkrec" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
-
-                <Text className={styles.linkText}>恢复模式</Text>
-              </a>
-              
-              <a href="https://admt.lacs.cc/docs/device/linkfb" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
-
-                <Text className={styles.linkText}>引导模式</Text>
-              </a>
-              
-              <a href="https://admt.lacs.cc/docs/device/linkedl" target="_blank" rel="noopener noreferrer" className={styles.modeLink}>
-                <Text className={styles.linkText}>EDL模式</Text>
-              </a>
+              {[
+                { href: "https://admt.lacs.cc/docs", text: "文档中心" },
+                { href: "https://space.bilibili.com/1779662818/lists/4978116?type=series", text: "视频教程" },
+                { href: "https://admt.lacs.cc/docs/device/linksys", text: "系统模式" },
+                { href: "https://admt.lacs.cc/docs/device/linkrec", text: "恢复模式" },
+                { href: "https://admt.lacs.cc/docs/device/linkfb", text: "引导模式" },
+                { href: "https://admt.lacs.cc/docs/device/linkedl", text: "EDL模式" },
+              ].map((link, index) => (
+                <motion.a 
+                  key={index}
+                  href={link.href} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className={styles.modeLink}
+                  whileHover={{ scale: 1.05, backgroundColor: "var(--colorNeutralBackground2Hover)" }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Text className={styles.linkText}>{link.text}</Text>
+                </motion.a>
+              ))}
             </div>
           </Card>
 
           <MiscellaneousCard />
-        </div>
+        </motion.div>
       </div>
     </div>
   );

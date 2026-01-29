@@ -20,6 +20,7 @@ import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
 import AppManagerPanel from './AppManagerPanel';
 import AppInstallPanel from './AppInstallPanel';
 import FileManagerPanel from './FileManagerPanel';
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
@@ -140,6 +141,7 @@ type AdbZoneView =  "device-control" | "app_install" | "file-manager" | "screen-
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
   const [currentView, setCurrentView] = useState<AdbZoneView>("device-control");
 
@@ -151,27 +153,27 @@ const AdbZonePanel: React.FC = () => {
   const tabs = [
     {
       id: "device-control" as AdbZoneView,
-      label: "设备控制",
+      label: t('adb.device_control'),
       icon: <Play24Regular />,
     },
     {
       id: "screen-mirror" as AdbZoneView,
-      label: "设备投屏",
+      label: t('adb.screen_mirror'),
       icon: <Settings24Regular />,
     },
     {
       id: "app_install" as AdbZoneView,
-      label: "应用安装",
+      label: t('adb.app_install'),
       icon: <Apps24Regular />,
     },
     {
       id: "app-manager" as AdbZoneView,
-      label: "应用管理",
+      label: t('adb.app_manager'),
       icon: <Settings24Regular />,
     },
     {
       id: "file-manager" as AdbZoneView,
-      label: "文件管理",
+      label: t('adb.file_manager'),
       icon: <Folder24Regular />,
     },
 
@@ -233,25 +235,25 @@ const AdbZonePanel: React.FC = () => {
       {connectedDevices.length === 0 ? (
         <div className={styles.noDevice}>
           <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>未检测到设备</Text>
+          <Text size={400}>{t('main.no_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备已连接并启用USB调试
+            {t('mirror.no_device_hint')}
           </Text>
         </div>
       ) : !selectedDevice ? (
         <div className={styles.noDevice}>
           <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>请选择一个设备</Text>
+          <Text size={400}>{t('unlock.select_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            从设备信息页面选择要操作的设备
+            {t('unlock.select_device_hint')}
           </Text>
         </div>
       ) : isFastbootMode ? (
         <div className={styles.noDevice}>
           <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>设备未在 adb 模式</Text>
+          <Text size={400}>{t('adb.fastboot_mode_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请将设备重启到系统或Recovery模式以使用ADB功能
+            {t('adb.fastboot_mode_desc')}
           </Text>
         </div>
       ) : (

@@ -29,6 +29,7 @@ import {
 } from "@fluentui/react-icons";
 import { deviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
+import { useTranslation } from "react-i18next";
 // 定义信息面板组件的props类型
 interface InfoPanelProps {
   device: any;
@@ -63,6 +64,7 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
   const [sortOrder, setSortOrder] = useState<string>("name");
   const [selectedPartitions, setSelectedPartitions] = useState<Set<string>>(new Set());
   const { setStatusBarMessage } = useAppStore();
+  const { t } = useTranslation();
 
   // 预定义分区描述和分类
   const getPartitionInfo = useCallback((name: string): { category: string; description: string } => {
@@ -70,182 +72,86 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
     const lowerName = name.toLowerCase();
     
     // 启动与引导类分区
-    const bootPartitions: Record<string, string> = {
-      "xbl_a": "高通底层引导，初始化硬件并加载后续程序（高通设备专属）",
-      "xbl_b": "高通底层引导，初始化硬件并加载后续程序（高通设备专属）",
-      "xbl_config_a": "存储 xbl 硬件适配参数，确保 xbl 适配设备",
-      "xbl_config_b": "存储 xbl 硬件适配参数，确保 xbl 适配设备",
-      "abl_a": "安卓 Boot Loader，加载 boot 内核，决定启动 A/B 槽",
-      "abl_b": "安卓 Boot Loader，加载 boot 内核，决定启动 A/B 槽",
-      "boot_a": "存安卓内核 + ramdisk，刷 Magisk 修补版可获 Root",
-      "boot_b": "存安卓内核 + ramdisk，刷 Magisk 修补版可获 Root",
-      "dtbo_a": "补充硬件配置，支持动态修改参数（第三方 ROM/Recovery 需适配）",
-      "dtbo_b": "补充硬件配置，支持动态修改参数（第三方 ROM/Recovery 需适配）",
-      "vendor_boot_a": "存厂商定制启动资源，补充 boot 功能（安卓 11+ 常见）",
-      "vendor_boot_b": "存厂商定制启动资源，补充 boot 功能（安卓 11+ 常见）",
-      "imagefv_a": "UEFI 镜像验证，保障启动安全（防篡改）",
-      "imagefv_b": "UEFI 镜像验证，保障启动安全（防篡改）",
-      "uefisecapp_a": "运行 UEFI 安全程序（如 Secure Boot 验证）",
-      "uefisecapp_b": "运行 UEFI 安全程序（如 Secure Boot 验证）",
-      "vbmeta_a": "存分区签名，AVB 验证用，刷第三方需加 --disable-verity",
-      "vbmeta_b": "存分区签名，AVB 验证用，刷第三方需加 --disable-verity",
-      "vbmeta_system_a": "专门验证 system 分区完整性",
-      "vbmeta_system_b": "专门验证 system 分区完整性",
-    };
-    
+    if (lowerName.startsWith("xbl_config")) return { category: "boot", description: t('partition_desc.xbl_config') };
+    if (lowerName.startsWith("xbl")) return { category: "boot", description: t('partition_desc.xbl') };
+    if (lowerName.startsWith("abl")) return { category: "boot", description: t('partition_desc.abl') };
+    if (lowerName.startsWith("boot")) return { category: "boot", description: t('partition_desc.boot') };
+    if (lowerName.startsWith("dtbo")) return { category: "boot", description: t('partition_desc.dtbo') };
+    if (lowerName.startsWith("vendor_boot")) return { category: "boot", description: t('partition_desc.vendor_boot') };
+    if (lowerName.startsWith("imagefv")) return { category: "boot", description: t('partition_desc.imagefv') };
+    if (lowerName.startsWith("uefisecapp")) return { category: "boot", description: t('partition_desc.uefisecapp') };
+    if (lowerName.startsWith("vbmeta_system")) return { category: "boot", description: t('partition_desc.vbmeta_system') };
+    if (lowerName.startsWith("vbmeta")) return { category: "boot", description: t('partition_desc.vbmeta') };
+
     // 通信与基带类分区
-    const communicationPartitions: Record<string, string> = {
-      "modem_a": "存基带固件，控 5G/4G / 蓝牙 / WiFi，需匹配地区固件",
-      "modem_b": "存基带固件，控 5G/4G / 蓝牙 / WiFi，需匹配地区固件",
-      "modemst1": "存基带动态配置，清除后重启可恢复",
-      "modemst2": "存基带动态配置，清除后重启可恢复",
-      "fsg": "存基带安全策略，需与 modem 版本匹配",
-      "fsc": "存 fsg 加密证书，验证 fsg 完整性",
-      "bluetooth_a": "存蓝牙固件，控蓝牙连接（此设备单独分区）",
-      "bluetooth_b": "存蓝牙固件，控蓝牙连接（此设备单独分区）",
-    };
-    
+    if (lowerName.startsWith("modemst")) return { category: "communication", description: t('partition_desc.modemst') };
+    if (lowerName.startsWith("modem")) return { category: "communication", description: t('partition_desc.modem') };
+    if (lowerName === "fsg") return { category: "communication", description: t('partition_desc.fsg') };
+    if (lowerName === "fsc") return { category: "communication", description: t('partition_desc.fsc') };
+    if (lowerName.startsWith("bluetooth")) return { category: "communication", description: t('partition_desc.bluetooth') };
+
     // 系统与用户数据类分区
-    const systemPartitions: Record<string, string> = {
-      "super": "含 system/vendor/product 等子分区，刷系统需先刷此分区",
-      "userdata": "存个人数据，fastboot erase userdata 即恢复出厂",
-      "cust": "存厂商地区 / 运营商定制内容（如国行 MIUI 功能）",
-      "logo": "存开机 Logo / 动画，可刷自定义文件替换",
-      "splash": "存开机过渡画面，可含简单动画（区别于静态 logo）",
-    };
-    
+    if (lowerName === "super") return { category: "system", description: t('partition_desc.super') };
+    if (lowerName === "userdata") return { category: "system", description: t('partition_desc.userdata') };
+    if (lowerName === "cust") return { category: "system", description: t('partition_desc.cust') };
+    if (lowerName === "logo") return { category: "system", description: t('partition_desc.logo') };
+    if (lowerName === "splash") return { category: "system", description: t('partition_desc.splash') };
+
     // 安全与配置类分区
-    const securityPartitions: Record<string, string> = {
-      "keymaster_a": "运行 Keymaster 模块，存系统密钥（硬件级加密）",
-      "keymaster_b": "运行 Keymaster 模块，存系统密钥（硬件级加密）",
-      "vm-keystore": "为安卓虚拟机提供密钥存储 / 签名验证",
-      "secdata": "存轻量安全配置（如 Secure Boot 状态、防回滚号）",
-      "storsec": "控存储访问权限，防数据物理提取",
-      "frp": "存谷歌锁数据，刷机前 fastboot erase frp 可跳过激活",
-      "devinfo": "存设备硬件参数，系统启动时确认设备身份",
-      "persist": "存硬件校准数据（如传感器 / 相机参数），擦除致硬件异常且难恢复",
-      "persistbak": "备份 persist 数据，可恢复损坏的 persist",
-    };
-    
+    if (lowerName.startsWith("keymaster")) return { category: "security", description: t('partition_desc.keymaster') };
+    if (lowerName === "vm-keystore") return { category: "security", description: t('partition_desc.vm-keystore') };
+    if (lowerName === "secdata") return { category: "security", description: t('partition_desc.secdata') };
+    if (lowerName === "storsec") return { category: "security", description: t('partition_desc.storsec') };
+    if (lowerName === "frp") return { category: "security", description: t('partition_desc.frp') };
+    if (lowerName === "devinfo") return { category: "security", description: t('partition_desc.devinfo') };
+    if (lowerName.startsWith("persistbak")) return { category: "security", description: t('partition_desc.persistbak') };
+    if (lowerName.startsWith("persist")) return { category: "security", description: t('partition_desc.persist') };
+
     // 调试与日志类分区
-    const debugPartitions: Record<string, string> = {
-      "logdump": "存系统日志，设备异常时定位故障",
-      "minidump": "存系统崩溃精简内存快照，便于分析",
-      "rawdump": "存完整崩溃内存快照，供复杂故障排查",
-      "oops": "存内核错误日志，快速定位内核故障",
-      "dbg": "存调试模式配置（如 USB 调试权限）",
-    };
-    
+    if (lowerName === "logdump") return { category: "debug", description: t('partition_desc.logdump') };
+    if (lowerName === "minidump") return { category: "debug", description: t('partition_desc.minidump') };
+    if (lowerName === "rawdump") return { category: "debug", description: t('partition_desc.rawdump') };
+    if (lowerName === "oops") return { category: "debug", description: t('partition_desc.oops') };
+    if (lowerName === "dbg") return { category: "debug", description: t('partition_desc.dbg') };
+
     // 备份与恢复类分区
-    const recoveryPartitions: Record<string, string> = {
-      "rescue": "存紧急救援系统，主系统故障时修复 / 备份",
-      "ffu": "存厂商快速修复固件，用 QPST 刷写修复底层故障",
-      "msadp": "存基带 / 应用处理器紧急修复程序",
-      "apdp": "存基带 / 应用处理器紧急修复程序",
-    };
-    
+    if (lowerName === "rescue") return { category: "recovery", description: t('partition_desc.rescue') };
+    if (lowerName === "ffu") return { category: "recovery", description: t('partition_desc.ffu') };
+    if (lowerName === "msadp" || lowerName === "apdp") return { category: "recovery", description: t('partition_desc.apdp') };
+
     // 硬件与芯片专属分区
-    const hardwarePartitions: Record<string, string> = {
-      "aop_a": "存音频编解码固件，控音频硬件（高通专属）",
-      "aop_b": "存音频编解码固件，控音频硬件（高通专属）",
-      "tz_a": "运行 TEE 系统，提供硬件级安全隔离（如指纹 / 支付加密）",
-      "tz_b": "运行 TEE 系统，提供硬件级安全隔离（如指纹 / 支付加密）",
-      "hyp_a": "管理 CPU 虚拟化资源，支持安卓虚拟化功能",
-      "hyp_b": "管理 CPU 虚拟化资源，支持安卓虚拟化功能",
-      "cmnlib_a": "为 TEE 提供安全接口，64 位版（cmnlib64）适配 64 位 TEE",
-      "cmnlib_b": "为 TEE 提供安全接口，64 位版（cmnlib64）适配 64 位 TEE",
-      "devcfg_a": "存高通芯片硬件配置，确保识别外部硬件",
-      "devcfg_b": "存高通芯片硬件配置，确保识别外部硬件",
-      "qupfw_a": "控电源管理（如充电电流 / 休眠功耗），保电源稳定",
-      "qupfw_b": "控电源管理（如充电电流 / 休眠功耗），保电源稳定",
-      "dsp_a": "存 DSP 固件，处理音视频信号（提升多媒体效率）",
-      "dsp_b": "存 DSP 固件，处理音视频信号（提升多媒体效率）",
-      "ddr": "存内存初始化参数，防内存识别失败",
-      "mdmddr": "存基带内存初始化参数，防内存识别失败",
-      "cdt": "存高通芯片硬件信息，开机时确认芯片规格",
-    };
-    
+    if (lowerName.startsWith("aop")) return { category: "hardware", description: t('partition_desc.aop') };
+    if (lowerName.startsWith("tz")) return { category: "hardware", description: t('partition_desc.tz') };
+    if (lowerName.startsWith("hyp")) return { category: "hardware", description: t('partition_desc.hyp') };
+    if (lowerName.startsWith("cmnlib")) return { category: "hardware", description: t('partition_desc.cmnlib') };
+    if (lowerName.startsWith("devcfg")) return { category: "hardware", description: t('partition_desc.devcfg') };
+    if (lowerName.startsWith("qupfw")) return { category: "hardware", description: t('partition_desc.qupfw') };
+    if (lowerName.startsWith("dsp")) return { category: "hardware", description: t('partition_desc.dsp') };
+    if (lowerName === "ddr") return { category: "hardware", description: t('partition_desc.ddr') };
+    if (lowerName === "mdmddr") return { category: "hardware", description: t('partition_desc.mdmddr') };
+    if (lowerName === "cdt") return { category: "hardware", description: t('partition_desc.cdt') };
+
     // 厂商自定义分区
-    const vendorPartitions: Record<string, string> = {
-      "bk01": "存厂商小体积配置备份（如校准参数、MIUI 开关）",
-      "bk02": "存厂商小体积配置备份（如校准参数、MIUI 开关）",
-      "bk03": "存厂商小体积配置备份（如校准参数、MIUI 开关）",
-      "bk04": "存厂商小体积配置备份（如校准参数、MIUI 开关）",
-      "bk06": "存相机算法、屏幕参数、充电策略等功能配置",
-      "bk08": "存相机算法、屏幕参数、充电策略等功能配置",
-      "bk09": "存相机算法、屏幕参数、充电策略等功能配置",
-      "bk010": "存相机算法、屏幕参数、充电策略等功能配置",
-      "bk41_a": "备份 A/B 槽配置，防槽位切换失败",
-      "bk41_b": "备份 A/B 槽配置，防槽位切换失败",
-      "bk42": "存传感器备份、蓝牙 / WiFi 配置、射频参数等",
-      "bk43": "存传感器备份、蓝牙 / WiFi 配置、射频参数等",
-      "bk44": "存传感器备份、蓝牙 / WiFi 配置、射频参数等",
-      "bk51": "存传感器备份、蓝牙 / WiFi 配置、射频参数等",
-      "countrycode": "存销售地区代码，系统加载对应地区功能",
-      "featenabler_a": "控小米特色功能开关（如 MIUI 隐私保护、快充）",
-      "featenabler_b": "控小米特色功能开关（如 MIUI 隐私保护、快充）",
-      "limits": "限制系统资源使用，防硬件过载",
-      "limits-cdsp": "限制 DSP 资源使用，防硬件过载",
-      "misc": "存临时配置（如重启模式、OTA 状态）",
-      "multiimgqti_a": "存高通 QTI 多镜像加载参数，保组件协同",
-      "multiimgqti_b": "存高通 QTI 多镜像加载参数，保组件协同",
-      "multiimgoem_a": "存小米定制多镜像参数，适配第三方硬件",
-      "multiimgoem_b": "存小米定制多镜像参数，适配第三方硬件",
-      "oem_misc1": "存小米 OEM 临时数据（如测试日志、保修信息）",
-      "ssd": "记录 UFS 闪存健康状态，优化存储性能",
-      "spunvm": "存小米安全虚拟机镜像，提供隐私隔离",
-      "switch": "存设备模式标记，开机时决定启动模式",
-      "uefivarstore": "存 UEFI 动态变量，保启动参数一致",
-      "vm-data": "存安卓虚拟机运行数据，提升启动效率",
-      "mdm1m9kefsc": "存基带 EFS 数据（如 IMEI），损坏致无信号且难恢复",
-      "mdm1m9kefs1": "存基带 EFS 数据（如 IMEI），损坏致无信号且难恢复",
-      "mdm1m9kefs2": "存基带 EFS 数据（如 IMEI），损坏致无信号且难恢复",
-      "mdm1m9kefs3": "存基带 EFS 数据（如 IMEI），损坏致无信号且难恢复",
-    };
-    
-    // 检查分区是否属于启动与引导类
-    if (bootPartitions[lowerName]) {
-      return { category: "boot", description: bootPartitions[lowerName] };
-    }
-    
-    // 检查分区是否属于通信与基带类
-    if (communicationPartitions[lowerName]) {
-      return { category: "communication", description: communicationPartitions[lowerName] };
-    }
-    
-    // 检查分区是否属于系统与用户数据类
-    if (systemPartitions[lowerName]) {
-      return { category: "system", description: systemPartitions[lowerName] };
-    }
-    
-    // 检查分区是否属于安全与配置类
-    if (securityPartitions[lowerName]) {
-      return { category: "security", description: securityPartitions[lowerName] };
-    }
-    
-    // 检查分区是否属于调试与日志类
-    if (debugPartitions[lowerName]) {
-      return { category: "debug", description: debugPartitions[lowerName] };
-    }
-    
-    // 检查分区是否属于备份与恢复类
-    if (recoveryPartitions[lowerName]) {
-      return { category: "recovery", description: recoveryPartitions[lowerName] };
-    }
-    
-    // 检查分区是否属于硬件与芯片专属分区
-    if (hardwarePartitions[lowerName]) {
-      return { category: "hardware", description: hardwarePartitions[lowerName] };
-    }
-    
-    // 检查分区是否属于厂商自定义分区
-    if (vendorPartitions[lowerName]) {
-      return { category: "vendor", description: vendorPartitions[lowerName] };
-    }
-    
+    if (lowerName.startsWith("bk41")) return { category: "vendor", description: t('partition_desc.bk41') };
+    if (lowerName.startsWith("bk42") || lowerName.startsWith("bk43") || lowerName.startsWith("bk44") || lowerName.startsWith("bk51")) return { category: "vendor", description: t('partition_desc.bk42') };
+    if (lowerName.startsWith("bk")) return { category: "vendor", description: t('partition_desc.bk') };
+    if (lowerName === "countrycode") return { category: "vendor", description: t('partition_desc.countrycode') };
+    if (lowerName.startsWith("featenabler")) return { category: "vendor", description: t('partition_desc.featenabler') };
+    if (lowerName.startsWith("limits")) return { category: "vendor", description: t('partition_desc.limits') };
+    if (lowerName === "misc") return { category: "vendor", description: t('partition_desc.misc') };
+    if (lowerName.startsWith("multiimgqti")) return { category: "vendor", description: t('partition_desc.multiimgqti') };
+    if (lowerName.startsWith("multiimgoem")) return { category: "vendor", description: t('partition_desc.multiimgoem') };
+    if (lowerName === "oem_misc1") return { category: "vendor", description: t('partition_desc.oem_misc1') };
+    if (lowerName === "ssd") return { category: "vendor", description: t('partition_desc.ssd') };
+    if (lowerName === "spunvm") return { category: "vendor", description: t('partition_desc.spunvm') };
+    if (lowerName === "switch") return { category: "vendor", description: t('partition_desc.switch') };
+    if (lowerName === "uefivarstore") return { category: "vendor", description: t('partition_desc.uefivarstore') };
+    if (lowerName === "vm-data") return { category: "vendor", description: t('partition_desc.vm-data') };
+    if (lowerName.startsWith("mdm1m9kefs")) return { category: "vendor", description: t('partition_desc.mdm1m9kefs') };
+
     // 默认归类为其他分区
-    return { category: "other", description: "未知分区" };
-  }, []);
+    return { category: "other", description: t('fastboot_storage.unknown_partition') };
+  }, [t]);
 
   // 格式化大小
   const formatSize = useCallback((sizeHex: string): string => {
@@ -412,7 +318,7 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
   // 获取分区信息
   const fetchPartitionInfo = useCallback(async () => {
     if (!device.serial || device.mode !== 'fastboot') {
-      setError("设备未连接或不在 fastboot 模式");
+      setError(t('fastboot_storage.no_device_mode'));
       return;
     }
 
@@ -456,56 +362,56 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
         const categoryArray: PartitionCategory[] = [
           {
             id: "boot",
-            name: "启动与引导",
-            description: "设备开机核心，损坏致无法开机",
+            name: t('fastboot_storage.category_boot'),
+            description: t('fastboot_storage.category_boot_desc'),
             partitions: categories.boot,
           },
           {
             id: "communication",
-            name: "通信与基带",
-            description: "控网络，损坏致无信号 / 无法通话",
+            name: t('fastboot_storage.category_communication'),
+            description: t('fastboot_storage.category_communication_desc'),
             partitions: categories.communication,
           },
           {
             id: "system",
-            name: "系统与用户数据",
-            description: "存系统 / 个人数据",
+            name: t('fastboot_storage.category_system'),
+            description: t('fastboot_storage.category_system_desc'),
             partitions: categories.system,
           },
           {
             id: "security",
-            name: "安全与配置",
-            description: "保安全 / 硬件适配，损坏致功能异常",
+            name: t('fastboot_storage.category_security'),
+            description: t('fastboot_storage.category_security_desc'),
             partitions: categories.security,
           },
           {
             id: "debug",
-            name: "调试与日志",
-            description: "排故障，供开发者 / 维修用",
+            name: t('fastboot_storage.category_debug'),
+            description: t('fastboot_storage.category_debug_desc'),
             partitions: categories.debug,
           },
           {
             id: "recovery",
-            name: "备份与恢复",
-            description: "系统故障时紧急修复",
+            name: t('fastboot_storage.category_recovery'),
+            description: t('fastboot_storage.category_recovery_desc'),
             partitions: categories.recovery,
           },
           {
             id: "hardware",
-            name: "硬件与芯片",
-            description: "高通 / 厂商适配，保硬件协同",
+            name: t('fastboot_storage.category_hardware'),
+            description: t('fastboot_storage.category_hardware_desc'),
             partitions: categories.hardware,
           },
           {
             id: "vendor",
-            name: "厂商自定义",
-            description: "小米专属，保特色功能",
+            name: t('fastboot_storage.category_vendor'),
+            description: t('fastboot_storage.category_vendor_desc'),
             partitions: categories.vendor,
           },
           {
             id: "other",
-            name: "其他分区",
-            description: "未分类分区",
+            name: t('fastboot_storage.category_other'),
+            description: t('fastboot_storage.category_other_desc'),
             partitions: categories.other,
           },
         ];
@@ -518,7 +424,7 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
       }
     } catch (err) {
       console.error("[FastbootStorageInfoPanel] 获取分区信息异常:", err);
-      setError("获取分区信息失败: " + (err instanceof Error ? err.message : "未知错误"));
+      setError(t('fastboot_storage.get_info_failed', { error: err instanceof Error ? err.message : t('common.unknown_error') }));
     } finally {
       setLoading(false);
     }
@@ -536,13 +442,13 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
     navigator.clipboard.writeText(text).then(() => {
       setStatusBarMessage({
         type: "success",
-        message: `已复制 ${label} 到剪贴板`,
+        message: t('fastboot_storage.copied_to_clipboard', { label }),
       });
     }).catch(err => {
       console.error("复制失败:", err);
       setStatusBarMessage({
         type: "error",
-        message: `无法复制 ${label} 到剪贴板`,
+        message: t('fastboot_storage.copy_failed', { label }),
       });
     });
   };
@@ -632,32 +538,33 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         {/* 统计信息 */}
         <Text size={400} style={{ marginLeft: '10px' }}>
-          共 {partitionCategories.reduce((acc, category) => acc + category.partitions.length, 0)} 个分区，共
-          {(() => {
-            const totalBytes = partitionCategories.reduce((acc, category) => {
-              return acc + category.partitions.reduce((sum, p) => {
-                // 尝试将分区大小转换为数字，若无法转换则视为 0
-                const sizeStr = p.size.replace(/[^0-9.]/g, '');
-                const sizeNum = parseFloat(sizeStr);
-                if (isNaN(sizeNum)) {
+          {t('fastboot_storage.total_info', {
+            count: partitionCategories.reduce((acc, category) => acc + category.partitions.length, 0),
+            size: (() => {
+              const totalBytes = partitionCategories.reduce((acc, category) => {
+                return acc + category.partitions.reduce((sum, p) => {
+                  // 尝试将分区大小转换为数字，若无法转换则视为 0
+                  const sizeStr = p.size.replace(/[^0-9.]/g, '');
+                  const sizeNum = parseFloat(sizeStr);
+                  if (isNaN(sizeNum)) {
+                    return sum;
+                  }
+                  // 根据单位调整大小值为字节
+                  if (p.size.includes('KB')) {
+                    return sum + sizeNum * 1024;
+                  } else if (p.size.includes('MB')) {
+                    return sum + sizeNum * 1024 * 1024;
+                  } else if (p.size.includes('GB')) {
+                    return sum + sizeNum * 1024 * 1024 * 1024;
+                  } else if (p.size.includes('B')) {
+                    return sum + sizeNum;
+                  }
                   return sum;
-                }
-                // 根据单位调整大小值为字节
-                if (p.size.includes('KB')) {
-                  return sum + sizeNum * 1024;
-                } else if (p.size.includes('MB')) {
-                  return sum + sizeNum * 1024 * 1024;
-                } else if (p.size.includes('GB')) {
-                  return sum + sizeNum * 1024 * 1024 * 1024;
-                } else if (p.size.includes('B')) {
-                  return sum + sizeNum;
-                }
-                return sum;
+                }, 0);
               }, 0);
-            }, 0);
-            // 将总字节数转换为GB并保留两位小数
-            return (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
-          })()} GB
+              return (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+            })()
+          })}
         </Text>
 
                   {/* 分类选择器 */}
@@ -681,7 +588,7 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
             onFocus={(e) => e.target.style.borderColor = '#0078d4'}
             onBlur={(e) => e.target.style.borderColor = '#ccc'}
           >
-            <option value="all">全部类型</option>
+            <option value="all">{t('fastboot_storage.all_types')}</option>
             {partitionCategories.map(category => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -709,16 +616,16 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
           onFocus={(e) => e.target.style.borderColor = '#0078d4'}
           onBlur={(e) => e.target.style.borderColor = '#ccc'}
         >
-          <option value="name">按名称A-Z排序</option>
-          <option value="name-reverse">按名称Z-A排序</option>
-          <option value="size">按大小排序</option>
-          <option value="size-reverse">按大小排序（倒序）</option>
+          <option value="name">{t('fastboot_storage.sort_name_az')}</option>
+          <option value="name-reverse">{t('fastboot_storage.sort_name_za')}</option>
+          <option value="size">{t('fastboot_storage.sort_size')}</option>
+          <option value="size-reverse">{t('fastboot_storage.sort_size_desc')}</option>
           
         </select>
 
         {/* 搜索框 */}
         <Input
-            placeholder="搜索分区名称或描述..."
+            placeholder={t('fastboot_storage.search_placeholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             contentBefore={<SearchRegular />}
@@ -738,7 +645,7 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
       {loading && (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
           <Spinner size="medium" />
-          <Text style={{ marginLeft: '10px' }}>正在获取分区信息...</Text>
+          <Text style={{ marginLeft: '10px' }}>{t('fastboot_storage.fetching_info')}</Text>
         </div>
       )}
 
@@ -761,11 +668,11 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
                         onChange={(_, data) => handleSelectAll(!!data.checked)}
                       />
                     </TableHeaderCell>
-                    <TableHeaderCell style={{ width: '5%' }}>序号</TableHeaderCell>
-                    <TableHeaderCell style={{ width: '20%' }}>分区名称</TableHeaderCell>
-                    <TableHeaderCell style={{ width: '15%' }}>类型</TableHeaderCell>
-                    <TableHeaderCell style={{ width: '15%' }}>大小</TableHeaderCell>
-                    <TableHeaderCell style={{ width: '40%' }}>核心作用</TableHeaderCell>
+                    <TableHeaderCell style={{ width: '5%' }}>{t('fastboot_storage.ordinal')}</TableHeaderCell>
+                    <TableHeaderCell style={{ width: '20%' }}>{t('fastboot_storage.partition_name')}</TableHeaderCell>
+                    <TableHeaderCell style={{ width: '15%' }}>{t('fastboot_storage.partition_type')}</TableHeaderCell>
+                    <TableHeaderCell style={{ width: '15%' }}>{t('fastboot_storage.partition_size')}</TableHeaderCell>
+                    <TableHeaderCell style={{ width: '40%' }}>{t('fastboot_storage.partition_description')}</TableHeaderCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -794,7 +701,7 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
                                 icon={<InfoRegular />}
                                 appearance="subtle"
                                 size="small"
-                                aria-label="详细信息"
+                                aria-label={t('fastboot_storage.detail_info')}
                               />
                             </DialogTrigger>
                             <DialogSurface>

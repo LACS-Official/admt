@@ -1,4 +1,5 @@
 import React  from 'react';
+import { useTranslation } from "react-i18next";
 import {
   makeStyles,
   Text,
@@ -73,6 +74,7 @@ const useStyles = makeStyles({
 
 const UnlockZonePanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
 
   const connectedDevices = devices.filter(d => d.connected);
@@ -83,17 +85,17 @@ const UnlockZonePanel: React.FC = () => {
       {connectedDevices.length === 0 ? (
         <div className={styles.noDevice}>
           <LockOpen24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>未检测到设备</Text>
+          <Text size={400}>{t('unlock.no_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备已连接并启用USB调试
+            {t('unlock.no_device_hint')}
           </Text>
         </div>
       ) : !selectedDevice ? (
         <div className={styles.noDevice}>
           <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>请选择一个设备</Text>
+          <Text size={400}>{t('unlock.select_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            从设备信息页面选择要操作的设备
+            {t('unlock.select_device_hint')}
           </Text>
         </div>
       ) : (
@@ -104,10 +106,10 @@ const UnlockZonePanel: React.FC = () => {
                 <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
                 <div className={styles.warningText}>
                   <Text weight="semibold" style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                    ⚠️ 重要警告
+                    {t('unlock.warning_title')}
                   </Text>
                   <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
-                    解锁操作具有风险，可能导致设备变砖、保修失效或数据丢失。请确保您了解相关风险并已备份重要数据。
+                    {t('unlock.warning_desc')}
                   </Text>
                 </div>
               </div>

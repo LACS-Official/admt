@@ -25,6 +25,7 @@ import { autoStartService } from '../../services/autoStartService';
 import { enable, isEnabled, disable } from '@tauri-apps/plugin-autostart';
 // when using `"withGlobalTauri": true`, you may use
 // const { enable, isEnabled, disable } = window.__TAURI__.autostart;
+import { useTranslation } from "react-i18next";
 
 // 状态提示组件
 interface SystemFeatureStatus {
@@ -139,6 +140,7 @@ const useStyles = makeStyles({
 
 const OtherSettingsPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { config, updateConfig } = useAppStore();
   const { setStatusBarMessage } = useAppStore();
   
@@ -262,7 +264,7 @@ const OtherSettingsPanel: React.FC = () => {
 
 
   const handleLanguageChange = (value: string) => {
-    updateConfig({ language: value as "zh-CN" | "en-US" });
+    updateConfig({ language: value as "zh-CN" | "zh-TW" | "en-US" });
   };
 
 function handleStartWithSystemChange(checked: boolean): void {
@@ -322,18 +324,19 @@ function handleStartWithSystemChange(checked: boolean): void {
         <Card className={styles.card}>
           <CardHeader
             image={<Globe24Regular />}
-            header={<Text weight="semibold">语言和地区</Text>}
-            description={<Text size={200}>语言、时区和本地化设置</Text>}
+            header={<Text weight="semibold">{t('settings.language_region')}</Text>}
+            description={<Text size={200}>{t('settings.language_region_desc')}</Text>}
           />
 
           <div className={styles.cardContent}>
-            <Field label="界面语言:">
+            <Field label={t('settings.interface_language') + ":"}>
               <Select
                 value={config.language}
                 onChange={(_, data) => handleLanguageChange(data.value)}
               >
-                <option value="zh-CN">简体中文</option>
-                <option value="zh-CN">Chinese</option>
+                <option value="zh-CN">{t('settings.simplified_chinese')}</option>
+                <option value="zh-TW">{t('settings.traditional_chinese')}</option>
+                <option value="en-US">{t('settings.english')}</option>
               </Select>
             </Field>
 

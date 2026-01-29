@@ -23,6 +23,7 @@ import {
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from '@/stores/appStore';
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -100,6 +101,7 @@ interface PowerManagementCardProps {
 
 const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { deviceService } = useDeviceService();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
   const { setStatusBarMessage } = useAppStore();
@@ -134,30 +136,30 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
 
   // 屏幕超时选项
   const screenTimeoutOptions = [
-    { value: "15000", label: "15秒" },
-    { value: "30000", label: "30秒" },
-    { value: "60000", label: "1分钟" },
-    { value: "120000", label: "2分钟" },
-    { value: "300000", label: "5分钟" },
-    { value: "600000", label: "10分钟" },
-    { value: "1800000", label: "30分钟" },
-    { value: "-1", label: "永不" },
+    { value: "15000", label: t('device_control.seconds', { count: 15 }) },
+    { value: "30000", label: t('device_control.seconds', { count: 30 }) },
+    { value: "60000", label: t('device_control.minutes', { count: 1 }) },
+    { value: "120000", label: t('device_control.minutes', { count: 2 }) },
+    { value: "300000", label: t('device_control.minutes', { count: 5 }) },
+    { value: "600000", label: t('device_control.minutes', { count: 10 }) },
+    { value: "1800000", label: t('device_control.minutes', { count: 30 }) },
+    { value: "-1", label: t('device_control.never') },
   ];
 
   // 充电时保持唤醒选项
   const stayOnWhilePluggedInOptions = [
-    { value: "0", label: "关闭" },
-    { value: "1", label: "充电时保持唤醒" },
-    { value: "2", label: "USB连接时保持唤醒" },
-    { value: "7", label: "无线充电时保持唤醒" },
+    { value: "0", label: t('device_control.off') },
+    { value: "1", label: t('device_control.stay_on_charging') },
+    { value: "2", label: t('device_control.stay_on_usb') },
+    { value: "7", label: t('device_control.stay_on_wireless') },
   ];
 
   // 充电模式选项
   const chargingModeOptions = [
-    { value: "none", label: "非充电模式" },
-    { value: "usb", label: "USB充电模式" },
-    { value: "ac", label: "直流充电模式" },
-    { value: "wireless", label: "无线充电模式" },
+    { value: "none", label: t('device_control.mode_none') },
+    { value: "usb", label: t('device_control.mode_usb') },
+    { value: "ac", label: t('device_control.mode_ac') },
+    { value: "wireless", label: t('device_control.mode_wireless') },
   ];
 
   // 获取电源管理设置
@@ -258,22 +260,22 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
       const result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "system", "screen_off_timeout", timeout.toString()]);
       if (result.success) {
         setPowerSettings(prev => ({ ...prev, screenTimeout: timeout }));
-        setStatusBarMessage({
-          type: "success",
-          message: `自动锁屏时间已设置为 ${timeout < 0 ? '永不' : timeout/1000 + '秒'}`,
-        });
+          setStatusBarMessage({
+            type: "success",
+            message: t('device_control.msg_screen_timeout_success', { time: timeout < 0 ? t('device_control.never') : t('device_control.seconds', { count: timeout/1000 }) }),
+          });
         // 重新获取设置以确保更新
         setTimeout(fetchPowerSettings, 500);
       } else {
-        setStatusBarMessage({
-          type: "error",
-          message: result.error || "设置自动锁屏时间失败",
-        });
+          setStatusBarMessage({
+            type: "error",
+            message: result.error || t('device_control.msg_screen_timeout_failed'),
+          });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `设置自动锁屏时间失败: ${error}`,
+        message: `${t('device_control.msg_screen_timeout_failed')}: ${error}`,
       });
     } finally {
       setExecutingCommand(null);
@@ -288,22 +290,22 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
       const result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "global", "stay_on_while_plugged_in", value.toString()]);
       if (result.success) {
         setPowerSettings(prev => ({ ...prev, stayOnWhilePluggedIn: value }));
-        setStatusBarMessage({
-          type: "success",
-          message: `充电时保持唤醒设置已更新`,
-        });
+          setStatusBarMessage({
+            type: "success",
+            message: t('device_control.msg_stay_on_success'),
+          });
         // 重新获取设置以确保更新
         setTimeout(fetchPowerSettings, 500);
       } else {
-        setStatusBarMessage({
-          type: "error",
-          message: result.error || "设置充电时保持唤醒失败",
-        });
+          setStatusBarMessage({
+            type: "error",
+            message: result.error || t('device_control.msg_stay_on_failed'),
+          });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `设置充电时保持唤醒失败: ${error}`,
+        message: `${t('device_control.msg_stay_on_failed')}: ${error}`,
       });
     } finally {
       setExecutingCommand(null);
@@ -364,23 +366,23 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
       );
       
       if (levelResult.success && tempResult.success && statusResult.success && healthResult.success) {
-        setStatusBarMessage({
-          type: "success",
-          message: "电池模拟设置已应用",
-        });
+          setStatusBarMessage({
+            type: "success",
+            message: t('device_control.msg_battery_sim_success'),
+          });
         
         // 重新获取电池状态以确保更新
         setTimeout(fetchRealBatteryStatus, 500);
       } else {
-        setStatusBarMessage({
-          type: "error",
-          message: "应用电池模拟设置失败",
-        });
+          setStatusBarMessage({
+            type: "error",
+            message: t('device_control.msg_battery_sim_failed'),
+          });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `应用电池模拟设置失败: ${error}`,
+        message: `${t('device_control.msg_battery_sim_failed')}: ${error}`,
       });
     } finally {
       setExecutingCommand(null);
@@ -412,21 +414,21 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
         
         setStatusBarMessage({
           type: "success",
-          message: "已恢复真实电池状态",
+          message: t('device_control.msg_restore_battery_success'),
         });
         
         // 重新获取电池状态以确保更新
         setTimeout(fetchRealBatteryStatus, 500);
       } else {
-        setStatusBarMessage({
-          type: "error",
-          message: "恢复真实电池状态失败",
-        });
+          setStatusBarMessage({
+            type: "error",
+            message: t('device_control.msg_restore_battery_failed'),
+          });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `恢复真实电池状态失败: ${error}`,
+        message: `${t('device_control.msg_restore_battery_failed')}: ${error}`,
       });
     } finally {
       setExecutingCommand(null);
@@ -447,15 +449,15 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
     <Card className={styles.card}>
       <CardHeader
         image={<Battery2Regular />}
-        header={<Text weight="semibold">电源管理</Text>}
+        header={<Text weight="semibold">{t('device_control.power_management')}</Text>}
       />
       
       <div className={styles.content}>
         {/* 屏幕超时控制 */}
         <div className={styles.controlRow}>
-          <Text className={styles.controlLabel}>自动锁屏:</Text>
+          <Text className={styles.controlLabel}>{t('device_control.screen_timeout')}:</Text>
           <Text className={styles.controlValue}>
-            {powerSettings.screenTimeout < 0 ? "永不" : `${powerSettings.screenTimeout/1000}秒`}
+            {powerSettings.screenTimeout < 0 ? t('device_control.never') : t('device_control.seconds', { count: powerSettings.screenTimeout/1000 })}
           </Text>
           <Dropdown
             className={styles.dropdownControl}
@@ -485,12 +487,12 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
 
         {/* 充电时保持唤醒控制 */}
         <div className={styles.controlRow}>
-          <Text className={styles.controlLabel}>充电时唤醒:</Text>
+          <Text className={styles.controlLabel}>{t('device_control.stay_on')}:</Text>
           <Text className={styles.controlValue}>
-            {powerSettings.stayOnWhilePluggedIn === 0 ? "关闭" : 
-             powerSettings.stayOnWhilePluggedIn === 1 ? "充电时" :
-             powerSettings.stayOnWhilePluggedIn === 2 ? "USB连接时" :
-             powerSettings.stayOnWhilePluggedIn === 7 ? "无线充电时" : "未知"}
+            {powerSettings.stayOnWhilePluggedIn === 0 ? t('device_control.off') : 
+             powerSettings.stayOnWhilePluggedIn === 1 ? t('device_control.stay_on_charging') :
+             powerSettings.stayOnWhilePluggedIn === 2 ? t('device_control.stay_on_usb') :
+             powerSettings.stayOnWhilePluggedIn === 7 ? t('device_control.stay_on_wireless') : t('device_mode.unknown')}
           </Text>
           <Dropdown
             className={styles.dropdownControl}
@@ -522,7 +524,7 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
         <div className={styles.simulationSection}>
           <div className={styles.sectionTitle}>
             <BatteryCharge24Regular />
-            <Text>电池模拟</Text>
+            <Text>{t('device_control.battery_simulation')}</Text>
             <Switch
               checked={batterySimulation.isSimulationEnabled}
               onChange={(_, data) => {
@@ -541,7 +543,7 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
 
           {/* 电量控制 */}
           <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>电量:</Text>
+            <Text className={styles.controlLabel}>{t('device_control.battery_level')}:</Text>
             <Input
               className={styles.inputControl}
               type="number"
@@ -562,13 +564,13 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
               disabled={!isDeviceAvailable || !batterySimulation.isSimulationEnabled || executingCommand !== null}
               onClick={() => applyBatterySimulation()}
             >
-              应用
+              {t('device_control.apply')}
             </Button>
           </div>
 
           {/* 温度控制 */}
           <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>温度:</Text>
+            <Text className={styles.controlLabel}>{t('device_control.temperature')}:</Text>
             <Input
               className={styles.inputControl}
               type="number"
@@ -589,13 +591,13 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
               disabled={!isDeviceAvailable || !batterySimulation.isSimulationEnabled || executingCommand !== null}
               onClick={() => applyBatterySimulation()}
             >
-              应用
+              {t('device_control.apply')}
             </Button>
           </div>
 
           {/* 充电状态控制 */}
           <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>充电状态:</Text>
+            <Text className={styles.controlLabel}>{t('device_control.charging_status')}:</Text>
             <Switch
               checked={batterySimulation.isCharging}
               onChange={(_, data) => {
@@ -607,13 +609,13 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
               disabled={!isDeviceAvailable || !batterySimulation.isSimulationEnabled || executingCommand !== null}
             />
             <Text className={styles.controlValue}>
-              {batterySimulation.isCharging ? "充电中" : "未充电"}
+              {batterySimulation.isCharging ? t('device_control.charging') : t('device_control.not_charging')}
             </Text>
           </div>
 
           {/* 充电模式控制 */}
           <div className={styles.controlRow}>
-            <Text className={styles.controlLabel}>充电模式:</Text>
+            <Text className={styles.controlLabel}>{t('device_control.charging_mode')}:</Text>
             <Dropdown
               className={styles.dropdownControl}
               disabled={!isDeviceAvailable || !batterySimulation.isSimulationEnabled || executingCommand !== null}
@@ -648,13 +650,13 @@ const PowerManagementCard: React.FC<PowerManagementCardProps> = ({ device }) => 
             disabled={!isDeviceAvailable || executingCommand !== null}
             onClick={() => restoreRealBatteryStatus()}
           >
-            恢复真实电池状态
+            {t('device_control.restore_battery')}
           </Button>
         </div>
 
         {!isDeviceAvailable && (
           <Text size={200} style={{ textAlign: "center", color: "var(--colorNeutralForeground3)" }}>
-            设备未连接或不在系统模式
+            {t('device_control.device_unavailable')}
           </Text>
         )}
       </div>

@@ -46,6 +46,7 @@ import {
   saveFastbootCommandsConfig,
   watchFastbootConfigFile
 } from '../../utils/configLoader';
+import { useTranslation } from "react-i18next";
 
 
 
@@ -297,6 +298,7 @@ if (typeof document !== 'undefined') {
 
 const CommandExecutePanel : React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { devices, selectedDevice, selectDevice } = useDeviceStore();
   const { deviceService, startScanning } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
@@ -314,7 +316,8 @@ const CommandExecutePanel : React.FC = () => {
 
   // 获取设备显示名称
   const getDeviceDisplayName = (device: DeviceInfo) => {
-    if (!device) return '未知设备';
+    if (!device) return t('command_panel.device_unknown');
+     
     
     const { properties, mode, serial } = device;
     
@@ -327,15 +330,15 @@ const CommandExecutePanel : React.FC = () => {
   // 获取设备模式显示文本
   const getDeviceModeText = (mode: DeviceMode) => {
     switch (mode) {
-      case 'sys': return '系统';
-      case 'rec': return 'Recovery';
-      case 'fastboot': return 'Fastboot';
-      case 'fastbootd': return 'Fastbootd';
-      case 'sideload': return 'Sideload';
-      case 'edl': return 'EDL';
-      case 'unauthorized': return '未授权';
-      case 'offline': return '离线';
-      default: return '未知';
+      case 'sys': return t('command_panel.mode_sys');
+      case 'rec': return t('command_panel.mode_rec');
+      case 'fastboot': return t('command_panel.mode_fastboot');
+      case 'fastbootd': return t('command_panel.mode_fastbootd');
+      case 'sideload': return t('command_panel.mode_sideload');
+      case 'edl': return t('command_panel.mode_edl');
+      case 'unauthorized': return t('command_panel.mode_unauthorized');
+      case 'offline': return t('command_panel.mode_offline');
+      default: return t('command_panel.mode_unknown');
     }
   };
 
@@ -362,8 +365,8 @@ const CommandExecutePanel : React.FC = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [setIsQuickCommandDialogOpen] = useState(false);
-  const [dialogSearchTerm] = useState("");
+  const [isQuickCommandDialogOpen, setIsQuickCommandDialogOpen] = useState(false);
+  const [dialogSearchTerm, setDialogSearchTerm] = useState("");
   const [commandsConfig, setCommandsConfig] = useState<AdbCommandsConfig | null>(null);
   const [, setConfigLoading] = useState(true);
   
@@ -431,7 +434,7 @@ const CommandExecutePanel : React.FC = () => {
             setCommandsConfig(newConfig);
             setStatusBarMessage({
               type: 'info',
-              message: 'Fastboot配置文件已更新，重新加载配置'
+              message: t('command_panel.config_updated', { type: 'Fastboot' })
             });
           });
         } else {
@@ -440,7 +443,7 @@ const CommandExecutePanel : React.FC = () => {
             setCommandsConfig(newConfig);
             setStatusBarMessage({
               type: 'info',
-              message: 'ADB配置文件已更新，重新加载配置'
+              message: t('command_panel.config_updated', { type: 'ADB' })
             });
           });
         }
@@ -473,13 +476,13 @@ const CommandExecutePanel : React.FC = () => {
           await startScanning();
           setStatusBarMessage({
             type: 'info',
-            message: '正在扫描设备...'
+            message: t('command_panel.scanning')
           });
         } catch (error) {
           console.error('CommandExecutePanel: 启动设备扫描失败', error);
           setStatusBarMessage({
             type: 'error',
-            message: '启动设备扫描失败'
+            message: t('command_panel.scan_failed')
           });
         }
       };
@@ -494,7 +497,7 @@ const CommandExecutePanel : React.FC = () => {
       selectDevice(null);
       setStatusBarMessage({
         type: 'warning',
-        message: '设备已断开连接'
+        message: t('command_panel.device_disconnected')
       });
     } else if (devices.length > 0 && !selectedDevice) {
       // 有设备但没有选中
@@ -503,13 +506,13 @@ const CommandExecutePanel : React.FC = () => {
         selectDevice(devices[0]);
         setStatusBarMessage({
           type: 'success',
-          message: `已自动选择设备: ${getDeviceDisplayName(devices[0])}`
+          message: t('command_panel.device_auto_selected', { name: getDeviceDisplayName(devices[0]) })
         });
       } else {
         // 多个设备，提示用户选择
         setStatusBarMessage({
           type: 'info',
-          message: `检测到 ${devices.length} 个设备，请选择要操作的设备`
+          message: t('command_panel.device_select_prompt', { count: devices.length })
         });
       }
     }
@@ -624,7 +627,7 @@ const executeCommand = async (cmd: string) => {
   if (!cmd.trim()) {
     setStatusBarMessage({
       type: 'error',
-      message: '命令不能为空'
+      message: t('command_panel.command_empty')
     });
     return;
   }
@@ -633,9 +636,9 @@ const executeCommand = async (cmd: string) => {
   if (!selectedDevice) {
     setStatusBarMessage({
       type: 'error',
-      message: '请先选择一个设备'
+      message: t('command_panel.select_device_first')
     });
-    setOutput(`错误: 请先选择一个设备\n`);
+    setOutput(`Error: ${t('command_panel.select_device_first')}\n`);
     return;
   }
 
@@ -647,7 +650,7 @@ const executeCommand = async (cmd: string) => {
   
   setStatusBarMessage({
     type: 'info',
-    message: `正在执行${commandType}命令... (${getDeviceDisplayName(selectedDevice)})`
+    message: t('command_panel.executing_command', { type: commandType, device: getDeviceDisplayName(selectedDevice) })
   });
 
   try {
@@ -685,16 +688,17 @@ const executeCommand = async (cmd: string) => {
     if (result.success) {
       setOutput(prev => prev + newOutput + result.output + "\n\n");
       // 显示命令执行成功提示
+      const truncatedCmd = cmd.length > 30 ? cmd.substring(0, 30) + '...' : cmd;
       setStatusBarMessage({
         type: 'success',
-        message: `已执行: ${cmd.substring(0, 30)}${cmd.length > 30 ? '...' : ''} (${getDeviceDisplayName(selectedDevice)})`
+        message: t('command_panel.command_executed', { cmd: truncatedCmd, device: getDeviceDisplayName(selectedDevice) })
       });
     } else {
       setOutput(prev => prev + newOutput + `错误: ${result.error || "命令执行失败"}\n\n`);
       // 显示命令执行失败提示
       setStatusBarMessage({
         type: 'error',
-        message: result.error || "命令执行失败"
+        message: result.error || t('command_panel.exec_failed')
       });
     }
   } catch (error) {
@@ -1201,7 +1205,7 @@ const executeCommand = async (cmd: string) => {
                 {searchTerm && searchMatches.length > 0 && (
                   <div className={styles.searchMatchesInfo}>
                     <Text size={200}>
-                      找到 {searchMatches.length} 个匹配项
+                      {t('command_panel.matches_found', { count: searchMatches.length })}
                     </Text>
                     <Button
                       appearance="subtle"
@@ -1209,7 +1213,7 @@ const executeCommand = async (cmd: string) => {
                       onClick={navigateToMatch}
                       disabled={!searchTerm || searchMatches.length === 0}
                     >
-                      下一个
+                      {t('command_panel.next_match')}
                     </Button>
                   </div>
                 )}
@@ -1218,14 +1222,14 @@ const executeCommand = async (cmd: string) => {
                   icon={<Copy24Regular />}
                   onClick={copyOutput}
                   disabled={!output}
-                  title="复制输出"
+                  title={t('command_panel.copy_output')}
                 />
                 <Button
                   appearance="subtle"
                   icon={<Delete24Regular />}
                   onClick={clearOutput}
                   disabled={!output}
-                  title="清空输出"
+                  title={t('command_panel.clear_output')}
                 />
               </div>
             </div>
@@ -1238,7 +1242,7 @@ const executeCommand = async (cmd: string) => {
                 <pre
                   ref={outputRef}
                   dangerouslySetInnerHTML={{
-                    __html: highlightedOutput || '<span style="color: #888">命令输出将显示在这里...</span>'
+                    __html: highlightedOutput || `<span style="color: #888">${t('command_panel.output_placeholder')}</span>`
                   }}
                 />
               </div>
@@ -1258,13 +1262,13 @@ const executeCommand = async (cmd: string) => {
         <DialogSurface style={{ width: "900px", maxWidth: "90vw" }}>
           <DialogBody>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <DialogTitle>快捷命令</DialogTitle>
+              <DialogTitle>{t('command_panel.quick_commands')}</DialogTitle>
             </div>
             
             <DialogContent className={styles.dialogBody}>
               <div style={{ marginBottom: "16px", display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <Input
-                  placeholder="搜索命令..."
+                  placeholder={t('command_panel.search_commands')}
                   value={unifiedPanelSearchTerm}
                   onChange={(_, data) => setUnifiedPanelSearchTerm(data.value)}
                   contentBefore={<Search24Regular />}
@@ -1276,7 +1280,7 @@ const executeCommand = async (cmd: string) => {
                   icon={<Add24Regular />}
                   onClick={openAddCategoryDialog}
                 >
-                  添加分类
+                  {t('command_panel.add_category')}
                 </Button>
               </div>
               
@@ -1291,7 +1295,7 @@ const executeCommand = async (cmd: string) => {
                         icon={<Add24Regular />}
                         onClick={() => openAddCommandDialog(category)}
                       >
-                        添加命令
+                        {t('command_panel.add_command')}
                       </Button>
                       <Button
                         appearance="subtle"
@@ -1299,7 +1303,7 @@ const executeCommand = async (cmd: string) => {
                         icon={<Delete24Regular />}
                         onClick={() => deleteCategory(category)}
                         disabled={category.commands.length > 0}
-                        title={category.commands.length > 0 ? "请先删除该分类下的所有命令" : "删除分类"}
+                        title={category.commands.length > 0 ? t('command_panel.delete_category_hint') : t('command_panel.delete_category')}
                       />
                     </div>
                   </div>
@@ -1330,7 +1334,7 @@ const executeCommand = async (cmd: string) => {
                             onClick={() => handleExecuteCommand(cmd)}
                             className={styles.executeButton}
                           >
-                            执行
+                            {t('command_panel.execute')}
                           </Button>
                           <Button
                             appearance="subtle"
@@ -1339,7 +1343,7 @@ const executeCommand = async (cmd: string) => {
                             onClick={() => handleEditCommand(cmd, category)}
                             className={styles.editButton}
                           >
-                            编辑
+                            {t('command_panel.edit')}
                           </Button>
                           <Button
                             appearance="subtle"
@@ -1347,7 +1351,7 @@ const executeCommand = async (cmd: string) => {
                             icon={<Delete24Regular />}
                             onClick={() => handleDeleteCommand(cmd, category)}
                             className={styles.deleteButton}
-                            title="删除命令"
+                            title={t('command_panel.delete_command')}
                           />
                         </div>
                       </div>
@@ -1358,13 +1362,13 @@ const executeCommand = async (cmd: string) => {
               
               {unifiedPanelFilteredCommands.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '20px', color: 'var(--colorNeutralForeground3)' }}>
-                  {unifiedPanelSearchTerm ? '没有找到匹配的命令' : '暂无命令，请先添加分类和命令'}
+                  {unifiedPanelSearchTerm ? t('command_panel.no_matches') : t('command_panel.no_commands')}
                 </div>
               )}
             </DialogContent>
             
             <DialogActions>
-              <Button onClick={closeUnifiedPanel}>关闭</Button>
+              <Button onClick={closeUnifiedPanel}>{t('command_panel.close')}</Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
@@ -1382,7 +1386,7 @@ const executeCommand = async (cmd: string) => {
           <DialogBody>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <DialogTitle>
-                {isAddingNewCategory ? '添加新分类' : (isAddingNewCommand ? '添加新命令' : '编辑命令')}
+                {isAddingNewCategory ? t('command_panel.add_new_category') : (isAddingNewCommand ? t('command_panel.add_new_command') : t('command_panel.edit_command'))}
               </DialogTitle>
             </div>
             
@@ -1390,25 +1394,25 @@ const executeCommand = async (cmd: string) => {
               {isAddingNewCategory ? (
                 // 添加新分类表单
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <Field label="分类ID">
+                  <Field label={t('command_panel.category_id')}>
                     <Input
                       value={categoryForm.id}
                       onChange={(_, data) => setCategoryForm({...categoryForm, id: data.value})}
-                      placeholder="例如: custom_category"
+                      placeholder={t('command_panel.placeholder_category_id')}
                     />
                   </Field>
-                  <Field label="分类名称">
+                  <Field label={t('command_panel.category_name')}>
                     <Input
                       value={categoryForm.name}
                       onChange={(_, data) => setCategoryForm({...categoryForm, name: data.value})}
-                      placeholder="例如: 自定义分类"
+                      placeholder={t('command_panel.placeholder_category_name')}
                     />
                   </Field>
-                  <Field label="分类描述">
+                  <Field label={t('command_panel.category_desc')}>
                     <Input
                       value={categoryForm.description}
                       onChange={(_, data) => setCategoryForm({...categoryForm, description: data.value})}
-                      placeholder="分类描述"
+                      placeholder={t('command_panel.placeholder_category_desc')}
                     />
                   </Field>
                 </div>
@@ -1416,7 +1420,7 @@ const executeCommand = async (cmd: string) => {
                 // 编辑命令或添加新命令表单
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {!isAddingNewCommand && (
-                    <Field label="选择分类">
+                    <Field label={t('command_panel.select_category')}>
                       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                         {commandsConfig?.categories.map((cat) => (
                           <Button
@@ -1434,39 +1438,39 @@ const executeCommand = async (cmd: string) => {
                           icon={<Add24Regular />}
                           onClick={openAddCategoryDialog}
                         >
-                          添加分类
+                          {t('command_panel.add_category')}
                         </Button>
                       </div>
                     </Field>
                   )}
                   
-                  <Field label="命令ID">
+                  <Field label={t('command_panel.command_id')}>
                     <Input
                       value={editForm.id}
                       onChange={(_, data) => setEditForm({...editForm, id: data.value})}
-                      placeholder="例如: custom_command"
+                      placeholder={t('command_panel.placeholder_command_id')}
                       disabled={!isAddingNewCommand}
                     />
                   </Field>
-                  <Field label="命令名称">
+                  <Field label={t('command_panel.command_name')}>
                     <Input
                       value={editForm.label}
                       onChange={(_, data) => setEditForm({...editForm, label: data.value})}
-                      placeholder="例如: 自定义命令"
+                      placeholder={t('command_panel.placeholder_command_name')}
                     />
                   </Field>
-                  <Field label="ADB命令">
+                  <Field label={t('command_panel.adb_command')}>
                     <Input
                       value={editForm.command}
                       onChange={(_, data) => setEditForm({...editForm, command: data.value})}
-                      placeholder="例如: shell getprop ro.product.model"
+                      placeholder={t('command_panel.placeholder_command')}
                     />
                   </Field>
-                  <Field label="命令描述">
+                  <Field label={t('command_panel.command_desc')}>
                     <Input
                       value={editForm.description}
                       onChange={(_, data) => setEditForm({...editForm, description: data.value})}
-                      placeholder="命令描述"
+                      placeholder={t('command_panel.placeholder_command_desc')}
                     />
                   </Field>
                 </div>
@@ -1474,7 +1478,7 @@ const executeCommand = async (cmd: string) => {
             </DialogContent>
             
             <DialogActions>
-              <Button appearance="subtle" onClick={closeEditDialog}>取消</Button>
+              <Button appearance="subtle" onClick={closeEditDialog}>{t('command_panel.cancel')}</Button>
               <Button 
                 appearance="primary" 
                 icon={<Save24Regular />}
@@ -1485,7 +1489,7 @@ const executeCommand = async (cmd: string) => {
                     : !editForm.label.trim() || !editForm.command.trim()
                 }
               >
-                保存
+                {t('command_panel.save')}
               </Button>
             </DialogActions>
           </DialogBody>

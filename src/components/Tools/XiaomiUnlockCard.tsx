@@ -25,6 +25,7 @@ import {
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
+import { useTranslation } from "react-i18next";
 
 // 重构点：导入提取的模块
 import { CommandOutput } from './XiaomiUnlock/types';
@@ -110,6 +111,7 @@ interface XiaomiUnlockCardProps {
  */
 const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const deviceService = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
   
@@ -145,7 +147,7 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
     if (!device) {
       setStatusBarMessage({
         type: "warning",
-        message: "请先选择或连接设备后再执行该操作",
+        message: t('unlock.select_device_first'),
       });
       return;
     }
@@ -175,7 +177,7 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
     if (!device) {
       setStatusBarMessage({
         type: "warning",
-        message: "请先选择或连接设备后再执行该操作",
+        message: t('unlock.select_device_first'),
       });
       return;
     }
@@ -186,7 +188,7 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
       await UnlockService.executeUnlockTool(toolId, device, setStatusBarMessage);
     } catch (error) {
       // 错误处理已在服务类中完成
-      console.error('解锁工具执行失败:', error);
+      console.error(t('unlock.execute_failed_log'), error);
     } finally {
       setIsExecuting(false);
       setSelectedAction("");
@@ -217,13 +219,13 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
           
           const lines: string[] = [];
           if (!detectionResult.isXiaomiDevice) {
-            lines.push("• 当前设备不是小米设备，结果仅供参考。");
+            lines.push(`• ${t('unlock.not_xiaomi')}`);
           }
-          lines.push(`• Android 版本: ${detectionResult.androidVersion}`);
-          lines.push(`• 系统版本: ${detectionResult.systemVersion}`);
-          lines.push(`• 建议：${detectionResult.guidance}`);
+          lines.push(`• ${t('unlock.android_version')}${detectionResult.androidVersion}`);
+          lines.push(`• ${t('unlock.system_version')}${detectionResult.systemVersion}`);
+          lines.push(`• ${t('unlock.suggestion')}${detectionResult.guidance}`);
 
-          setResultDialogTitle("检测结果");
+          setResultDialogTitle(t('unlock.detection_result'));
           setResultDialogMessage(lines.join("\n"));
           setResultDialogOpen(true);
           skipSuccessNotify = true;
@@ -234,18 +236,18 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
           // 重构点：使用提取的系统信息获取和建议生成函数
           setStatusBarMessage({
             type: "info",
-            message: "正在检测系统版本与处理器类型...",
+            message: t('unlock.detecting_system'),
           });
 
           const systemInfo = await getSystemInfo(deviceService, device.serial, addCommandOutput);
           const adviceLines = generateInstallAdvice(systemInfo);
 
           // 根据检测结果设置对话框标题
-          let dialogTitle = "安装建议";
+          let dialogTitle = t('unlock.install_advice');
           if (!isNaN(systemInfo.androidMajor) && systemInfo.androidMajor >= 15) {
-            dialogTitle = "无法通过 Bypass 解锁";
+            dialogTitle = t('unlock.bypass_failed');
           } else if (!/816/i.test(systemInfo.miuiName)) {
-            dialogTitle = "无需安装";
+            dialogTitle = t('unlock.no_install_needed');
           }
 
           setResultDialogTitle(dialogTitle);
@@ -256,19 +258,19 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
         }
         
         default:
-          throw new Error("未知操作");
+          throw new Error(t('unlock.unknown_action'));
       }
 
       if (!skipSuccessNotify) {
         setStatusBarMessage({
           type: "success",
-          message: `${xiaomiTools.find(t => t.id === actionId)?.label} 执行成功`,
+          message: `${xiaomiTools.find(t => t.id === actionId)?.label} ${t('unlock.success')}`,
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "未知错误",
+        message: error instanceof Error ? error.message : t('unlock.unknown_error'),
       });
     } finally {
       setIsExecuting(false);
@@ -302,7 +304,7 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
           <div className={styles.warningSection}>
             <Warning24Regular className={styles.warningIcon} />
             <Text size={200}>
-              ⚠️ 解锁操作具有风险，可能导致设备变砖或保修失效，请谨慎操作
+              {t('unlock.risk_warning')}
             </Text>
           </div>
           {/* 工具列表 */}

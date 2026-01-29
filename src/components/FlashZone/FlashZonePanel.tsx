@@ -12,6 +12,7 @@ import {
   Flash24Regular,
   Code24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
 import ImageFlashCard from "../Tools/ImageFlashCard";
@@ -139,6 +140,7 @@ type FlashZoneView =  "unlock-tools" | "image-flash" | "xiaomi-flash" | "system-
 
 const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
   const [currentView, setCurrentView] = useState<FlashZoneView>("unlock-tools");
   const connectedDevices = devices.filter(d => d.connected);
@@ -148,17 +150,17 @@ const FlashZonePanel: React.FC = () => {
   const tabs = [
     {
       id: "unlock-tools" as FlashZoneView,
-      label: "解锁工具",
+      label: t('flash.tab_unlock'),
       icon: <LockOpen24Regular />,
     },
     {
       id: "image-flash" as FlashZoneView,
-      label: "镜像刷入",
+      label: t('flash.tab_image'),
       icon: <CloudArrowUp24Regular />,
     },
     {
       id: "xiaomi-flash" as FlashZoneView,
-      label: "线刷工具",
+      label: t('flash.tab_rom'),
       icon: <Flash24Regular />,
     },
   ];
@@ -184,17 +186,17 @@ const FlashZonePanel: React.FC = () => {
   {connectedDevices.length === 0 ? (
         <div className={styles.noDevice}>
           <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>未检测到设备</Text>
+          <Text size={400}>{t('flash.no_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备已连接
+            {t('flash.no_device_hint')}
           </Text>
         </div>
       ) : !selectedDevice ? (
         <div className={styles.noDevice}>
           <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>请选择一个设备</Text>
+          <Text size={400}>{t('flash.select_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            从设备信息页面选择要操作的设备
+            {t('flash.select_device_hint')}
           </Text>
         </div>
       ) : (

@@ -18,6 +18,7 @@ import {
   Warning24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -115,6 +116,7 @@ interface SecurityStatusCardProps {
 
 const SecurityStatusCard: React.FC<SecurityStatusCardProps> = ({ device }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
 
   const getSecurityLevel = () => {
     if (!device.properties) return "unknown";
@@ -150,81 +152,81 @@ const SecurityStatusCard: React.FC<SecurityStatusCardProps> = ({ device }) => {
 
   const getSecurityText = (level: string) => {
     switch (level) {
-      case "safe": return "设备安全";
-      case "warning": return "存在风险";
-      case "danger": return "高风险";
-      default: return "未知状态";
+      case "safe": return t('security_status.level_safe');
+      case "warning": return t('security_status.level_warning');
+      case "danger": return t('security_status.level_danger');
+      default: return t('security_status.level_unknown');
     }
   };
 
   const getBootloaderStatus = () => {
     if (device.properties?.bootloaderLocked === undefined) {
-      return { icon: <LockClosed24Regular />, text: "未知", level: "unknown" };
+      return { icon: <LockClosed24Regular />, text: t('device_overview.unknown'), level: "unknown" };
     }
     if (device.properties.bootloaderLocked) {
       return { 
         icon: <LockClosed24Regular className={styles.securityIconSafe} />, 
-        text: "已锁定", 
+        text: t('device_info.locked'), 
         level: "safe" 
       };
     }
     return { 
       icon: <LockOpen24Regular className={styles.securityIconDanger} />, 
-      text: "已解锁", 
+      text: t('device_info.unlocked'), 
       level: "danger" 
     };
   };
 
   const getDebuggableStatus = () => {
     if (device.properties?.debuggable === undefined) {
-      return { icon: <Bug24Regular />, text: "未知", level: "unknown" };
+      return { icon: <Bug24Regular />, text: t('device_overview.unknown'), level: "unknown" };
     }
     if (device.properties.debuggable) {
       return { 
         icon: <Bug24Regular className={styles.securityIconWarning} />, 
-        text: "已启用", 
+        text: t('device_overview.enabled'), 
         level: "warning" 
       };
     }
     return { 
       icon: <CheckmarkCircle24Regular className={styles.securityIconSafe} />, 
-      text: "已禁用", 
+      text: t('device_overview.disabled'), 
       level: "safe" 
     };
   };
 
   const getSecureStatus = () => {
     if (device.properties?.secure === undefined) {
-      return { icon: <Shield24Regular />, text: "未知", level: "unknown" };
+      return { icon: <Shield24Regular />, text: t('device_overview.unknown'), level: "unknown" };
     }
     if (device.properties.secure) {
       return { 
         icon: <ShieldCheckmark24Regular className={styles.securityIconSafe} />, 
-        text: "已启用", 
+        text: t('device_overview.enabled'), 
         level: "safe" 
       };
     }
     return { 
       icon: <ShieldError24Regular className={styles.securityIconDanger} />, 
-      text: "已禁用", 
+      text: t('device_overview.disabled'), 
       level: "danger" 
     };
   };
 
   const getAdbSecureStatus = () => {
     if (device.properties?.adbSecure === undefined) {
-      return { icon: <Shield24Regular />, text: "未知", level: "unknown" };
+      return { icon: <Shield24Regular />, text: t('device_overview.unknown'), level: "unknown" };
     }
     if (device.properties.adbSecure) {
       return { 
         icon: <ShieldCheckmark24Regular className={styles.securityIconSafe} />, 
-        text: "已启用", 
+        text: t('device_overview.enabled'), 
         level: "safe" 
       };
     }
     return { 
       icon: <Warning24Regular className={styles.securityIconWarning} />, 
-      text: "已禁用", 
+      text: t('device_overview.disabled'), 
       level: "warning" 
     };
   };
@@ -257,7 +259,7 @@ const SecurityStatusCard: React.FC<SecurityStatusCardProps> = ({ device }) => {
     <Card className={styles.card}>
       <CardHeader
         image={<Shield24Regular />}
-        header={<Text weight="semibold">安全状态</Text>}
+        header={<Text weight="semibold">{t('security_status.card_title')}</Text>}
         action={
           <Badge 
             appearance="filled" 
@@ -271,7 +273,7 @@ const SecurityStatusCard: React.FC<SecurityStatusCardProps> = ({ device }) => {
       
       <div className={styles.content}>
         <div className={styles.securityGrid}>
-          <Tooltip content="Bootloader锁定状态影响系统安全性" relationship="label">
+          <Tooltip content={t('security_status.tooltip_bootloader')} relationship="label">
             <div className={getItemClassName(bootloaderStatus.level)}>
               <div className={styles.securityHeader}>
                 {bootloaderStatus.icon}
@@ -281,31 +283,31 @@ const SecurityStatusCard: React.FC<SecurityStatusCardProps> = ({ device }) => {
             </div>
           </Tooltip>
 
-          <Tooltip content="调试模式可能带来安全风险" relationship="label">
+          <Tooltip content={t('security_status.tooltip_debuggable')} relationship="label">
             <div className={getItemClassName(debuggableStatus.level)}>
               <div className={styles.securityHeader}>
                 {debuggableStatus.icon}
-                <Text className={styles.securityLabel}>调试模式</Text>
+                <Text className={styles.securityLabel}>{t('device_overview.debug_mode')}</Text>
               </div>
               <Text className={styles.securityValue}>{debuggableStatus.text}</Text>
             </div>
           </Tooltip>
 
-          <Tooltip content="系统安全模式状态" relationship="label">
+          <Tooltip content={t('security_status.tooltip_secure')} relationship="label">
             <div className={getItemClassName(secureStatus.level)}>
               <div className={styles.securityHeader}>
                 {secureStatus.icon}
-                <Text className={styles.securityLabel}>安全模式</Text>
+                <Text className={styles.securityLabel}>{t('device_overview.secure_mode')}</Text>
               </div>
               <Text className={styles.securityValue}>{secureStatus.text}</Text>
             </div>
           </Tooltip>
 
-          <Tooltip content="ADB安全认证状态" relationship="label">
+          <Tooltip content={t('security_status.tooltip_adb_secure')} relationship="label">
             <div className={getItemClassName(adbSecureStatus.level)}>
               <div className={styles.securityHeader}>
                 {adbSecureStatus.icon}
-                <Text className={styles.securityLabel}>ADB安全</Text>
+                <Text className={styles.securityLabel}>{t('device_overview.adb_secure')}</Text>
               </div>
               <Text className={styles.securityValue}>{adbSecureStatus.text}</Text>
             </div>

@@ -1,4 +1,89 @@
+use std::collections::HashMap;
 use crate::adb::device::device_info::get_device_info;
+
+// ... existing imports ...
+
+#[derive(Debug, Default, Clone)]
+struct AppDetailInfo {
+    version_name: Option<String>,
+    version_code: Option<String>,
+    install_time: Option<String>,
+    update_time: Option<String>,
+    is_enabled: bool,
+}
+
+async fn fetch_global_app_details(serial: &str) -> HashMap<String, AppDetailInfo> {
+    let mut map = HashMap::new();
+    
+    // 使用 grep 过滤 dumpsys package 的大量输出，只保留关键信息
+    // 关键字段：
+    // - Package [com.example]... -> 标记应用上下文
+    // - versionCode=123...
+    // - versionName=1.0.0...
+    // - firstInstallTime=2023...
+    // - lastUpdateTime=2023...
+    // - enabled=0/1/2... -> 启用状态
+    
+    let cmd = "dumpsys package | grep -E '^[ ]*Package \\[[^]]+\\]|^[ ]*versionCode=|^[ ]*versionName=|^[ ]*firstInstallTime=|^[ ]*lastUpdateTime=|^[ ]*enabled='";
+    
+    // 设置较长的超时时间，因为 dumpsys 即使有 grep 也可能需要几秒钟生成
+    if let Ok(result) = utils_execute_adb_command(&["-s", serial, "shell", cmd], Some(45)).await {
+        if result.success {
+            let mut current_pkg = String::new();
+            
+            for line in result.output.lines() {
+                let line = line.trim();
+                
+                if line.starts_with("Package [") {
+                    // 解析包名: Package [com.pkg.name] (hash)
+                    if let Some(start) = line.find('[') {
+                         if let Some(end) = line[start..].find(']') {
+                             let pkg = line[start+1 .. start+end].to_string();
+                             current_pkg = pkg.clone();
+                             
+                             // 初始化默认值 (默认认为是启用的)
+                             map.entry(pkg).or_insert_with(|| AppDetailInfo { is_enabled: true, ..Default::default() });
+                         }
+                    }
+                } else if !current_pkg.is_empty() {
+                    // 如果在某个包的上下文中，解析详细信息
+                    if let Some(info) = map.get_mut(&current_pkg) {
+                        if let Some(idx) = line.find("versionName=") {
+                             let val = line[idx+12..].trim();
+                             info.version_name = Some(val.to_string());
+                        } else if let Some(idx) = line.find("versionCode=") {
+                             // versionCode 后面可能还有 minSdk 等
+                             let val = line[idx+12..].split_whitespace().next().unwrap_or("");
+                             info.version_code = Some(val.to_string());
+                        } else if let Some(idx) = line.find("firstInstallTime=") {
+                             let val = line[idx+17..].trim();
+                             info.install_time = Some(val.to_string());
+                        } else if let Some(idx) = line.find("lastUpdateTime=") {
+                             let val = line[idx+15..].trim();
+                             info.update_time = Some(val.to_string());
+                        } else if let Some(idx) = line.find("enabled=") {
+                             let val = line[idx+8..].trim();
+                             // 0: Enabled (default)
+                             // 1: Enabled (explicit)
+                             // 2: Disabled
+                             // 3: Disabled (user)
+                             // 4: Disabled (until used)
+                             if val == "2" || val == "3" || val == "4" {
+                                 info.is_enabled = false;
+                             } else {
+                                 info.is_enabled = true;
+                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    map
+}
+
+
 use crate::device::{
     ApkInfo, BatchOperation, BatchOperationItem, BatchOperationStatus, BatchOperationType,
     CommandResult, InstallStatus, InstalledApp,

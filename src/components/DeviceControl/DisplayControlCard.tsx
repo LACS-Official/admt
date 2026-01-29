@@ -27,6 +27,7 @@ import {
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from '@/stores/appStore';
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -236,6 +237,7 @@ interface DisplayControlCardProps {
 
 const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { deviceService } = useDeviceService();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
   const { setStatusBarMessage } = useAppStore();
@@ -348,21 +350,21 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
         const numValue = parseInt(value);
         if (value && (isNaN(numValue) || numValue <= 0 || numValue > 10000)) {
           isValid = false;
-          error = "请输入1-10000之间的有效数字";
+          error = t('device_control.validation_resolution');
         }
         break;
       case 'density':
         const densityValue = parseInt(value);
         if (value && (isNaN(densityValue) || densityValue <= 0 || densityValue > 1000)) {
           isValid = false;
-          error = "请输入1-1000之间的有效数字";
+          error = t('device_control.validation_density');
         }
         break;
       case 'fontScale':
         const scaleValue = parseFloat(value);
         if (value && (isNaN(scaleValue) || scaleValue < 0.1 || scaleValue > 3.0)) {
           isValid = false;
-          error = "请输入0.1-3.0之间的有效数字";
+          error = t('device_control.validation_font_scale');
         }
         break;
     }
@@ -375,18 +377,15 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
   
   // 处理权限错误
   const handlePermissionError = (operationName: string) => {
-    const permissionErrorMsg = `${operationName}失败: 需要设备root权限或WRITE_SECURE_SETTINGS权限`;
+    const permissionErrorMsg = t('device_control.msg_perm_error', { name: operationName });
     setOperationStatus({ type: 'error', message: permissionErrorMsg });
     setStatusBarMessage({ type: 'error', message: permissionErrorMsg });
   };
   
   // 处理操作成功
-  const handleOperationSuccess = (operationName: string, details?: string) => {
-    const successMsg = details 
-      ? `${operationName}已设置为 ${details}` 
-      : `${operationName}设置成功`;
-    setOperationStatus({ type: 'success', message: successMsg });
-    setStatusBarMessage({ type: 'success', message: successMsg });
+  const handleOperationSuccess = (message: string) => {
+    setOperationStatus({ type: 'success', message });
+    setStatusBarMessage({ type: 'success', message });
   };
   
   // 应用自定义分辨率
@@ -397,7 +396,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     if (!inputValidation.resolutionWidth.isValid || !inputValidation.resolutionHeight.isValid) {
       setOperationStatus({
         type: "error",
-        message: "请修正输入错误后重试",
+        message: t('device_control.msg_fix_input'),
       });
       return;
     }
@@ -407,7 +406,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     } else {
       setOperationStatus({
         type: "error",
-        message: "请输入有效的分辨率值",
+        message: t('device_control.msg_invalid_resolution'),
       });
     }
   };
@@ -419,7 +418,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     if (!inputValidation.density.isValid) {
       setOperationStatus({
         type: "error",
-        message: "请修正输入错误后重试",
+        message: t('device_control.msg_fix_input'),
       });
       return;
     }
@@ -429,7 +428,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     } else {
       setOperationStatus({
         type: "error",
-        message: "请输入有效的显示密度值 (1-1000)",
+        message: t('device_control.msg_invalid_density'),
       });
     }
   };
@@ -441,7 +440,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     if (!inputValidation.fontScale.isValid) {
       setOperationStatus({
         type: "error",
-        message: "请修正输入错误后重试",
+        message: t('device_control.msg_fix_input'),
       });
       return;
     }
@@ -451,7 +450,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     } else {
       setOperationStatus({
         type: "error",
-        message: "请输入有效的字体缩放值 (0.1-3.0)",
+        message: t('device_control.msg_invalid_font_scale'),
       });
     }
   };
@@ -477,7 +476,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
         }));
         
         // 显示成功消息
-        handleOperationSuccess("屏幕分辨率", `${width}x${height}`);
+        handleOperationSuccess(t('device_control.msg_resolution_success', { value: `${width}x${height}` }));
         
         // 重新获取设置以确保更新
         setTimeout(fetchDisplaySettings, 500);
@@ -485,9 +484,9 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
         // 检查是否是权限错误
         const errorMessage = result.error || "";
         if (errorMessage.includes("WRITE_SECURE_SETTINGS") || errorMessage.includes("SecurityException")) {
-          handlePermissionError("设置屏幕分辨率");
+          handlePermissionError(t('device_control.resolution_settings'));
         } else {
-          const message = errorMessage || "设置屏幕分辨率失败";
+          const message = errorMessage || t('device_control.msg_operation_failed', { name: t('device_control.resolution_settings'), error: '' });
           setOperationStatus({ type: 'error', message });
           setStatusBarMessage({ type: "error", message });
         }
@@ -495,9 +494,9 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     } catch (error) {
       const errorMessage = String(error);
       if (errorMessage.includes("WRITE_SECURE_SETTINGS") || errorMessage.includes("SecurityException")) {
-        handlePermissionError("设置屏幕分辨率");
+        handlePermissionError(t('device_control.resolution_settings'));
       } else {
-        const message = `设置屏幕分辨率失败: ${error}`;
+        const message = t('device_control.msg_operation_failed', { name: t('device_control.resolution_settings'), error: error });
         setOperationStatus({ type: 'error', message });
         setStatusBarMessage({ type: "error", message });
       }
@@ -519,15 +518,15 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
       const result = await deviceService.executeAdbCommand(device.serial, "shell", ["wm", "density", density.toString()]);
       if (result.success) {
         setDisplaySettings(prev => ({ ...prev, density }));
-        handleOperationSuccess("显示密度", `${density} dpi`);
+        handleOperationSuccess(t('device_control.msg_density_success', { value: `${density} dpi` }));
         // 重新获取设置以确保更新
         setTimeout(fetchDisplaySettings, 500);
       } else {
         // 检查是否是权限错误
         if (result.error?.includes("WRITE_SECURE_SETTINGS") || result.error?.includes("SecurityException")) {
-          handlePermissionError("设置显示密度");
+          handlePermissionError(t('device_control.density_settings'));
         } else {
-          const errorMessage = result.error || "设置显示密度失败";
+          const errorMessage = result.error || t('device_control.msg_operation_failed', { name: t('device_control.density_settings'), error: '' });
           setOperationStatus({ type: 'error', message: errorMessage });
           setStatusBarMessage({ type: "error", message: errorMessage });
         }
@@ -535,9 +534,9 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
     } catch (error) {
       // 检查是否是权限错误
       if (String(error).includes("WRITE_SECURE_SETTINGS") || String(error).includes("SecurityException")) {
-        handlePermissionError("设置显示密度");
+        handlePermissionError(t('device_control.density_settings'));
       } else {
-        const errorMessage = `设置显示密度失败: ${error}`;
+        const errorMessage = t('device_control.msg_operation_failed', { name: t('device_control.density_settings'), error: error });
         setOperationStatus({ type: 'error', message: errorMessage });
         setStatusBarMessage({ type: "error", message: errorMessage });
       }
@@ -554,16 +553,16 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
       const result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "system", "font_scale", scale.toString()]);
       if (result.success) {
         setDisplaySettings(prev => ({ ...prev, fontScale: scale }));
-        handleOperationSuccess("字体缩放", scale.toString());
+        handleOperationSuccess(t('device_control.msg_font_scale_success', { value: scale.toString() }));
         // 重新获取设置以确保更新
         setTimeout(fetchDisplaySettings, 500);
       } else {
         // 检查是否是权限错误
         const errorMessage = result.error || "";
         if (errorMessage.includes("WRITE_SECURE_SETTINGS") || errorMessage.includes("SecurityException")) {
-          handlePermissionError("设置字体缩放");
+          handlePermissionError(t('device_control.font_scale_settings'));
         } else {
-          const message = errorMessage || "设置字体缩放失败";
+          const message = errorMessage || t('device_control.msg_operation_failed', { name: t('device_control.font_scale_settings'), error: '' });
           setOperationStatus({ type: 'error', message });
           setStatusBarMessage({ type: "error", message });
         }
@@ -572,9 +571,9 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
       // 检查是否是权限错误
       const errorMessage = String(error);
       if (errorMessage.includes("WRITE_SECURE_SETTINGS") || errorMessage.includes("SecurityException")) {
-        handlePermissionError("设置字体缩放");
+        handlePermissionError(t('device_control.font_scale_settings'));
       } else {
-        const message = `设置字体缩放失败: ${error}`;
+        const message = t('device_control.msg_operation_failed', { name: t('device_control.font_scale_settings'), error: error });
         setOperationStatus({ type: 'error', message });
         setStatusBarMessage({ type: "error", message });
       }
@@ -595,41 +594,41 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
       switch (type) {
         case "resolution":
           result = await deviceService.executeAdbCommand(device.serial, "shell", ["wm", "size", "reset"]);
-          operationName = "分辨率";
+          operationName = t('device_control.resolution_settings');
           break;
         case "density":
           result = await deviceService.executeAdbCommand(device.serial, "shell", ["wm", "density", "reset"]);
-          operationName = "显示密度";
+          operationName = t('device_control.density_settings');
           break;
         default:
           return;
       }
       
       if (result.success) {
-        setOperationStatus({ type: 'success', message: `成功恢复${operationName}默认设置` });
-        setStatusBarMessage({ type: 'success', message: `成功恢复${operationName}默认设置` });
+        setOperationStatus({ type: 'success', message: t('device_control.msg_reset_success', { name: operationName }) });
+        setStatusBarMessage({ type: 'success', message: t('device_control.msg_reset_success', { name: operationName }) });
         // 重新获取显示设置
         await fetchDisplaySettings();
       } else {
         // 检查是否是权限错误
         if (result.error && result.error.includes("android.permission.WRITE_SECURE_SETTINGS")) {
-          const permissionErrorMsg = "恢复默认设置失败: 需要设备root权限或无障碍服务权限";
+          const permissionErrorMsg = t('device_control.msg_reset_failed');
           setOperationStatus({ type: 'error', message: permissionErrorMsg });
           setStatusBarMessage({ type: "error", message: permissionErrorMsg });
         } else {
-          setOperationStatus({ type: 'error', message: result.error || "操作失败" });
-          setStatusBarMessage({ type: "error", message: result.error || "操作失败" });
+          setOperationStatus({ type: 'error', message: result.error || t('device_control.msg_unknown_error') });
+          setStatusBarMessage({ type: "error", message: result.error || t('device_control.msg_unknown_error') });
         }
       }
     } catch (error) {
       // 检查是否是权限错误
       if (String(error).includes("android.permission.WRITE_SECURE_SETTINGS")) {
-        const permissionErrorMsg = "恢复默认设置失败: 需要设备root权限或无障碍服务权限";
+        const permissionErrorMsg = t('device_control.msg_reset_failed');
         setOperationStatus({ type: 'error', message: permissionErrorMsg });
         setStatusBarMessage({ type: "error", message: permissionErrorMsg });
       } else {
-        setOperationStatus({ type: 'error', message: String(error) || "操作失败" });
-        setStatusBarMessage({ type: "error", message: String(error) || "操作失败" });
+        setOperationStatus({ type: 'error', message: String(error) || t('device_control.msg_unknown_error') });
+        setStatusBarMessage({ type: "error", message: String(error) || t('device_control.msg_unknown_error') });
       }
     } finally {
       setExecutingCommand(null);
@@ -643,7 +642,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
       <CardHeader
          className={styles.cardHeader}
          image={<Desktop24Regular />}
-         header={<Text weight="semibold" size={200}>显示控制</Text>}
+         header={<Text weight="semibold" size={200}>{t('device_control.display_control')}</Text>}
        />
       
       <div className={styles.content}>
@@ -651,7 +650,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
         {!isDeviceAvailable && (
           <div className={styles.deviceStatus}>
             <Text size={200} style={{ textAlign: "center", color: "var(--colorNeutralForeground3)" }}>
-              设备未连接或不在系统模式
+              {t('device_control.device_unavailable')}
             </Text>
           </div>
         )}
@@ -661,8 +660,8 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
             {/* 屏幕分辨率控制 */}
             <div className={styles.controlSection}>
               <div className={styles.sectionHeader}>
-                <Text weight="medium">分辨率设置</Text>
-                <Tooltip content="设置屏幕的宽度和高度像素值" relationship="label">
+                <Text weight="medium">{t('device_control.resolution_settings')}</Text>
+                <Tooltip content={t('device_control.tooltip_resolution')} relationship="label">
                    <Button 
                      size="small" 
                      appearance="subtle" 
@@ -677,14 +676,14 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                 <div className={styles.inputContainer}>
                   <div className={styles.resolutionInputGroup}>
                     <Field 
-                      label="宽度" 
+                      label={t('device_control.width')} 
                       style={{ marginBottom: 0, marginRight: '8px' }}
                       validationState={inputValidation.resolutionWidth.isValid ? undefined : 'error'}
                     >
                       <Input
                         className={styles.resolutionInput}
                         type="number"
-                        placeholder="宽度"
+                        placeholder={t('device_control.width')}
                         value={customInputs.resolutionWidth}
                         onChange={(e) => handleInputChange('resolutionWidth', e.target.value)}
                         disabled={executingCommand !== null}
@@ -702,14 +701,14 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                     <Text style={{ alignSelf: 'flex-end', marginBottom: '8px' }}>×</Text>
                     
                     <Field 
-                      label="高度" 
+                      label={t('device_control.height')} 
                       style={{ marginBottom: 0, marginLeft: '8px' }}
                       validationState={inputValidation.resolutionHeight.isValid ? undefined : 'error'}
                     >
                       <Input
                         className={styles.resolutionInput}
                         type="number"
-                        placeholder="高度"
+                        placeholder={t('device_control.height')}
                         value={customInputs.resolutionHeight}
                         onChange={(e) => handleInputChange('resolutionHeight', e.target.value)}
                         disabled={executingCommand !== null}
@@ -733,7 +732,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                       disabled={executingCommand !== null}
                       onClick={applyCustomResolution}
                     >
-                      应用
+                      {t('device_control.apply')}
                     </Button>
                     <Button
                       className={styles.actionButton}
@@ -742,7 +741,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                       disabled={executingCommand !== null}
                       onClick={() => resetToDefault("resolution")}
                     >
-                      恢复默认
+                      {t('device_control.restore_default')}
                     </Button>
                   </div>
                 </div>
@@ -752,8 +751,8 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
             {/* 显示密度控制 */}
             <div className={styles.controlSection}>
               <div className={styles.sectionHeader}>
-                <Text weight="medium">显示密度设置</Text>
-                <Tooltip content="设置屏幕的像素密度，影响界面元素大小" relationship="label">
+                <Text weight="medium">{t('device_control.density_settings')}</Text>
+                <Tooltip content={t('device_control.tooltip_density')} relationship="label">
                    <Button 
                      size="small" 
                      appearance="subtle" 
@@ -774,7 +773,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                       <Input
                         className={styles.densityInput}
                         type="number"
-                        placeholder="DPI"
+                        placeholder={t('device_control.dpi_value')}
                         value={customInputs.density}
                         onChange={(e) => handleInputChange('density', e.target.value)}
                         disabled={executingCommand !== null}
@@ -799,7 +798,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                       disabled={executingCommand !== null}
                       onClick={applyCustomDensity}
                     >
-                      应用
+                      {t('device_control.apply')}
                     </Button>
                     <Button
                       className={styles.actionButton}
@@ -808,7 +807,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                       disabled={executingCommand !== null}
                       onClick={() => resetToDefault("density")}
                     >
-                      恢复默认
+                      {t('device_control.restore_default')}
                     </Button>
                   </div>
                 </div>
@@ -818,8 +817,8 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
             {/* 字体缩放控制 */}
             <div className={styles.controlSection}>
               <div className={styles.sectionHeader}>
-                <Text weight="medium">字体缩放设置</Text>
-                <Tooltip content="调整系统字体大小，范围0.1-3.0" relationship="label">
+                <Text weight="medium">{t('device_control.font_scale_settings')}</Text>
+                <Tooltip content={t('device_control.tooltip_font_scale')} relationship="label">
                    <Button 
                      size="small" 
                      appearance="subtle" 
@@ -833,14 +832,14 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                 
                 <div className={styles.inputContainer}>
                   <Field 
-                    label="缩放值" 
+                    label={t('device_control.font_scale_value')} 
                     style={{ marginBottom: 0, flex: 1 }}
                     validationState={inputValidation.fontScale.isValid ? undefined : 'error'}
                   >
                     <Input
                       className={styles.fontScaleInput}
                       type="number"
-                      placeholder="缩放值"
+                      placeholder={t('device_control.font_scale_value')}
                       value={customInputs.fontScale}
                       onChange={(e) => handleInputChange('fontScale', e.target.value)}
                       disabled={executingCommand !== null}
@@ -864,7 +863,7 @@ const DisplayControlCard: React.FC<DisplayControlCardProps> = ({ device }) => {
                       disabled={executingCommand !== null}
                       onClick={applyCustomFontScale}
                     >
-                      应用
+                      {t('device_control.apply')}
                     </Button>
                   </div>
                 </div>
