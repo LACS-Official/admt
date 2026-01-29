@@ -66,7 +66,8 @@
     "device_offline": "当前设备已离线，无法获取详细信息。",
     "device_unauthorized": "当前设备未授权，无法获取详细信息。",
     "refreshing_device_list": "正在刷新设备列表...",
-    "info_copied": "设备信息已复制到剪贴板"
+    "info_copied": "设备信息已复制到剪贴板",
+    "scanning": "正在扫描设备..."
   },
   "home": {
     "select_device_title": "请选择一个设备",
@@ -111,7 +112,33 @@
     "close": "关闭",
     "retry": "重试",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "unknown_error": "未知错误",
+    "refresh_manual": "手动刷新",
+    "all": "全部"
+  },
+  "main": {
+    "no_device_title": "暂未检测到设备连接",
+    "no_device_desc": "请检查设备是否正常连接，对应驱动是否安装",
+    "select_device_label": "当前设备: ",
+    "no_device_connected": "无设备连接",
+    "command_line": "命令行",
+    "logs": "日志",
+    "device_offline_title": "设备离线",
+    "device_offline_desc": "当前设备已离线，请重新连接设备后，重新插拔数据线后重试",
+    "device_unauthorized_title": "设备未授权",
+    "device_unauthorized_desc": "当前设备未授权，请在设备上允许USB调试授权后，重新插拔数据线。",
+    "i_know": "我知道了"
+  },
+  "guide": {
+    "title": "连接指南",
+    "docs": "文档中心",
+    "video": "视频教程",
+    "sys": "系统模式",
+    "rec": "恢复模式",
+    "fb": "引导模式",
+    "edl": "EDL模式",
+    "settings_center": "系统设置"
   },
   "welcome": {
     "title": "欢迎使用",
@@ -231,19 +258,7 @@
     "rom_store": "ROM商店",
     "download_manager": "下载管理"
   },
-  "main": {
-    "command_line": "命令行",
-    "logs": "日志",
-    "no_device_title": "未检测到设备",
-    "no_device_desc": "请检查设备是否正常连接 对应驱动是否安装",
-    "no_device_connected": "暂无设备连接",
-    "select_device_label": "选择设备:",
-    "device_offline_title": "设备离线",
-    "device_offline_desc": "当前设备已离线，请重新连接设备后，重新插拔数据线后重试",
-    "device_unauthorized_title": "设备未授权",
-    "device_unauthorized_desc": "当前设备未授权，请在设备上允许USB调试授权后，重新插拔数据线。",
-    "i_know": "我知道了"
-  },
+
   "adb": {
     "device_control": "设备控制",
     "screen_mirror": "设备投屏",
@@ -317,12 +332,14 @@
     "desc_airplane_mode_on": "开启飞行模式",
     "desc_airplane_mode_off": "关闭飞行模式",
     "desc_developer_options": "打开设备的开发者选项设置",
+    "display_control": "显示控制",
     "msg_check_connection": "请确保设备已连接并启用USB调试",
     "msg_exec_failed_perm": "执行{{desc}}失败：需要设备USB调试安全设置权限或无障碍服务权限",
     "msg_exec_failed_root": "执行{{desc}}失败：需要设备WRITE_SECURE_SETTINGS权限（通常需要root权限）",
     "msg_exec_failed_special": "执行{{desc}}失败：需要设备特殊权限",
     "msg_exec_failed": "{{desc}}失败: {{error}}",
     "resolution_settings": "屏幕分辨率设置",
+    "restore_default": "恢复默认设置",
     "density_settings": "显示密度设置",
     "font_scale_settings": "字体缩放设置",
     "tooltip_resolution": "调整屏幕分辨率。较高的分辨率会消耗更多性能。",
@@ -453,6 +470,7 @@
     "panel_title": "设备信息面板",
     "click_to_copy": "点击值可以复制",
     "refresh_info": "刷新内存和存储信息",
+    "copy_success": "已复制 {{label}} 到剪贴板",
     "copy_failed": "复制 {{label}} 失败",
     "tab_basic": "基本信息",
     "tab_hardware": "硬件信息",
@@ -715,7 +733,12 @@
     "fail_get_current_app": "获取当前应用失败：{{error}}",
     "msg_frozen_apps": "已冻结应用：{{count}} 个",
     "msg_frozen": "已冻结 {{packageName}}",
-    "msg_unfrozen": "已解冻 {{packageName}}"
+    "msg_unfrozen": "已解冻 {{packageName}}",
+    "clear_data_success": "已清除数据：{{packageName}}",
+    "get_apk_path_fail": "无法获取APK路径",
+    "no_apk_path_found": "未找到APK路径",
+    "export_apk_success": "APK 已导出到：{{path}}",
+    "uninstall_warning": "此操作将删除应用及其数据，无法撤销"
   },
   "security_status": {
     "card_title": "安全状态",
@@ -875,6 +898,9 @@
     "start_record": "开始录制",
     "stop_record": "停止录制",
     "show_details": "显示详情",
+    "start_mirror": "开始投屏",
+    "stop_mirror": "停止投屏",
+    "mirroring": "投屏中",
     "hide_details": "隐藏详情",
     "mirror_config": "投屏配置",
     "show_touches_label": "显示触摸:",
@@ -883,9 +909,7 @@
     "control_label": "触摸控制:",
     "connecting_device": "正在连接设备...",
     "connecting_hint": "请稍候，正在建立投屏连接",
-    "mirroring": "投屏中",
     "connecting": "连接中",
-    "stop_mirror": "停止投屏",
     "fullscreen": "全屏",
     "unknown_device": "未知设备",
     "scrcpy_hint": "请在任务栏或桌面上查找scrcpy投屏窗口",
@@ -920,5 +944,37 @@
     "success": "执行成功",
     "unknown_error": "未知错误",
     "risk_warning": "⚠️ 解锁操作具有风险，可能导致设备变砖或保修失效，请谨慎操作"
+  },
+  "misc": {
+    "title": "辅助功能",
+    "restart_adb": "重启ADB服务",
+    "finish_adb": "结束ADB服务",
+    "install_driver": "安装设备驱动",
+    "fix_usb3": "USB 3.0修复",
+    "open_device_manager": "打开设备管理器",
+    "open_task_manager": "打开任务管理器",
+    "risky_confirm": "请再次点击确认执行 {{label}}",
+    "success": "{{description}}成功",
+    "fail": "{{description}}失败",
+    "fail_with_error": "{{description}}失败: {{error}}",
+    "driver_tip": "请前往在线资源板块下载并安装",
+    "usb_fix_title": "USB 3.0 修复工具",
+    "usb_fix_desc": "此工具将修复USB 3.0连接问题，确保Android设备能够正常识别。",
+    "usb_fix_notice": "注意事项：",
+    "usb_fix_item1": "此操作需要管理员权限",
+    "usb_fix_item2": "将修改系统注册表以修复USB 3.0问题",
+    "usb_fix_item3": "建议在执行前关闭其他USB调试工具",
+    "usb_fix_running": "正在执行USB 3.0修复...",
+    "usb_unfix_running": "正在撤销USB 3.0修复...",
+    "usb_fix_result": "执行结果: {{output}}",
+    "usb_fix_success": "USB 3.0修复成功，请重新连接设备",
+    "usb_unfix_success": "USB 3.0修复已撤销，请重新连接设备",
+    "usb_fix_error": "USB 3.0修复失败",
+    "usb_unfix_error": "USB 3.0修复撤销失败",
+    "start_fix": "开始修复",
+    "rollback_fix": "撤销修复",
+    "executing": "正在执行...",
+    "close": "关闭",
+    "cancel": "取消"
   }
 }

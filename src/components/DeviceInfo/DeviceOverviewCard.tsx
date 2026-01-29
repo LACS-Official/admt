@@ -71,7 +71,6 @@ interface MemoryStorageInfo {
 
 const useStyles = makeStyles({
   title: {
-    selector: ".MuiCardContent-root",
     fontSize: "1.2rem",
     fontWeight: "600",
     color: "var(--colorNeutralForeground1)",
@@ -381,9 +380,6 @@ const useStyles = makeStyles({
   },
   noSelect: {
     userSelect: 'none',
-    WebkitUserSelect: 'none',
-    MozUserSelect: 'none',
-    msUserSelect: 'none',
   },
 });
 
@@ -452,7 +448,7 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
       await navigator.clipboard.writeText(value);
         setStatusBarMessage({
           type: "info",
-          message: `已复制 ${label} 到剪贴板`,
+          message: t('device_overview.copy_success', { label: label }),
           duration: 1000,
         });
     } catch (error) {

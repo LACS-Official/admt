@@ -2,6 +2,7 @@ import React from 'react';
 import cx from 'classnames';
 import {
   makeStyles,
+  mergeClasses,
   Text,
   Spinner,
   tokens,
@@ -23,6 +24,7 @@ import {
 } from "@fluentui/react-icons";
 import MiscellaneousCard from './MiscellaneousCard';
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 
 const useStyles = makeStyles({
@@ -308,6 +310,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
   onRefresh
 }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
 
 
   return (
@@ -341,10 +344,10 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
                   <PlugDisconnected24Regular className={styles.connectionIcon} />
               </motion.div>
               <Text className={styles.title}>
-                暂未检测到设备连接
+                {t('main.no_device_title')}
               </Text>
               <Text className={styles.subtitle}>
-                请检查设备是否正常连接，对应驱动是否安装
+                {t('main.no_device_desc')}
               </Text>
               
               {/* 扫描状态指示器 */}
@@ -352,7 +355,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
                 <div className={styles.scanningIndicator}>
                   <Spinner size="extra-small" />
                   <Text className={styles.scanningText}>
-                    正在扫描设备...
+                    {t('status.scanning')}
                   </Text>
                 </div>
               )}
@@ -369,7 +372,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
                     icon={<ArrowClockwise24Regular />}
                     onClick={onRefresh}
                   >
-                    手动刷新
+                    {t('common.refresh_manual')}
                   </Button>
                 </motion.div>
               )}
@@ -384,20 +387,20 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           {/* 连接指南卡片 */}
-          <Card className={`${styles.unifiedCard} ${styles.guideCard}`}>
+          <Card className={mergeClasses(styles.unifiedCard, styles.guideCard)}>
             <div className={styles.cardHeader}>
 
               <Settings24Regular className={styles.titleIcon} />
-              <Text className={styles.cardTitle}>连接指南</Text>
+              <Text className={styles.cardTitle}>{t('guide.title')}</Text>
             </div>
             <div className={styles.linkGrid}>
               {[
-                { href: "https://admt.lacs.cc/docs", text: "文档中心" },
-                { href: "https://space.bilibili.com/1779662818/lists/4978116?type=series", text: "视频教程" },
-                { href: "https://admt.lacs.cc/docs/device/linksys", text: "系统模式" },
-                { href: "https://admt.lacs.cc/docs/device/linkrec", text: "恢复模式" },
-                { href: "https://admt.lacs.cc/docs/device/linkfb", text: "引导模式" },
-                { href: "https://admt.lacs.cc/docs/device/linkedl", text: "EDL模式" },
+                { href: "https://admt.lacs.cc/docs", text: t('guide.docs') },
+                { href: "https://space.bilibili.com/1779662818/lists/4978116?type=series", text: t('guide.video') },
+                { href: "https://admt.lacs.cc/docs/device/linksys", text: t('guide.sys') },
+                { href: "https://admt.lacs.cc/docs/device/linkrec", text: t('guide.rec') },
+                { href: "https://admt.lacs.cc/docs/device/linkfb", text: t('guide.fb') },
+                { href: "https://admt.lacs.cc/docs/device/linkedl", text: t('guide.edl') },
               ].map((link, index) => (
                 <motion.a 
                   key={index}

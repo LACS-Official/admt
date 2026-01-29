@@ -16,21 +16,21 @@ import { ScreenMirrorDevice } from "../../types/screenMirror";
 
 const useStyles = makeStyles({
   card: {
-    height: "fit-content",
+    height: "100%",
+    borderRadius: "8px",
   },
   deviceList: {
     display: "flex",
     flexDirection: "column",
     gap: "8px",
-    padding: "16px",
   },
   deviceItem: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "12px",
+    padding: "8px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "6px",
+    borderRadius: "8px",
     cursor: "pointer",
     transition: "all 0.2s ease",
     "&:hover": {
@@ -87,7 +87,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     gap: "8px",
-    padding: "16px",
+    padding: "8px",
   },
   streamingIndicator: {
     display: "flex",
@@ -182,9 +182,6 @@ const DeviceSelectionCard: React.FC<DeviceSelectionCardProps> = ({
                     {device.name || device.model || device.serial}
                   </Text>
                   <div className={styles.deviceMeta}>
-                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                      {device.serial}
-                    </Text>
                     {device.resolution && (
                       <Badge size="small" appearance="outline">
                         {formatResolution(device.resolution)}

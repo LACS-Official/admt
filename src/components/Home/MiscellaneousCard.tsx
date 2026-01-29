@@ -19,6 +19,7 @@ import {
   Info24Regular,
 } from "@fluentui/react-icons";
 
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
 import { invoke } from "@tauri-apps/api/core";
 import { useBatchExecutor } from "../Common/BatchExecutorDialog";
@@ -166,6 +167,7 @@ interface MiscellaneousCardProps {
 
 const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { setStatusBarMessage } = useAppStore();
   const {BatchExecutorDialog } = useBatchExecutor();
 
@@ -186,7 +188,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     if (isRisky) {
       setStatusBarMessage({
         type: "warning",
-        message: `请再次点击 确认执行重启操作`,
+        message: t('misc.risky_confirm', { label: description }),
         icon: <Warning24Regular />,
         duration: 5000,
       });
@@ -198,18 +200,18 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
       if (result.success) {
         setStatusBarMessage({
           type: "success",
-          message: `${description}成功`,
+          message: t('misc.success', { description }),
         });
       } else {
         setStatusBarMessage({
           type: "error",
-          message: result.error || `${description}失败`,
+          message: result.error || t('misc.fail', { description }),
         });
       }
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `${description}失败: ${error}`,
+        message: t('misc.fail_with_error', { description, error }),
       });
     } finally {
       setExecutingFunction(null);
@@ -221,7 +223,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     await executeCommand(
       "open-device-manager",
       () => invoke("open_device_manager"),
-      "打开设备管理器"
+      t('misc.open_device_manager')
     );
   };
 
@@ -232,19 +234,19 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const handleRestartAdb = async () => {
     setStatusBarMessage({
       type: "info",
-      message: "正在重启ADB服务...",
+      message: t('misc.usb_fix_running'),
       });
     await executeCommand(
       "restart-adb",
       () => invoke("restart_adb_service"),
-      "重启ADB服务"
+      t('misc.restart_adb')
     );
   };
 
   const handleInstallDriver = async () => {
       setStatusBarMessage({
       type: "info",
-      message: "请前往在线资源板块下载并安装",
+      message: t('misc.driver_tip'),
       });
   };
 
@@ -257,32 +259,32 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const handleUsbFixStart = async () => {
     setShowUsbFixDialog(false);
     setUsbFixStatus('running');
-    setUsbFixOutput('正在执行USB 3.0修复...\n');
+    setUsbFixOutput(t('misc.usb_fix_running') + '\n');
     
     try {
       const result = await invoke("fix_usb3_connection") as any;
-      setUsbFixOutput(prev => prev + `执行结果: ${result.output}\n`);
+      setUsbFixOutput(prev => prev + t('misc.usb_fix_result', { output: result.output }) + '\n');
       
       if (result.success) {
         setUsbFixStatus('success');
         setStatusBarMessage({
           type: "success",
-          message: "USB 3.0修复成功，请重新连接设备",
+          message: t('misc.usb_fix_success'),
         });
       } else {
         setUsbFixStatus('error');
-        setUsbFixOutput(prev => prev + `错误: ${result.error || '未知错误'}\n`);
+        setUsbFixOutput(prev => prev + `${t('common.fail')}: ${result.error || t('common.unknown_error')}\n`);
         setStatusBarMessage({
           type: "error",
-          message: "USB 3.0修复失败",
+          message: t('misc.usb_fix_error'),
         });
       }
     } catch (error) {
       setUsbFixStatus('error');
-      setUsbFixOutput(prev => prev + `执行异常: ${error}\n`);
+      setUsbFixOutput(prev => prev + `${t('common.fail')}: ${error}\n`);
       setStatusBarMessage({
         type: "error",
-        message: `USB 3.0修复失败: ${error}`,
+        message: t('misc.usb_fix_error') + `: ${error}`,
       });
     }
     
@@ -293,32 +295,32 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const handleUsbUnFixStart = async () => {
     setShowUsbFixDialog(false);
     setUsbFixStatus('running');
-    setUsbFixOutput('正在撤销USB 3.0修复...\n');
+    setUsbFixOutput(t('misc.usb_unfix_running') + '\n');
     
     try {
       const result = await invoke("unfix_usb3_connection") as any;
-      setUsbFixOutput(prev => prev + `执行结果: ${result.output}\n`);
+      setUsbFixOutput(prev => prev + t('misc.usb_fix_result', { output: result.output }) + '\n');
       
       if (result.success) {
         setUsbFixStatus('success');
         setStatusBarMessage({
           type: "success",
-          message: "USB 3.0修复已撤销，请重新连接设备",
+          message: t('misc.usb_unfix_success'),
         });
       } else {
         setUsbFixStatus('error');
-        setUsbFixOutput(prev => prev + `错误: ${result.error || '未知错误'}\n`);
+        setUsbFixOutput(prev => prev + `${t('common.fail')}: ${result.error || t('common.unknown_error')}\n`);
         setStatusBarMessage({
           type: "error",
-          message: "USB 3.0修复撤销失败",
+          message: t('misc.usb_unfix_error'),
         });
       }
     } catch (error) {
       setUsbFixStatus('error');
-      setUsbFixOutput(prev => prev + `执行异常: ${error}\n`);
+      setUsbFixOutput(prev => prev + `${t('common.fail')}: ${error}\n`);
       setStatusBarMessage({
         type: "error",
-        message: `USB 3.0修复撤销失败: ${error}`,
+        message: t('misc.usb_unfix_error') + `: ${error}`,
       });
     }
     
@@ -338,12 +340,12 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const handleFinishAdb = async () => {
     setStatusBarMessage({
       type: "info",
-      message: "正在结束ADB服务...",
+      message: t('misc.finish_adb') + "...",
       });
     await executeCommand(
       "finish-adb",
       () => invoke("finish_adb_service"),
-      "结束ADB服务"
+      t('misc.finish_adb')
     );
   };
 
@@ -351,7 +353,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     await executeCommand(
       "open-task-manager",
       () => invoke("open_task_manager"),
-      "打开任务管理器"
+      t('misc.open_task_manager')
     );
   };
 
@@ -359,13 +361,13 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const miscFunctions: MiscFunction[] = [
     {
       id: "restart-adb",
-      title: "重启ADB服务",
+      title: t('misc.restart_adb'),
       isRisky: false,
       action: handleRestartAdb,
     },
     {
       id:"finish-adb",
-      title: "结束ADB服务",
+      title: t('misc.finish_adb'),
       isRisky: false,
       action: handleFinishAdb,
     },
@@ -377,24 +379,24 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     // },
     {
       id: "install-driver",
-      title: "安装设备驱动",
+      title: t('misc.install_driver'),
       isRisky: true,
       action: handleInstallDriver,
     },
     {
       id: "fix-usb3",
-      title: "USB 3.0修复",
+      title: t('misc.fix_usb3'),
       isRisky: true,
       action: handleFixUsb3,
     },
     {
       id: "open-device-manager",
-      title: "打开设备管理器",
+      title: t('misc.open_device_manager'),
       isRisky: false,
       action: handleOpenDeviceManager,
     },{
       id: "open-task-manager",
-      title: "打开任务管理器",
+      title: t('misc.open_task_manager'),
       isRisky: true,
       action: handleOpenTaskManager,
     }
@@ -425,7 +427,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
       <Card className={`${styles.card} ${className || ''}`}>
         <div className={styles.cardHeader}>
           <Info24Regular className={styles.titleIcon} />
-          <Text className={styles.cardTitle}>辅助功能</Text>
+          <Text className={styles.cardTitle}>{t('misc.title')}</Text>
         </div>
 
 
@@ -455,11 +457,11 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
         modalType="modal"
       >
         <DialogSurface style={{ minWidth: '500px', maxWidth: '600px' }}>
-          <DialogTitle>USB 3.0 修复工具</DialogTitle>
+          <DialogTitle>{t('misc.usb_fix_title')}</DialogTitle>
           <DialogContent>
             <DialogBody>
               <div style={{ marginBottom: '16px' }}>
-                <Text>此工具将修复USB 3.0连接问题，确保Android设备能够正常识别。</Text>
+                <Text>{t('misc.usb_fix_desc')}</Text>
               </div>
               
               {usbFixStatus === 'idle' && (
@@ -470,12 +472,12 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                   marginBottom: '16px'
                 }}>
                   <Text weight="semibold" style={{ color: 'var(--colorPaletteYellowForeground1)' }}>
-                    ⚠️ 注意事项：
+                    {t('misc.usb_fix_notice')}
                   </Text>
                   <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                    <li>此操作需要管理员权限</li>
-                    <li>将修改系统注册表以修复USB 3.0问题</li>
-                    <li>建议在执行前关闭其他USB调试工具</li>
+                    <li>{t('misc.usb_fix_item1')}</li>
+                    <li>{t('misc.usb_fix_item2')}</li>
+                    <li>{t('misc.usb_fix_item3')}</li>
                   </ul>
                 </div>
               )}
@@ -497,7 +499,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                   {usbFixStatus === 'running' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                       <Spinner size="tiny" />
-                      <Text size={200}>正在执行...</Text>
+                      <Text size={200}>{t('misc.executing')}</Text>
                     </div>
                   )}
                 </div>
@@ -511,21 +513,21 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                   appearance="secondary" 
                   onClick={handleUsbFixClose}
                 >
-                  取消
+                  {t('misc.cancel')}
                 </Button>
                 <Button 
                   appearance="primary" 
                   onClick={handleUsbFixStart}
                   icon={<Wrench24Regular />}
                 >
-                  开始修复
+                  {t('misc.start_fix')}
                 </Button>
                 <Button 
                   appearance="primary" 
                   onClick={handleUsbUnFixStart}
                   icon={<Wrench24Regular />}
                 >
-                  撤销修复
+                  {t('misc.rollback_fix')}
                 </Button>
               </>
             )}
@@ -536,7 +538,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                 disabled
                 icon={<Spinner size="tiny" />}
               >
-                正在执行...
+                {t('misc.executing')}
               </Button>
             )}
             
@@ -546,7 +548,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                   appearance="secondary" 
                   onClick={handleUsbFixClose}
                 >
-                  关闭
+                  {t('misc.close')}
                 </Button>
               </>
             )}

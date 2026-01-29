@@ -20,6 +20,7 @@ import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
 import AppManagerPanel from './AppManagerPanel';
 import AppInstallPanel from './AppInstallPanel';
 import FileManagerPanel from './FileManagerPanel';
+import KeySimulationCard from "../DeviceControl/KeySimulationCard";
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
@@ -137,7 +138,7 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView =  "device-control" | "app_install" | "file-manager" | "screen-mirror" | "app-manager" ;
+type AdbZoneView =  "device-control" | "app_install" | "file-manager" | "screen-mirror" | "app-manager" | "settings-center";
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -171,14 +172,15 @@ const AdbZonePanel: React.FC = () => {
       label: t('adb.app_manager'),
       icon: <Settings24Regular />,
     },
+  /* New Tab for Settings Center */
     {
-      id: "file-manager" as AdbZoneView,
-      label: t('adb.file_manager'),
-      icon: <Folder24Regular />,
+      id: "settings-center" as AdbZoneView, 
+      label: t('guide.settings_center'), // Ensure this translation key exists
+      icon: <Settings24Regular />,
     },
-
   ];
 
+  /* Updated renderContent to handle new views */
   const renderContent = () => {
     if (!selectedDevice) return null;
 
@@ -189,13 +191,25 @@ const AdbZonePanel: React.FC = () => {
             height: "100%",
             overflow: "auto",
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "1fr", // Changed to single column
             gap: "16px",
             padding: "16px"
           }}>
-            <SystemControlCard device={selectedDevice} />
+             {/* Only Keep KeySimulationCard here as requested, others moved */}
+             <KeySimulationCard device={selectedDevice} />
           </div>
         );
+      case "settings-center": /* New Case for Settings Center */
+          return (
+            <div style={{
+                height: "100%",
+                overflow: "auto",
+                 // Use consistent styling or reuse existing
+                padding: "16px"
+            }}>
+                <SystemControlCard device={selectedDevice} />
+            </div>
+          );
       case "screen-mirror":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>

@@ -28,12 +28,9 @@ import {
   MenuPopover,
   MenuList,
   MenuItem,
-  Radio,
-  RadioGroup,
 } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { Apps24Regular,
-  ArrowClockwise24Regular,
   Delete24Regular,
   Info24Regular,
   Search24Regular,
@@ -227,11 +224,6 @@ const useStyles = makeStyles({
     gap: "8px",
     flexWrap: "wrap",
   },
-  radioGroup: {
-    //横向排列
-    display: "flex",
-    gap: "8px",
-  },
   buttonGroup: {
     display: "flex",
     gap: "8px",
@@ -285,14 +277,198 @@ const AppManagerPanel: React.FC = () => {
   const [performanceStats, setPerformanceStats] = useState<{loadTime: number, appCount: number, isOptimized: boolean}>({loadTime: 0, appCount: 0, isOptimized: false});
   const [currentApp, setCurrentApp] = useState<string | null>(null);
   const [lastDetectedApp, setLastDetectedApp] = useState<string | null>(null);
+  const currentAppRef = React.useRef<string | null>(null);
+  const lastDetectedAppRef = React.useRef<string | null>(null);
+  const appsRef = React.useRef<InstalledApp[]>(apps);
   const [frozenAppsWithVersion, setFrozenAppsWithVersion] = useState<InstalledApp[]>([]);
   
+  // 规范化版本信息，处理各种格式问题
+  const normalizeVersionInfo = useCallback((versionInfo: string): string => {
+    if (!versionInfo || versionInfo.trim() === '') {
+      return '';
+    }
+    let normalized = versionInfo.trim();
+    normalized = normalized.replace(/^["']|["']$/g, '');
+    normalized = normalized.replace(/[\r\n\t]/g, '');
+    normalized = normalized.replace(/\s+/g, ' ').trim();
+    return normalized;
+  }, []);
+
+  // 格式化版本名称，处理各种格式问题
+  const formatVersionName = useCallback((versionName: string): string => {
+    if (!versionName || versionName.trim() === '') {
+      return t('common.unknown');
+    }
+    let formatted = versionName.trim();
+    formatted = formatted.replace(/^["']|["']$/g, '');
+    formatted = formatted.replace(/[\r\n\t]/g, '');
+    if (formatted.length > 20) {
+      formatted = formatted.substring(0, 20) + '...';
+    }
+    const versionRegex = /^[\d.]+$/;
+    if (!versionRegex.test(formatted)) {
+      const versionMatch = formatted.match(/(\d+(?:\.\d+)*)/);
+      if (versionMatch) {
+        formatted = versionMatch[1];
+      }
+    }
+    return formatted;
+  }, [t]);
+
+  // 获取当前前台应用包名和版本信息
+  const loadCurrentApp = useCallback(async () => {
+    if (!selectedDevice) return;
+    try {
+      const activityResult = await deviceService.executeAdbCommand(
+        selectedDevice.serial,
+        "shell",
+        ["dumpsys activity activities"]
+      );
+      
+      if (!activityResult.success || !activityResult.output) {
+        currentAppRef.current = null;
+        return;
+      }
+
+      const lines = activityResult.output.split(/\r?\n/);
+      const resumed = lines.find(l => /ResumedActivity|mResumedActivity/.test(l));
+      
+      if (!resumed) {
+        currentAppRef.current = null;
+        return;
+      }
+
+      const match = resumed.match(/ ([a-zA-Z0-9_.]+)\/[a-zA-Z0-9_.]+/);
+      if (!match || !match[1]) {
+        currentAppRef.current = null;
+        return;
+      }
+
+      const packageName = match[1];
+      const cachedApp = appsRef.current.find(a => a.packageName === packageName && (a.versionName || a.versionCode));
+      if (packageName === currentAppRef.current && cachedApp) {
+        return;
+      }
+
+      currentAppRef.current = packageName;
+      setCurrentApp(packageName);
+      
+      try {
+        const packageResult = await deviceService.executeAdbCommand(
+          selectedDevice.serial,
+          "shell",
+          [`dumpsys package ${packageName} | grep -E "versionName|versionCode"`]
+        );
+        
+        let versionName = "";
+        let versionCode = "";
+        
+        if (packageResult.success && packageResult.output) {
+          const versionLines = packageResult.output.split(/\r?\n/);
+          for (const line of versionLines) {
+            const versionNameMatch = line.match(/versionName=([^\s]+)/);
+            if (versionNameMatch && versionNameMatch[1]) {
+              versionName = versionNameMatch[1];
+            }
+            const versionCodeMatch = line.match(/versionCode=([^\s]+)/);
+            if (versionCodeMatch && versionCodeMatch[1]) {
+              versionCode = versionCodeMatch[1];
+            }
+          }
+        }
+        
+        setApps(prev => {
+          const found = prev.find(a => a.packageName === packageName);
+          if (!found) {
+            const newApp: InstalledApp = {
+              packageName,
+              versionName,
+              versionCode,
+              isSystemApp: false,
+              isEnabled: true,
+              permissions: [],
+            };
+            return [...prev, newApp];
+          } else if (!found.versionName && versionName) {
+            return prev.map(app => 
+              app.packageName === packageName 
+                ? { ...app, versionName, versionCode } 
+                : app
+            );
+          }
+          return prev;
+        });
+        
+        setViewSource("current");
+        
+        if (packageName !== lastDetectedAppRef.current) {
+          setStatusBarMessage({ 
+            type: "success", 
+            message: t('app_manager.msg_current_app', { packageName }) 
+          });
+          lastDetectedAppRef.current = packageName;
+          setLastDetectedApp(packageName);
+        }
+      } catch (versionError) {
+        console.error('获取应用版本信息失败:', versionError);
+        setViewSource("current");
+        if (packageName !== lastDetectedAppRef.current) {
+          setStatusBarMessage({ 
+            type: "success", 
+            message: t('app_manager.msg_current_app', { packageName }) 
+          });
+          lastDetectedAppRef.current = packageName;
+          setLastDetectedApp(packageName);
+        }
+      }
+    } catch (e) {
+      console.debug('获取当前应用轮询中:', e);
+    }
+  }, [selectedDevice, deviceService, setStatusBarMessage, t]);
+
+  // 获取已冻结（被禁用）的应用列表
+  const loadFrozenApps = useCallback(async () => {
+    if (!selectedDevice) return;
+    try {
+      const frozenApps = await deviceService.getFrozenApps(selectedDevice.serial);
+      if (frozenApps && frozenApps.length > 0) {
+        const frozenAppsWithVersion: InstalledApp[] = frozenApps.map((app: any) => ({
+          packageName: app.package_name || '',
+          versionName: normalizeVersionInfo(app.version_name || ''),
+          versionCode: normalizeVersionInfo(app.version_code || ''),
+          isSystemApp: app.is_system_app || false,
+          isEnabled: app.is_enabled || false,
+          installLocation: app.install_location || '',
+          apkPath: app.apk_path || '',
+          installTime: app.install_time || '',
+          updateTime: app.update_time || '',
+          permissions: app.permissions || [],
+        }));
+        setFrozenAppsWithVersion(frozenAppsWithVersion);
+        setViewSource("frozen");
+        setStatusBarMessage({ type: "success", message: t('app_manager.msg_frozen_apps', { count: frozenApps.length }) });
+      } else {
+        setFrozenAppsWithVersion([]);
+        setViewSource("frozen");
+        setStatusBarMessage({ type: "info", message: t('app_manager.no_apps_found') });
+      }
+    } catch (e) {
+      console.error('获取冻结应用失败:', e);
+      setStatusBarMessage({ type: "error", message: t('app_manager.fail_get_apps', { error: e }) });
+    }
+  }, [selectedDevice, deviceService, setStatusBarMessage, normalizeVersionInfo, t]);
+
+  // 同步 apps 到 ref
+  useEffect(() => {
+    appsRef.current = apps;
+  }, [apps]);
+
   // 默认加载当前应用
   useEffect(() => {
     if (selectedDevice && !viewSource) {
       loadCurrentApp();
     }
-  }, [selectedDevice, viewSource]);
+  }, [selectedDevice, viewSource, loadCurrentApp]);
 
   // 应用管理相关函数（超级优化版本）
   const loadApps = useCallback(async (forceRefresh = false) => {
@@ -510,7 +686,7 @@ const AppManagerPanel: React.FC = () => {
       setIsLoadingApps(false);
       setLoadingProgress({current: 0, total: 0}); // 清除进度
     }
-  }, [selectedDevice, includeSystemApps, deviceService, setStatusBarMessage, appCache, CACHE_DURATION]);
+  }, [selectedDevice, includeSystemApps, appCache, CACHE_DURATION, normalizeVersionInfo, setStatusBarMessage, t]);
 
 
 
@@ -803,15 +979,15 @@ const AppManagerPanel: React.FC = () => {
             }));
             setFrozenAppsWithVersion(frozenAppsWithVersion);
           }
-        } catch (error) {
-          console.error('重新获取已冻结应用列表失败:', error);
+        } catch (e) {
+          console.error('刷新冻结应用列表失败:', e);
         }
       }
 
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: `批量${freeze ? '冻结' : '解冻'}操作失败: ${error}`,
+        message: t('common.fail') + `: ${error}`,
       });
     }
   };
@@ -1143,232 +1319,8 @@ const AppManagerPanel: React.FC = () => {
     }
   };
 
-  // 获取当前前台应用包名和版本信息
-  const loadCurrentApp = useCallback(async () => {
-    if (!selectedDevice) return;
-    try {
-      // 获取当前前台应用包名
-      const activityResult = await deviceService.executeAdbCommand(
-        selectedDevice.serial,
-        "shell",
-        ["dumpsys activity activities"]
-      );
-      
-      if (!activityResult.success || !activityResult.output) {
-        setStatusBarMessage({ type: "error", message: activityResult.error || t('app_manager.fail_get_apps') });
-        return;
-      }
-
-      const lines = activityResult.output.split(/\r?\n/);
-      // 查找包含 ResumedActivity 的行
-      const resumed = lines.find(l => /ResumedActivity|mResumedActivity/.test(l));
-      
-      if (!resumed) {
-        setStatusBarMessage({ type: "info", message: t('app_manager.error_no_current_app') });
-        return;
-      }
-
-      // 解析形如 com.example/.MainActivity 或 com.example/com.example.MainActivity
-      const match = resumed.match(/ ([a-zA-Z0-9_.]+)\/[a-zA-Z0-9_.]+/);
-      if (!match || !match[1]) {
-        setStatusBarMessage({ type: "info", message: "未解析到当前前台应用包名" });
-        return;
-      }
-
-      const packageName = match[1];
-      setCurrentApp(packageName);
-      
-      // 获取应用版本信息
-      try {
-        const packageResult = await deviceService.executeAdbCommand(
-          selectedDevice.serial,
-          "shell",
-          [`dumpsys package ${packageName} | grep -E "versionName|versionCode"`]
-        );
-        
-        let versionName = "";
-        let versionCode = "";
-        
-        if (packageResult.success && packageResult.output) {
-          // 解析版本信息
-          const versionLines = packageResult.output.split(/\r?\n/);
-          for (const line of versionLines) {
-            const versionNameMatch = line.match(/versionName=([^\s]+)/);
-            if (versionNameMatch && versionNameMatch[1]) {
-              versionName = versionNameMatch[1];
-            }
-            
-            const versionCodeMatch = line.match(/versionCode=([^\s]+)/);
-            if (versionCodeMatch && versionCodeMatch[1]) {
-              versionCode = versionCodeMatch[1];
-            }
-          }
-        }
-        
-        // 使用函数式更新来避免直接依赖apps
-        setApps(prev => {
-          const found = prev.find(a => a.packageName === packageName);
-          
-          if (!found) {
-            // 如果不在apps数组中，创建一个新的应用对象并添加到apps数组
-            const newApp: InstalledApp = {
-              packageName,
-              versionName,
-              versionCode,
-              isSystemApp: false, // 默认为非系统应用，后续可以通过其他命令获取
-              isEnabled: true,    // 当前运行的应用肯定是启用的
-              permissions: [],     // 可以通过其他命令获取权限列表
-            };
-            
-            // 返回更新后的数组
-            return [...prev, newApp];
-          } else if (!found.versionName && versionName) {
-            // 如果在apps数组中但没有版本信息，更新版本信息
-            return prev.map(app => 
-              app.packageName === packageName 
-                ? { ...app, versionName, versionCode } 
-                : app
-            );
-          }
-          
-          // 如果不需要更新，返回原数组
-          return prev;
-        });
-        
-        setViewSource("current");
-        
-        // 只有当检测到的应用与上次不同时才显示状态栏消息
-          setLastDetectedApp(packageName);
-        
-      } catch (versionError) {
-        console.error('获取应用版本信息失败:', versionError);
-        // 即使获取版本信息失败，也显示应用包名，但仅当与上次不同时
-        setViewSource("current");
-        if (packageName !== lastDetectedApp) {
-          setStatusBarMessage({ type: "success", message: `当前前台应用：${packageName}` });
-          setLastDetectedApp(packageName);
-        } else {
-          setLastDetectedApp(packageName);
-        }
-      }
-    } catch (e) {
-      setStatusBarMessage({ type: "error", message: `获取当前应用失败：${e}` });
-    }
-  }, [selectedDevice, deviceService, setStatusBarMessage]);
-
-  // 获取已冻结（被禁用）的应用列表
-  // 当viewSource为"current"时，每隔1秒刷新当前应用
-  useEffect(() => {
-    let refreshInterval: NodeJS.Timeout | undefined;
-    
-    if (viewSource === "current" && selectedDevice) {
-      // 立即执行一次刷新
-      loadCurrentApp();
-      
-      // 设置每秒刷新一次
-      refreshInterval = setInterval(() => {
-        loadCurrentApp();
-      }, 1000);
-    }
-    
-    // 清除定时器
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-    };
-  }, [viewSource, selectedDevice, loadCurrentApp]);
-
-  // 规范化版本信息，处理各种格式问题
-  const normalizeVersionInfo = (versionInfo: string): string => {
-    if (!versionInfo || versionInfo.trim() === '') {
-      return '';
-    }
-    
-    // 处理常见的版本格式问题
-    let normalized = versionInfo.trim();
-    
-    // 移除多余的引号
-    normalized = normalized.replace(/^["']|["']$/g, '');
-    
-    // 处理版本号中的特殊字符
-    normalized = normalized.replace(/[\r\n\t]/g, '');
-    
-    // 移除版本信息中的多余空格
-    normalized = normalized.replace(/\s+/g, ' ').trim();
-    
-    return normalized;
-  };
-
-  // 格式化版本名称，处理各种格式问题
-  const formatVersionName = (versionName: string): string => {
-    if (!versionName || versionName.trim() === '') {
-      return t('common.unknown');
-    }
-    
-    // 处理常见的版本格式问题
-    let formatted = versionName.trim();
-    
-    // 移除多余的引号
-    formatted = formatted.replace(/^["']|["']$/g, '');
-    
-    // 处理版本号中的特殊字符
-    formatted = formatted.replace(/[\r\n\t]/g, '');
-    
-    // 如果版本名称过长，截断并添加省略号
-    if (formatted.length > 20) {
-      formatted = formatted.substring(0, 20) + '...';
-    }
-    
-    // 检查是否为有效的版本格式
-    const versionRegex = /^[\d.]+$/;
-    if (!versionRegex.test(formatted)) {
-      // 如果不是纯数字和点，尝试提取版本号
-      const versionMatch = formatted.match(/(\d+(?:\.\d+)*)/);
-      if (versionMatch) {
-        formatted = versionMatch[1];
-      }
-    }
-    
-    return formatted;
-  };
-
-  // 获取已冻结（被禁用）的应用列表
-  const loadFrozenApps = useCallback(async () => {
-    if (!selectedDevice) return;
-    try {
-      // 使用deviceService的getFrozenApps方法调用后端API
-      const frozenApps = await deviceService.getFrozenApps(selectedDevice.serial);
-      
-      if (frozenApps && frozenApps.length > 0) {
-        // 转换为前端需要的格式
-        const frozenAppsWithVersion: InstalledApp[] = frozenApps.map((app: any) => ({
-          packageName: app.package_name || '',
-          versionName: normalizeVersionInfo(app.version_name || ''),
-          versionCode: normalizeVersionInfo(app.version_code || ''),
-          isSystemApp: app.is_system_app || false,
-          isEnabled: app.is_enabled || false,
-          installLocation: app.install_location || '',
-          apkPath: app.apk_path || '',
-          installTime: app.install_time || '',
-          updateTime: app.update_time || '',
-          permissions: app.permissions || [],
-        }));
-        
-        // 更新frozenAppsWithVersion状态
-        setFrozenAppsWithVersion(frozenAppsWithVersion);
-        setViewSource("frozen");
-        setStatusBarMessage({ type: "success", message: t('app_manager.msg_frozen_apps', { count: frozenApps.length }) });
-      } else {
-        setFrozenAppsWithVersion([]);
-        setViewSource("frozen");
-        setStatusBarMessage({ type: "info", message: t('app_manager.no_apps_found') });
-      }
-    } catch (e) {
-      console.error('获取冻结应用失败:', e);
-      setStatusBarMessage({ type: "error", message: t('app_manager.fail_get_apps', { error: e }) });
-    }
-  }, [selectedDevice, deviceService, setStatusBarMessage]);
+  // Placeholder for reordered functions
+  // The implementation has been moved up.
 
   // 冻结/解冻应用
   const handleFreezeToggle = useCallback(async (pkg: string, isEnabled: boolean) => {
@@ -1423,39 +1375,39 @@ const AppManagerPanel: React.FC = () => {
   }, [selectedDevice, deviceService, setStatusBarMessage]);
 
   // 清除应用数据
-  const handleClearData = async (pkg: string) => {
+  const handleClearData = useCallback(async (pkg: string) => {
     if (!selectedDevice) return;
     try {
       const result = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [`pm clear ${pkg}`]);
       if (result.success && result.output && /Success|成功/.test(result.output)) {
-        setStatusBarMessage({ type: "success", message: `已清除数据：${pkg}` });
+        setStatusBarMessage({ type: "success", message: t('app_manager.clear_data_success', { packageName: pkg }) });
       } else {
-        setStatusBarMessage({ type: "error", message: result.output || result.error || "清除数据失败" });
+        setStatusBarMessage({ type: "error", message: result.output || result.error || t('app_manager.clear_data_fail') });
       }
     } catch (e) {
-      setStatusBarMessage({ type: "error", message: `清除数据失败：${e}` });
+      setStatusBarMessage({ type: "error", message: t('app_manager.clear_data_fail') + `: ${e}` });
     }
-  };
+  }, [selectedDevice, deviceService, setStatusBarMessage, t]);
 
   // 导出APK：pm path 获取路径，再 adb pull
-  const handleExportApk = async (pkg: string) => {
+  const handleExportApk = useCallback(async (pkg: string) => {
     if (!selectedDevice) return;
     try {
       const targetDir = await openDialog({ directory: true, multiple: false });
       if (!targetDir || typeof targetDir !== "string") {
-        setStatusBarMessage({ type: "info", message: "已取消导出" });
+        setStatusBarMessage({ type: "info", message: t('app_manager.export_cancelled') });
         return;
       }
 
       // 获取APK路径
       const pathResult = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [`pm path ${pkg}`]);
       if (!pathResult.success || !pathResult.output) {
-        setStatusBarMessage({ type: "error", message: pathResult.error || "无法获取APK路径" });
+        setStatusBarMessage({ type: "error", message: pathResult.error || t('app_manager.get_apk_path_fail') });
         return;
       }
       const apkLine = pathResult.output.split(/\r?\n/).find(l => l.startsWith("package:"));
       if (!apkLine) {
-        setStatusBarMessage({ type: "error", message: "未找到APK路径" });
+        setStatusBarMessage({ type: "error", message: t('app_manager.no_apk_path_found') });
         return;
       }
       const remotePath = apkLine.replace("package:", "").trim();
@@ -1464,14 +1416,14 @@ const AppManagerPanel: React.FC = () => {
       // 执行 pull
       const pullResult = await deviceService.executeAdbCommand(selectedDevice.serial, "pull", [remotePath, localPath]);
       if (pullResult.success) {
-        setStatusBarMessage({ type: "success", message: `APK 已导出到：${localPath}` });
+        setStatusBarMessage({ type: "success", message: t('app_manager.export_apk_success', { path: localPath }) });
       } else {
-        setStatusBarMessage({ type: "error", message: pullResult.output || pullResult.error || "导出失败" });
+        setStatusBarMessage({ type: "error", message: pullResult.output || pullResult.error || t('common.fail') });
       }
     } catch (e) {
-      setStatusBarMessage({ type: "error", message: `导出失败：${e}` });
+      setStatusBarMessage({ type: "error", message: t('common.fail') + `: ${e}` });
     }
-  };
+  }, [selectedDevice, deviceService, setStatusBarMessage, t]);
 
   const renderContent = () => {
     return (
@@ -1800,7 +1752,7 @@ const AppManagerPanel: React.FC = () => {
               </Text>
               <br />
               <Text size={200} style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                ⚠️ {t('app_manager.uninstall_confirm_desc', { packageName: '' }).includes('撤销') ? '此操作将删除应用及其数据，无法撤销' : 'This action is irreversible.'}
+                ⚠️ {t('app_manager.uninstall_warning')}
               </Text>
             </DialogBody>
           </DialogContent>
