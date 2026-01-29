@@ -95,6 +95,42 @@ const useStyles = makeStyles({
     position: "relative",
     boxSizing: "border-box",
     margin: "8px", // 添加外边距
+    borderRadius: "8px", // 添加圆角
+  },
+  deviceInfoOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.4)", // 半透明背景
+    backdropFilter: "blur(2px)", // 模糊效果
+    zIndex: 100, // 确保在最上层
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: 0,
+    transition: "all 0.2s ease",
+    cursor: "pointer",
+    borderRadius: "8px",
+    
+    "&:hover": {
+      opacity: 1,
+    },
+  },
+  deviceInfoOverlayText: {
+    color: "white",
+    fontSize: "13px",
+    fontWeight: "600",
+    padding: "6px 12px",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: "20px",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
+    backdropFilter: "blur(4px)",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
   },
   deviceInfoContainer: {
     display: "flex",
@@ -111,7 +147,6 @@ const useStyles = makeStyles({
     width: "100%",
     overflow: "hidden",
     marginBottom: "4px", // 减少底部间距
-    border: "1px solid var(--colorNeutralStroke2)", // 更淡的边框
     borderRadius: "8px", // 添加圆角
     padding: "4px", // 添加内边距
   },
@@ -591,7 +626,7 @@ const useStyles = makeStyles({
       left: 0,
       right: 0,
       bottom: 0,
-      background: "radial-gradient(circle at 50% 50%, var(--colorNeutralBackground1) 0%, transparent 70%)",
+      background: "radial-gradient(circle at 50% 50%, var(--colorNeutralBackground2) 0%, transparent 70%)",
       opacity: 0.3,
       pointerEvents: "none",
     },
@@ -867,6 +902,15 @@ const MainContent: React.FC = () => {
     if (connectedDevices.length === 0) {
       return (
         <div className={styles.deviceInfo}>
+          <div 
+            className={styles.deviceInfoOverlay}
+            onClick={() => setIsDeviceSelectionDialogOpen(true)}
+          >
+            <div className={styles.deviceInfoOverlayText}>
+               {/* <Swap24Regular /> */}
+               选择其他设备
+            </div>
+          </div>
           <div className={styles.deviceInfoContainer}>
             {/* 上半部分：左侧背景图片 + 右侧无设备提示 */}
             <div className={styles.deviceInfoTop}>
@@ -891,7 +935,7 @@ const MainContent: React.FC = () => {
             </div>
 
             {/* 下半部分：设备选择区域（保持一致性） */}
-                          <div 
+            <div 
                 className={styles.deviceSelectCard}
               >
                 <div className={styles.deviceSelectCardContent}>
@@ -900,7 +944,7 @@ const MainContent: React.FC = () => {
                   </div>
                 </div>
                 <Warning24Regular />
-              </div>
+            </div>
           </div>
         </div>
       );
@@ -939,6 +983,15 @@ const MainContent: React.FC = () => {
 
     return (
       <div className={styles.deviceInfo}>
+        <div 
+          className={styles.deviceInfoOverlay}
+          onClick={() => setIsDeviceSelectionDialogOpen(true)}
+        >
+          <div className={styles.deviceInfoOverlayText}>
+             {/* <Swap24Regular /> */}
+             选择其他设备
+          </div>
+        </div>
         <div className={styles.deviceInfoContainer}>
           {/* 上半部分：左侧设备状态图片 + 右侧设备文字信息 */}
           <div className={styles.deviceInfoTop}>
@@ -990,7 +1043,7 @@ const MainContent: React.FC = () => {
           </div>
 
           {/* 下半部分：设备选择框 */}
-          <div className={styles.deviceSelectorArea}>
+          {/* <div className={styles.deviceSelectorArea}>
             {connectedDevices.length > 0 ? (
               <div 
                 className={styles.deviceSelectCard}
@@ -1017,7 +1070,7 @@ const MainContent: React.FC = () => {
                 <Warning24Regular />
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </div>
     );

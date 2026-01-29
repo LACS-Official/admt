@@ -103,7 +103,14 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorPaletteRedBackground1)",
     "&:hover": {
        backgroundColor: "var(--colorPaletteRedBackground2)",
-    }
+    },
+    animationName: {
+        "0%": { transform: "scale(1)" },
+        "50%": { transform: "scale(1.02)" },
+        "100%": { transform: "scale(1)" },
+    },
+    animationDuration: "2s",
+    animationIterationCount: "infinite",
   },
   deviceInfo: {
     display: "flex",
@@ -140,6 +147,17 @@ const useStyles = makeStyles({
     justifyContent: "center",
     gap: "8px",
     padding: "16px",
+  },
+  
+  // Animations
+  fadeInSlideIn: {
+    animationName: {
+      from: { opacity: 0, transform: 'translateX(10px)' },
+      to: { opacity: 1, transform: 'translateX(0)' },
+    },
+    animationDuration: '0.3s',
+    animationFillMode: 'forwards',
+    animationTimingFunction: 'cubic-bezier(0.33, 1, 0.68, 1)',
   },
 
   fieldRow: {
@@ -323,7 +341,7 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                  </Button>
             </div>
             
-            <div className={styles.settingsContainer}>
+            <div className={`${styles.settingsContainer} ${styles.fadeInSlideIn}`}>
                 {/* Quality Section */}
                 <div>
                     <Text className={styles.sectionTitle} style={{marginBottom: '12px', display: 'block'}}>{t('mirror.video_quality')}</Text>

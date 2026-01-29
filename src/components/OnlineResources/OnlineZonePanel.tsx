@@ -135,6 +135,16 @@ const useStyles = makeStyles({
     textAlign: "center",
     color: "var(--colorNeutralForeground2)",
   },
+  // Animations
+  fadeIn: {
+    animationName: {
+      from: { opacity: 0, transform: 'translateY(10px)' },
+      to: { opacity: 1, transform: 'translateY(0)' },
+    },
+    animationDuration: '0.3s',
+    animationFillMode: 'forwards',
+    animationTimingFunction: 'cubic-bezier(0.33, 1, 0.68, 1)',
+  },
 });
 
 type FlashZoneView =  "online-resources" | "rom-download" | "download-manager";
@@ -231,7 +241,7 @@ const OnlineZonePanel: React.FC = () => {
             ))}
           </TabList>
 
-          <div className={styles.tabContent}>
+          <div key={currentView} className={`${styles.tabContent} ${styles.fadeIn}`}>
             {renderContent()}
           </div>
         </div>

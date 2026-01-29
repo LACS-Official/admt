@@ -173,14 +173,7 @@ const itemVariants = {
     scale: 1,
     transition: { type: "spring", stiffness: 300, damping: 24 }
   },
-  hover: { 
-    scale: 1.02, 
-    backgroundColor: "var(--colorNeutralBackground1Hover)",
-    borderColor: "var(--colorNeutralStroke1Hover)",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-    transition: { type: "spring", stiffness: 400, damping: 10 }
-  },
-  tap: { scale: 0.98 }
+
 };
 
 const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
@@ -305,8 +298,7 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
                     layout
                     key={device.serial}
                     variants={itemVariants}
-                    whileHover="hover"
-                    whileTap="tap"
+
                     className={mergeClasses(
                       styles.deviceItem,
                       selectedDevice?.serial === device.serial && styles.selectedDevice
