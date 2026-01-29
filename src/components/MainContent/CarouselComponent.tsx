@@ -240,20 +240,6 @@ const CarouselComponent: React.FC<CarouselProps> = ({
         </motion.div>
       </AnimatePresence>
 
-      <div
-        className={mergeClasses(styles.navButton, styles.prevButton)}
-        onClick={() => paginate(-1)}
-      >
-        <ChevronLeft24Regular />
-      </div>
-
-      <div
-        className={mergeClasses(styles.navButton, styles.nextButton)}
-        onClick={() => paginate(1)}
-      >
-        <ChevronRight24Regular />
-      </div>
-
       <div className={styles.dotsContainer}>
         {slides.map((_, index) => (
           <div
