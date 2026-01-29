@@ -596,7 +596,7 @@ const FileManagerPanel: React.FC = () => {
       } else {
         setStatusBarMessage({
           type: "error",
-          message: t('file_manager.msg_pull_fail', { error: result.error || t('common.unknown_error') }),
+          message: t('file_manager.msg_pull_fail', { error: result.error || t('common.unknown') }),
         });
       }
     } catch (error) {
@@ -734,7 +734,7 @@ const FileManagerPanel: React.FC = () => {
         } else {
           setStatusBarMessage({
             type: "error",
-            message: t('file_manager.msg_upload_fail', { error: result.error || t('common.unknown_error') }),
+            message: t('file_manager.msg_upload_fail', { error: result.error || t('common.unknown') }),
           });
         }
       }

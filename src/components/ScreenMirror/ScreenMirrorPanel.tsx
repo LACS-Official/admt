@@ -10,9 +10,8 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
 import { ScreenMirrorDevice } from "../../types/screenMirror";
 import ScreenMirrorService from "../../services/screenMirrorService";
-import DeviceSelectionCard from "./DeviceSelectionCard";
 import MirrorDisplayCard from "./MirrorDisplayCard";
-import SettingsCard from "./SettingsCard";
+import MirrorControlCard from "./MirrorControlCard";
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
@@ -259,8 +258,8 @@ const ScreenMirrorPanel: React.FC = () => {
         </div>
       ) : (
         <div className={styles.content}>
-          <div className={styles.leftPanel}>
-            <DeviceSelectionCard 
+          <div className={styles.fullWidth}>
+             <MirrorControlCard
               devices={supportedDevices}
               selectedDevice={mirrorDevice}
               onSelectDevice={handleDeviceSelect}
@@ -269,9 +268,6 @@ const ScreenMirrorPanel: React.FC = () => {
               streamingDevices={streamingDevices}
             />
           </div>
-          
-          <div className={styles.rightPanel}>
-            <SettingsCard />
             
             {activeSessions.length > 0 && (
               <div className={styles.sessionsContainer}>
@@ -284,7 +280,6 @@ const ScreenMirrorPanel: React.FC = () => {
                 ))}
               </div>
             )}
-          </div>
         </div>
       )}
     </div>

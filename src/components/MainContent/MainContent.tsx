@@ -856,6 +856,13 @@ const MainContent: React.FC = () => {
 
   const connectedDevices = devices.filter(d => d.connected);
 
+  // 自动选择第一个设备
+  useEffect(() => {
+    if (connectedDevices.length > 0 && !selectedDevice) {
+      handleDeviceSelect(connectedDevices[0]);
+    }
+  }, [connectedDevices, selectedDevice]);
+
   const renderDeviceInfo = () => {
     if (connectedDevices.length === 0) {
       return (
@@ -900,8 +907,6 @@ const MainContent: React.FC = () => {
     }
 
     if (!selectedDevice) {
-      // 如果有设备但没有选中，自动选择第一个
-      handleDeviceSelect(connectedDevices[0]);
       return null;
     }
 

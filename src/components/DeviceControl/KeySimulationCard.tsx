@@ -33,33 +33,44 @@ const useStyles = makeStyles({
     flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke1)",
     borderRadius: "8px",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+  },
+  cardHeader: {
+    padding: "12px 16px",
+    borderBottom: "1px solid var(--colorNeutralStroke2)",
   },
   content: {
     flex: 1,
-    display: "flex",
-    flexDirection: "column",
+    padding: "12px",
+    overflowY: "auto",
   },
   commandGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "12px",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: "8px",
   },
   commandButton: {
-    height: "80px",
+    height: "auto",
+    minHeight: "64px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: "8px",
-    borderRadius: "8px",
+    gap: "4px",
+    padding: "8px 4px",
+    borderRadius: "6px",
   },
   commandIcon: {
-    fontSize: "24px",
+    fontSize: "20px",
   },
   commandLabel: {
-    fontSize: "12px",
+    fontSize: "11px",
     textAlign: "center",
     lineHeight: "1.2",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    width: "100%",
   },
 });
 
@@ -264,8 +275,9 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
   return (
     <Card className={styles.card}>
       <CardHeader
+        className={styles.cardHeader}
         image={<Settings24Regular />}
-        header={<Text weight="semibold">{t('device_control.key_simulation')}</Text>}
+        header={<Text weight="semibold" size={300}>{t('device_control.key_simulation')}</Text>}
       />
       
       <div className={styles.content}>
@@ -279,19 +291,21 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
               onClick={() => executeCommand(cmd.id, cmd.command, cmd.description)}
             >
               {executingCommand === cmd.id ? (
-                <Spinner size="small" />
+                <Spinner size="tiny" />
               ) : (
                 <div className={styles.commandIcon}>{cmd.icon}</div>
               )}
-              <Text className={styles.commandLabel}>{cmd.label}</Text>
+              <Text className={styles.commandLabel} title={cmd.label}>{cmd.label}</Text>
             </Button>
           ))}
         </div>
 
         {!isDeviceAvailable && (
-          <Text size={200} style={{ textAlign: "center", color: "var(--colorNeutralForeground3)" }}>
-            {t('device_control.device_unavailable')}
-          </Text>
+          <div style={{ marginTop: '16px', textAlign: 'center', color: 'var(--colorNeutralForeground3)' }}>
+            <Text size={200}>
+              {t('device_control.device_unavailable')}
+            </Text>
+          </div>
         )}
       </div>
     </Card>

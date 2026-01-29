@@ -66,7 +66,8 @@
     "device_offline": "當前設備已離線，無法獲取詳細信息。",
     "device_unauthorized": "當前設備未授權，無法獲取詳細信息。",
     "refreshing_device_list": "正在刷新設備列表...",
-    "info_copied": "設備信息已複製到剪貼板"
+    "info_copied": "設備信息已複製到剪貼板",
+    "scanning": "正在掃描設備..."
   },
   "home": {
     "select_device_title": "請選擇一個設備",
@@ -111,7 +112,33 @@
     "close": "關閉",
     "retry": "重試",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "unknown_error": "未知錯誤",
+    "refresh_manual": "手動刷新",
+    "all": "全部"
+  },
+  "main": {
+    "no_device_title": "暫未檢測到設備連接",
+    "no_device_desc": "請檢查設備是否正常連接 對應驅動是否安裝",
+    "no_device_connected": "暫無設備連接",
+    "select_device_label": "當前設備:",
+    "command_line": "命令列工具",
+    "logs": "程序運行日誌",
+    "device_offline_title": "設備離線",
+    "device_offline_desc": "當前設備已離線，請重新連接設備後，重新插拔數據線後重試",
+    "device_unauthorized_title": "設備未授權",
+    "device_unauthorized_desc": "當前設備未授權，請在設備上允許USB調試授權後，重新插拔數據線。",
+    "i_know": "我知道了"
+  },
+  "guide": {
+    "title": "連接指南",
+    "docs": "文檔中心",
+    "video": "視頻教程",
+    "sys": "系統模式",
+    "rec": "恢復模式",
+    "fb": "引導模式",
+    "edl": "EDL模式",
+    "settings_center": "系統設置"
   },
   "welcome": {
     "title": "歡迎使用",
@@ -230,19 +257,6 @@
     "rom_store": "ROM商店",
     "download_manager": "下載管理"
   },
-  "main": {
-    "command_line": "命令列",
-    "logs": "日誌",
-    "no_device_title": "未檢測到設備",
-    "no_device_desc": "請檢查設備是否正常連接 對應驅動是否安裝",
-    "no_device_connected": "暫無設備連接",
-    "select_device_label": "選擇設備:",
-    "device_offline_title": "設備離線",
-    "device_offline_desc": "當前設備已離線，請重新連接設備後，重新插拔數據線後重試",
-    "device_unauthorized_title": "設備未授權",
-    "device_unauthorized_desc": "當前設備未授權，請在設備上允許USB調試授權後，重新插拔數據線。",
-    "i_know": "我知道了"
-  },
   "adb": {
     "device_control": "設備控制",
     "screen_mirror": "設備投屏",
@@ -322,6 +336,9 @@
     "msg_exec_failed_special": "執行{{desc}}失敗：需要設備特殊權限",
     "msg_exec_failed": "{{desc}}失敗: {{error}}",
     "msg_unknown_error": "未知錯誤",
+    "display_control": "顯示控制",
+    "restore_default": "恢復默認設置",
+    "dpi_value": "DPI 值",
     "resolution_settings": "屏幕分辨率設置",
     "density_settings": "顯示密度設置",
     "font_scale_settings": "字體縮放設置",
@@ -336,8 +353,8 @@
     "msg_density_success": "顯示密度已成功設置為 {{value}}",
     "msg_font_scale_success": "字體縮放已成功設置為 {{value}}",
     "msg_reset_success": "{{name}} 已成功恢復為默認設置",
-    "msg_perm_error": "執行 {{name}} 失敗：權限不足或設備不支持。可能需要 Root 或特殊 ADB 權限。",
-    "msg_reset_failed": "恢復默認設置失敗：權限不足。",
+    "msg_reset_failed": "恢復默認設置失敗",
+    "msg_perm_error": "權限錯誤：{{name}}",
     "msg_invalid_resolution": "無效的分辨率數值",
     "msg_invalid_density": "無效的顯示密度數值",
     "msg_invalid_font_scale": "無效的字體縮放數值",
@@ -455,6 +472,7 @@
     "panel_title": "設備信息面板",
     "click_to_copy": "點擊值可以複製",
     "refresh_info": "刷新內存和存儲信息",
+    "copy_success": "已復制 {{label}} 到剪貼板",
     "copy_failed": "複製 {{label}} 失敗",
     "tab_basic": "基本信息",
     "tab_hardware": "硬體信息",
@@ -717,7 +735,12 @@
     "fail_get_current_app": "獲取當前應用失敗：{{error}}",
     "msg_frozen_apps": "已凍結應用：{{count}} 個",
     "msg_frozen": "已凍結 {{packageName}}",
-    "msg_unfrozen": "已解凍 {{packageName}}"
+    "msg_unfrozen": "已解凍 {{packageName}}",
+    "clear_data_success": "已清除數據：{{packageName}}",
+    "get_apk_path_fail": "無法獲取APK路徑",
+    "no_apk_path_found": "未找到APK路徑",
+    "export_apk_success": "APK 已導出到：{{path}}",
+    "uninstall_warning": "此操作將刪除應用及其數據，無法撤銷"
   },
   "security_status": {
     "card_title": "安全狀態",
@@ -922,5 +945,37 @@
     "success": "執行成功",
     "unknown_error": "未知錯誤",
     "risk_warning": "⚠️ 解鎖操作具有風險，可能導致設備變磚或保修失效，請謹慎操作"
+  },
+  "misc": {
+    "title": "輔助功能",
+    "restart_adb": "重啟ADB服務",
+    "finish_adb": "結束ADB服務",
+    "install_driver": "安裝設備驅動",
+    "fix_usb3": "USB 3.0修復",
+    "open_device_manager": "打開設備管理器",
+    "open_task_manager": "打開任務管理器",
+    "risky_confirm": "請再次點擊確認執行 {{label}}",
+    "success": "{{description}}成功",
+    "fail": "{{description}}失敗",
+    "fail_with_error": "{{description}}失敗: {{error}}",
+    "driver_tip": "請前往在線資源板塊下載並安裝",
+    "usb_fix_title": "USB 3.0 修復工具",
+    "usb_fix_desc": "此工具將修復USB 3.0連接問題，確保Android設備能夠正常識別。",
+    "usb_fix_notice": "注意事項：",
+    "usb_fix_item1": "此操作需要管理員權限",
+    "usb_fix_item2": "將修改系統註冊表以修復USB 3.0問題",
+    "usb_fix_item3": "建議在執行前關閉其他USB調試工具",
+    "usb_fix_running": "正在執行USB 3.0修復...",
+    "usb_unfix_running": "正在撤銷USB 3.0修復...",
+    "usb_fix_result": "執行結果: {{output}}",
+    "usb_fix_success": "USB 3.0修復成功，請重新連接設備",
+    "usb_unfix_success": "USB 3.0修復已撤銷，請重新連接設備",
+    "usb_fix_error": "USB 3.0修復失敗",
+    "usb_unfix_error": "USB 3.0修復撤銷失敗",
+    "start_fix": "開始修復",
+    "rollback_fix": "撤銷修復",
+    "executing": "正在執行...",
+    "close": "關閉",
+    "cancel": "取消"
   }
 }

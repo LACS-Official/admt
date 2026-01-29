@@ -153,7 +153,15 @@ const SettingsCard: React.FC = () => {
     <Card className={styles.card}>
       <CardHeader
         header={<Text weight="semibold">{t('mirror.settings_title')}</Text>}
-        description={t('mirror.settings_desc')}
+        action={
+          <Button
+            appearance="subtle"
+            icon={<ArrowReset24Regular />}
+            onClick={resetConfig}
+          >
+            {t('mirror.reset_to_default')}
+          </Button>
+        }
       />
       
       <div className={styles.content}>
@@ -179,6 +187,7 @@ const SettingsCard: React.FC = () => {
         <div className={styles.section}>
           <Text className={styles.sectionTitle}>{t('mirror.video_quality')}</Text>
           
+          <div className={styles.fieldRow}>
           <Field label={t('mirror.resolution')}>
             <Dropdown
               value={config.quality.resolution}
@@ -192,6 +201,19 @@ const SettingsCard: React.FC = () => {
             </Dropdown>
           </Field>
 
+          <Field label={t('mirror.codec')}>
+            <Dropdown
+              value={config.quality.codec}
+              onOptionSelect={(_, data) => handleCodecChange(data.optionValue as "h264" | "h265")}
+            >
+              {codecOptions.map((option) => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Dropdown>
+          </Field>
+          </div>
           <div className={styles.sliderContainer}>
             <div className={styles.sliderRow}>
               <Text className={styles.sliderLabel}>{t('mirror.bitrate')}</Text>
@@ -219,57 +241,46 @@ const SettingsCard: React.FC = () => {
               <Text className={styles.sliderValue}>{config.quality.framerate} fps</Text>
             </div>
           </div>
-
-          <Field label={t('mirror.codec')}>
-            <Dropdown
-              value={config.quality.codec}
-              onOptionSelect={(_, data) => handleCodecChange(data.optionValue as "h264" | "h265")}
-            >
-              {codecOptions.map((option) => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Dropdown>
-          </Field>
         </div>
 
         {/* 行为选项 */}
         <div className={styles.section}>
           <Text className={styles.sectionTitle}>{t('mirror.behavior_options')}</Text>
-          
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>{t('mirror.show_touches')}</Text>
-            <Switch
-              checked={config.showTouches}
-              onChange={(_, data) => handleSwitchChange('showTouches', data.checked)}
-            />
-          </div>
+            <div className={styles.fieldRow}>
+              <Text className={styles.fieldLabel}>{t('mirror.show_touches')}</Text>
+              <Switch
+                checked={config.showTouches}
+                onChange={(_, data) => handleSwitchChange('showTouches', data.checked)}
+              />
+            </div>
 
+            <div className={styles.fieldRow}>
+              <Text className={styles.fieldLabel}>{t('mirror.stay_awake')}</Text>
+              <Switch
+                checked={config.stayAwake}
+                onChange={(_, data) => handleSwitchChange('stayAwake', data.checked)}
+              />
+            </div>
+          </div>
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>{t('mirror.stay_awake')}</Text>
-            <Switch
-              checked={config.stayAwake}
-              onChange={(_, data) => handleSwitchChange('stayAwake', data.checked)}
-            />
-          </div>
+            <div className={styles.fieldRow}>
+              <Text className={styles.fieldLabel}>{t('mirror.turn_screen_off')}</Text>
+              <Switch
+                checked={config.turnScreenOff}
+                onChange={(_, data) => handleSwitchChange('turnScreenOff', data.checked)}
+              />
+            </div>
 
+            <div className={styles.fieldRow}>
+              <Text className={styles.fieldLabel}>{t('mirror.power_off_on_close')}</Text>
+              <Switch
+                checked={config.powerOffOnClose}
+                onChange={(_, data) => handleSwitchChange('powerOffOnClose', data.checked)}
+              />
+            </div>
+          </div>
           <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>{t('mirror.turn_screen_off')}</Text>
-            <Switch
-              checked={config.turnScreenOff}
-              onChange={(_, data) => handleSwitchChange('turnScreenOff', data.checked)}
-            />
-          </div>
-
-          <div className={styles.fieldRow}>
-            <Text className={styles.fieldLabel}>{t('mirror.power_off_on_close')}</Text>
-            <Switch
-              checked={config.powerOffOnClose}
-              onChange={(_, data) => handleSwitchChange('powerOffOnClose', data.checked)}
-            />
-          </div>
-
           <div className={styles.fieldRow}>
             <Text className={styles.fieldLabel}>{t('mirror.no_power_on')}</Text>
             <Switch
@@ -286,19 +297,9 @@ const SettingsCard: React.FC = () => {
               onChange={(_, data) => handleSwitchChange('fullscreen', data.checked)}
             />
           </div>
+          </div>
         </div>
 
-
-        {/* 操作按钮 */}
-        <div className={styles.actions}>
-          <Button
-            appearance="subtle"
-            icon={<ArrowReset24Regular />}
-            onClick={resetConfig}
-          >
-            {t('mirror.reset_to_default')}
-          </Button>
-        </div>
       </div>
     </Card>
   );
