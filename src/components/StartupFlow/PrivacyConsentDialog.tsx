@@ -20,6 +20,9 @@ import {
   DialogActions,
   Link,
   Divider,
+  Select,
+  Switch,
+  Label,
 } from '@fluentui/react-components';
 import { 
   ArrowLeft24Regular,
@@ -31,8 +34,14 @@ import {
   DocumentBulletList24Regular,
   ChevronRight24Regular,
   Open24Regular,
+  Globe24Regular,
+  Play24Regular,
+  ArrowMinimize24Regular,
+  Settings24Regular,
 } from '@fluentui/react-icons';
 import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
+import { useAppStore } from '../../stores/appStore';
+import { systemTrayManager } from '../../services/systemTrayManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from "react-i18next";
 
@@ -90,6 +99,10 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     overflowY: 'auto',
+    scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': {
+      display: 'none',
+    },
   },
   appIconImage: {
     width: "128px",
@@ -113,20 +126,23 @@ const useStyles = makeStyles({
   },
   policyList: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
+    flexDirection: 'row',
+    gap: tokens.spacingHorizontalM,
     marginBottom: tokens.spacingVerticalXL,
   },
   policyItem: {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    padding: tokens.spacingHorizontalM,
+    justifyContent: 'center',
+    padding: tokens.spacingVerticalL,
     borderRadius: tokens.borderRadiusMedium,
     backgroundColor: tokens.colorNeutralBackground2,
     border: `1px solid transparent`,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     textDecoration: 'none',
+    flex: 1,
     
     ':hover': {
         border: `1px solid ${tokens.colorBrandStroke1}`,
@@ -136,28 +152,25 @@ const useStyles = makeStyles({
     }
   },
   policyIconBox: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '12px',
+    width: '48px',
+    height: '48px',
+    borderRadius: '16px',
     backgroundColor: tokens.colorBrandBackground2,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: tokens.spacingHorizontalM,
+    marginBottom: tokens.spacingVerticalM,
     color: tokens.colorBrandForeground1,
   },
   policyInfo: {
-    flex: 1,
     display: 'flex',
     flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
   },
   policyTitle: {
     fontWeight: tokens.fontWeightSemibold,
     color: tokens.colorNeutralForeground1,
-  },
-  policyDesc: {
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground3,
   },
   footer: {
     marginTop: 'auto',
@@ -191,6 +204,21 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground4,
     textAlign: 'center',
   },
+  quickSettings: {
+    marginTop: tokens.spacingVerticalL,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalM,
+  },
+  settingRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
 });
 
 interface PrivacyConsentDialogProps {
@@ -205,9 +233,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
   onReject,
 }) => {
   const styles = useStyles();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [acceptedAll, setAcceptedAll] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const { config, updateConfig } = useAppStore();
 
   const {
     acceptPrivacyPolicy,
@@ -284,7 +313,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     <>
       <AnimatePresence>
         {open && (
-          <div className={styles.container}>
+          <div className={styles.container} data-tauri-drag-region>
             {/* Background Animations */}
             <style>
               {`
@@ -354,11 +383,77 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                                 </div>
                                 <div className={styles.policyInfo}>
                                     <span className={styles.policyTitle}>{p.title}</span>
-                                    <span className={styles.policyDesc}>{p.description}</span>
                                 </div>
-                                <Open24Regular style={{ color: tokens.colorNeutralForeground3 }} />
                             </motion.div>
                         ))}
+                    </div>
+
+                    <Divider />
+
+                    <div className={styles.quickSettings}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Settings24Regular />
+                            <Text weight="semibold">{t('settings.title', '快速设置')}</Text>
+                        </div>
+                        
+                        <div className={styles.settingRow}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Globe24Regular />
+                                <Label>{t('settings.interface_language')}</Label>
+                            </div>
+                            <Select 
+                                value={config.language} 
+                                onChange={(_, data) => {
+                                    updateConfig({ language: data.value as any });
+                                    i18n.changeLanguage(data.value);
+                                }}
+                                style={{ minWidth: '120px' }}
+                            >
+                                <option value="zh-CN">简体中文</option>
+                                <option value="zh-TW">繁体中文</option>
+                                <option value="en-US">English</option>
+                            </Select>
+                        </div>
+
+                        <div className={styles.settingRow}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Play24Regular />
+                                <Label>通知音效</Label>
+                            </div>
+                            <Switch 
+                                checked={config.soundEnabled} 
+                                onChange={(_, data) => updateConfig({ soundEnabled: data.checked })} 
+                            />
+                        </div>
+
+                        <div className={styles.settingRow}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <ArrowMinimize24Regular />
+                                <Label>系统托盘</Label>
+                            </div>
+                            <Switch 
+                                checked={config.systemTrayEnabled} 
+                                onChange={async (_, data) => {
+                                    const checked = data.checked;
+                                    updateConfig({ systemTrayEnabled: checked });
+                                    try {
+                                        if (checked) {
+                                            await systemTrayManager.initialize({
+                                                systemTrayEnabled: true,
+                                                minimizeToTrayOnClose: config.minimizeToTrayOnClose
+                                            });
+                                        } else {
+                                            await systemTrayManager.updateConfig({
+                                                systemTrayEnabled: false,
+                                                minimizeToTrayOnClose: false
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                }} 
+                            />
+                        </div>
                     </div>
 
                     <div className={styles.footer}>

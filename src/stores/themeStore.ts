@@ -8,6 +8,12 @@ interface ThemeState {
   setTheme: (isDark: boolean) => void;
   setFollowSystemTheme: (follow: boolean) => void;
   updateThemeBasedOnSystem: () => void;
+  accentColor: string;
+  setAccentColor: (color: string) => void;
+  contentDensity: 'comfortable' | 'compact';
+  setContentDensity: (density: 'comfortable' | 'compact') => void;
+  cornerRadius: 'small' | 'medium' | 'large';
+  setCornerRadius: (radius: 'small' | 'medium' | 'large') => void;
   subscribeToStorageChanges: () => () => void; // 返回清理函数
 }
 
@@ -23,6 +29,12 @@ export const useThemeStore = create<ThemeState>()(
         const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         set({ isDarkMode: systemPrefersDark });
       },
+      accentColor: "#0078d4",
+      setAccentColor: (color: string) => set({ accentColor: color }),
+      contentDensity: 'comfortable',
+      setContentDensity: (density: 'comfortable' | 'compact') => set({ contentDensity: density }),
+      cornerRadius: 'medium',
+      setCornerRadius: (radius: 'small' | 'medium' | 'large') => set({ cornerRadius: radius }),
       subscribeToStorageChanges: () => {
         // 监听storage变化事件，实现跨页面主题同步
         const handleStorageChange = (event: StorageEvent) => {
@@ -35,6 +47,16 @@ export const useThemeStore = create<ThemeState>()(
               if (newState.state.isDarkMode !== currentState.isDarkMode) {
                 set({ isDarkMode: newState.state.isDarkMode });
                 console.log('主题状态已从其他页面同步:', newState.state.isDarkMode ? '暗黑模式' : '亮色模式');
+                console.log('主题状态已从其他页面同步:', newState.state.isDarkMode ? '暗黑模式' : '亮色模式');
+              }
+              if (newState.state.accentColor !== currentState.accentColor) {
+                  set({ accentColor: newState.state.accentColor });
+              }
+              if (newState.state.contentDensity !== currentState.contentDensity) {
+                  set({ contentDensity: newState.state.contentDensity });
+              }
+              if (newState.state.cornerRadius !== currentState.cornerRadius) {
+                  set({ cornerRadius: newState.state.cornerRadius });
               }
             } catch (error) {
               console.error('解析主题存储数据失败:', error);

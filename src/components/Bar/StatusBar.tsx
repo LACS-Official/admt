@@ -15,8 +15,12 @@ import {
   Dismiss24Regular,
   Copy24Regular,
   Checkmark24Filled,
+  QuestionCircle24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
+import AppTour from "../Common/AppTour";
 import { useAppStore, StatusBarMessage } from "../../stores/appStore";
+import { useThemeStore } from "../../stores/themeStore";
 import { NotificationMessage } from "../../types/app";
 
 
@@ -158,7 +162,19 @@ const useStyles = makeStyles({
 
 const StatusBar: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { isLoading, notifications, removeNotification, statusBarMessage, clearStatusBarMessage, config } = useAppStore();
+  
+  // 引导状态
+  const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+
+  const handleTourStart = () => {
+      setRunTour(true);
+  };
+
+  const handleTourEnd = () => {
+      setRunTour(false);
+  };
 
   // 音效文件路径映射
   const soundFiles = {
@@ -457,9 +473,35 @@ const StatusBar: React.FC = () => {
 
         {/* 右侧状态信息 */}
         <div className={styles.rightSection}>
+          {/* 引导按钮 */}
+          <button
+            onClick={handleTourStart}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: 0.7,
+              transition: "opacity 0.2s ease",
+              color: "inherit",
+              marginRight: "8px"
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+            title={t('tour.start_tour', '应用操作引导')}
+          >
+            <QuestionCircle24Regular style={{ fontSize: "16px" }} />
+          </button>
+          
           {/* 可以添加其他状态信息 */}
         </div>
       </div>
+
+      <AppTour runTour={runTour} onTourEnd={handleTourEnd} />
 
       {/* 状态栏消息 - 优先级高于通知 */}
       {statusBarMessage && (

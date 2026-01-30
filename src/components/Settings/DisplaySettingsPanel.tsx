@@ -7,6 +7,8 @@ import {
   Switch,
   Slider,
   Label,
+  RadioGroup,
+  Radio,
 } from "@fluentui/react-components";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
@@ -14,7 +16,14 @@ import {
   Grid24Regular,
   WeatherMoon24Regular,
   Timer24Regular,
+  Color24Regular,
+  ArrowReset24Regular,
+  TextFontSize24Regular,
+  ShapeOrganic24Regular,
 } from "@fluentui/react-icons";
+import { Button } from "@fluentui/react-components";
+import { ChromePicker } from 'react-color';
+import { open } from '@tauri-apps/plugin-dialog';
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
@@ -97,10 +106,28 @@ const useStyles = makeStyles({
 const DisplaySettingsPanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { isDarkMode, followSystemTheme, toggleTheme, setFollowSystemTheme, updateThemeBasedOnSystem } = useThemeStore();
-  const { config, updateConfig } = useAppStore();
+  const { 
+    isDarkMode, 
+    followSystemTheme, 
+    setTheme,
+    setFollowSystemTheme, 
+    updateThemeBasedOnSystem 
+  } = useThemeStore();
+  const { 
+    config, 
+    updateConfig 
+  } = useAppStore();
+  const {
+      accentColor, 
+      setAccentColor, 
+      contentDensity,
+      setContentDensity,
+      cornerRadius,
+      setCornerRadius
+  } = useThemeStore();
   
-  // 界面设置状态
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
 
   const [enableAnimations, setEnableAnimations] = useState(true);
 
@@ -127,25 +154,15 @@ const DisplaySettingsPanel: React.FC = () => {
     return () => mediaQuery.removeEventListener('change', handler);
   }, [followSystemTheme, updateThemeBasedOnSystem, updateConfig]);
 
-  const handleThemeChange = () => {
-    if (!followSystemTheme) {
-      toggleTheme();
-      updateConfig({ theme: isDarkMode ? "light" : "dark" });
-    }
-  };
-
-  const handleFollowSystemChange = (_: React.ChangeEvent<HTMLInputElement>, data: { checked: boolean }) => {
-    const follow = data.checked === true;
-    setFollowSystemTheme(follow);
-    
-    if (follow) {
-      // 如果启用跟随系统，则立即更新主题
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const handleThemeRadioChange = (_: unknown, data: { value: string }) => {
+    if (data.value === 'system') {
+      setFollowSystemTheme(true);
       updateThemeBasedOnSystem();
-      updateConfig({ theme: systemPrefersDark ? "dark" : "light" });
     } else {
-      // 如果禁用跟随系统，则保持当前主题设置
-      updateConfig({ theme: isDarkMode ? "dark" : "light" });
+      setFollowSystemTheme(false);
+      const isDark = data.value === 'dark';
+      setTheme(isDark);
+      updateConfig({ theme: isDark ? "dark" : "light" });
     }
   };
 
@@ -153,48 +170,118 @@ const DisplaySettingsPanel: React.FC = () => {
     updateConfig({ carouselInterval: data.value });
   };
 
+  // 计算当前选中的主题值
+  const currentThemeValue = followSystemTheme ? 'system' : (isDarkMode ? 'dark' : 'light');
+
   return (
     <div className={styles.container}>
       <div className={styles.content}>
 
-        {/* 外观设置 */}
+        {/* 个性化设置 */}
         <Card className={styles.card}>
-          <CardHeader
-            image={<WeatherMoon24Regular />}
-            header={<Text weight="semibold">{t('settings.appearance')}</Text>}
-            description={<Text size={200}>{t('settings.appearance_desc')}</Text>}
-          />
+            <CardHeader
+                image={<Color24Regular />}
+                header={<Text weight="semibold">{t('settings.personalization', '个性化')}</Text>}
+                description={<Text size={200}>{t('settings.personalization_desc', '自定义应用的主题颜色和背景')}</Text>}
+            />
+            <div className={styles.cardContent}>
+                <div className={styles.settingRow}>
+                  <div className={styles.settingInfo}>
+                    <Text weight="semibold">{t('settings.theme', '主题')}</Text>
+                    <br />
+                    <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                      {t('settings.theme_desc', '选择应用的主题')}
+                    </Text>
+                  </div>
+                  <RadioGroup
+                    layout="horizontal"
+                    value={currentThemeValue}
+                    onChange={handleThemeRadioChange as any}
+                  >
+                    <Radio value="light" label={t('settings.theme_light', '浅色')} />
+                    <Radio value="dark" label={t('settings.theme_dark', '深色')} />
+                    <Radio value="system" label={t('settings.theme_system', '系统')} />
+                  </RadioGroup>
+                </div>
+                
+                <div className={styles.settingRow}>
+                    <div className={styles.settingInfo}>
+                        <Text weight="semibold">{t('settings.accent_color', '强调色')}</Text>
+                        <br />
+                        <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                            {t('settings.accent_color_desc', '选择应用的主要强调颜色')}
+                        </Text>
+                    </div>
+                    <div style={{ position: 'relative', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div 
+                            style={{ 
+                                width: '36px', 
+                                height: '36px', 
+                                borderRadius: '50%', 
+                                backgroundColor: accentColor, 
+                                cursor: 'pointer',
+                                border: '2px solid var(--colorNeutralStroke1)',
+                                flexShrink: 0
+                            }}
+                            onClick={() => setShowColorPicker(!showColorPicker)}
+                        />
+                        <Button 
+                            appearance="subtle"
+                            icon={<ArrowReset24Regular />}
+                            onClick={() => setAccentColor("#0078d4")}
+                            title={t('settings.reset_color', '恢复默认')}
+                        />
+                        {showColorPicker && (
+                            <div style={{ position: 'absolute', right: 0, top: '45px', zIndex: 100 }}>
+                                <div 
+                                    style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0 }} 
+                                    onClick={() => setShowColorPicker(false)}
+                                />
+                                <ChromePicker 
+                                    color={accentColor} 
+                                    onChange={(color) => setAccentColor(color.hex)}
+                                    disableAlpha={true}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
 
-          <div className={styles.cardContent}>
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">{t('settings.dark_mode')}</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  {t('settings.dark_mode_desc')}
-                </Text>
-              </div>
-              <Switch
-                checked={isDarkMode}
-                onChange={handleThemeChange}
-                disabled={followSystemTheme}
-              />
-            </div>
+                <div className={styles.settingRow}>
+                    <div className={styles.settingInfo}>
+                        <Text weight="semibold">{t('settings.content_density', '内容密度')}</Text>
+                        <br />
+                        <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                            {t('settings.content_density_desc', '调整界面元素的间距')}</Text>
+                    </div>
+                    <RadioGroup 
+                        layout="horizontal" 
+                        value={contentDensity} 
+                        onChange={(_, data) => setContentDensity(data.value as 'comfortable' | 'compact')}
+                    >
+                        <Radio value="comfortable" label={t('settings.density_comfortable', '舒适')} />
+                        <Radio value="compact" label={t('settings.density_compact', '紧凑')} />
+                    </RadioGroup>
+                </div>
 
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">{t('settings.follow_system')}</Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  {t('settings.follow_system_desc')}
-                </Text>
-              </div>
-              <Switch
-                checked={followSystemTheme}
-                onChange={handleFollowSystemChange}
-              />
+                <div className={styles.settingRow}>
+                    <div className={styles.settingInfo}>
+                        <Text weight="semibold">{t('settings.corner_radius', '圆角大小')}</Text>
+                        <br />
+                        <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                            {t('settings.corner_radius_desc', '调整界面元素的圆角弧度')}</Text>
+                    </div>
+                    <RadioGroup 
+                        layout="horizontal" 
+                        value={cornerRadius} 
+                        onChange={(_, data) => setCornerRadius(data.value as 'small' | 'medium' | 'large')}
+                    >
+                        <Radio value="small" label={t('settings.radius_small', '较小')} />
+                        <Radio value="medium" label={t('settings.radius_medium', '适中')} />
+                        <Radio value="large" label={t('settings.radius_large', '较大')} />
+                    </RadioGroup>
+                </div>
             </div>
-          </div>
         </Card>
 
         {/* 动画与交互设置 */}

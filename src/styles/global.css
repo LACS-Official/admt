@@ -5,7 +5,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -18,7 +19,13 @@ html, body {
 
 #root {
   height: 100%;
+  position: relative; /* Ensure absolute children position relative to root */
+  isolation: isolate; /* Create new stacking context */
+  overflow: hidden; /* Prevent blur overflow */
 }
+
+/* 自定义背景功能 */
+
 
 /* 滚动条样式 */
 ::-webkit-scrollbar {
@@ -71,7 +78,8 @@ html, body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -208,7 +216,7 @@ html, body {
 }
 
 .security-status-indicator::before {
-  content: '';
+  content: "";
   width: 6px;
   height: 6px;
   border-radius: 50%;

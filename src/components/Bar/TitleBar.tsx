@@ -254,7 +254,10 @@ const TitleBar: React.FC = () => {
 
   return (
     <>
-      <div className={mergeClasses(styles.titleBar)} data-tauri-drag-region>
+      <div 
+        className={mergeClasses(styles.titleBar)} 
+        data-tauri-drag-region
+      >
         {/* 左侧区域 - Logo和应用名称 - 支持拖拽 */}
         <div className={styles.leftSection} data-tauri-drag-region>
           <img src={admtLogo64} alt="Logo" className={styles.logo} />
