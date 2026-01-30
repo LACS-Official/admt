@@ -71,23 +71,18 @@ const useStyles = makeStyles({
     },
   },
   logEntryFatal: {
-    borderLeftColor: "#8B0000",
     backgroundColor: "rgba(139, 0, 0, 0.05)",
   },
   logEntryError: {
-    borderLeftColor: "#DC143C",
     backgroundColor: "rgba(220, 20, 60, 0.05)",
   },
   logEntryWarning: {
-    borderLeftColor: "#FF8C00",
     backgroundColor: "rgba(255, 140, 0, 0.05)",
   },
   logEntryInfo: {
-    borderLeftColor: "#4169E1",
     backgroundColor: "rgba(65, 105, 225, 0.05)",
   },
   logEntryDebug: {
-    borderLeftColor: "#808080",
     backgroundColor: "rgba(128, 128, 128, 0.05)",
   },
   logHeader: {

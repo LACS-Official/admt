@@ -69,12 +69,6 @@ class PreloadService {
       // 图片资源
       {
         type: 'image',
-        path: 'assets/icons/admt/128x128.png',
-        priority: 'high',
-        preload: () => this.preloadImage('assets/icons/admt/128x128.png'),
-      },
-      {
-        type: 'image',
         path: 'assets/icons/devices/',
         priority: 'medium',
         preload: () => this.preloadDeviceIcons(),
@@ -207,11 +201,11 @@ class PreloadService {
           const result = await promise;
           this.preloadedResources.set(resource.path, result);
           
-          logService.debug(`预加载完成: ${resource.path}`, 'PreloadService');
+          logService.debug(`预加载完成: `, 'PreloadService');
           return result;
         }
       } catch (error) {
-        logService.warning(`预加载失败: ${resource.path}`, 'PreloadService', error);
+        logService.warning(`预加载失败: `, 'PreloadService', error);
         // 预加载失败不应该阻止应用启动
         return null;
       }

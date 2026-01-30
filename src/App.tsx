@@ -24,6 +24,7 @@ import { ErrorNotification } from "./components/Common/ErrorNotification";
 import { StartupFlow } from "./components/StartupFlow/StartupFlow";
 import { useAppStyles } from "./styles/appStyles";
 import { useAppStartup } from "./hooks/useAppStartup";
+import { useThemeStore } from "./stores/themeStore";
 
 function App() {
   const styles = useAppStyles();
@@ -41,6 +42,8 @@ function App() {
     handleStartupFlowError,
     handleStartupFlowComplete
   } = useAppStartup();
+  
+  const { isDarkMode } = useThemeStore();
 
 
 
@@ -76,7 +79,9 @@ function App() {
 
   // 显示主应用界面
   return (
-    <div className={styles.app}>
+    <div 
+      className={styles.app}
+    >
       <TitleBar />
       <MainContent />
       <StatusBar />

@@ -22,8 +22,8 @@ import {
   CloudArrowUp24Regular,
   CloudArrowDown24Regular,
   Home24Regular,
-  Tent24Regular,
-  DocumentText24Regular,
+  Icons24Regular,
+  Notepad24Regular,
   ChevronDown24Regular,
   Warning24Regular,
 } from "@fluentui/react-icons";
@@ -33,6 +33,7 @@ import { getDeviceIcon } from "../../assets/icons";
 import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
 import { useAppStore } from "../../stores/appStore";
 import { useDeviceStore } from "../../stores/deviceStore";
+import { useThemeStore } from "../../stores/themeStore";
 import { useDeviceService } from "../../services/deviceService";
 import { AppView } from "../../types/app";
 import HomePage from "../Home/HomePage";
@@ -901,7 +902,7 @@ const MainContent: React.FC = () => {
   const renderDeviceInfo = () => {
     if (connectedDevices.length === 0) {
       return (
-        <div className={styles.deviceInfo}>
+        <div className={styles.deviceInfo} id="tour-device-info">
           <div 
             className={styles.deviceInfoOverlay}
             onClick={() => setIsDeviceSelectionDialogOpen(true)}
@@ -982,7 +983,7 @@ const MainContent: React.FC = () => {
     };
 
     return (
-      <div className={styles.deviceInfo}>
+      <div className={styles.deviceInfo} id="tour-device-info">
         <div 
           className={styles.deviceInfoOverlay}
           onClick={() => setIsDeviceSelectionDialogOpen(true)}
@@ -1102,13 +1103,18 @@ const MainContent: React.FC = () => {
   };
 
   return (
-    <div className={`${styles.container} startup-optimized`}>
-      <div className={`${styles.sidebar} sidebar-enter`}>
+    <div 
+      className={`${styles.container} startup-optimized`}
+    >
+      <div 
+        className={`${styles.sidebar} sidebar-enter`}
+      >
         {/* 设备信息区域 */}
         {renderDeviceInfo()}
 
         {/* 标签列表 */}
         <TabList
+          id="tour-nav-tabs"
           selectedValue={currentView}
           onTabSelect={handleTabSelect}
           className={styles.tabList}
@@ -1116,6 +1122,7 @@ const MainContent: React.FC = () => {
         >
           {tabs.map((tab) => (
             <Tab
+              id={`tour-tab-${tab.id}`}
               key={tab.id}
               value={tab.id}
               icon={tab.icon}
@@ -1136,17 +1143,19 @@ const MainContent: React.FC = () => {
             <div 
               className={`${styles.actionButton} ${currentView === "command-line" ? styles.actionButtonSelected : ""}`}
               onClick={() => setCurrentView("command-line")}
+              title={t('main.command_line')}
             >
-              <Tent24Regular />
-              {t('main.command_line')}
+              <Icons24Regular />
+              <Text>{t('main.command_line')}</Text>
             </div>
             {/* 打开日志窗口按钮 */}
             <div 
               className={`${styles.actionButton} ${currentView === "logs" ? styles.actionButtonSelected : ""}`}
               onClick={() => setCurrentView("logs")}
+              title={t('main.logs')}
             >
-              <DocumentText24Regular />
-              {t('main.logs')}
+              <Notepad24Regular />
+              <Text>{t('main.logs')}</Text>
             </div>
           </div>
       </div>
@@ -1163,7 +1172,7 @@ const MainContent: React.FC = () => {
         }}
       />
 
-      <div className={`${styles.content} main-content-enter`}>
+      <div className={`${styles.content} main-content-enter`} id="tour-main-content">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
