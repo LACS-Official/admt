@@ -267,6 +267,7 @@
     "fastboot_mode_desc": "Please reboot device to System or Recovery mode to use ADB features"
   },
   "device_control": {
+    "unknown":"Unknown",
     "power_management": "Power Management",
     "screen_timeout": "Screen Timeout",
     "stay_on": "Stay On While Plugged In",
@@ -332,7 +333,6 @@
     "msg_font_scale_success": "Font scale set to {{value}}",
     "msg_reset_success": "{{name}} reset successfully",
     "msg_reset_failed": "Reset failed",
-    "msg_unknown_error": "Unknown error",
     "validation_resolution": "Invalid resolution value",
     "validation_density": "Invalid density value",
     "validation_font_scale": "Invalid font scale value",

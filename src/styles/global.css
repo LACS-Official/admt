@@ -26,7 +26,6 @@ body {
 
 /* 自定义背景功能 */
 
-
 /* 滚动条样式 */
 ::-webkit-scrollbar {
   width: 6px;
@@ -269,4 +268,23 @@ body {
   z-index: 10000;
   font-size: 16px;
   opacity: 0.5;
+}
+
+/* 全局组件圆角覆盖 */
+.fui-Dropdown,
+.fui-Dropdown > button,
+.fui-Listbox,
+.fui-Button,
+.fui-Input,
+.fui-Input > input,
+.fui-Textarea,
+.fui-Textarea > textarea,
+.fui-Card {
+  border-radius: 8px !important;
+}
+
+/* 特殊处理：Input 和 Dropdown 的外层容器通常也需要圆角 */
+.fui-Input,
+.fui-Dropdown {
+  overflow: hidden;
 }

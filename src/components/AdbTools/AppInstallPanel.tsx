@@ -9,16 +9,26 @@ import {
   Input,
   Spinner,
   Checkbox,
+  RadioGroup,
+  Radio,
+  ProgressBar,
+  Badge,
 } from "@fluentui/react-components";
 import {
   DocumentAdd24Regular,
   Apps24Regular,
   Folder24Regular,
+  Delete24Regular,
+  CheckmarkCircle24Regular,
+  DismissCircle24Regular,
+  Clock24Regular,
+  Play24Regular
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import { open } from "@tauri-apps/plugin-dialog";
+import { readDir } from "@tauri-apps/plugin-fs";
 import ErrorDialog from "../Common/ErrorDialog";
 import { ErrorInfo } from "../../utils/errorHandler";
 import { useTranslation } from "react-i18next";
@@ -130,18 +140,26 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     gap: "4px",
+    overflow: "hidden",
   },
   apkListItemName: {
     fontWeight: "600",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   apkListItemPath: {
     fontSize: "12px",
     color: "var(--colorNeutralForeground2)",
     wordBreak: "break-all",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   apkListItemActions: {
     display: "flex",
     gap: "8px",
+    alignItems: "center",
   },
   refreshButton: {
     display: "flex",
@@ -160,12 +178,36 @@ const useStyles = makeStyles({
   emptyStateText: {
     marginTop: "8px",
   },
+  modeSelection: {
+    marginBottom: "8px",
+  },
+  batchActions: {
+    display: "flex",
+    gap: "8px",
+    marginBottom: "8px",
+  },
+  statusBadge: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+  },
+  folderInput: {
+      display: "none"
+  }
 });
 
 interface InstallStatus {
   fileName: string;
-  status: "installing" | "success" | "failed";
+  status: "pending" | "installing" | "success" | "failed";
   progress: number;
+  message?: string;
+}
+
+interface BatchFileItem {
+  id: string;
+  path: string;
+  name: string;
+  status: "pending" | "installing" | "success" | "failed";
   message?: string;
 }
 
@@ -185,47 +227,76 @@ const AppInstallPanel: React.FC = () => {
   const [errorInfo] = useState<ErrorInfo | null>(null);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
 
+  // 安装模式：单个 vs 批量
+  const [installMode, setInstallMode] = useState<'single' | 'batch'>('single');
+
   // APK安装相关状态
   const [apkPath, setApkPath] = useState("");
-  const [apkPaths, setApkPaths] = useState<string[]>([]);
+  // 批量安装文件列表
+  const [batchFiles, setBatchFiles] = useState<BatchFileItem[]>([]);
+  
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
+  // 单个安装的历史记录/状态
   const [installHistory, setInstallHistory] = useState<InstallStatus[]>([]);
   
   // 本地APK文件列表相关状态
   const [localApkFiles, setLocalApkFiles] = useState<ApkFile[]>([]);
   const [isLoadingLocalApks, setIsLoadingLocalApks] = useState(false);
 
-  // 使用文件选择器获取完整路径
+  // 批量安装进度
+  const [batchProgress, setBatchProgress] = useState({ total: 0, current: 0 });
+
+  // 切换模式时清理状态
+  useEffect(() => {
+    if (installMode === 'single') {
+        setBatchFiles([]);
+    } else {
+        setApkPath("");
+    }
+  }, [installMode]);
+
+  // 使用文件选择器获取完整路径 (单个/批量文件)
   const handleFileSelect = useCallback(async () => {
     try {
       const selected = await open({
-        multiple: true,
+        multiple: installMode === 'batch',
         filters: [{
-          name: t('app_install.apk_files'),
+          name: t('app_install.apk_files', 'APK Files'),
           extensions: ['apk']
         }]
       });
 
       if (selected) {
-        if (Array.isArray(selected)) {
-          setApkPaths(selected);
-          setApkPath(selected.length > 0 ? selected[0] : "");
+        if (installMode === 'single') {
+            const path = Array.isArray(selected) ? selected[0] : selected;
+             setApkPath(path);
+             setStatusBarMessage({
+                type: "info",
+                message: t('app_install.selected_file', { path }),
+             });
         } else {
-          setApkPath(selected);
-          setApkPaths([selected]);
-        }
+            // 批量模式：添加到列表
+            const paths = Array.isArray(selected) ? selected : [selected];
+            const newFiles: BatchFileItem[] = paths.map(path => ({
+                id: Math.random().toString(36).substr(2, 9),
+                path,
+                name: path.split(/[/\\]/).pop() || 'unknown.apk',
+                status: 'pending'
+            }));
+            
+            setBatchFiles(prev => {
+                // 去重
+                const existingPaths = new Set(prev.map(f => f.path));
+                const uniqueNewFiles = newFiles.filter(f => !existingPaths.has(f.path));
+                return [...prev, ...uniqueNewFiles];
+            });
 
-        // 显示完整的文件路径信息
-        const filePaths = Array.isArray(selected) ? selected : [selected];
-        const fileInfo = filePaths
-          .map(path => `${path.split(/[/\\]/).pop()} (${path})`)
-          .join(', ');
-        
-        setStatusBarMessage({
-          type: "info",
-          message: t('app_install.selected_files', { count: filePaths.length, info: fileInfo }),
-        });
+            setStatusBarMessage({
+                type: "info",
+                message: t('app_install.added_files', { count: paths.length }),
+            });
+        }
       }
     } catch (error) {
       setStatusBarMessage({
@@ -233,7 +304,75 @@ const AppInstallPanel: React.FC = () => {
         message: t('app_install.select_file_fail', { error }),
       });
     }
-  }, [setStatusBarMessage]);
+  }, [setStatusBarMessage, installMode, t]);
+
+  // 选择文件夹并扫描APK
+  const handleFolderSelect = useCallback(async () => {
+      try {
+          const selectedDir = await open({
+              directory: true,
+              multiple: false,
+          });
+
+          if (selectedDir && typeof selectedDir === 'string') {
+              setStatusBarMessage({ type: "info", message: t('app_install.scanning_folder', 'Scanning folder...') });
+              
+              // 读取文件夹内容
+              try {
+                  const entries = await readDir(selectedDir);
+                  // 过滤出 .apk 文件
+                  const apkEntries = entries.filter(entry => 
+                      entry.isFile && entry.name.toLowerCase().endsWith('.apk')
+                  );
+
+                  if (apkEntries.length === 0) {
+                      setStatusBarMessage({ type: "warning", message: t('app_install.no_apk_in_folder', 'No APK files found in selected folder.') });
+                      return;
+                  }
+
+                  const newFiles: BatchFileItem[] = apkEntries.map(entry => {
+                      // 构造完整路径需要注意系统分隔符，这里简单拼接，如果 readDir 返回的不包含 fullPath
+                      // 此处假设 entries 主要包含 name。需要结合 selectedDir 拼接。
+                      // Tauri v2 fs.readDir usually returns name.
+                      const separator = navigator.userAgent.includes("Windows") ? "\\" : "/";
+                      const fullPath = `${selectedDir}${separator}${entry.name}`;
+                      
+                      return {
+                        id: Math.random().toString(36).substr(2, 9),
+                        path: fullPath,
+                        name: entry.name,
+                        status: 'pending'
+                      };
+                  });
+
+                  setBatchFiles(prev => {
+                      const existingPaths = new Set(prev.map(f => f.path));
+                      const uniqueNewFiles = newFiles.filter(f => !existingPaths.has(f.path));
+                      return [...prev, ...uniqueNewFiles];
+                  });
+
+                  setStatusBarMessage({
+                      type: "success",
+                      message: t('app_install.added_from_folder', { count: apkEntries.length }),
+                  });
+
+              } catch (fsError) {
+                   console.error("Failed to read dir", fsError);
+                   setStatusBarMessage({ type: "error", message: t('app_install.read_dir_fail', { error: String(fsError) }) });
+              }
+          }
+      } catch (error) {
+          setStatusBarMessage({ type: "error", message: t('app_install.select_folder_fail', { error }) });
+      }
+  }, [setStatusBarMessage, t]);
+
+  const removeBatchFile = (id: string) => {
+      setBatchFiles(prev => prev.filter(f => f.id !== id));
+  };
+  
+  const clearBatchFiles = () => {
+      setBatchFiles([]);
+  };
 
   // 加载本地APK文件列表
   const loadLocalApkFiles = useCallback(async () => {
@@ -257,21 +396,48 @@ const AppInstallPanel: React.FC = () => {
     } finally {
       setIsLoadingLocalApks(false);
     }
-  }, [setStatusBarMessage]);
+  }, [setStatusBarMessage, t]);
 
-  // 安装本地APK文件
-  const handleInstallLocalApk = useCallback(async (apkPath: string) => {
+  // 安装本地APK文件 (桥接到当前模式)
+  const handleInstallLocalApk = useCallback(async (path: string) => {
+    if (installMode === 'single') {
+        setApkPath(path);
+        // 如果是单击"安装"，可以自动填充路径，或者直接触发安装？
+        // 这里仅填充路径
+    } else {
+        // 添加到批量列表
+        const name = path.split(/[/\\]/).pop() || 'unknown.apk';
+         setBatchFiles(prev => {
+            if (prev.some(f => f.path === path)) return prev;
+            return [...prev, {
+                id: Math.random().toString(36).substr(2, 9),
+                path,
+                name,
+                status: 'pending'
+            }];
+        });
+    }
+  }, [installMode]);
+
+  // 组件加载时获取本地APK文件列表
+  useEffect(() => {
+    loadLocalApkFiles();
+  }, [loadLocalApkFiles]);
+
+  // 单个安装原有逻辑
+  const handleSingleInstallClick = async () => {
     if (!selectedDevice) {
-      setStatusBarMessage({
-        type: "warning",
-        message: t('app_install.select_device_first'),
-      });
+      setStatusBarMessage({ type: "warning", message: t('app_install.select_device_first') });
+      return;
+    }
+    if (!apkPath) {
+      setStatusBarMessage({ type: "warning", message: t('app_install.select_apk_first') });
       return;
     }
 
-    const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
     try {
       setIsInstalling(true);
+      const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
       
       setStatusBarMessage({
         type: "info",
@@ -286,253 +452,81 @@ const AppInstallPanel: React.FC = () => {
 
       setInstallHistory(prev => [newStatus, ...prev]);
 
-      // 模拟安装进度
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        setInstallHistory(prev => 
-          prev.map((item, index) => 
-            index === 0 ? { ...item, progress: i } : item
-          )
-        );
-      }
-
+      // 模拟一点进度，提升UX
       const result = await deviceService.installApk(selectedDevice.serial, apkPath, replaceExisting);
       
       if (result.success) {
-        setInstallHistory(prev => 
-          prev.map((item, index) => 
-            index === 0 ? { 
-              ...item, 
-              status: "success", 
-              progress: 100,
-              message: t('app_install.install_success')
-            } : item
-          )
-        );
-        
-        setStatusBarMessage({
-          type: "success",
-          message: t('app_install.success', { fileName }),
-        });
+        setInstallHistory(prev => prev.map((item, index) => 
+            index === 0 ? { ...item, status: "success", progress: 100, message: t('app_install.install_success') } : item
+        ));
+        setStatusBarMessage({ type: "success", message: t('app_install.success', { fileName }) });
       } else {
-        setInstallHistory(prev => 
-          prev.map((item, index) => 
-            index === 0 ? { 
-              ...item, 
-              status: "failed", 
-              message: result.error || t('common.fail')
-            } : item
-          )
-        );
-        
-        setStatusBarMessage({
-          type: "error",
-          message: result.error || t('app_install.failed', { fileName, error: t('common.fail') }),
-        });
+        setInstallHistory(prev => prev.map((item, index) => 
+            index === 0 ? { ...item, status: "failed", message: result.error || t('common.fail') } : item
+        ));
+        setStatusBarMessage({ type: "error", message: result.error || t('app_install.failed', { fileName, error: t('common.fail') }) });
       }
     } catch (error) {
-      setInstallHistory(prev => 
-        prev.map((item, index) => 
-          index === 0 ? { 
-            ...item, 
-            status: "failed", 
-            message: t('app_install.install_failed_with_error', { error })
-          } : item
-        )
-      );
-      
-      setStatusBarMessage({
-        type: "error",
-        message: t('app_install.failed', { fileName, error }),
-      });
+        const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
+        setInstallHistory(prev => prev.map((item, index) => 
+            index === 0 ? { ...item, status: "failed", message: String(error) } : item
+        ));
+      setStatusBarMessage({ type: "error", message: t('app_install.failed', { fileName, error: String(error) }) });
     } finally {
       setIsInstalling(false);
     }
-  }, [selectedDevice, deviceService, replaceExisting, setStatusBarMessage]);
+  };
 
-  // 组件加载时获取本地APK文件列表
-  useEffect(() => {
-    loadLocalApkFiles();
-  }, [loadLocalApkFiles]);
+  // 批量安装逻辑
+  const handleBatchInstallClick = async () => {
+      if (!selectedDevice) {
+          setStatusBarMessage({ type: "warning", message: t('app_install.select_device_first') });
+          return;
+      }
+      
+      const pendingFiles = batchFiles.filter(f => f.status === 'pending' || f.status === 'failed');
+      if (pendingFiles.length === 0) {
+           setStatusBarMessage({ type: "warning", message: t('app_install.no_pending_files', 'No pending files to install.') });
+           return;
+      }
 
-  const handleInstallClick = async () => {
-    if (!selectedDevice) {
-      setStatusBarMessage({
-        type: "warning",
-        message: t('app_install.select_device_first'),
-      });
-      return;
-    }
-
-    // 确定要安装的文件路径
-    const pathsToInstall = apkPaths.length > 0 ? apkPaths : (apkPath ? [apkPath] : []);
-    
-    if (pathsToInstall.length === 0) {
-      setStatusBarMessage({
-        type: "warning",
-        message: t('app_install.select_apk_first'),
-      });
-      return;
-    }
-
-    try {
       setIsInstalling(true);
-      
-      // 验证文件路径是否存在
-      const validPaths = pathsToInstall.filter(path => {
-        if (!path || path.trim() === '') {
-          console.warn('发现空文件路径，跳过');
-          return false;
-        }
-        return true;
-      });
+      setBatchProgress({ total: pendingFiles.length, current: 0 });
 
-      if (validPaths.length === 0) {
-        setStatusBarMessage({
-          type: "error",
-          message: t('app_install.no_valid_path'),
-        });
-        return;
+      // 逐个安装
+      for (let i = 0; i < pendingFiles.length; i++) {
+            const file = pendingFiles[i];
+            
+            // 更新当前文件状态为安装中
+            setBatchFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'installing', message: t('app_install.installing') } : f));
+            setBatchProgress(prev => ({ ...prev, current: i + 1 }));
+
+            try {
+                const result = await deviceService.installApk(selectedDevice.serial, file.path, replaceExisting);
+                
+                if (result.success) {
+                    setBatchFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'success', message: t('app_install.install_success') } : f));
+                } else {
+                    // 失败，但继续
+                    setBatchFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'failed', message: result.error || 'Unknown error' } : f));
+                }
+            } catch (error) {
+                // 异常，但继续
+                setBatchFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'failed', message: String(error) } : f));
+            }
       }
 
-      // 显示安装信息（包含完整路径）
-      const fileInfo = validPaths
-        .map(path => path ? `${path.split(/[/\\]/).pop()} (${path})` : '未知文件')
-        .filter(info => info)
-        .join(', ');
-      setStatusBarMessage({
-        type: "info",
-        message: t('app_install.start_install_info', { count: validPaths.length, info: fileInfo }),
-      });
-
-      if (validPaths.length > 1) {
-        await handleBatchInstall(validPaths);
-      } else {
-        setApkPath(validPaths[0]);
-        await confirmInstall();
-      }
-      
-    } catch (error) {
-      console.error('安装APK时出错:', error);
-      setStatusBarMessage({
-        type: "error",
-        message: t('app_install.error_occured', { error: error instanceof Error ? error.message : String(error) }),
-      });
-    } finally {
       setIsInstalling(false);
-    }
+      setStatusBarMessage({ type: "success", message: t('app_install.batch_completed', 'Batch installation completed.') });
   };
 
-  const handleBatchInstall = async (paths: string[]) => {
-    if (!selectedDevice) return;
-
-    setIsInstalling(true);
-    try {
-      const operation = await deviceService.batchInstallApks(
-        selectedDevice.serial,
-        paths,
-        replaceExisting
-      );
-
-      // 这里应该有批量操作的处理逻辑，但为了简化只保留状态更新
-      setStatusBarMessage({
-        type: "success",
-        message: t('app_install.batch_start', { count: paths.length }),
-      });
-
-      // 清空路径
-      setApkPath("");
-      setApkPaths([]);
-
-    } catch (error) {
-      setStatusBarMessage({
-        type: "error",
-        message: t('app_install.batch_fail', { error }),
-      });
-    } finally {
-      setIsInstalling(false);
-    }
-  };
-
-  const confirmInstall = async () => {
-    if (!selectedDevice || !apkPath) return;
-
-    setIsInstalling(true);
-
-    const fileName = apkPath ? apkPath.split(/[/\\]/).pop() || "unknown.apk" : "unknown.apk";
-    const newStatus: InstallStatus = {
-      fileName,
-      status: "installing",
-      progress: 0,
-    };
-
-    setInstallHistory(prev => [newStatus, ...prev]);
-
-    try {
-      // 模拟安装进度
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        setInstallHistory(prev => 
-          prev.map((item, index) => 
-            index === 0 ? { ...item, progress: i } : item
-          )
-        );
+  const renderStatusIcon = (status: string) => {
+      switch (status) {
+          case 'success': return <CheckmarkCircle24Regular color="var(--colorPaletteGreenForeground1)" />;
+          case 'failed': return <DismissCircle24Regular color="var(--colorPaletteRedForeground1)" />;
+          case 'installing': return <Spinner size="tiny" />;
+          default: return <Clock24Regular color="var(--colorNeutralForeground3)" />;
       }
-
-      const result = await deviceService.installApk(selectedDevice.serial, apkPath, replaceExisting);
-      
-      if (result.success) {
-        setInstallHistory(prev => 
-          prev.map((item, index) => 
-            index === 0 ? { 
-              ...item, 
-              status: "success", 
-              progress: 100,
-              message: t('app_install.install_success')
-            } : item
-          )
-        );
-        
-        setStatusBarMessage({
-          type: "success",
-          message: t('app_install.success', { fileName }),
-        });
-      } else {
-        setInstallHistory(prev => 
-          prev.map((item, index) => 
-            index === 0 ? { 
-              ...item, 
-              status: "failed", 
-              message: result.error || t('common.fail')
-            } : item
-          )
-        );
-        
-        setStatusBarMessage({
-          type: "error",
-          message: result.error || t('app_install.failed', { fileName, error: t('common.fail') }),
-        });
-      }
-    } catch (error) {
-      setInstallHistory(prev => 
-        prev.map((item, index) => 
-          index === 0 ? { 
-            ...item, 
-            status: "failed", 
-            message: t('app_install.install_failed_with_error', { error })
-          } : item
-        )
-      );
-      
-      setStatusBarMessage({
-        type: "error",
-        message: t('app_install.failed', { fileName, error }),
-      });
-    } finally {
-      setIsInstalling(false);
-      setApkPath("");
-      setReplaceExisting(false);
-    }
   };
 
   const renderContent = () => {
@@ -543,29 +537,73 @@ const AppInstallPanel: React.FC = () => {
           <CardHeader
             image={<DocumentAdd24Regular />}
             header={<Text weight="semibold">{t('app_install.card_title')}</Text>}
-            description={<Text size={200}>{t('app_install.card_desc')}</Text>}
+            description={
+                <div className={styles.modeSelection}>
+                     <RadioGroup 
+                        layout="horizontal" 
+                        value={installMode} 
+                        onChange={(_, data) => setInstallMode(data.value as 'single' | 'batch')}
+                        disabled={isInstalling}
+                     >
+                        <Radio value="single" label={t('app_install.mode_single', '单个安装')} />
+                        <Radio value="batch" label={t('app_install.mode_batch', '批量安装')} />
+                     </RadioGroup>
+                </div>
+            }
           />
           
           <div className={styles.content}>
             <div className={styles.installSection}>
-              <div className={styles.pathInput}>
-                <Field label={t('app_install.path_label')} style={{ flex: 1 }}>
-                  <Input
-                    value={apkPath}
-                    onChange={(_, data) => setApkPath(data.value)}
-                    placeholder={t('app_install.path_placeholder')}
-                    disabled={isInstalling}
-                  />
-                </Field>
-                <Button
-                  appearance="secondary"
-                  onClick={handleFileSelect}
-                  disabled={isInstalling}
-                  className={styles.selectButton}
-                >
-                  {t('app_install.select_file')}
-                </Button>
-              </div>
+              
+              {installMode === 'single' ? (
+                  // 单个安装 UI
+                  <div className={styles.pathInput}>
+                    <Field label={t('app_install.path_label')} style={{ flex: 1 }}>
+                      <Input
+                        value={apkPath}
+                        onChange={(_, data) => setApkPath(data.value)}
+                        placeholder={t('app_install.path_placeholder')}
+                        disabled={isInstalling}
+                      />
+                    </Field>
+                    <Button
+                      appearance="secondary"
+                      onClick={handleFileSelect}
+                      disabled={isInstalling}
+                      className={styles.selectButton}
+                    >
+                      {t('app_install.select_file')}
+                    </Button>
+                  </div>
+              ) : (
+                  // 批量安装 UI - 按钮区
+                  <div className={styles.batchActions}>
+                      <Button 
+                        appearance="secondary" 
+                        icon={<DocumentAdd24Regular />} 
+                        onClick={handleFileSelect}
+                        disabled={isInstalling}
+                      >
+                          {t('app_install.add_files', '添加文件')}
+                      </Button>
+                      <Button 
+                        appearance="secondary" 
+                        icon={<Folder24Regular />} 
+                        onClick={handleFolderSelect}
+                        disabled={isInstalling}
+                      >
+                          {t('app_install.add_folder', '添加文件夹')}
+                      </Button>
+                      <Button 
+                        appearance="subtle" 
+                        icon={<Delete24Regular />} 
+                        onClick={clearBatchFiles}
+                        disabled={isInstalling || batchFiles.length === 0}
+                      >
+                          {t('app_install.clear_all', '清空')}
+                      </Button>
+                  </div>
+              )}
 
               <Checkbox
                 label={t('app_install.replace_existing')}
@@ -574,18 +612,82 @@ const AppInstallPanel: React.FC = () => {
                 disabled={isInstalling}
               />
 
-              <Button
-                appearance="primary"
-                icon={isInstalling ? <Spinner size="small" /> : <Apps24Regular />}
-                onClick={handleInstallClick}
-                disabled={!selectedDevice || (apkPaths.length === 0 && !apkPath) || isInstalling}
-                className={styles.installButton}
-              >
-                {isInstalling ? t('app_install.installing') : t('app_install.start_install', { count: apkPaths.length || (apkPath ? 1 : 0) })}
-              </Button>
+              {installMode === 'single' ? (
+                  <Button
+                    appearance="primary"
+                    icon={isInstalling ? <Spinner size="small" /> : <Apps24Regular />}
+                    onClick={handleSingleInstallClick}
+                    disabled={!selectedDevice || !apkPath || isInstalling}
+                    className={styles.installButton}
+                  >
+                    {isInstalling ? t('app_install.installing') : t('app_install.start_install_single', '开始安装')}
+                  </Button>
+              ) : (
+                   <Button
+                    appearance="primary"
+                    icon={isInstalling ? <Spinner size="small" /> : <Play24Regular />}
+                    onClick={handleBatchInstallClick}
+                    disabled={!selectedDevice || batchFiles.filter(f => f.status !== 'success').length === 0 || isInstalling}
+                    className={styles.installButton}
+                  >
+                    {isInstalling 
+                        ? t('app_install.installing_batch', { current: batchProgress.current, total: batchProgress.total, defaultValue: `Installing (${batchProgress.current}/${batchProgress.total})` }) 
+                        : t('app_install.start_batch_install', { count: batchFiles.filter(f => f.status !== 'success').length, defaultValue: `Start Batch Install (${batchFiles.filter(f => f.status !== 'success').length})` })}
+                  </Button>
+              )}
             </div>
 
+            {/* 批量文件列表 */}
+            {installMode === 'batch' && (
+                <div className={styles.apkList} style={{ flex: 1, maxHeight: '300px' }}>
+                    {batchFiles.length === 0 ? (
+                        <div className={styles.emptyState}>
+                            <Text className={styles.emptyStateText}>{t('app_install.no_files_selected', '请选择APK文件或文件夹')}</Text>
+                        </div>
+                    ) : (
+                        batchFiles.map(file => (
+                            <div key={file.id} className={styles.apkListItem}>
+                                <div className={styles.apkListItemInfo}>
+                                    <Text className={styles.apkListItemName}>{file.name}</Text>
+                                    <Text className={styles.apkListItemPath}>{file.path}</Text>
+                                    {file.message && <Text size={100} style={{ color: file.status === 'failed' ? 'var(--colorPaletteRedForeground1)' : 'var(--colorNeutralForeground2)' }}>{file.message}</Text>}
+                                </div>
+                                <div className={styles.apkListItemActions}>
+                                    {renderStatusIcon(file.status)}
+                                    <Button
+                                        appearance="transparent"
+                                        icon={<Delete24Regular />}
+                                        onClick={() => removeBatchFile(file.id)}
+                                        disabled={isInstalling}
+                                        aria-label="Remove"
+                                    />
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
 
+            {/* 单个模式的历史记录 */}
+            {installMode === 'single' && installHistory.length > 0 && (
+                 <div className={styles.historySection}>
+                    <Text weight="semibold">{t('app_install.history')}</Text>
+                    {installHistory.map((item, index) => (
+                        <div key={index} className={styles.historyItem}>
+                             <div className={styles.statusBadge}>
+                                {item.status === 'success' && <CheckmarkCircle24Regular color="var(--colorPaletteGreenForeground1)" />}
+                                {item.status === 'failed' && <DismissCircle24Regular color="var(--colorPaletteRedForeground1)" />}
+                                {item.status === 'installing' && <Spinner size="tiny" />}
+                             </div>
+                             <div className={styles.historyItemContent}>
+                                 <Text className={styles.historyItemName}>{item.fileName}</Text>
+                                 <Text className={styles.historyItemMessage}>{item.message || t(`app_install.status_${item.status}`)}</Text>
+                             </div>
+                        </div>
+                    ))}
+                 </div>
+            )}
+            
           </div>
         </Card>
         <Card className={styles.card}>
@@ -637,7 +739,7 @@ const AppInstallPanel: React.FC = () => {
                         onClick={() => handleInstallLocalApk(apk.path)}
                         disabled={!selectedDevice || isInstalling}
                       >
-                        {t('app_install.install')}
+                        {installMode === 'single' ? t('app_install.select') : t('app_install.add')}
                       </Button>
                     </div>
                   </div>

@@ -487,6 +487,7 @@
     "mode_unauthorized": "未授权"
   },
   "device_overview": {
+    "unknown":"未知",
     "panel_title": "设备信息面板",
     "click_to_copy": "点击值可以复制",
     "refresh_info": "刷新内存和存储信息",

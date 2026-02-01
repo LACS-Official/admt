@@ -3,6 +3,24 @@
 
 use crate::error::{AdmtError, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::process::Child;
+use tauri::State;
+
+/// 投屏状态管理器
+pub struct MirrorManager {
+    /// 存储所有活跃的投屏会话: device_serial -> (ChildProcess, SessionInfo)
+    pub sessions: Arc<Mutex<HashMap<String, (Child, ScreenMirrorSession)>>>,
+}
+
+impl MirrorManager {
+    pub fn new() -> Self {
+        Self {
+            sessions: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+}
 
 /// 屏幕镜像设备信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -70,30 +88,7 @@ impl ScreenMirrorSession {
         }
     }
 
-    /// 启动会话
-    #[allow(dead_code)]
-    pub fn start(&mut self) {
-        self.status = "starting".to_string();
-    }
 
-    /// 设置连接状态
-    #[allow(dead_code)]
-    pub fn set_connected(&mut self, process_id: u32, _port: u32) {
-        self.process_id = Some(process_id);
-        self.status = "connected".to_string();
-    }
-
-    /// 设置流媒体状态
-    #[allow(dead_code)]
-    pub fn set_streaming(&mut self) {
-        self.status = "streaming".to_string();
-    }
-
-    /// 设置错误状态
-    pub fn set_error(&mut self, error_message: String) {
-        self.error_message = Some(error_message);
-        self.status = "error".to_string();
-    }
 }
 
 /// 诊断scrcpy安装和配置
@@ -289,10 +284,22 @@ pub async fn get_device_resolution(device_serial: String) -> Result<String> {
 pub async fn start_screen_mirror(
     device_serial: String,
     config: ScreenMirrorConfig,
+    state: State<'_, MirrorManager>,
 ) -> Result<ScreenMirrorSession> {
     log::info!("Starting screen mirror for device: {}", device_serial);
 
-    // 检查设备支持
+    // 1. 检查是否已经在投屏
+    {
+        let sessions = state.sessions.lock().unwrap();
+        if sessions.contains_key(&device_serial) {
+            return Err(AdmtError::Process(format!(
+                "Device {} is already mirroring",
+                device_serial
+            )));
+        }
+    }
+
+    // 2. 检查设备支持
     let device = check_screen_mirror_support(device_serial.clone()).await?;
     if !device.is_supported {
         return Err(AdmtError::Device(
@@ -300,15 +307,15 @@ pub async fn start_screen_mirror(
         ));
     }
 
-    // 创建会话
+    // 3. 创建会话信息
     let mut session = ScreenMirrorSession::new(device_serial.clone(), config.clone());
-    session.device_name = device.name;
-    session.start();
+    session.device_name = device.name.clone();
+    session.status = "starting".to_string();
 
-    // 构建scrcpy命令
+    // 4. 构建命令参数
     let mut args = vec![
         "-s".to_string(),
-        device_serial,
+        device_serial.clone(),
         "--max-size".to_string(),
         extract_resolution_number(&config.quality.resolution),
         "--video-bit-rate".to_string(),
@@ -317,51 +324,39 @@ pub async fn start_screen_mirror(
         config.quality.framerate.to_string(),
     ];
 
-    // 添加其他选项
-    if config.show_touches {
-        args.push("--show-touches".to_string());
-    }
+    if config.show_touches { args.push("--show-touches".to_string()); }
+    if config.record_screen { args.push("--record".to_string()); }
+    if config.stay_awake { args.push("--stay-awake".to_string()); }
+    if config.turn_screen_off { args.push("--turn-screen-off".to_string()); }
+    if !config.control_enabled { args.push("--no-control".to_string()); }
+    if !config.audio_enabled { args.push("--no-audio".to_string()); }
 
-    if config.record_screen {
-        args.push("--record".to_string());
-    }
-
-    if config.stay_awake {
-        args.push("--stay-awake".to_string());
-    }
-
-    if config.turn_screen_off {
-        args.push("--turn-screen-off".to_string());
-    }
-
-    if !config.control_enabled {
-        args.push("--no-control".to_string());
-    }
-
-    if !config.audio_enabled {
-        args.push("--no-audio".to_string());
-    }
-
-    // 启动scrcpy进程
+    // 5. 启动 scrcpy 进程
     match start_scrcpy_process(&args).await {
-        Ok(process_id) => {
-            session.set_connected(process_id, 8080); // 默认端口
-            session.set_streaming();
-            log::info!(
-                "Screen mirror started successfully with PID: {}",
-                process_id
-            );
+        Ok(child) => {
+            let pid = child.id();
+            session.process_id = Some(pid);
+            session.status = "streaming".to_string();
+            
+            log::info!("Screen mirror started (PID: {}) for device {}", pid, device_serial);
+
+            // 6. 保存到全局状态
+            let mut sessions = state.sessions.lock().unwrap();
+            sessions.insert(device_serial, (child, session.clone()));
+            
             Ok(session)
         }
         Err(e) => {
-            session.set_error(format!("Failed to start scrcpy: {}", e));
+            session.status = "error".to_string();
+            session.error_message = Some(format!("{}", e));
+            log::error!("Failed to start mirroring for {}: {}", device_serial, e);
             Err(e)
         }
     }
 }
 
 /// 启动scrcpy进程
-async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
+async fn start_scrcpy_process(args: &[String]) -> Result<std::process::Child> {
     use std::process::Command;
 
     // 检查scrcpy是否可用
@@ -419,9 +414,8 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
 
     match cmd.spawn() {
         Ok(child) => {
-            let pid = child.id();
-            log::info!("scrcpy process started successfully with PID: {}", pid);
-            Ok(pid)
+            log::info!("scrcpy process spawned successfully");
+            Ok(child)
         }
         Err(e) => {
             let error_msg = format!(
@@ -450,19 +444,60 @@ async fn start_scrcpy_process(args: &[String]) -> Result<u32> {
 
 /// 停止屏幕镜像
 #[tauri::command]
-pub async fn stop_screen_mirror(session_id: String) -> Result<bool> {
-    log::info!("Stopping screen mirror session: {}", session_id);
+pub async fn stop_screen_mirror(
+    device_serial: String,
+    state: State<'_, MirrorManager>,
+) -> Result<bool> {
+    log::info!("Requesting stop screen mirror for device: {}", device_serial);
 
-    // TODO: 实现进程终止逻辑
-    // 1. 根据session_id查找对应的进程ID
-    // 2. 终止scrcpy进程
-    // 3. 清理资源
+    let mut sessions = state.sessions.lock().unwrap();
+    
+    // 1. 查找会话
+    if let Some((mut child, mut session)) = sessions.remove(&device_serial) {
+        log::info!("Stopping scrcpy process (PID: {:?})", session.process_id);
+        
+        session.status = "stopping".to_string();
+        
+        // 2. 终止进程
+        match child.kill() {
+            Ok(_) => {
+                log::info!("Successfully killed scrcpy process for {}", device_serial);
+                // 等待进程退出以释放资源
+                let _ = child.wait();
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("Failed to kill scrcpy process for {}: {}", device_serial, e);
+                // 即使失败，我们也认为它处于异常状态并从管理中移除
+                Err(AdmtError::Process(format!("Failed to stop process: {}", e)))
+            }
+        }
+    } else {
+        log::warn!("No active mirror session found for device: {}", device_serial);
+        Ok(false)
+    }
+}
 
-    // 暂时返回成功，实际实现需要进程管理
-    // 注意：这里需要实现会话管理器来跟踪会话和进程ID的映射关系
-    log::warn!("stop_screen_mirror called but session management is not fully implemented");
+/// 获取当前所有活跃的投屏会话
+#[tauri::command]
+pub async fn get_active_mirror_sessions(
+    state: State<'_, MirrorManager>,
+) -> Result<Vec<ScreenMirrorSession>> {
+    let sessions = state.sessions.lock().unwrap();
+    let list: Vec<ScreenMirrorSession> = sessions.values()
+        .map(|(_, session)| session.clone())
+        .collect();
+    Ok(list)
+}
 
-    Ok(true)
+/// 检查指定设备是否正在投屏
+#[tauri::command]
+pub async fn is_device_mirroring(
+    device_serial: String,
+    state: State<'_, MirrorManager>,
+) -> Result<bool> {
+    let sessions = state.sessions.lock().unwrap();
+    Ok(sessions.contains_key(&device_serial))
 }
 
 /// 查找scrcpy可执行文件
