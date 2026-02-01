@@ -44,6 +44,7 @@ import { useAppStore } from '../../stores/appStore';
 import { systemTrayManager } from '../../services/systemTrayManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from "react-i18next";
+import confetti from 'canvas-confetti';
 
 const useStyles = makeStyles({
   container: {
@@ -256,7 +257,55 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     acceptUserAgreement();
     acceptDataCollection();
     completePrivacySetup();
-    onAccept();
+    
+    // 触发庆祝烟花
+    fireCelebration();
+    
+    // 延迟一点时间再调用 onAccept，让用户能看到烟花开始
+    setTimeout(() => {
+        onAccept();
+    }, 500);
+  };
+
+  const fireCelebration = () => {
+    const duration = 5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
+
+    const randomInRange = (min: number, max: number) => {
+      return Math.random() * (max - min) + min;
+    };
+
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      
+      // 随机喷发位置
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+      });
+      
+      // 每隔一次增加一次中心大喷发
+      if (Math.random() > 0.7) {
+        confetti({
+          ...defaults,
+          particleCount: particleCount * 2,
+          origin: { x: 0.5, y: 0.5 }
+        });
+      }
+    }, 250);
   };
 
   const handleReject = async () => {

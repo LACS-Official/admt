@@ -28,6 +28,7 @@ import {
   Warning24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import confetti from 'canvas-confetti';
 import DeviceSelectionDialog from './DeviceSelectionDialog';
 import { getDeviceIcon } from "../../assets/icons";
 import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
@@ -797,6 +798,40 @@ const MainContent: React.FC = () => {
 
     console.log('🏢 MainContent useEffect 被触发');
     trackMainContentEntry();
+
+    // 首次进入应用的庆祝彩带 (如果刚刚同意了隐私政策)
+    const celebrationDone = sessionStorage.getItem('app_entrance_celebration_done');
+    if (!celebrationDone) {
+      const duration = 2 * 1000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 2,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          zIndex: 10000,
+        });
+        confetti({
+          particleCount: 2,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          zIndex: 10000,
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      
+      // 稍微延迟一下，配合进入动画
+      setTimeout(() => {
+        frame();
+        sessionStorage.setItem('app_entrance_celebration_done', 'true');
+      }, 500);
+    }
   }, []); // 空依赖数组，确保只在组件挂载时执行一次
 
   // 系统托盘初始化 - 单例模式管理，确保只在应用启动时初始化一次
