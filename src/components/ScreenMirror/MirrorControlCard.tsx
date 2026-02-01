@@ -346,19 +346,29 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                 <div>
                     <Text className={styles.sectionTitle} style={{marginBottom: '12px', display: 'block'}}>{t('mirror.video_quality')}</Text>
                     <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                        <Field label={t('mirror.quality_preset')} size="small">
-                             <Dropdown value={qualityPresetOptions.find(p=>p.value === 'high')?.label || "High"} placeholder={t('mirror.select_quality_placeholder')} onOptionSelect={(_, d) => handleQualityPresetChange(d.optionValue as string)}>
-                                 {qualityPresetOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-                            </Dropdown>
-                        </Field>
+                         <Field label={t('mirror.quality_preset')} size="small">
+                              <Dropdown 
+                                value={qualityPresetOptions.find(p=>p.value === 'high')?.label || "High"} 
+                                placeholder={t('mirror.select_quality_placeholder')} 
+                                onOptionSelect={(_, d) => handleQualityPresetChange(d.optionValue as string)}
+                              >
+                                  {qualityPresetOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+                             </Dropdown>
+                         </Field>
                         
                         <Field label={t('mirror.resolution')} size="small" style={{width: '100px'}}>
-                          <Dropdown value={config.quality.resolution} onOptionSelect={(_,d) => handleResolutionChange(d.optionValue as string)}>
+                          <Dropdown 
+                            value={config.quality.resolution} 
+                            onOptionSelect={(_,d) => handleResolutionChange(d.optionValue as string)}
+                          >
                                 {resolutionOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
                           </Dropdown>
                         </Field>
                         <Field label={t('mirror.codec')} size="small" style={{width: '100px'}}>
-                          <Dropdown value={config.quality.codec} onOptionSelect={(_,d) => handleCodecChange(d.optionValue as "h264" | "h265")}>
+                          <Dropdown 
+                            value={config.quality.codec} 
+                            onOptionSelect={(_,d) => handleCodecChange(d.optionValue as "h264" | "h265")}
+                          >
                                 {codecOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
                           </Dropdown>
                         </Field>

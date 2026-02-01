@@ -27,7 +27,8 @@ use adb::command::adb_system_controler::{
 use adb::device::device_reboot::reboot_device;
 use adb::file::file::{list_device_files, pull_file, push_file};
 use adb::scrcpy::screen_mirror::{
-    check_screen_mirror_support, diagnose_scrcpy, start_screen_mirror, stop_screen_mirror,
+    check_screen_mirror_support, diagnose_scrcpy, get_active_mirror_sessions, is_device_mirroring,
+    start_screen_mirror, stop_screen_mirror, MirrorManager,
 };
 use cache::cache_cleanup_task;
 use commands::{
@@ -59,6 +60,7 @@ use tauri_plugin_dialog::DialogExt;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(MirrorManager::new())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -138,6 +140,8 @@ pub fn run() {
             diagnose_scrcpy,
             start_screen_mirror,
             stop_screen_mirror,
+            get_active_mirror_sessions,
+            is_device_mirroring,
             validate_activation_code_format,
             activate_application,
             check_activation_status,

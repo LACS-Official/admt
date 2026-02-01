@@ -469,6 +469,7 @@
     "mode_unauthorized": "未授權"
   },
   "device_overview": {
+    "unknown":"未知",
     "panel_title": "設備信息面板",
     "click_to_copy": "點擊值可以複製",
     "refresh_info": "刷新內存和存儲信息",

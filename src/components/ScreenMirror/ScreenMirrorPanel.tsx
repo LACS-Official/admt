@@ -87,6 +87,7 @@ const ScreenMirrorPanel: React.FC = () => {
     setLoading,
     setError,
     selectDevice,
+    setActiveSessions,
     addActiveSession,
     removeActiveSession,
     canStartMirroring,
@@ -98,6 +99,22 @@ const ScreenMirrorPanel: React.FC = () => {
   const isCheckingRef = useRef<boolean>(false);
 
   const connectedDevices = devices.filter(d => d.connected);
+
+  // 初始化时同步后端正在进行的投屏会话
+  useEffect(() => {
+    const syncSessions = async () => {
+      try {
+        const backendSessions = await ScreenMirrorService.getActiveSessions();
+        if (backendSessions.length > 0) {
+          // 直接使用后端返回的会话列表覆盖本地状态，确保一致性
+          setActiveSessions(backendSessions);
+        }
+      } catch (err) {
+        console.error("Failed to sync screen mirror sessions:", err);
+      }
+    };
+    syncSessions();
+  }, [setActiveSessions]);
 
   // 获取正在投屏的设备序列号列表
   const streamingDevices = activeSessions
@@ -172,9 +189,11 @@ const ScreenMirrorPanel: React.FC = () => {
       const session = await ScreenMirrorService.startMirror(device.serial, config);
       addActiveSession(session);
       console.log("Screen mirror started:", session);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to start screen mirror:", error);
-      setError(t('mirror.start_failed', { error }));
+      // 提取详细的错误信息
+      const errorMessage = typeof error === 'object' ? (error.Process || error.Device || JSON.stringify(error)) : error;
+      setError(t('mirror.start_failed', { error: errorMessage }));
     } finally {
       setLoading(false);
     }
@@ -222,12 +241,13 @@ const ScreenMirrorPanel: React.FC = () => {
 
     setLoading(true);
     try {
-      await ScreenMirrorService.stopMirror(session.id);
+      await ScreenMirrorService.stopMirror(session.deviceSerial);
       removeActiveSession(session.id);
       console.log("Screen mirror stopped");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to stop screen mirror:", error);
-      setError(t('mirror.stop_failed', { error }));
+      const errorMessage = typeof error === 'object' ? (error.Process || error.Device || JSON.stringify(error)) : error;
+      setError(t('mirror.stop_failed', { error: errorMessage }));
     } finally {
       setLoading(false);
     }
