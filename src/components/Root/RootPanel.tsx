@@ -131,6 +131,10 @@ const RootPanel: React.FC = () => {
   const styles = useStyles();
   const { selectedDevice, devices } = useDeviceStore();
   const [currentView, setCurrentView] = useState<AdbZoneView>("adb-tools");
+  const triggerOverlay = () => {
+    console.log('ADB mode required in RootPanel');
+  };
+
 
   const connectedDevices = devices.filter(d => d.connected);
 
@@ -188,13 +192,13 @@ const RootPanel: React.FC = () => {
             gap: "16px",
             padding: "16px"
           }}>
-            <SystemControlCard device={selectedDevice} />
+            <SystemControlCard device={selectedDevice} onAdbRequired={triggerOverlay} />
           </div>
         );
       case "screen-mirror":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-            <ScreenMirrorPanel />
+            <ScreenMirrorPanel device={selectedDevice} onAdbRequired={triggerOverlay} />
           </div>
         );
     

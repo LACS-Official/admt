@@ -80,6 +80,12 @@ class VersionManager {
   syncVersions(version) {
     console.log(`🔄 同步版本到 ${version}...`);
     
+    // 更新配置文件
+    const config = this.readConfig();
+    config.version = version;
+    config.versionName = version;
+    this.writeConfig(config);
+
     this.updatePackageJson(version);
     this.updateCargoToml(version);
     this.updateTauriConfig(version);

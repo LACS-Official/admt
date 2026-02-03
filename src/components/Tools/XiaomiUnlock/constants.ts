@@ -20,12 +20,14 @@ export const TOOL_CONFIGS: Record<string, ToolConfig> = {
   bypass_unlock: {
     name: 'Bypass解锁',
     folder: 'MiBypass',
-    configFile: 'lacs_config.json'
+    configFile: 'lacs_config.json',
+    downloadTag: '小米解锁'
   },
   xiaomi_unlock_tool: {
     name: '小米解锁工具',
     folder: 'miflash_unlock',
-    configFile: 'lacs_config.json'
+    configFile: 'lacs_config.json',
+    downloadTag: '小米解锁'
   }
 };
 
@@ -35,6 +37,9 @@ export const TOOL_CONFIGS: Record<string, ToolConfig> = {
  */
 export const POSSIBLE_TOOL_PATHS = [
   'downloads',
+  'resources/downloads',
+  '../downloads',
+  './downloads',
   'src-tauri/target/debug/downloads',
   'target/debug/downloads'
 ];

@@ -24,6 +24,7 @@ export interface ToolConfig {
   name: string;
   folder: string;
   configFile: string;
+  downloadTag?: string;
 }
 
 export interface DetectionResult {

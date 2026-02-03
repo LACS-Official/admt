@@ -21,7 +21,8 @@ export class UnlockService {
   static async executeUnlockTool(
     toolId: string,
     device: DeviceInfo,
-    onStatusUpdate: (status: StatusMessage) => void
+    onStatusUpdate: (status: StatusMessage) => void,
+    appStore?: any // 传入 store 以便切换视图
   ): Promise<void> {
     if (!device) {
       onStatusUpdate({
@@ -42,7 +43,7 @@ export class UnlockService {
 
     onStatusUpdate({
       type: 'success',
-      message: '成功'
+      message: '正在检测工具路径...'
     });
 
     try {
@@ -51,8 +52,16 @@ export class UnlockService {
       if (!toolPath) {
         onStatusUpdate({
           type: 'error',
-          message: `找不到${toolConfig.folder}文件夹，请前往在线资源下载<${toolConfig.name}>`
+          message: `找不到${toolConfig.folder}文件夹，3秒后将为您跳转到在线资源下载<${toolConfig.name}>`
         });
+
+        // 3秒后跳转
+        if (appStore) {
+          setTimeout(() => {
+            appStore.setCurrentView('online-resources');
+            // 如果有标签，可以考虑通过某种方式传递标签，或者让在线资源页面默认显示对应分类
+          }, 3000);
+        }
         return;
       }
 
@@ -62,7 +71,7 @@ export class UnlockService {
       if (!configExists) {
         onStatusUpdate({
           type: 'error',
-          message: '找不到配置文件，请重新下载文件'
+          message: `在 ${toolConfig.folder} 中找不到配置文件 ${toolConfig.configFile}，请确保工具已通过在线资源完整下载并解压`
         });
         return;
       }
@@ -72,7 +81,7 @@ export class UnlockService {
       if (!configData) {
         onStatusUpdate({
           type: 'error',
-          message: '读取配置文件失败'
+          message: '读取配置文件失败，JSON 格式可能不正确'
         });
         return;
       }
@@ -82,7 +91,7 @@ export class UnlockService {
       if (!executableName) {
         onStatusUpdate({
           type: 'error',
-          message: `找不到 ${executableName}`
+          message: `配置文件中未定义可执行文件名`
         });
         return;
       }
@@ -93,7 +102,7 @@ export class UnlockService {
       if (!executableExists) {
         onStatusUpdate({
           type: 'error',
-          message: `找不到 ${executableName}`
+          message: `找不到可执行文件: ${executableName}，请检查文件夹内容`
         });
         return;
       }
@@ -103,13 +112,13 @@ export class UnlockService {
       
       onStatusUpdate({
         type: 'success',
-        message: '打开成功'
+        message: '工具已成功启动'
       });
 
     } catch (error) {
       onStatusUpdate({
         type: 'error',
-        message: '找不到'
+        message: `执行失败: ${error instanceof Error ? error.message : '未知错误'}`
       });
       throw error;
     }
@@ -120,6 +129,21 @@ export class UnlockService {
    * 重构点：将路径查找逻辑提取为独立方法
    */
   private static async findToolPath(folderName: string): Promise<string | null> {
+    const { invoke } = await import('@tauri-apps/api/core');
+    
+    // 1. 首先尝试从后端获取统一的下载目录
+    try {
+      const downloadDir = await invoke('get_default_download_directory') as string;
+      if (downloadDir) {
+        const fullPath = `${downloadDir}/${folderName}`;
+        const exists = await checkFileExists(fullPath);
+        if (exists) return fullPath;
+      }
+    } catch (e) {
+      console.warn('获取默认下载目录失败', e);
+    }
+
+    // 2. 遍历可能的相对路径
     for (const basePath of POSSIBLE_TOOL_PATHS) {
       const fullPath = `${basePath}/${folderName}`;
       try {
