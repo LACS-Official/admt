@@ -20,6 +20,8 @@
     "carousel_speed_desc": "Adjust Sidebar Carousel Auto-Switch Interval",
     "fast": "Fast (2s)",
     "slow": "Slow (15s)",
+    "confetti_entrance": "Celebrate on Entrance",
+    "confetti_entrance_desc": "Play celebration confetti animation whenever entering the home page",
     "about_app": "About App",
     "app_name": "Wanji Guanjia",
     "app_desc": "Modern Android Device Tool based on Tauri 2, Compact and Powerful",
@@ -115,7 +117,8 @@
     "no": "No",
     "unknown_error": "Unknown Error",
     "refresh_manual": "Manual Refresh",
-    "all": "All"
+    "all": "All",
+    "clear": "Clear "
   },
   "guide": {
     "title": "Link Guide",
@@ -165,14 +168,6 @@
     "unauthorized": "Unauthorized",
     "offline": "Offline",
     "unknown": "Unknown"
-  },
-  "carousel": {
-    "slide1_title": "Welcome",
-    "slide1_desc": "Modern Android Device Management Tool",
-    "slide2_title": "Powerful Device Management",
-    "slide2_desc": "Real-time device detection and detailed information",
-    "slide3_title": "Personalized Experience",
-    "slide3_desc": "Rich customization options and theme switching"
   },
   "flash": {
     "tab_unlock": "Unlock Tools",
@@ -237,7 +232,9 @@
     "status_checking": "Checking",
     "status_flashing": "Flashing",
     "status_success": "Success",
-    "status_failed": "Failed"
+    "status_failed": "Failed",
+    "fastboot_mode_required_title": "Device not in Fastboot Mode",
+    "fastboot_mode_required_desc": "This feature is only available in Fastboot or Fastbootd mode. Please reboot your device and try again."
   },
   "online": {
     "app_store": "App Store",
@@ -264,10 +261,12 @@
     "app_manager": "App Manager",
     "file_manager": "File Manager",
     "fastboot_mode_title": "Device Not in ADB Mode",
-    "fastboot_mode_desc": "Please reboot device to System or Recovery mode to use ADB features"
+    "fastboot_mode_desc": "Please reboot device to System or Recovery mode to use ADB features",
+    "adb_mode_required_title": "Device not in ADB Mode",
+    "adb_mode_required_desc": "This feature is only available in System or Recovery mode. Please reboot your device and try again."
   },
   "device_control": {
-    "unknown":"Unknown",
+    "unknown": "Unknown",
     "power_management": "Power Management",
     "screen_timeout": "Screen Timeout",
     "stay_on": "Stay On While Plugged In",
@@ -661,7 +660,8 @@
     "unknown_file": "Unknown file.apk",
     "install_success": "Installation Successful",
     "install_failed_with_error": "Installation Failed: {{error}}",
-    "error_occured": "Error occurred during APK installation: {{error}}"
+    "error_occured": "Error occurred during APK installation: {{error}}",
+    "history": "History"
   },
   "app_manager": {
     "card_title": "App Manager",
@@ -726,6 +726,8 @@
     "traditional_loading_tip": "Currently using traditional loading (one-time display)",
     "unknown_version": "Unknown Version",
     "version_code_tip": "Version Code: {{code}}",
+    "version_name": "Version Name",
+    "version_code": "Version Code",
     "select_save_dir": "Select Save Directory",
     "select_import_file": "Select App List File",
     "export_cancelled": "Export cancelled",
@@ -978,5 +980,13 @@
     "executing": "Executing...",
     "close": "Close",
     "cancel": "Cancel"
+  },
+  "app_properties": {
+    "detail_info": "Detailed Info",
+    "is_system_app": "Is System App",
+    "apk_path": "APK Path",
+    "install_time": "Install Time",
+    "update_time": "Update Time",
+    "permissions": "Permissions"
   }
 }

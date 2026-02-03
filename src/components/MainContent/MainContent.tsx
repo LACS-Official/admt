@@ -640,6 +640,7 @@ const MainContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentView, setCurrentView, config, setStatusBarMessage } = useAppStore();
   const { selectedDevice, devices, selectDevice } = useDeviceStore();
+  const { showConfetti } = useThemeStore();
 
   const tabs = [
     {
@@ -799,9 +800,9 @@ const MainContent: React.FC = () => {
     console.log('🏢 MainContent useEffect 被触发');
     trackMainContentEntry();
 
-    // 首次进入应用的庆祝彩带 (如果刚刚同意了隐私政策)
+    // 首次进入应用的庆祝彩带 (如果刚刚同意了隐私政策，且开启了设置)
     const celebrationDone = sessionStorage.getItem('app_entrance_celebration_done');
-    if (!celebrationDone) {
+    if (!celebrationDone && showConfetti) {
       const duration = 2 * 1000;
       const end = Date.now() + duration;
 
@@ -968,18 +969,6 @@ const MainContent: React.FC = () => {
                   </Text>
                 </div>
               </div>
-            </div>
-
-            {/* 下半部分：设备选择区域（保持一致性） */}
-            <div 
-                className={styles.deviceSelectCard}
-              >
-                <div className={styles.deviceSelectCardContent}>
-                  <div className={styles.deviceSelectCardTitle}>
-                     {t('main.no_device_connected')}
-                  </div>
-                </div>
-                <Warning24Regular />
             </div>
           </div>
         </div>

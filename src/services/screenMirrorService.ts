@@ -88,12 +88,17 @@ export class ScreenMirrorService {
       }
 
       return session;
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         `Failed to start screen mirror for ${deviceSerial}:`,
         error,
       );
-      throw new Error(`启动投屏失败: ${error}`);
+      // 处理错误对象，避免 [object Object]
+      const errorMessage =
+        typeof error === "object"
+          ? error.Process || error.Device || JSON.stringify(error)
+          : error;
+      throw new Error(`启动投屏失败: ${errorMessage}`);
     }
   }
 

@@ -20,13 +20,15 @@
     "carousel_speed_desc": "调整侧边栏轮播图自动切换的间隔时间",
     "fast": "快 (2秒)",
     "slow": "慢 (15秒)",
+    "confetti_entrance": "首页进入彩带",
+    "confetti_entrance_desc": "每次进入主页时播放庆祝彩带动画",
     "about_app": "关于软件",
     "app_name": "玩机管家",
     "app_desc": "基于Tauri2框架开发的现代化Android设备免费玩机工具，体积小，功能强大",
     "check_update": "检查更新",
     "checking_update": "检查中...",
     "user_manual": "用户手册",
-    "feedback": "问题反馈",
+    "feedback": "意见/反馈",
     "official_website": "官方网站",
     "team_info": "开发团队信息",
     "team_name": "领创工作室 LACS",
@@ -118,7 +120,8 @@
     "all": "全部",
     "next": "下一步",
     "prev": "上一步",
-    "done": "完成"
+    "done": "完成",
+    "clear": "清除"
   },
   "tour": {
     "start_tour": "应用操作引导",
@@ -199,14 +202,6 @@
     "offline": "离线",
     "unknown": "未知模式"
   },
-  "carousel": {
-    "slide1_title": "欢迎使用",
-    "slide1_desc": "现代化的Android设备管理工具",
-    "slide2_title": "强大的设备管理",
-    "slide2_desc": "实时设备检测、详细信息展示",
-    "slide3_title": "个性化设置体验",
-    "slide3_desc": "丰富的自定义选项和主题切换"
-  },
   "flash": {
     "tab_unlock": "解锁工具",
     "tab_image": "镜像刷入",
@@ -270,7 +265,9 @@
     "status_checking": "检查中",
     "status_flashing": "刷入中",
     "status_success": "成功",
-    "status_failed": "失败"
+    "status_failed": "失败",
+    "fastboot_mode_required_title": "设备未处于 Fastboot 模式",
+    "fastboot_mode_required_desc": "此功能仅在 Fastboot 或 Fastbootd 模式下可用，请在设备重启后重试。"
   },
 
   "online": {
@@ -286,7 +283,9 @@
     "app_manager": "应用管理",
     "file_manager": "文件管理",
     "fastboot_mode_title": "设备未在 adb 模式",
-    "fastboot_mode_desc": "请将设备重启到系统或Recovery模式以使用ADB功能"
+    "fastboot_mode_desc": "请将设备重启到系统或Recovery模式以使用ADB功能",
+    "adb_mode_required_title": "设备未处于 ADB 模式",
+    "adb_mode_required_desc": "此功能仅在系统模式或 Recovery 模式下可用，请在设备重启后重试。"
   },
   "device_control": {
     "power_management": "电源管理",
@@ -679,7 +678,8 @@
     "unknown_file": "未知文件.apk",
     "install_success": "安装成功",
     "install_failed_with_error": "安装失败: {{error}}",
-    "error_occured": "安装 APK 时出错: {{error}}"
+    "error_occured": "安装 APK 时出错: {{error}}",
+    "history": "历史记录"
   },
   "app_manager": {
     "card_title": "应用管理",
@@ -744,6 +744,8 @@
     "traditional_loading_tip": "当前使用传统加载（一次性显示）",
     "unknown_version": "未知版本",
     "version_code_tip": "版本代码: {{code}}",
+    "version_name": "版本名称",
+    "version_code": "版本代码",
     "select_save_dir": "选择保存目录",
     "select_import_file": "选择应用列表文件",
     "export_cancelled": "已取消导出",
@@ -997,5 +999,13 @@
     "executing": "正在执行...",
     "close": "关闭",
     "cancel": "取消"
+  },
+  "app_properties": {
+    "detail_info": "详情信息",
+    "is_system_app": "是否系统应用",
+    "apk_path": "安装包路径",
+    "install_time": "安装时间",
+    "update_time": "更新时间",
+    "permissions": "权限列表"
   }
 }

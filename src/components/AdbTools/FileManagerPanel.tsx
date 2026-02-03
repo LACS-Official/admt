@@ -55,6 +55,8 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "react-i18next";
+import { DeviceInfo } from "../../types/device";
+
 
 const useStyles = makeStyles({
   container: {
@@ -214,12 +216,31 @@ interface FileItem {
   path: string;
 }
 
-const FileManagerPanel: React.FC = () => {
+interface FileManagerPanelProps {
+  device: DeviceInfo | null;
+  onAdbRequired: () => void;
+}
+
+const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequired }) => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { selectedDevice } = useDeviceStore();
+  const { devices } = useDeviceStore();
   const { deviceService } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
+
+  const checkMode = useCallback(() => {
+    if (!device) {
+       setStatusBarMessage({ type: "warning", message: t('file_manager.select_device_first') });
+       return false;
+    }
+    if (device.connected && device.mode !== 'sys' && device.mode !== 'rec') {
+      onAdbRequired();
+      return false;
+    }
+    return true;
+  }, [device, onAdbRequired, t]);
+
+
 
   const [currentPath, setCurrentPath] = useState<string>('/storage/emulated/0/');
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -240,13 +261,14 @@ const FileManagerPanel: React.FC = () => {
   ];
 
   const loadFiles = useCallback(async (path: string) => {
+    if (!checkMode()) return;
     console.log('loadFiles 被调用，路径:', path);
-    if (!selectedDevice) {
+    if (!device) {
       console.log('没有选中的设备，退出');
       return;
     }
 
-    console.log('开始加载文件，设备:', selectedDevice.serial);
+    console.log('开始加载文件，设备:', device.serial);
     setIsLoading(true);
     try {
       // 规范化路径，处理符号链接
@@ -256,7 +278,8 @@ const FileManagerPanel: React.FC = () => {
         normalizedPath = '/sdcard';
       }
       
-      const result = await deviceService.listDeviceFiles(selectedDevice.serial, normalizedPath);
+      const result = await deviceService.listDeviceFiles(device.serial, normalizedPath);
+
       if (Array.isArray(result)) {
         const fileItems: FileItem[] = result
           .filter(file => {
@@ -342,7 +365,7 @@ const FileManagerPanel: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDevice, deviceService, setStatusBarMessage, sortMode]);
+  }, [device, deviceService, setStatusBarMessage, t, sortMode]);
 
   // 排序选择变化
   const handleSortChange = (_: any, data: { optionValue: string }) => {
@@ -467,10 +490,11 @@ const FileManagerPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    if (selectedDevice) {
+    if (device) {
       loadFiles(currentPath);
     }
-  }, [selectedDevice, loadFiles, currentPath]);
+  }, [device, loadFiles, currentPath]);
+
 
   const handleNavigateUp = () => {
     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
@@ -479,15 +503,16 @@ const FileManagerPanel: React.FC = () => {
 
   // 处理真实路径显示
   const getRealPath = useCallback(async (path: string) => {
-    if (!selectedDevice) return path;
+    if (!device) return path;
     
     try {
       // 对于 /sdcard，我们获取它的真实路径
       if (path === '/sdcard') {
         const result = await deviceService.executeAdbCommand(
-          selectedDevice.serial,
+          device.serial,
           'shell readlink -f /sdcard'
         );
+
         if (result.success && result.output.trim()) {
           return result.output.trim();
         }
@@ -496,7 +521,7 @@ const FileManagerPanel: React.FC = () => {
       console.log('获取真实路径失败:', error);
     }
     return path;
-  }, [selectedDevice, deviceService]);
+  }, [device, deviceService]);
 
   const handleNavigateToPath = (path: string) => {
     loadFiles(path);
@@ -515,11 +540,11 @@ const FileManagerPanel: React.FC = () => {
 
     // 兜底：后端可能将目录误判为文件，主动检测
     try {
-      if (!selectedDevice) return;
+      if (!device) return;
       const probe = `test -d "${file.path}" && echo DIR || echo FILE`;
       console.log('进行目录检测:', probe);
       const res = await deviceService.executeAdbCommand(
-        selectedDevice.serial,
+        device.serial,
         'shell',
         ['sh', '-lc', probe],
         15
@@ -555,11 +580,12 @@ const FileManagerPanel: React.FC = () => {
   };
 
   const handleDownloadFile = async (file: FileItem) => {
-    if (!selectedDevice) return;
+    if (!checkMode()) return;
+    if (!device) return;
 
     // 检查设备是否处于离线状态
-    console.log('单文件传出设备模式检查:', selectedDevice.mode, '设备信息:', selectedDevice);
-    if (selectedDevice.mode === 'offline') {
+    console.log('单文件传出设备模式检查:', device.mode, '设备信息:', device);
+    if (device.mode === 'offline') {
       setStatusBarMessage({
         type: "error",
         message: t('file_manager.msg_offline'),
@@ -586,8 +612,8 @@ const FileManagerPanel: React.FC = () => {
         message: t('file_manager.msg_pulling', { name: file.name }),
       });
 
-      console.log('尝试拉取单个文件:', file.path, '到:', localPath, '设备状态:', selectedDevice.mode);
-      const result = await deviceService.pullFile(selectedDevice.serial, file.path, localPath);
+      console.log('尝试拉取单个文件:', file.path, '到:', localPath, '设备状态:', device.mode);
+      const result = await deviceService.pullFile(device.serial, file.path, localPath);
       if (result.success) {
         setStatusBarMessage({
           type: "success",
@@ -600,7 +626,7 @@ const FileManagerPanel: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('单文件传出失败:', error, '设备状态:', selectedDevice.mode);
+      console.error('单文件传出失败:', error, '设备状态:', device.mode);
       setStatusBarMessage({
         type: "error",
         message: t('file_manager.msg_pull_fail', { error }),
@@ -609,11 +635,12 @@ const FileManagerPanel: React.FC = () => {
   };
 
   const handleBatchDownload = async () => {
-    if (!selectedDevice || selectedFiles.size === 0) return;
+    if (!checkMode()) return;
+    if (!device || selectedFiles.size === 0) return;
 
     // 检查设备是否处于离线状态
-    console.log('设备模式检查:', selectedDevice.mode, '设备信息:', selectedDevice);
-    if (selectedDevice.mode === 'offline') {
+    console.log('设备模式检查:', device.mode, '设备信息:', device);
+    if (device.mode === 'offline') {
       setStatusBarMessage({
         type: "error",
         message: t('file_manager.msg_offline'),
@@ -646,15 +673,16 @@ const FileManagerPanel: React.FC = () => {
         if (file.type === 'file') {
           try {
             const localPath = await join(downloadDir, file.name);
-            console.log('尝试拉取文件:', file.path, '到:', localPath, '设备状态:', selectedDevice.mode);
-            const result = await deviceService.pullFile(selectedDevice.serial, file.path, localPath);
+            console.log('尝试拉取文件:', file.path, '到:', localPath, '设备状态:', device.mode);
+            const result = await deviceService.pullFile(device.serial, file.path, localPath);
+
             if (result.success) {
               successCount++;
             } else {
               failCount++;
             }
           } catch (error) {
-            console.error('文件拉取失败:', error, '设备状态:', selectedDevice.mode);
+            console.error('文件拉取失败:', error, '设备状态:', device.mode);
             failCount++;
           }
         }
@@ -705,38 +733,49 @@ const FileManagerPanel: React.FC = () => {
   };
 
   const handleUploadFile = async () => {
-    if (!selectedDevice) return;
-
+    if (!checkMode()) return;
+    if (!device) return;
     try {
-      // Open file picker dialog
       const selected = await open({
-        multiple: false,
+        multiple: true,
         filters: [{
           name: t('file_manager.all_files'),
           extensions: ['*']
         }]
       });
 
-      if (selected && typeof selected === 'string') {
+      if (selected && Array.isArray(selected)) {
         setIsUploading(true);
         setStatusBarMessage({
           type: "info",
           message: t('file_manager.msg_uploading'),
         });
 
-        const result = await deviceService.pushFile(selectedDevice.serial, selected, currentPath);
-        if (result.success) {
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const filePath of selected) {
+          const result = await deviceService.pushFile(device.serial, filePath, currentPath);
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        }
+
+        if (successCount > 0) {
           setStatusBarMessage({
             type: "success",
-            message: t('file_manager.msg_upload_success'),
+            message: t('file_manager.msg_upload_success_batch', { success: successCount, fail: failCount }),
           });
           loadFiles(currentPath); // Refresh file list
-        } else {
+        } else if (selected.length > 0) {
           setStatusBarMessage({
             type: "error",
-            message: t('file_manager.msg_upload_fail', { error: result.error || t('common.unknown') }),
+            message: t('file_manager.msg_upload_fail', { error: t('common.fail') }),
           });
         }
+
       }
     } catch (error) {
       setStatusBarMessage({
@@ -786,7 +825,7 @@ const FileManagerPanel: React.FC = () => {
     );
   };
 
-  if (!selectedDevice) {
+  if (!device) {
     return (
       <div className={styles.container}>
         <div className={styles.emptyState}>
@@ -796,6 +835,7 @@ const FileManagerPanel: React.FC = () => {
       </div>
     );
   }
+
 
   return (
     <div className={styles.container}>

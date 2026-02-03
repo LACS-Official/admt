@@ -14,6 +14,8 @@ interface ThemeState {
   setContentDensity: (density: 'comfortable' | 'compact') => void;
   cornerRadius: 'small' | 'medium' | 'large';
   setCornerRadius: (radius: 'small' | 'medium' | 'large') => void;
+  showConfetti: boolean;
+  setShowConfetti: (show: boolean) => void;
   subscribeToStorageChanges: () => () => void; // 返回清理函数
 }
 
@@ -35,6 +37,8 @@ export const useThemeStore = create<ThemeState>()(
       setContentDensity: (density: 'comfortable' | 'compact') => set({ contentDensity: density }),
       cornerRadius: 'medium',
       setCornerRadius: (radius: 'small' | 'medium' | 'large') => set({ cornerRadius: radius }),
+      showConfetti: true,
+      setShowConfetti: (show: boolean) => set({ showConfetti: show }),
       subscribeToStorageChanges: () => {
         // 监听storage变化事件，实现跨页面主题同步
         const handleStorageChange = (event: StorageEvent) => {
@@ -57,6 +61,9 @@ export const useThemeStore = create<ThemeState>()(
               }
               if (newState.state.cornerRadius !== currentState.cornerRadius) {
                   set({ cornerRadius: newState.state.cornerRadius });
+              }
+              if (newState.state.showConfetti !== currentState.showConfetti) {
+                  set({ showConfetti: newState.state.showConfetti });
               }
             } catch (error) {
               console.error('解析主题存储数据失败:', error);

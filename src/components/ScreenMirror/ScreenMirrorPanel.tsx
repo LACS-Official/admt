@@ -4,14 +4,19 @@ import {
   Text,
 } from "@fluentui/react-components";
 import {
+  Code24Regular,
   Phone24Regular,
+  Settings24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
+import { useDeviceService } from "../../services/deviceService";
+import { useAppStore } from "../../stores/appStore";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
 import { ScreenMirrorDevice } from "../../types/screenMirror";
 import ScreenMirrorService from "../../services/screenMirrorService";
 import MirrorDisplayCard from "./MirrorDisplayCard";
 import MirrorControlCard from "./MirrorControlCard";
+import { DeviceInfo } from "../../types/device";
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
@@ -74,7 +79,12 @@ const useStyles = makeStyles({
   },
 });
 
-const ScreenMirrorPanel: React.FC = () => {
+interface ScreenMirrorPanelProps {
+  device: DeviceInfo | null;
+  onAdbRequired: () => void;
+}
+
+const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequired }) => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { devices } = useDeviceStore();
@@ -92,6 +102,7 @@ const ScreenMirrorPanel: React.FC = () => {
     removeActiveSession,
     canStartMirroring,
     isDeviceStreaming,
+    handleProcessTerminated,
   } = useScreenMirrorStore();
 
   const [supportedDevices, setSupportedDevices] = useState<ScreenMirrorDevice[]>([]);
@@ -131,9 +142,12 @@ const ScreenMirrorPanel: React.FC = () => {
     }
 
     const prepareDevicesForMirroring = async () => {
+      // 在投屏专区，如果选中的设备不是 ADB 模式且试图操作，我们需要拦截
+      // 但在这里我们先同步所有已连接设备到支持列表
       if (connectedDevices.length === 0) {
         setSupportedDevices([]);
         lastCheckedDevicesRef.current = '';
+        setLoading(false);
         return;
       }
 
@@ -175,6 +189,13 @@ const ScreenMirrorPanel: React.FC = () => {
   const handleStartMirror = async (device: ScreenMirrorDevice) => {
     if (!device || !canStartMirroring(device.serial)) return;
 
+    // 检查设备是否处于 ADB 模式
+    const realDevice = connectedDevices.find(d => d.serial === device.serial);
+    if (realDevice && realDevice.mode !== 'sys' && realDevice.mode !== 'rec') {
+      onAdbRequired();
+      return;
+    }
+
     // 检查设备是否已经有正在投屏的会话
     const existingSession = activeSessions.find(s => s.deviceSerial === device.serial && s.status === 'streaming');
     if (existingSession) {
@@ -186,13 +207,21 @@ const ScreenMirrorPanel: React.FC = () => {
     setError(null);
 
     try {
-      const session = await ScreenMirrorService.startMirror(device.serial, config);
+      const session = await ScreenMirrorService.startMirror(device.serial, config, (sessionId) => {
+        handleProcessTerminated(sessionId);
+        // 同时调用后端停止命令以确保状态清理
+        ScreenMirrorService.stopMirror(device.serial).catch(console.error);
+      });
       addActiveSession(session);
       console.log("Screen mirror started:", session);
     } catch (error: any) {
       console.error("Failed to start screen mirror:", error);
       // 提取详细的错误信息
-      const errorMessage = typeof error === 'object' ? (error.Process || error.Device || JSON.stringify(error)) : error;
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' 
+            ? (error.Process || error.Device || JSON.stringify(error)) 
+            : String(error));
       setError(t('mirror.start_failed', { error: errorMessage }));
     } finally {
       setLoading(false);
@@ -268,7 +297,7 @@ const ScreenMirrorPanel: React.FC = () => {
         </div>
       )}
 
-      {connectedDevices.length === 0 ? (
+      {false ? (
         <div className={styles.noDevice}>
           <Phone24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
           <Text size={400}>{t('mirror.no_device_title')}</Text>

@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { admtLogo512 } from '../../assets/icons';
+import {wechatpay, alipay} from '../../assets/icons';
 import {
   Button,
   Checkbox,
@@ -220,6 +221,58 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
     border: `1px solid ${tokens.colorNeutralStroke2}`,
   },
+  sponsorshipLeftPanel: {
+    width: '45%',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: tokens.spacingHorizontalXL,
+    gap: tokens.spacingVerticalL,
+    borderRight: `1px solid rgba(0, 0, 0, 0.05)`,
+    '@media (prefers-color-scheme: dark)': {
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        borderRight: `1px solid rgba(255, 255, 255, 0.05)`,
+    }
+  },
+  qrImage: {
+    width: '220px',
+    height: '220px',
+    borderRadius: '16px',
+    objectFit: 'cover',
+    border: `4px solid ${tokens.colorNeutralBackground1}`,
+    transition: 'transform 0.3s ease',
+    ':hover': {
+      transform: 'scale(1.05)',
+    }
+  },
+  sponsorshipContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalL,
+    height: '100%',
+    justifyContent: 'center',
+  },
+  sponsorshipTitle: {
+    fontSize: tokens.fontSizeHero700,
+    fontWeight: tokens.fontWeightBold,
+    color: tokens.colorBrandForeground1,
+    marginBottom: tokens.spacingVerticalS,
+  },
+  sponsorshipDescription: {
+    fontSize: tokens.fontSizeBase400,
+    lineHeight: '1.6',
+    color: tokens.colorNeutralForeground2,
+  },
+  highlightBox: {
+    padding: tokens.spacingHorizontalL,
+    paddingBlock: tokens.spacingVerticalL,
+    backgroundColor: tokens.colorBrandBackground2,
+    borderRadius: tokens.borderRadiusLarge,
+    border: `1px solid ${tokens.colorBrandStroke2}`,
+    marginTop: tokens.spacingVerticalXL,
+  }
 });
 
 interface PrivacyConsentDialogProps {
@@ -236,8 +289,19 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
   const styles = useStyles();
   const { t, i18n } = useTranslation();
   const [acceptedAll, setAcceptedAll] = useState(false);
+  const [step, setStep] = useState<'privacy' | 'sponsorship'>('privacy');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const { config, updateConfig } = useAppStore();
+  const celebrationIntervalRef = React.useRef<any>(null);
+
+  // 组件卸载时清理定时器
+  React.useEffect(() => {
+    return () => {
+      if (celebrationIntervalRef.current) {
+        clearInterval(celebrationIntervalRef.current);
+      }
+    };
+  }, []);
 
   const {
     acceptPrivacyPolicy,
@@ -249,10 +313,12 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
 
   const handleAccept = () => {
     if (!acceptedAll) {
-      // Shake animation trigger could go here
       return;
     }
+    setStep('sponsorship');
+  };
 
+  const handleFinalAccept = () => {
     acceptPrivacyPolicy();
     acceptUserAgreement();
     acceptDataCollection();
@@ -264,7 +330,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
     // 延迟一点时间再调用 onAccept，让用户能看到烟花开始
     setTimeout(() => {
         onAccept();
-    }, 500);
+    }, 1500);
   };
 
   const fireCelebration = () => {
@@ -280,7 +346,9 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
       const timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {
-        return clearInterval(interval);
+        clearInterval(interval);
+        celebrationIntervalRef.current = null;
+        return;
       }
 
       const particleCount = 50 * (timeLeft / duration);
@@ -306,6 +374,8 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
         });
       }
     }, 250);
+    
+    celebrationIntervalRef.current = interval;
   };
 
   const handleReject = async () => {
@@ -381,158 +451,283 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
               transition={{ type: "spring", duration: 0.6, bounce: 0.3 }}
               className={styles.glassCard}
             >
+              {/* 固定左侧面板结构 */}
               <div className={styles.leftPanel}>
-                 <motion.img 
-                    src={admtLogo512} 
-                    alt="Logo" 
-                    className={styles.appIconImage}
-                    initial={{ y: -20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                 />
-                 <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                 >
-                     <Text weight="bold" size={600} align="center" block>{t('welcome.app_name')}</Text>
-                     <Text size={200} align="center" style={{ color: tokens.colorNeutralForeground3, marginTop: '8px' }} block>
-                         {t('welcome.app_subtitle')}
-                     </Text>
-                 </motion.div>
-                 
-                 <div className={styles.versionTag}>
-                    v1.2.0
-                 </div>
+                <AnimatePresence mode="wait">
+                  {step === 'privacy' ? (
+                    <motion.div
+                      key="privacy-left"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}
+                    >
+                      <motion.img 
+                        src={admtLogo512} 
+                        alt="Logo" 
+                        className={styles.appIconImage}
+                        initial={{ y: -20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                      >
+                        <Text weight="bold" size={600} align="center" block>{t('welcome.app_name')}</Text>
+                        <Text size={200} align="center" style={{ color: tokens.colorNeutralForeground3, marginTop: '8px' }} block>
+                          {t('welcome.app_subtitle')}
+                        </Text>
+                      </motion.div>
+                      <div className={styles.versionTag}>
+                        领创工作室全栈开发
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="sponsorship-left"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: tokens.spacingVerticalL, width: '100%' }}
+                    >
+                      <Text className={styles.sponsorshipTitle} block>支付宝 ↓</Text>
+                       <motion.img 
+                          src={alipay} 
+                          alt="Alipay" 
+                          className={styles.qrImage}
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: 0.2 }}
+                       />
+                       {/* 分割线 */}
+                       
+                       <Text className={styles.sponsorshipTitle} block>微信 ↓</Text>
+                       <motion.img 
+                          src={wechatpay} 
+                          alt="Wechat" 
+                          className={styles.qrImage}
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: 0.4 }}
+                       />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
+              {/* 固定右侧面板结构 */}
               <div className={styles.rightPanel}>
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <Text className={styles.welcomeTitle} block>{t('welcome.title')}</Text>
-                     <Text className={styles.welcomeSubtitle} block>
-                         {t('welcome.subtitle')}
-                     </Text>
+                <AnimatePresence mode="wait">
+                  {step === 'privacy' ? (
+                    <motion.div
+                      key="privacy-right"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                    >
+                      <Text className={styles.welcomeTitle} block>{t('welcome.title')}</Text>
+                      <Text className={styles.welcomeSubtitle} block>
+                        {t('welcome.subtitle')}
+                      </Text>
 
-                    <div className={styles.policyList}>
+                      <div className={styles.policyList}>
                         {policies.map((p, index) => (
-                            <motion.div 
-                                key={p.id}
-                                className={styles.policyItem}
-                                onClick={() => handlePolicyClick(p.url)}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4 + (index * 0.1) }}
-                            >
-                                <div className={styles.policyIconBox}>
-                                    {p.icon}
-                                </div>
-                                <div className={styles.policyInfo}>
-                                    <span className={styles.policyTitle}>{p.title}</span>
-                                </div>
-                            </motion.div>
+                          <motion.div 
+                            key={p.id}
+                            className={styles.policyItem}
+                            onClick={() => handlePolicyClick(p.url)}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.4 + (index * 0.1) }}
+                          >
+                            <div className={styles.policyIconBox}>
+                              {p.icon}
+                            </div>
+                            <div className={styles.policyInfo}>
+                              <span className={styles.policyTitle}>{p.title}</span>
+                            </div>
+                          </motion.div>
                         ))}
-                    </div>
+                      </div>
 
-                    <Divider />
+                      <Divider />
 
-                    <div className={styles.quickSettings}>
+                      <div className={styles.quickSettings}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Settings24Regular />
-                            <Text weight="semibold">{t('settings.title', '快速设置')}</Text>
+                          <Settings24Regular />
+                          <Text weight="semibold">{t('settings.title', '快速设置')}</Text>
                         </div>
                         
                         <div className={styles.settingRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Globe24Regular />
-                                <Label>{t('settings.interface_language')}</Label>
-                            </div>
-                            <Select 
-                                value={config.language} 
-                                onChange={(_, data) => {
-                                    updateConfig({ language: data.value as any });
-                                    i18n.changeLanguage(data.value);
-                                }}
-                                style={{ minWidth: '120px' }}
-                            >
-                                <option value="zh-CN">简体中文</option>
-                                <option value="zh-TW">繁体中文</option>
-                                <option value="en-US">English</option>
-                            </Select>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Globe24Regular />
+                            <Label>{t('settings.interface_language')}</Label>
+                          </div>
+                          <Select 
+                            value={config.language} 
+                            onChange={(_, data) => {
+                              updateConfig({ language: data.value as any });
+                              i18n.changeLanguage(data.value);
+                            }}
+                            style={{ minWidth: '120px' }}
+                          >
+                            <option value="zh-CN">简体中文</option>
+                            <option value="zh-TW">繁体中文</option>
+                            <option value="en-US">English</option>
+                          </Select>
                         </div>
 
                         <div className={styles.settingRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Play24Regular />
-                                <Label>通知音效</Label>
-                            </div>
-                            <Switch 
-                                checked={config.soundEnabled} 
-                                onChange={(_, data) => updateConfig({ soundEnabled: data.checked })} 
-                            />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Play24Regular />
+                            <Label>通知音效</Label>
+                          </div>
+                          <Switch 
+                            checked={config.soundEnabled} 
+                            onChange={(_, data) => updateConfig({ soundEnabled: data.checked })} 
+                          />
                         </div>
 
                         <div className={styles.settingRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ArrowMinimize24Regular />
-                                <Label>系统托盘</Label>
-                            </div>
-                            <Switch 
-                                checked={config.systemTrayEnabled} 
-                                onChange={async (_, data) => {
-                                    const checked = data.checked;
-                                    updateConfig({ systemTrayEnabled: checked });
-                                    try {
-                                        if (checked) {
-                                            await systemTrayManager.initialize({
-                                                systemTrayEnabled: true,
-                                                minimizeToTrayOnClose: config.minimizeToTrayOnClose
-                                            });
-                                        } else {
-                                            await systemTrayManager.updateConfig({
-                                                systemTrayEnabled: false,
-                                                minimizeToTrayOnClose: false
-                                            });
-                                        }
-                                    } catch (e) {
-                                        console.error(e);
-                                    }
-                                }} 
-                            />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ArrowMinimize24Regular />
+                            <Label>系统托盘</Label>
+                          </div>
+                          <Switch 
+                            checked={config.systemTrayEnabled} 
+                            onChange={async (_, data) => {
+                              const checked = data.checked;
+                              updateConfig({ systemTrayEnabled: checked });
+                              try {
+                                if (checked) {
+                                  await systemTrayManager.initialize({
+                                    systemTrayEnabled: true,
+                                    minimizeToTrayOnClose: config.minimizeToTrayOnClose
+                                  });
+                                } else {
+                                  await systemTrayManager.updateConfig({
+                                    systemTrayEnabled: false,
+                                    minimizeToTrayOnClose: false
+                                  });
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }} 
+                          />
                         </div>
-                    </div>
+                      </div>
 
-                    <div className={styles.footer}>
+                      <div className={styles.footer}>
                         <div className={styles.checkboxWrapper}>
-                            <Checkbox
-                                checked={acceptedAll}
-                                onChange={(_, data) => setAcceptedAll(data.checked === true)}
-                                label={<Text weight="medium">{t('legal.consent_checkbox')}</Text>}
-                            />
+                          <Checkbox
+                            checked={acceptedAll}
+                            onChange={(_, data) => setAcceptedAll(data.checked === true)}
+                            label={<Text weight="medium">{t('legal.consent_checkbox')}</Text>}
+                          />
                         </div>
                         
                         <div className={styles.actionButtons}>
-                            <Button 
-                                appearance="secondary"
-                                onClick={() => setShowExitConfirm(true)}
-                            >
-                                {t('legal.exit_browse')}
-                            </Button>
-                            <Button 
-                                appearance="primary"
-                                size="large"
-                                onClick={handleAccept}
-                                disabled={!acceptedAll}
-                                icon={<CheckmarkCircle24Regular />}
-                            >
-                                {t('legal.agree_continue')}
-                            </Button>
+                          <Button 
+                            appearance="secondary"
+                            onClick={() => setShowExitConfirm(true)}
+                          >
+                            {t('legal.exit_browse')}
+                          </Button>
+                          <Button 
+                            appearance="primary"
+                            size="large"
+                            onClick={handleAccept}
+                            disabled={!acceptedAll}
+                            icon={<CheckmarkCircle24Regular />}
+                          >
+                            {t('legal.agree_continue')}
+                          </Button>
                         </div>
-                    </div>
-                </motion.div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="sponsorship-right"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className={styles.sponsorshipContent}
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                      >
+                        <Text className={styles.sponsorshipTitle} block>注意！使用本软件需要诚信捐赠￥6元+</Text>
+                        <Text className={styles.sponsorshipDescription} block>
+                          玩机管家是一款由<b>领创工作室</b> 维护的免费项目
+                          我们的目标是为 Android 玩家提供强大、简洁、优雅的调试工具箱。
+                        </Text>
+                      </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className={styles.highlightBox}
+                      >
+                        <Text weight="semibold" size={400} block style={{ marginBottom: '8px' }}>
+                          请确保您已有捐赠意愿，这不是一种购买行为
+                        </Text>
+                        <Text block style={{ color: tokens.colorNeutralForeground2 }}>
+                          采取诚信付款机制，付款后将获得使用权
+                          <br />
+                          <b>若有捐赠意愿但暂无捐赠能力，可以暂不捐赠</b>
+                          <br />
+                          待有能力那天再来捐赠即可
+                        </Text>
+                      </motion.div>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className={styles.highlightBox}
+                      >
+                        <Text weight="semibold" size={400} block style={{ marginBottom: '8px' }}>
+                          为什么需要您的支持？
+                        </Text>
+                        <Text block style={{ color: tokens.colorNeutralForeground2 }}>
+                          赞助资金将直接用于服务器运营、官网维护以及支持开发者的持续开发热情。
+                          无论金额大小，您的每一份支持都是我们前进的动力。
+                        </Text>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className={styles.highlightBox}
+                      >
+                        <Text weight="semibold" size={400} block style={{ marginBottom: '8px' }}>
+                          捐赠后即视为同意本页内容
+                        </Text>
+                        <Text block style={{ color: tokens.colorNeutralForeground2 }}>
+                          付款后概不退款，请您了解
+                        </Text>
+                      </motion.div>
+
+                      <div className={styles.footer} style={{ marginTop: 'auto' }}>
+                        <div className={styles.actionButtons}>
+                          <Button 
+                            appearance="primary"
+                            size="large"
+                            onClick={handleFinalAccept}
+                            icon={<CheckmarkCircle24Regular />}
+                          >
+                            我已诚信付款，进入应用
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </div>

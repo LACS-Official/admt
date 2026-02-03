@@ -123,7 +123,9 @@ const DisplaySettingsPanel: React.FC = () => {
       contentDensity,
       setContentDensity,
       cornerRadius,
-      setCornerRadius
+      setCornerRadius,
+      showConfetti,
+      setShowConfetti
   } = useThemeStore();
   
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -303,6 +305,20 @@ const DisplaySettingsPanel: React.FC = () => {
               <Switch
                 checked={enableAnimations}
                 onChange={(_, data) => setEnableAnimations(data.checked === true)}
+              />
+            </div>
+
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <Text weight="semibold">{t('settings.confetti_entrance')}</Text>
+                <br />
+                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                  {t('settings.confetti_entrance_desc')}
+                </Text>
+              </div>
+              <Switch
+                checked={showConfetti}
+                onChange={(_, data) => setShowConfetti(data.checked === true)}
               />
             </div>
 

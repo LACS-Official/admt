@@ -75,10 +75,11 @@ const useStyles = makeStyles({
 });
 
 interface KeySimulationCardProps {
-  device: DeviceInfo;
+  device: DeviceInfo | null;
+  onAdbRequired: () => void;
 }
 
-const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
+const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequired }) => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { deviceService } = useDeviceService();
@@ -89,11 +90,23 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
   const { setStatusBarMessage } = useAppStore();
 
   const executeCommand = async (commandId: string, command: string[], description: string) => {
+    if (!device) {
+      setStatusBarMessage({
+        type: "warning",
+        message: t('unlock.select_device_first'),
+      });
+      return;
+    }
     if (!device.connected) {
       setStatusBarMessage({
         type: "error",
         message: t('device_control.msg_check_connection'),
       });
+      return;
+    }
+
+    if (device.mode !== "sys" && device.mode !== "rec") {
+      onAdbRequired();
       return;
     }
 
@@ -270,7 +283,7 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
     },
   ];
 
-  const isDeviceAvailable = device.connected && device.mode === "sys";
+  const isDeviceAvailable = device?.connected && device?.mode === "sys";
 
   return (
     <Card className={styles.card}>
@@ -287,7 +300,7 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device }) => {
               key={cmd.id}
               appearance="outline"
               className={styles.commandButton}
-              disabled={!isDeviceAvailable || executingCommand === cmd.id}
+              disabled={executingCommand === cmd.id}
               onClick={() => executeCommand(cmd.id, cmd.command, cmd.description)}
             >
               {executingCommand === cmd.id ? (

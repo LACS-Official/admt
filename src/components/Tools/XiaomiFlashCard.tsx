@@ -132,17 +132,20 @@ const useStyles = makeStyles({
 });
 
 interface XiaomiFlashCardProps {
-  device: DeviceInfo;
+  device: DeviceInfo | null;
+  onFastbootRequired: () => void;
 }
 
 type FlashStatus = "idle" | "checking" | "flashing" | "success" | "error";
 
-const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
+const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootRequired }) => {
   const styles = useStyles();
   useDeviceService();
   const { setFlashing } = useDeviceStore();
   const { config, updateConfig } = useAppStore();
+  const { setStatusBarMessage } = useAppStore();
   const { t } = useTranslation();
+
   
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [packageInfo, setPackageInfo] = useState<Record<string, unknown> | null>(null);
@@ -159,6 +162,24 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
   const [batchFileName, setBatchFileName] = useState<string>("");
   const [batchWorkingDirectory, setBatchWorkingDirectory] = useState<string>("");
   const [originalAutoDetect, setOriginalAutoDetect] = useState<boolean>(config.autoDetectDevices);
+
+  // 检查设备是否处于 Fastboot 或 Fastbootd 模式
+  const checkMode = () => {
+    if (!device) {
+       setStatusBarMessage({ type: "warning", message: t('unlock.select_device_first') });
+       return false;
+    }
+
+    // 检查模式：只能在 fastboot 或 fastbootd 模式下刷入
+    if (device.mode !== "fastboot" && device.mode !== "fastbootd") {
+      onFastbootRequired();
+      return false;
+    }
+
+    return true;
+  };
+
+
 
   const handleBatchDialogClose = () => {
     setBatchDialogOpen(false);
@@ -388,6 +409,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
                 <div className={styles.actions}>
                   <Text>{t('flash.xiaomi_step2')}</Text>
                   <Button appearance="primary" icon={<Play24Regular />} onClick={() => {
+                    if (!checkMode()) return;
                     setBatchDialogTitle(`${t('flash.flash_clean')} (flash_all.bat)`);
                     setBatchFileName("flash_all.bat");
                     setBatchWorkingDirectory(selectedFolderPath);
@@ -396,6 +418,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
                     {t('flash.flash_clean')}
                   </Button>
                   <Button appearance="secondary" icon={<Play24Regular />} onClick={() => {
+                    if (!checkMode()) return;
                     setBatchDialogTitle(`${t('flash.flash_keep')} (flash_all_except_storage.bat)`);
                     setBatchFileName("flash_all_except_storage.bat");
                     setBatchWorkingDirectory(selectedFolderPath);
@@ -404,6 +427,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device }) => {
                     {t('flash.flash_keep')}
                   </Button>
                   <Button appearance="outline" icon={<Play24Regular />} onClick={() => {
+                    if (!checkMode()) return;
                     setBatchDialogTitle(`${t('flash.flash_lock')} (flash_all_lock.bat)`);
                     setBatchFileName("flash_all_lock.bat");
                     setBatchWorkingDirectory(selectedFolderPath);
