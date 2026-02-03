@@ -5,19 +5,20 @@ import {
   Text,
 } from "@fluentui/react-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight24Regular, ChevronLeft24Regular } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { Banner } from "../../types/app";
+import { bannerService } from "../../services/bannerService";
 
 const useStyles = makeStyles({
   carousel: {
     position: "relative",
     width: "100%",
-    height: "120px", // Slightly taller for better spacing
+    height: "120px", 
     overflow: "hidden",
-    borderRadius: "12px", // Increased radius for modern look
-    backgroundColor: "var(--colorNeutralBackground1)",
-    border: "1px solid var(--colorNeutralStroke2)",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)", // Soft shadow
+    borderRadius: "12px", 
+    backgroundColor: "transparent",
+    border: "none",
+    boxShadow: "none", 
   },
   slideContainer: {
     position: "absolute",
@@ -30,51 +31,34 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    // We'll apply the gradient via inline styles or motion component
-    color: "var(--colorNeutralForegroundOnBrand)",
+    color: "white",
     textAlign: "center",
     padding: "24px",
     boxSizing: "border-box",
+    cursor: "pointer",
+    backgroundSize: "contain",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "center",
+    transition: "transform 0.5s ease",
+    ":hover": {
+       // subtle zoom effect removed to avoid interference with drag
+    }
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.4))",
+    zIndex: 0,
   },
   slideText: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "8px",
     maxWidth: "80%",
     zIndex: 1,
-  },
-  navButton: {
-    position: "absolute",
-    top: "50%",
-    transform: "translateY(-50%)",
-    zIndex: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    backdropFilter: "blur(4px)",
-    border: "1px solid rgba(0,0,0,0.05)",
-    borderRadius: "50%",
-    width: "24px",
-    height: "24px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    color: "var(--colorNeutralForeground1)",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    transition: "all 0.2s cubic-bezier(0.33, 1, 0.68, 1)",
-    ":hover": {
-      backgroundColor: "white",
-      transform: "translateY(-50%) scale(1.1)",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-    },
-    ":active": {
-      transform: "translateY(-50%) scale(0.95)",
-    }
-  },
-  prevButton: {
-    left: "12px",
-  },
-  nextButton: {
-    right: "12px",
   },
   dotsContainer: {
     position: "absolute",
@@ -89,26 +73,19 @@ const useStyles = makeStyles({
     width: "6px",
     height: "6px",
     borderRadius: "50%",
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    backgroundColor: "rgba(255, 255, 255, 0.6)",
+    border: "1px solid rgba(0, 0, 0, 0.3)", // 加入黑色半透明边框
     cursor: "pointer",
     transition: "all 0.3s ease",
   },
   activeDot: {
     backgroundColor: "rgba(255, 255, 255, 1)",
+    border: "1px solid rgba(0, 0, 0, 0.5)", // 激活状态边框更明显
     transform: "scale(1.2)",
     width: "18px",
     borderRadius: "4px",
   }
 });
-
-interface CarouselSlide {
-  id: string;
-  title: string;
-  description: string;
-  gradient?: string;
-}
-
-
 
 const variants = {
   enter: (direction: number) => ({
@@ -130,68 +107,85 @@ const variants = {
   }),
 };
 
-/**
- * Experimenting with distrubuting `number` based index and direction.
- * We need to absolute position slides to animate them on top of each other.
- */
 const swipeConfidenceThreshold = 10000;
 const swipePower = (offset: number, velocity: number) => {
   return Math.abs(offset) * velocity;
 };
 
 interface CarouselProps {
-  slides?: CarouselSlide[];
   autoPlay?: boolean;
   autoPlayInterval?: number;
 }
 
 const CarouselComponent: React.FC<CarouselProps> = ({
-  slides: propSlides,
   autoPlay = true,
   autoPlayInterval = 8000,
 }) => {
   const styles = useStyles();
-  const { t } = useTranslation();
+  const { i18n } = useTranslation();
   
-  const defaultSlides: CarouselSlide[] = useMemo(() => [
-    {
-      id: "1",
-      title: t('carousel.slide1_title'),
-      description: t('carousel.slide1_desc'),
-      gradient: "linear-gradient(135deg, #0078d4 0%, #106ebe 50%, #005a9e 100%)",
-    },
-    {
-      id: "2",
-      title: t('carousel.slide2_title'),
-      description: t('carousel.slide2_desc'),
-      gradient: "linear-gradient(135deg, #16a085 0%, #27ae60 50%, #2ecc71 100%)",
-    },
-    {
-      id: "3",
-      title: t('carousel.slide3_title'),
-      description: t('carousel.slide3_desc'),
-      gradient: "linear-gradient(135deg, #8e44ad 0%, #9b59b6 50%, #e74c3c 100%)",
-    },
-  ], [t]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const slides = propSlides || defaultSlides;
+  useEffect(() => {
+    const fetchBanners = async () => {
+      setIsLoading(true);
+      try {
+        const data = await bannerService.getBanners(2);
+        if (data && data.length > 0) {
+          setBanners(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch banners:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBanners();
+  }, []);
 
   const [[page, direction], setPage] = useState([0, 0]);
 
-  // We only have 3 images, but we paginate them
-  const imageIndex = Math.abs(page % slides.length);
+  const imageIndex = banners.length > 0 ? Math.abs(page % banners.length) : 0;
 
   const paginate = useCallback((newDirection: number) => {
     setPage([page + newDirection, newDirection]);
   }, [page]);
 
   useEffect(() => {
-    if (!autoPlay) return;
+    if (!autoPlay || banners.length <= 1) return;
     const timer = setInterval(() => {
       paginate(1);
     }, autoPlayInterval);
     return () => clearInterval(timer);
-  }, [autoPlay, autoPlayInterval, paginate]);
+  }, [autoPlay, autoPlayInterval, paginate, banners.length]);
+
+  // If no banners, don't render anything - moved after all hooks
+  if (banners.length === 0) {
+    return null;
+  }
+
+  const handleSlideClick = (banner: Banner) => {
+    if (banner.linkUrl) {
+      if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+        import('@tauri-apps/plugin-shell').then(({ open }) => {
+          open(banner.linkUrl!);
+        }).catch(err => {
+          console.error("Failed to open link via Tauri shell:", err);
+          window.open(banner.linkUrl, '_blank');
+        });
+      } else {
+        window.open(banner.linkUrl, '_blank');
+      }
+    }
+  };
+
+  const currentSlide = banners[imageIndex];
+  const isEnglish = i18n.language.startsWith('en');
+
+  const displayTitle = (isEnglish && currentSlide.titleEn) ? currentSlide.titleEn : currentSlide.title;
+  const displayDesc = (isEnglish && currentSlide.descriptionEn) ? currentSlide.descriptionEn : currentSlide.description;
 
   return (
     <div className={styles.carousel}>
@@ -224,37 +218,54 @@ const CarouselComponent: React.FC<CarouselProps> = ({
         >
           <div
             className={styles.slideContent}
+            onClick={() => handleSlideClick(currentSlide)}
             style={{
-              background: slides[imageIndex].gradient || "linear-gradient(135deg, var(--colorBrandBackground) 0%, var(--colorBrandBackground2) 100%)",
+              background: "transparent",
+              padding: 0, 
             }}
           >
-           <div className={styles.slideText}>
-              <Text size={500} weight="bold" style={{ color: "white", textShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-                {slides[imageIndex].title}
+            {currentSlide.imgUrl && (
+              <img 
+                src={currentSlide.imgUrl} 
+                alt={displayTitle}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  pointerEvents: 'none'
+                }}
+              />
+            )}
+            {/* <div className={styles.overlay} /> */}
+            {/* <div className={styles.slideText}>
+              <Text size={500} weight="bold" style={{ color: "white", textShadow: "0 2px 4px rgba(0,0,0,0.3)" }}>
+                {displayTitle}
               </Text>
-              <Text size={300} style={{ color: "rgba(255, 255, 255, 0.95)" }}>
-                {slides[imageIndex].description}
+              <Text size={300} style={{ color: "rgba(255, 255, 255, 0.95)", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>
+                {displayDesc}
               </Text>
-            </div>
+            </div> */}
           </div>
         </motion.div>
       </AnimatePresence>
 
-      <div className={styles.dotsContainer}>
-        {slides.map((_, index) => (
-          <div
-            key={index}
-            className={mergeClasses(
-              styles.dot,
-              index === imageIndex && styles.activeDot
-            )}
-            onClick={() => {
-              const direction = index > imageIndex ? 1 : -1;
-              setPage([page + (index - imageIndex), direction]);
-            }}
-          />
-        ))}
-      </div>
+      {banners.length > 1 && (
+        <div className={styles.dotsContainer}>
+          {banners.map((_, index) => (
+            <div
+              key={index}
+              className={mergeClasses(
+                styles.dot,
+                index === imageIndex && styles.activeDot
+              )}
+              onClick={() => {
+                const direction = index > imageIndex ? 1 : -1;
+                setPage([page + (index - imageIndex), direction]);
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

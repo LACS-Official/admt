@@ -8,7 +8,6 @@ use crate::utils::execute_adb_command as utils_execute_adb_command;
 use chrono::Utc;
 use uuid::Uuid;
 
-
 /// 获取已安装应用列表（分批加载版本）
 #[tauri::command]
 pub async fn get_installed_apps_batch(
@@ -252,6 +251,52 @@ pub async fn get_installed_apps(serial: String, include_system: bool) -> Result<
     Ok(apps)
 }
 
+/// 翻译 ADB 错误消息
+fn translate_adb_error(error_msg: &str) -> String {
+    if error_msg.contains("INSTALL_FAILED_VERSION_DOWNGRADE") {
+        // 尝试从错误消息中提取版本号
+        // 格式通常为: Update version code 20251024 is older than current 20251223
+        if error_msg.contains("Update version code") && error_msg.contains("is older than current")
+        {
+            let parts: Vec<&str> = error_msg.split("is older than current").collect();
+            if parts.len() >= 2 {
+                let current_part = parts[1].trim().trim_end_matches(']').trim();
+                let update_part_raw = parts[0];
+                if let Some(code_pos) = update_part_raw.find("Update version code ") {
+                    let update_code = update_part_raw[code_pos + 20..].trim();
+                    return format!(
+                        "此版本 ({}) 低于已安装版本 ({})，不允许降级安装",
+                        update_code, current_part
+                    );
+                }
+                return format!("此版本低于已安装版本 ({})，不允许降级安装", current_part);
+            }
+        }
+        return "此版本低于已安装版本，不允许降级安装".to_string();
+    }
+
+    if error_msg.contains("INSTALL_FAILED_ALREADY_EXISTS") {
+        return "应用已存在".to_string();
+    }
+    if error_msg.contains("INSTALL_FAILED_INSUFFICIENT_STORAGE") {
+        return "存储空间不足".to_string();
+    }
+    if error_msg.contains("INSTALL_FAILED_INVALID_APK") {
+        return "无效的 APK 文件".to_string();
+    }
+    if error_msg.contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE") {
+        return "更新不兼容（签名不一致）".to_string();
+    }
+    if error_msg.contains("INSTALL_FAILED_OLDER_SDK") {
+        return "系统版本过低".to_string();
+    }
+    if error_msg.contains("INSTALL_FAILED_USER_RESTRICTED") {
+        return "安装被用户拒绝或系统权限受限（请在开发者选项中确认“USB安装”）".to_string();
+    }
+
+    error_msg.to_string()
+}
+
 /// 卸载应用
 #[tauri::command]
 pub async fn uninstall_app(
@@ -293,7 +338,18 @@ pub async fn install_apk(serial: String, apk_path: String, replace: bool) -> Res
     }
     args.push(&apk_path);
 
-    utils_execute_adb_command(&args, Some(120)).await
+    let mut result = utils_execute_adb_command(&args, Some(120)).await?;
+
+    if !result.success {
+        if let Some(err) = result.error.as_ref() {
+            result.error = Some(translate_adb_error(err));
+        } else if !result.output.is_empty() {
+            // 有时错误信息在 stdout 中
+            result.error = Some(translate_adb_error(&result.output));
+        }
+    }
+
+    Ok(result)
 }
 
 /// 获取APK信息
@@ -491,7 +547,14 @@ pub async fn batch_install_apks(serial: String, apk_paths: Vec<String>) -> Resul
                     batch_operation.completed_items += 1;
                 } else {
                     batch_operation.items[index].status = InstallStatus::Failed;
-                    batch_operation.items[index].message = Some(format!("安装失败: {}", apk_path));
+                    let err_msg = if let Some(err) = op_result.error {
+                        translate_adb_error(&err)
+                    } else if !op_result.output.is_empty() {
+                        translate_adb_error(&op_result.output)
+                    } else {
+                        "未知错误".to_string()
+                    };
+                    batch_operation.items[index].message = Some(err_msg);
                     batch_operation.failed_items += 1;
                 }
             }

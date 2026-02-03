@@ -20,6 +20,8 @@
     "carousel_speed_desc": "調整側邊欄輪播圖自動切換的間隔時間",
     "fast": "快 (2秒)",
     "slow": "慢 (15秒)",
+    "confetti_entrance": "首頁進入彩帶",
+    "confetti_entrance_desc": "每次進入主頁時播放慶祝彩帶動畫",
     "about_app": "關於軟件",
     "app_name": "玩機管家",
     "app_desc": "基於Tauri2框架開發的現代化Android設備免費玩機工具，體積小，功能強大",
@@ -115,7 +117,8 @@
     "no": "否",
     "unknown_error": "未知錯誤",
     "refresh_manual": "手動刷新",
-    "all": "全部"
+    "all": "全部",
+    "clear":"清除"
   },
   "main": {
     "no_device_title": "暫未檢測到設備連接",
@@ -178,14 +181,6 @@
     "unauthorized": "未授權",
     "offline": "離線",
     "unknown": "未知模式"
-  },
-  "carousel": {
-    "slide1_title": "歡迎使用",
-    "slide1_desc": "現代化的Android設備管理工具",
-    "slide2_title": "強大的設備管理",
-    "slide2_desc": "實時設備檢測、詳細信息展示",
-    "slide3_title": "個性化設置體驗",
-    "slide3_desc": "豐富的自定義選項和主題切換"
   },
   "flash": {
     "tab_unlock": "解鎖工具",
@@ -250,7 +245,9 @@
     "status_checking": "檢查中",
     "status_flashing": "刷入中",
     "status_success": "成功",
-    "status_failed": "失敗"
+    "status_failed": "失敗",
+    "fastboot_mode_required_title": "裝置未處於 Fastboot 模式",
+    "fastboot_mode_required_desc": "此功能僅在 Fastboot 或 Fastbootd 模式下可用，請在裝置重啟後重試。"
   },
   "online": {
     "app_store": "軟件商店",
@@ -264,7 +261,9 @@
     "app_manager": "應用管理",
     "file_manager": "文件管理",
     "fastboot_mode_title": "設備未在 adb 模式",
-    "fastboot_mode_desc": "請將設備重啟到系統或Recovery模式以使用ADB功能"
+    "fastboot_mode_desc": "請將設備重啟到系統或Recovery模式以使用ADB功能",
+    "adb_mode_required_title": "裝置未處於 ADB 模式",
+    "adb_mode_required_desc": "此功能僅在系統模式或 Recovery 模式下可用，請在裝置重啟後重試。"
   },
   "device_control": {
     "power_management": "電源管理",
@@ -661,7 +660,8 @@
     "unknown_file": "未知文件.apk",
     "install_success": "安裝成功",
     "install_failed_with_error": "安裝失敗: {{error}}",
-    "error_occured": "安裝 APK 時出錯: {{error}}"
+    "error_occured": "安裝 APK 時出錯: {{error}}",
+    "history": "歷史記錄"
   },
   "app_manager": {
     "card_title": "應用管理",
@@ -726,6 +726,8 @@
     "traditional_loading_tip": "當前使用傳統加載（一次性顯示）",
     "unknown_version": "未知版本",
     "version_code_tip": "版本代碼: {{code}}",
+    "version_name": "版本名稱",
+    "version_code": "版本代碼",
     "select_save_dir": "選擇保存目錄",
     "select_import_file": "選擇應用列表文件",
     "export_cancelled": "已取消導出",
@@ -978,5 +980,13 @@
     "executing": "正在執行...",
     "close": "關閉",
     "cancel": "取消"
+  },
+  "app_properties": {
+    "detail_info": "詳細資訊",
+    "is_system_app": "是否為系統應用",
+    "apk_path": "安裝包路徑",
+    "install_time": "安裝時間",
+    "update_time": "更新時間",
+    "permissions": "權限列表"
   }
 }

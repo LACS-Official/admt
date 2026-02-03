@@ -156,10 +156,11 @@ const useStyles = makeStyles({
 });
 
 interface SystemControlCardProps {
-  device: DeviceInfo;
+  device: DeviceInfo | null;
+  onAdbRequired: () => void;
 }
 
-const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
+const SystemControlCard: React.FC<SystemControlCardProps> = ({ device, onAdbRequired }) => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { deviceService } = useDeviceService();
@@ -199,6 +200,21 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
   const [realBatteryStatus, setRealBatteryStatus] = useState({
      level: 50, temperature: 25, isCharging: false, chargingMode: "none"
   });
+
+  const checkMode = () => {
+    if (!device) {
+       setStatusBarMessage({ type: "warning", message: t('unlock.select_device_first') });
+       return false;
+    }
+    if (!device.connected) return false;
+    if (device.mode !== "sys" && device.mode !== "rec") {
+      onAdbRequired();
+      return false;
+    }
+    return true;
+  };
+
+  const isDeviceAvailable = device?.connected || false; // Allows controls to be clickable even when not in ADB mode, to trigger the overlay.
 
 
   // --- Options ---
@@ -240,7 +256,8 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
 
   // --- Fetch Data ---
   const fetchAllSettings = async () => {
-      if (!device.connected) return;
+      if (!device || !device.connected) return;
+
 
       // Display
       try {
@@ -287,8 +304,10 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
   };
 
   const fetchRealBatteryStatus = async () => {
+       if (!device) return;
        try {
           const batteryResult = await deviceService.executeAdbCommand(device.serial, "shell", ["dumpsys", "battery"]);
+
           if (batteryResult.success && batteryResult.output) {
                const output = batteryResult.output;
                const levelMatch = output.match(/level: (\d+)/);
@@ -327,14 +346,16 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
 
 
   useEffect(() => {
-    if (device.connected && device.mode === "sys") {
+    if (device && device.connected && (device.mode === "sys" || device.mode === "rec")) {
       fetchAllSettings();
     }
-  }, [device.connected, device.mode]);
+  }, [device?.connected, device?.mode]);
+
 
 
   // --- Display Handlers ---
   const handleApplyDisplay = async () => {
+      if (!checkMode()) return;
       setExecutingCommand("display");
       const width = parseInt(customInputs.resolutionWidth);
       const height = parseInt(customInputs.resolutionHeight);
@@ -358,6 +379,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
   };
   
    const handleRestoreDisplay = async () => {
+      if (!checkMode()) return;
       if(!confirm(t('device_control.restore_default') + "?")) return;
       setExecutingCommand("restore_display");
       try {
@@ -373,6 +395,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
 
   // --- Animation Handlers ---
   const applyAnimScale = async (key: string, value: number, stateKey: string) => {
+      if (!checkMode()) return;
       setExecutingCommand(stateKey);
       try {
           await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "global", key, value.toString()]);
@@ -387,6 +410,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
 
   // --- Power Handlers ---
   const applyPowerSetting = async (key: string, value: string, namespace: string = "system") => {
+      if (!checkMode()) return;
       const dbKey = key === "screenTimeout" ? "screen_off_timeout" : "stay_on_while_plugged_in"; // mapping
       setExecutingCommand(key);
       try {
@@ -399,6 +423,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
   
   // Handlers for Battery Simulation (simplified)
   const applyBatterySim = async () => {
+     if (!checkMode()) return;
      if(!batterySimulation.isSimulationEnabled) return;
      setExecutingCommand("battery_sim");
      try {
@@ -418,6 +443,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
   };
   
   const restoreBattery = async () => {
+       if (!checkMode()) return;
        setExecutingCommand("restore_battery");
        try {
            await deviceService.executeAdbCommand(device.serial, "shell", ["dumpsys", "battery", "reset"]);
@@ -429,7 +455,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device }) => {
   };
 
 
-  const isDeviceAvailable = device.connected && device.mode === "sys";
+
 
   return (
     <div className={styles.container}>

@@ -187,11 +187,11 @@ const OnlineZonePanel: React.FC = () => {
       label: t('online.app_store'),
       icon: <CloudArrowUp24Regular />,
     },
-    {
-      id: "rom-download" as FlashZoneView,
-      label: t('online.rom_store'),
-      icon: <CloudArrowUp24Regular />,
-    },
+    // {
+    //   id: "rom-download" as FlashZoneView,
+    //   label: t('online.rom_store'),
+    //   icon: <CloudArrowUp24Regular />,
+    // },
     {
       id: "download-manager" as FlashZoneView,
       label: t('online.download_manager'),
@@ -206,8 +206,8 @@ const OnlineZonePanel: React.FC = () => {
         return <OnlineResourcesPanel />;
       case "download-manager":
         return <DownloadManagerPanel onBack={() => {}}/>;
-      case "rom-download":
-        return <RomDownloadPanel/>;
+      // case "rom-download":
+      //   return <RomDownloadPanel/>;
       default:
        return <OnlineResourcesPanel />;
     }

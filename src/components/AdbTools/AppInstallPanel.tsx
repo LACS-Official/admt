@@ -28,7 +28,9 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import { open } from "@tauri-apps/plugin-dialog";
+import { DeviceInfo } from "../../types/device";
 import { readDir } from "@tauri-apps/plugin-fs";
+
 import ErrorDialog from "../Common/ErrorDialog";
 import { ErrorInfo } from "../../utils/errorHandler";
 import { useTranslation } from "react-i18next";
@@ -216,12 +218,31 @@ interface ApkFile {
   name: string;
 }
 
-const AppInstallPanel: React.FC = () => {
+interface AppInstallPanelProps {
+  device: DeviceInfo | null;
+  onAdbRequired: () => void;
+}
+
+const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired }) => {
   const styles = useStyles();
-  const { selectedDevice } = useDeviceStore();
+  const { devices } = useDeviceStore();
   const { deviceService } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
   const { t } = useTranslation();
+
+  const checkMode = useCallback(() => {
+    if (!device) {
+       setStatusBarMessage({ type: "warning", message: t('unlock.select_device_first') });
+       return false;
+    }
+    if (device.connected && device.mode !== 'sys' && device.mode !== 'rec') {
+      onAdbRequired();
+      return false;
+    }
+    return true;
+  }, [device, onAdbRequired, t, setStatusBarMessage]);
+
+
 
   // 无需状态管理，已移除标签页相关状态
   const [errorInfo] = useState<ErrorInfo | null>(null);
@@ -282,7 +303,7 @@ const AppInstallPanel: React.FC = () => {
                 id: Math.random().toString(36).substr(2, 9),
                 path,
                 name: path.split(/[/\\]/).pop() || 'unknown.apk',
-                status: 'pending'
+                status: 'pending' as const
             }));
             
             setBatchFiles(prev => {
@@ -337,12 +358,12 @@ const AppInstallPanel: React.FC = () => {
                       const separator = navigator.userAgent.includes("Windows") ? "\\" : "/";
                       const fullPath = `${selectedDir}${separator}${entry.name}`;
                       
-                      return {
-                        id: Math.random().toString(36).substr(2, 9),
-                        path: fullPath,
-                        name: entry.name,
-                        status: 'pending'
-                      };
+                        return {
+                          id: Math.random().toString(36).substr(2, 9),
+                          path: fullPath,
+                          name: entry.name,
+                          status: 'pending' as const
+                        };
                   });
 
                   setBatchFiles(prev => {
@@ -426,7 +447,8 @@ const AppInstallPanel: React.FC = () => {
 
   // 单个安装原有逻辑
   const handleSingleInstallClick = async () => {
-    if (!selectedDevice) {
+    if (!checkMode()) return;
+    if (!device) {
       setStatusBarMessage({ type: "warning", message: t('app_install.select_device_first') });
       return;
     }
@@ -453,7 +475,7 @@ const AppInstallPanel: React.FC = () => {
       setInstallHistory(prev => [newStatus, ...prev]);
 
       // 模拟一点进度，提升UX
-      const result = await deviceService.installApk(selectedDevice.serial, apkPath, replaceExisting);
+      const result = await deviceService.installApk(device.serial, apkPath, replaceExisting);
       
       if (result.success) {
         setInstallHistory(prev => prev.map((item, index) => 
@@ -479,7 +501,8 @@ const AppInstallPanel: React.FC = () => {
 
   // 批量安装逻辑
   const handleBatchInstallClick = async () => {
-      if (!selectedDevice) {
+      if (!checkMode()) return;
+      if (!device) {
           setStatusBarMessage({ type: "warning", message: t('app_install.select_device_first') });
           return;
       }
@@ -502,7 +525,7 @@ const AppInstallPanel: React.FC = () => {
             setBatchProgress(prev => ({ ...prev, current: i + 1 }));
 
             try {
-                const result = await deviceService.installApk(selectedDevice.serial, file.path, replaceExisting);
+                const result = await deviceService.installApk(device.serial, file.path, replaceExisting);
                 
                 if (result.success) {
                     setBatchFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'success', message: t('app_install.install_success') } : f));
@@ -617,7 +640,7 @@ const AppInstallPanel: React.FC = () => {
                     appearance="primary"
                     icon={isInstalling ? <Spinner size="small" /> : <Apps24Regular />}
                     onClick={handleSingleInstallClick}
-                    disabled={!selectedDevice || !apkPath || isInstalling}
+                    disabled={!device || !apkPath || isInstalling}
                     className={styles.installButton}
                   >
                     {isInstalling ? t('app_install.installing') : t('app_install.start_install_single', '开始安装')}
@@ -627,12 +650,12 @@ const AppInstallPanel: React.FC = () => {
                     appearance="primary"
                     icon={isInstalling ? <Spinner size="small" /> : <Play24Regular />}
                     onClick={handleBatchInstallClick}
-                    disabled={!selectedDevice || batchFiles.filter(f => f.status !== 'success').length === 0 || isInstalling}
+                    disabled={!device || batchFiles.filter(f => f.status !== 'success').length === 0 || isInstalling}
                     className={styles.installButton}
                   >
                     {isInstalling 
-                        ? t('app_install.installing_batch', { current: batchProgress.current, total: batchProgress.total, defaultValue: `Installing (${batchProgress.current}/${batchProgress.total})` }) 
-                        : t('app_install.start_batch_install', { count: batchFiles.filter(f => f.status !== 'success').length, defaultValue: `Start Batch Install (${batchFiles.filter(f => f.status !== 'success').length})` })}
+                        ? t('app_install.installing_batch', { current: batchProgress.current, total: batchProgress.total, defaultValue: `正在安装 (${batchProgress.current}/${batchProgress.total})` }) 
+                        : t('app_install.start_batch_install', { count: batchFiles.filter(f => f.status !== 'success').length, defaultValue: `开始批量安装 (${batchFiles.filter(f => f.status !== 'success').length})` })}
                   </Button>
               )}
             </div>
@@ -737,7 +760,7 @@ const AppInstallPanel: React.FC = () => {
                         appearance="primary"
                         size="small"
                         onClick={() => handleInstallLocalApk(apk.path)}
-                        disabled={!selectedDevice || isInstalling}
+                        disabled={!device || isInstalling}
                       >
                         {installMode === 'single' ? t('app_install.select') : t('app_install.add')}
                       </Button>

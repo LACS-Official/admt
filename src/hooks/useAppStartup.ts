@@ -8,6 +8,7 @@ import { adbToolsManager } from "../services/adbToolsManager";
 import { preloadService } from "../services/preloadService";
 import { SecurityConfigManager } from "../config/securityConfig";
 import { unifiedVersionService } from "../services/unifiedVersionService";
+import { activationService } from "../services/activationService";
 
 export const useAppStartup = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -284,13 +285,6 @@ export const useAppStartup = () => {
     }, 1000);
   }, []);
 
-  // 处理隐私政策同意
-  const handlePrivacyConsent = useCallback(() => {
-    console.log('隐私政策已同意');
-    markPrivacyConsentCompleted();
-    setCurrentPhase('activation-verification');
-  }, [setCurrentPhase, markPrivacyConsentCompleted]);
-
   // 处理激活验证成功
   const handleActivationSuccess = useCallback((activationStatus: any) => {
     console.log('激活验证成功:', activationStatus);
@@ -302,26 +296,43 @@ export const useAppStartup = () => {
         setVersionCheckCompleted(true);
         
         if (!versionCheckResult.hasUpdate) {
-          console.log('✅ 版本已是最新，进入数据收集同意阶段');
-          setCurrentPhase('data-collection');
+          // 如果用户已经完成了所有设置（在隐私政策页面已经全部同意），则直接进入主应用
+          const privacyState = usePrivacyConsentStore.getState();
+          if (privacyState.hasAcceptedDataCollection && privacyState.hasCompletedPrivacySetup) {
+            console.log('✅ 用户已完成所有隐私和数据设置，直接进入主应用');
+            handleStartupFlowComplete();
+          } else {
+            console.log('✅ 版本已是最新，进入数据收集同意阶段');
+            setCurrentPhase('data-collection');
+          }
         } else {
           console.log('⚠️ 检测到新版本，进入版本检查阶段');
           setCurrentPhase('version-check');
-          // 不再继续执行后续流程，用户必须处理更新
-          // 这里不需要return，因为已经设置了phase，后续流程会被阻止
         }
       })
       .catch((error) => {
         console.error('❌ 版本检查失败:', error);
         console.log('⚠️ 版本检查失败，进入版本检查阶段');
         setCurrentPhase('version-check');
-        // 不再继续执行后续流程，用户必须处理版本检查问题
-        // 这里不需要return，因为已经设置了phase，后续流程会被阻止
       });
       
-    // 重要：在异步操作开始后立即返回，确保不会继续执行后续同步代码
     return;
-  }, [setCurrentPhase, setVersionCheckResult, setVersionCheckCompleted]);
+  }, [setCurrentPhase, setVersionCheckResult, setVersionCheckCompleted, handleStartupFlowComplete]);
+
+  // 处理隐私政策同意
+  const handlePrivacyConsent = useCallback(() => {
+    console.log('隐私政策已同意');
+    markPrivacyConsentCompleted();
+    
+    // 检查激活状态，如果已激活（Stubbed服务总是返回true）则跳过激活验证阶段
+    const status = activationService.checkActivationStatus();
+    if (status.isActivated && !status.isExpired) {
+      console.log('✅ 检测到已激活状态，直接跳过激活验证阶段');
+      handleActivationSuccess(status);
+    } else {
+      setCurrentPhase('activation-verification');
+    }
+  }, [setCurrentPhase, markPrivacyConsentCompleted, handleActivationSuccess]);
 
   // 处理数据收集同意
   const handleDataCollectionConsent = useCallback((consent: boolean) => {

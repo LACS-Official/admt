@@ -14,6 +14,9 @@ import admtLogo64 from "./admt/64x64.png";
 import admtLogo128 from "./admt/128x128.png";
 import admtLogo256 from "./admt/256x256.png";
 import admtLogo512 from "./admt/512x512.png";
+//收款码
+import alipay from "./pay/zfb.webp";
+import wechatpay from "./pay/wx.webp";
 // 设备图标映射
 export const deviceIcons = {
   sys: anzIcon,        // 系统模式
@@ -41,7 +44,9 @@ export {
   admtLogo64,
   admtLogo128,
   admtLogo256,
-  admtLogo512
+  admtLogo512,
+  alipay,
+  wechatpay
 };
 
 // 根据设备模式获取图标

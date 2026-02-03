@@ -6,6 +6,7 @@ import {
   Text,
   TabList,
   Tab,
+  Button,
 } from "@fluentui/react-components";
 import {
   Code24Regular,
@@ -136,20 +137,53 @@ const useStyles = makeStyles({
       boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
     },
   },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(128, 128, 128, 0.1)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 100,
+    gap: "20px",
+    textAlign: "center",
+    padding: "20px",
+    borderRadius: "8px",
+    transition: "all 0.3s ease",
+  },
+  overlayText: {
+    maxWidth: "400px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  overlayActions: {
+    marginTop: "16px",
+    display: "flex",
+    justifyContent: "center",
+  },
 });
 
-type AdbZoneView =  "device-control" | "app_install" | "file-manager" | "screen-mirror" | "app-manager" | "settings-center";
+type AdbZoneView = "device-control" | "screen-mirror" | "app_install" | "app-manager" | "file-manager" | "settings-center";
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
   const [currentView, setCurrentView] = useState<AdbZoneView>("device-control");
+  const [showOverlay, setShowOverlay] = useState(false);
 
   const connectedDevices = devices.filter(d => d.connected);
   
-  // 检查设备是否处于fastboot模式
-  const isFastbootMode = selectedDevice?.mode === 'fastboot' || selectedDevice?.mode === 'fastbootd';
+  const triggerOverlay = () => {
+    setShowOverlay(true);
+  };
 
   const tabs = [
     {
@@ -172,6 +206,12 @@ const AdbZonePanel: React.FC = () => {
       label: t('adb.app_manager'),
       icon: <Settings24Regular />,
     },
+    {
+      id: "file-manager" as AdbZoneView,
+      label: t('adb.file_manager'),
+      icon: <Folder24Regular />,
+    },
+
   /* New Tab for Settings Center */
     {
       id: "settings-center" as AdbZoneView, 
@@ -182,7 +222,8 @@ const AdbZonePanel: React.FC = () => {
 
   /* Updated renderContent to handle new views */
   const renderContent = () => {
-    if (!selectedDevice) return null;
+    // 移除强制返回 null，允许显示专区内容
+    const device = selectedDevice;
 
     switch (currentView) {
       case "device-control":
@@ -196,7 +237,7 @@ const AdbZonePanel: React.FC = () => {
             padding: "16px"
           }}>
              {/* Only Keep KeySimulationCard here as requested, others moved */}
-             <KeySimulationCard device={selectedDevice} />
+             <KeySimulationCard device={selectedDevice} onAdbRequired={triggerOverlay} />
           </div>
         );
       case "settings-center": /* New Case for Settings Center */
@@ -207,38 +248,38 @@ const AdbZonePanel: React.FC = () => {
                  // Use consistent styling or reuse existing
                 padding: "16px"
             }}>
-                <SystemControlCard device={selectedDevice} />
+                <SystemControlCard device={selectedDevice} onAdbRequired={triggerOverlay} />
             </div>
           );
       case "screen-mirror":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-            <ScreenMirrorPanel />
+            <ScreenMirrorPanel device={device} onAdbRequired={triggerOverlay} />
           </div>
         );
       case "app-manager":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-            <AppManagerPanel />
+            <AppManagerPanel device={device} onAdbRequired={triggerOverlay} />
           </div>
         );
 
       case "app_install":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-            <AppInstallPanel />
+            <AppInstallPanel device={device} onAdbRequired={triggerOverlay} />
           </div>
         );
       case "file-manager":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-            <FileManagerPanel />
+            <FileManagerPanel device={device} onAdbRequired={triggerOverlay} />
           </div>
         );
       default:
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-            <AdbZonePanel />
+             <KeySimulationCard device={selectedDevice} onAdbRequired={triggerOverlay} />
           </div>
         );
     }
@@ -246,7 +287,7 @@ const AdbZonePanel: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {connectedDevices.length === 0 ? (
+      {false ? (
         <div className={styles.noDevice}>
           <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
           <Text size={400}>{t('main.no_device_title')}</Text>
@@ -254,20 +295,12 @@ const AdbZonePanel: React.FC = () => {
             {t('mirror.no_device_hint')}
           </Text>
         </div>
-      ) : !selectedDevice ? (
+      ) : false ? (
         <div className={styles.noDevice}>
           <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
           <Text size={400}>{t('unlock.select_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
             {t('unlock.select_device_hint')}
-          </Text>
-        </div>
-      ) : isFastbootMode ? (
-        <div className={styles.noDevice}>
-          <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>{t('adb.fastboot_mode_title')}</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            {t('adb.fastboot_mode_desc')}
           </Text>
         </div>
       ) : (
@@ -292,6 +325,23 @@ const AdbZonePanel: React.FC = () => {
 
             <div className={styles.tabContent}>
               {renderContent()}
+              {showOverlay && (
+                <div className={styles.overlay}>
+                  <div className={styles.overlayText}>
+                    <Text size={600} weight="bold">
+                      {t('adb.adb_mode_required_title')}
+                    </Text>
+                    <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
+                      {t('adb.adb_mode_required_desc')}
+                    </Text>
+                    <div className={styles.overlayActions}>
+                      <Button appearance="primary" onClick={() => setShowOverlay(false)}>
+                        {t('common.close')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

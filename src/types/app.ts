@@ -260,3 +260,25 @@ export interface OnlineResourcesState {
   showResourceDetailModal?: boolean;
   selectedResourceForModal?: OnlineSoftware;
 }
+
+// 轮播图相关类型
+export interface Banner {
+  id: number;
+  title: string;
+  titleEn?: string;
+  description: string;
+  descriptionEn?: string;
+  imgUrl: string;
+  linkUrl?: string;
+  backgroundColor?: string;
+  displayOrder: number;
+  isActive: boolean;
+  metadata?: Record<string, any>;
+}
+
+export interface BannerResponse {
+  success: boolean;
+  data: Banner[];
+  error?: string;
+}
+

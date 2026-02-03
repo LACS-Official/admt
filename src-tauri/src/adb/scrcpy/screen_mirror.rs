@@ -4,8 +4,8 @@
 use crate::error::{AdmtError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::process::Child;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 
 /// 投屏状态管理器
@@ -87,8 +87,6 @@ impl ScreenMirrorSession {
             error_message: None,
         }
     }
-
-
 }
 
 /// 诊断scrcpy安装和配置
@@ -290,12 +288,25 @@ pub async fn start_screen_mirror(
 
     // 1. 检查是否已经在投屏
     {
-        let sessions = state.sessions.lock().unwrap();
-        if sessions.contains_key(&device_serial) {
-            return Err(AdmtError::Process(format!(
-                "Device {} is already mirroring",
-                device_serial
-            )));
+        let mut sessions = state.sessions.lock().unwrap();
+        if let Some((child, _)) = sessions.get_mut(&device_serial) {
+            match child.try_wait() {
+                Ok(None) => {
+                    // 进程还在运行
+                    return Err(AdmtError::Process(format!(
+                        "Device {} is already mirroring",
+                        device_serial
+                    )));
+                }
+                _ => {
+                    // 进程已退出或出错，移除旧会话
+                    sessions.remove(&device_serial);
+                    log::info!(
+                        "Cleaned up dead mirror session for device {}",
+                        device_serial
+                    );
+                }
+            }
         }
     }
 
@@ -324,12 +335,24 @@ pub async fn start_screen_mirror(
         config.quality.framerate.to_string(),
     ];
 
-    if config.show_touches { args.push("--show-touches".to_string()); }
-    if config.record_screen { args.push("--record".to_string()); }
-    if config.stay_awake { args.push("--stay-awake".to_string()); }
-    if config.turn_screen_off { args.push("--turn-screen-off".to_string()); }
-    if !config.control_enabled { args.push("--no-control".to_string()); }
-    if !config.audio_enabled { args.push("--no-audio".to_string()); }
+    if config.show_touches {
+        args.push("--show-touches".to_string());
+    }
+    if config.record_screen {
+        args.push("--record".to_string());
+    }
+    if config.stay_awake {
+        args.push("--stay-awake".to_string());
+    }
+    if config.turn_screen_off {
+        args.push("--turn-screen-off".to_string());
+    }
+    if !config.control_enabled {
+        args.push("--no-control".to_string());
+    }
+    if !config.audio_enabled {
+        args.push("--no-audio".to_string());
+    }
 
     // 5. 启动 scrcpy 进程
     match start_scrcpy_process(&args).await {
@@ -337,13 +360,17 @@ pub async fn start_screen_mirror(
             let pid = child.id();
             session.process_id = Some(pid);
             session.status = "streaming".to_string();
-            
-            log::info!("Screen mirror started (PID: {}) for device {}", pid, device_serial);
+
+            log::info!(
+                "Screen mirror started (PID: {}) for device {}",
+                pid,
+                device_serial
+            );
 
             // 6. 保存到全局状态
             let mut sessions = state.sessions.lock().unwrap();
             sessions.insert(device_serial, (child, session.clone()));
-            
+
             Ok(session)
         }
         Err(e) => {
@@ -448,16 +475,19 @@ pub async fn stop_screen_mirror(
     device_serial: String,
     state: State<'_, MirrorManager>,
 ) -> Result<bool> {
-    log::info!("Requesting stop screen mirror for device: {}", device_serial);
+    log::info!(
+        "Requesting stop screen mirror for device: {}",
+        device_serial
+    );
 
     let mut sessions = state.sessions.lock().unwrap();
-    
+
     // 1. 查找会话
     if let Some((mut child, mut session)) = sessions.remove(&device_serial) {
         log::info!("Stopping scrcpy process (PID: {:?})", session.process_id);
-        
+
         session.status = "stopping".to_string();
-        
+
         // 2. 终止进程
         match child.kill() {
             Ok(_) => {
@@ -473,7 +503,10 @@ pub async fn stop_screen_mirror(
             }
         }
     } else {
-        log::warn!("No active mirror session found for device: {}", device_serial);
+        log::warn!(
+            "No active mirror session found for device: {}",
+            device_serial
+        );
         Ok(false)
     }
 }
@@ -484,7 +517,8 @@ pub async fn get_active_mirror_sessions(
     state: State<'_, MirrorManager>,
 ) -> Result<Vec<ScreenMirrorSession>> {
     let sessions = state.sessions.lock().unwrap();
-    let list: Vec<ScreenMirrorSession> = sessions.values()
+    let list: Vec<ScreenMirrorSession> = sessions
+        .values()
         .map(|(_, session)| session.clone())
         .collect();
     Ok(list)

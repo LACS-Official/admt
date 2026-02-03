@@ -105,17 +105,19 @@ const useStyles = makeStyles({
 });
 
 interface ImageFlashCardProps {
-  device: DeviceInfo;
+  device: DeviceInfo | null;
+  onFastbootRequired: () => void;
 }
 
 type FlashStatus = "idle" | "preparing" | "flashing" | "success" | "error";
 
-const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
+const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequired }) => {
   const styles = useStyles();
   const { deviceService } = useDeviceService();
   const { setFlashing } = useDeviceStore();
-  const { config, updateConfig } = useAppStore();
+  const { config, updateConfig, setStatusBarMessage } = useAppStore();
   const { t } = useTranslation();
+
   
   // 选择的镜像文件（使用 Tauri 原生文件选择，保留真实路径）
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
@@ -129,6 +131,21 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
   const [isFlashing, setIsFlashing] = useState(false);
   const [flashMode, setFlashMode] = useState<'ab' | 'a' | 'b' | 'direct'>("direct");
   const [originalAutoDetect, setOriginalAutoDetect] = useState<boolean>(config.autoDetectDevices);
+
+  const checkMode = () => {
+    if (!device) {
+       setStatusBarMessage({ type: "warning", message: t('unlock.select_device_first') });
+       return false;
+    }
+    // 检查设备是否处于 Fastboot 或 Fastbootd 模式
+    const isFastbootMode = device.mode === 'fastboot' || device.mode === 'fastbootd';
+    if (!isFastbootMode) {
+      onFastbootRequired();
+      return false;
+    }
+    return true;
+  };
+
 
   // 常见分区列表
   const partitions = [
@@ -171,11 +188,13 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device }) => {
 
   const handleFlashStart = () => {
     if (!selectedFilePath || !selectedPartition) return;
+    if (!checkMode()) return;
     setShowConfirmDialog(true);
   };
 
+
   const handleFlashConfirm = async () => {
-  if (!selectedFilePath || !selectedPartition) return;
+  if (!device || !selectedFilePath || !selectedPartition) return;
   
   setShowConfirmDialog(false);
   setIsFlashing(true);

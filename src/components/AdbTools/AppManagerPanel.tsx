@@ -37,14 +37,20 @@ import { Apps24Regular,
   MoreHorizontal24Regular,
   ArrowDownload24Regular,
   ArrowUpload24Regular,
+  LockClosed24Regular,
+  LockOpen24Regular,
+  Save24Regular,
+  Eraser24Regular,
+  ShieldLock24Regular,
 } from "@fluentui/react-icons";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
-import { InstalledApp, BatchOperation } from "../../types/device";
+import { InstalledApp, BatchOperation, DeviceInfo } from "../../types/device";
 import ErrorDialog from "../Common/ErrorDialog";
+
 import { ErrorInfo } from "../../utils/errorHandler";
 // 移除Node.js path模块导入，避免浏览器环境中的兼容性问题
 
@@ -228,6 +234,20 @@ const useStyles = makeStyles({
     display: "flex",
     gap: "8px",
   },
+  detailsGrid: {
+    display: "grid",
+    gridTemplateColumns: "120px 1fr",
+    gap: "8px 16px",
+    padding: "8px 0",
+  },
+  detailsLabel: {
+    fontWeight: "bold",
+    color: "var(--colorNeutralForeground2)",
+  },
+  detailsValue: {
+    wordBreak: "break-all",
+    fontFamily: "monospace",
+  },
 });
 
 interface InstallStatus {
@@ -247,12 +267,31 @@ interface ConnectionInfo {
   connection_type: string;
 }
 
-const AppManagerPanel: React.FC = () => {
+interface AppManagerPanelProps {
+  device: DeviceInfo | null;
+  onAdbRequired: () => void;
+}
+
+const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired }) => {
   const styles = useStyles();
-  const { selectedDevice } = useDeviceStore();
+  const { devices } = useDeviceStore();
   const { deviceService } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
   const { t } = useTranslation();
+
+  const checkMode = useCallback(() => {
+    if (!device) {
+       setStatusBarMessage({ type: "warning", message: t('unlock.select_device_first') });
+       return false;
+    }
+    if (device.connected && device.mode !== 'sys' && device.mode !== 'rec') {
+      onAdbRequired();
+      return false;
+    }
+    return true;
+  }, [device, onAdbRequired, t, setStatusBarMessage]);
+
+
 
   // 无需状态管理，已移除标签页相关状态
   const [errorInfo] = useState<ErrorInfo | null>(null);
@@ -281,6 +320,8 @@ const AppManagerPanel: React.FC = () => {
   const lastDetectedAppRef = React.useRef<string | null>(null);
   const appsRef = React.useRef<InstalledApp[]>(apps);
   const [frozenAppsWithVersion, setFrozenAppsWithVersion] = useState<InstalledApp[]>([]);
+  const [selectedAppForDetails, setSelectedAppForDetails] = useState<InstalledApp | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   
   // 规范化版本信息，处理各种格式问题
   const normalizeVersionInfo = useCallback((versionInfo: string): string => {
@@ -317,10 +358,11 @@ const AppManagerPanel: React.FC = () => {
 
   // 获取当前前台应用包名和版本信息
   const loadCurrentApp = useCallback(async () => {
-    if (!selectedDevice) return;
+    if (!device) return;
     try {
       const activityResult = await deviceService.executeAdbCommand(
-        selectedDevice.serial,
+        device.serial,
+
         "shell",
         ["dumpsys activity activities"]
       );
@@ -355,7 +397,7 @@ const AppManagerPanel: React.FC = () => {
       
       try {
         const packageResult = await deviceService.executeAdbCommand(
-          selectedDevice.serial,
+          device.serial,
           "shell",
           [`dumpsys package ${packageName} | grep -E "versionName|versionCode"`]
         );
@@ -424,13 +466,15 @@ const AppManagerPanel: React.FC = () => {
     } catch (e) {
       console.debug('获取当前应用轮询中:', e);
     }
-  }, [selectedDevice, deviceService, setStatusBarMessage, t]);
+  }, [device, deviceService, setStatusBarMessage, t]);
 
   // 获取已冻结（被禁用）的应用列表
   const loadFrozenApps = useCallback(async () => {
-    if (!selectedDevice) return;
+    if (!checkMode()) return;
+    if (!device) return;
     try {
-      const frozenApps = await deviceService.getFrozenApps(selectedDevice.serial);
+      const frozenApps = await deviceService.getFrozenApps(device.serial);
+
       if (frozenApps && frozenApps.length > 0) {
         const frozenAppsWithVersion: InstalledApp[] = frozenApps.map((app: any) => ({
           packageName: app.package_name || '',
@@ -456,7 +500,7 @@ const AppManagerPanel: React.FC = () => {
       console.error('获取冻结应用失败:', e);
       setStatusBarMessage({ type: "error", message: t('app_manager.fail_get_apps', { error: e }) });
     }
-  }, [selectedDevice, deviceService, setStatusBarMessage, normalizeVersionInfo, t]);
+  }, [device, deviceService, setStatusBarMessage, normalizeVersionInfo, t]);
 
   // 同步 apps 到 ref
   useEffect(() => {
@@ -465,17 +509,20 @@ const AppManagerPanel: React.FC = () => {
 
   // 默认加载当前应用
   useEffect(() => {
-    if (selectedDevice && !viewSource) {
+    if (!device) return;
+    if (!viewSource) {
       loadCurrentApp();
     }
-  }, [selectedDevice, viewSource, loadCurrentApp]);
+  }, [device, viewSource, loadCurrentApp]);
 
   // 应用管理相关函数（超级优化版本）
   const loadApps = useCallback(async (forceRefresh = false) => {
-    if (!selectedDevice) return;
+    if (!checkMode()) return;
+    if (!device) return;
 
     // 检查缓存（方案3：缓存机制优化）
-    const cacheKey = `${selectedDevice.serial}_${includeSystemApps}`;
+    const cacheKey = `${device.serial}_${includeSystemApps}`;
+
     const cached = appCache.get(cacheKey);
     const now = Date.now();
 
@@ -498,9 +545,10 @@ const AppManagerPanel: React.FC = () => {
       // 使用超级优化的后端批量获取命令
       const { invoke } = await import('@tauri-apps/api/core');
       const installedApps = await invoke<InstalledApp[]>('get_installed_apps', {
-        serial: selectedDevice.serial,
+        serial: device.serial,
         includeSystem: includeSystemApps
       });
+
 
       const loadTime = Date.now() - startTime;
       
@@ -557,14 +605,16 @@ const AppManagerPanel: React.FC = () => {
       setIsLoadingApps(false);
       setLoadingProgress({current: 0, total: 0}); // 清除进度
     }
-  }, [selectedDevice, includeSystemApps, deviceService, setStatusBarMessage, appCache, CACHE_DURATION]);
+  }, [device, includeSystemApps, deviceService, setStatusBarMessage, appCache, CACHE_DURATION, normalizeVersionInfo, t]);
 
   // 分批加载应用列表（每10个应用显示一次）- 优化版本
   const loadAppsBatch = useCallback(async (forceRefresh = false) => {
-    if (!selectedDevice) return;
+    if (!checkMode()) return;
+    if (!device) return;
 
     // 检查缓存（方案3：缓存机制优化）
-    const cacheKey = `${selectedDevice.serial}_${includeSystemApps}`;
+    const cacheKey = `${device.serial}_${includeSystemApps}`;
+
     const cached = appCache.get(cacheKey);
     const now = Date.now();
 
@@ -594,11 +644,12 @@ const AppManagerPanel: React.FC = () => {
       // 开始分批加载
       while (true) {
         const result = await invoke<[InstalledApp[], number]>('get_installed_apps_batch', {
-          serial: selectedDevice.serial,
+          serial: device.serial,
           includeSystem: includeSystemApps,
           batchSize: BATCH_SIZE,
           batchIndex: batchIndex
         });
+
         
         const [batchApps, totalCount] = result;
         totalApps = totalCount;
@@ -686,7 +737,7 @@ const AppManagerPanel: React.FC = () => {
       setIsLoadingApps(false);
       setLoadingProgress({current: 0, total: 0}); // 清除进度
     }
-  }, [selectedDevice, includeSystemApps, appCache, CACHE_DURATION, normalizeVersionInfo, setStatusBarMessage, t]);
+  }, [device, includeSystemApps, appCache, CACHE_DURATION, normalizeVersionInfo, setStatusBarMessage, t]);
 
 
 
@@ -742,7 +793,7 @@ const AppManagerPanel: React.FC = () => {
       : source;
 
     setFilteredApps(filtered);
-  }, [apps, frozenAppsWithVersion, currentApp, searchQuery, viewSource]);
+  }, [apps, frozenAppsWithVersion, currentApp, searchQuery, viewSource, loadFrozenApps, loadCurrentApp, t]);
 
   const handleUninstallClick = (app: InstalledApp) => {
     setAppToUninstall(app);
@@ -750,13 +801,15 @@ const AppManagerPanel: React.FC = () => {
   };
 
   const confirmUninstall = async () => {
-    if (!selectedDevice || !appToUninstall) return;
+    if (!checkMode()) return;
+    if (!device || !appToUninstall) return;
 
     setConfirmUninstallDialogOpen(false);
     try {
       // 使用 adb shell pm uninstall 命令卸载应用
       const result = await deviceService.executeAdbCommand(
-        selectedDevice.serial,
+        device.serial,
+
         "shell",
         [`pm uninstall ${appToUninstall.packageName}`]
       );
@@ -768,7 +821,11 @@ const AppManagerPanel: React.FC = () => {
             type: "success",
             message: t('app_manager.uninstall_success', { packageName: appToUninstall.packageName }),
           });
-          loadAppsBatch(); // 重新加载应用列表
+          if (useBatchLoading) {
+            loadAppsBatch(); // 重新加载应用列表
+          } else {
+            loadApps();
+          }
         } else {
           setStatusBarMessage({
             type: "error",
@@ -788,6 +845,11 @@ const AppManagerPanel: React.FC = () => {
       });
     }
     setAppToUninstall(null);
+  };
+  
+  const handleShowDetails = (app: InstalledApp) => {
+    setSelectedAppForDetails(app);
+    setDetailsDialogOpen(true);
   };
 
   const handleSelectApp = (packageName: string, checked: boolean) => {
@@ -810,7 +872,8 @@ const AppManagerPanel: React.FC = () => {
 
   // 批量卸载应用
   const handleBatchUninstall = async () => {
-    if (!selectedDevice || selectedApps.size === 0) return;
+    if (!checkMode()) return;
+    if (!device || selectedApps.size === 0) return;
 
     const packageNames = Array.from(selectedApps);
     let successCount = 0;
@@ -827,7 +890,7 @@ const AppManagerPanel: React.FC = () => {
       for (const packageName of packageNames) {
         try {
           const result = await deviceService.executeAdbCommand(
-            selectedDevice.serial,
+            device.serial,
             "shell",
             [`pm uninstall ${packageName}`]
           );
@@ -877,7 +940,11 @@ const AppManagerPanel: React.FC = () => {
       setSelectedApps(new Set());
 
       // 重新加载应用列表
-      loadAppsBatch();
+      if (useBatchLoading) {
+        loadAppsBatch();
+      } else {
+        loadApps();
+      }
 
     } catch (error) {
       setStatusBarMessage({
@@ -889,7 +956,8 @@ const AppManagerPanel: React.FC = () => {
 
   // 批量冻结/解冻应用
   const handleBatchFreezeToggle = async (freeze: boolean) => {
-    if (!selectedDevice || selectedApps.size === 0) return;
+    if (!checkMode()) return;
+    if (!device || selectedApps.size === 0) return;
 
     const packageNames = Array.from(selectedApps);
     let successCount = 0;
@@ -906,7 +974,7 @@ const AppManagerPanel: React.FC = () => {
       for (const packageName of packageNames) {
         try {
           const cmd = freeze ? `pm disable-user ${packageName}` : `pm enable ${packageName}`;
-          const result = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [cmd]);
+          const result = await deviceService.executeAdbCommand(device.serial, "shell", [cmd]);
           
           if (result.success) {
             successCount++;
@@ -963,7 +1031,7 @@ const AppManagerPanel: React.FC = () => {
       // 重新获取已冻结应用列表（如果当前视图是已冻结应用）
       if (viewSource === "frozen") {
         try {
-          const frozenApps = await deviceService.getFrozenApps(selectedDevice.serial);
+          const frozenApps = await deviceService.getFrozenApps(device.serial);
           if (frozenApps) {
             const frozenAppsWithVersion: InstalledApp[] = frozenApps.map((app: any) => ({
               packageName: app.package_name || '',
@@ -981,6 +1049,8 @@ const AppManagerPanel: React.FC = () => {
           }
         } catch (e) {
           console.error('刷新冻结应用列表失败:', e);
+          // 如果重新获取失败，至少清空当前列表
+          setFrozenAppsWithVersion([]);
         }
       }
 
@@ -994,7 +1064,8 @@ const AppManagerPanel: React.FC = () => {
 
   // 批量强制停止应用
   const handleBatchForceStop = async () => {
-    if (!selectedDevice || selectedApps.size === 0) return;
+    if (!checkMode()) return;
+    if (!device || selectedApps.size === 0) return;
 
     const packageNames = Array.from(selectedApps);
     let successCount = 0;
@@ -1011,7 +1082,7 @@ const AppManagerPanel: React.FC = () => {
       for (const packageName of packageNames) {
         try {
           const result = await deviceService.executeAdbCommand(
-            selectedDevice.serial,
+            device.serial,
             "shell",
             [`am force-stop ${packageName}`]
           );
@@ -1069,7 +1140,8 @@ const AppManagerPanel: React.FC = () => {
 
   // 批量提取安装包
   const handleBatchExportApk = async () => {
-    if (!selectedDevice || selectedApps.size === 0) return;
+    if (!checkMode()) return;
+    if (!device || selectedApps.size === 0) return;
 
     const packageNames = Array.from(selectedApps);
     let successCount = 0;
@@ -1077,11 +1149,15 @@ const AppManagerPanel: React.FC = () => {
     const results: string[] = [];
 
     try {
-      // 选择保存目录
-      const targetDir = await openDialog({ directory: true, multiple: false });
-      if (!targetDir || typeof targetDir !== "string") {
-        setStatusBarMessage({ type: "info", message: t('app_manager.export_cancelled') });
-        return;
+      // 获取用户路径
+      const { documentDir, join } = await import('@tauri-apps/api/path');
+      const docDir = await documentDir();
+      const exportDir = await join(docDir, 'ADMT', 'apk_export');
+      
+      // 检查并创建目录
+      const { exists, mkdir } = await import('@tauri-apps/plugin-fs');
+      if (!(await exists(exportDir))) {
+        await mkdir(exportDir, { recursive: true });
       }
 
       setStatusBarMessage({
@@ -1092,36 +1168,12 @@ const AppManagerPanel: React.FC = () => {
       // 逐个导出应用安装包
       for (const packageName of packageNames) {
         try {
-          // 获取APK路径
-          const pathResult = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [`pm path ${packageName}`]);
-          if (!pathResult.success || !pathResult.output) {
-            failCount++;
-            results.push(`✗ ${packageName}: 无法获取APK路径`);
-            continue;
-          }
-          
-          const apkLine = pathResult.output.split(/\r?\n/).find(l => l.startsWith("package:"));
-          if (!apkLine) {
-            failCount++;
-            results.push(`✗ ${packageName}: 未找到APK路径`);
-            continue;
-          }
-          
-          const remotePath = apkLine.replace("package:", "").trim();
-          const localPath = `${targetDir}/${packageName}.apk`;
-
-          // 执行 pull
-          const pullResult = await deviceService.executeAdbCommand(selectedDevice.serial, "pull", [remotePath, localPath]);
-          if (pullResult.success) {
-            successCount++;
-            results.push(`✓ ${packageName}: APK 已导出到：${localPath}`);
-          } else {
-            failCount++;
-            results.push(`✗ ${packageName}: ${pullResult.output || pullResult.error || '导出失败'}`);
-          }
-        } catch (error) {
+          await deviceService.exportApk(device.serial, packageName, exportDir);
+          successCount++;
+          results.push(`✓ ${packageName}: APK 已导出到：${exportDir}/${packageName}.apk`);
+        } catch (error: any) {
           failCount++;
-          results.push(`✗ ${packageName}: ${error}`);
+          results.push(`✗ ${packageName}: ${error.message || '导出失败'}`);
         }
       }
 
@@ -1165,6 +1217,7 @@ const AppManagerPanel: React.FC = () => {
 
   // 导出选中的应用列表为文件
   const handleExportAppList = async () => {
+    if (!checkMode()) return;
     if (selectedApps.size === 0) return;
 
     try {
@@ -1174,7 +1227,7 @@ const AppManagerPanel: React.FC = () => {
       // 准备导出数据
       const exportData = {
         exportTime: new Date().toISOString(),
-        deviceInfo: selectedDevice,
+        deviceInfo: device,
         appCount: selectedAppDetails.length,
         apps: selectedAppDetails,
       };
@@ -1210,6 +1263,7 @@ const AppManagerPanel: React.FC = () => {
 
   // 从文件导入应用列表
   const handleImportAppList = async () => {
+    if (!checkMode()) return;
     try {
       // 选择文件
       const filePath = await openDialog({
@@ -1250,7 +1304,8 @@ const AppManagerPanel: React.FC = () => {
 
   // 批量清除应用数据
   const handleBatchClearData = async () => {
-    if (!selectedDevice || selectedApps.size === 0) return;
+    if (!checkMode()) return;
+    if (!device || selectedApps.size === 0) return;
 
     const packageNames = Array.from(selectedApps);
     let successCount = 0;
@@ -1266,7 +1321,7 @@ const AppManagerPanel: React.FC = () => {
       // 逐个清除应用数据
       for (const packageName of packageNames) {
         try {
-          const result = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [`pm clear ${packageName}`]);
+          const result = await deviceService.executeAdbCommand(device.serial, "shell", [`pm clear ${packageName}`]);
           
           if (result.success && result.output && /Success|成功/.test(result.output)) {
             successCount++;
@@ -1324,10 +1379,11 @@ const AppManagerPanel: React.FC = () => {
 
   // 冻结/解冻应用
   const handleFreezeToggle = useCallback(async (pkg: string, isEnabled: boolean) => {
-    if (!selectedDevice) return;
+    if (!checkMode()) return;
+    if (!device) return;
     try {
       const cmd = isEnabled ? `pm disable-user ${pkg}` : `pm enable ${pkg}`;
-      const result = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [cmd]);
+      const result = await deviceService.executeAdbCommand(device.serial, "shell", [cmd]);
       if (result.success) {
         setStatusBarMessage({ 
           type: "success", 
@@ -1345,7 +1401,7 @@ const AppManagerPanel: React.FC = () => {
         
         // 重新获取已冻结应用列表
         try {
-          const frozenApps = await deviceService.getFrozenApps(selectedDevice.serial);
+          const frozenApps = await deviceService.getFrozenApps(device.serial);
           if (frozenApps) {
             const frozenAppsWithVersion: InstalledApp[] = frozenApps.map((app: any) => ({
               packageName: app.package_name || '',
@@ -1372,13 +1428,14 @@ const AppManagerPanel: React.FC = () => {
     } catch (e) {
       setStatusBarMessage({ type: "error", message: `操作失败：${e}` });
     }
-  }, [selectedDevice, deviceService, setStatusBarMessage]);
+  }, [device, deviceService, setStatusBarMessage, t]);
 
   // 清除应用数据
   const handleClearData = useCallback(async (pkg: string) => {
-    if (!selectedDevice) return;
+    if (!checkMode()) return;
+    if (!device) return;
     try {
-      const result = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [`pm clear ${pkg}`]);
+      const result = await deviceService.executeAdbCommand(device.serial, "shell", [`pm clear ${pkg}`]);
       if (result.success && result.output && /Success|成功/.test(result.output)) {
         setStatusBarMessage({ type: "success", message: t('app_manager.clear_data_success', { packageName: pkg }) });
       } else {
@@ -1387,43 +1444,32 @@ const AppManagerPanel: React.FC = () => {
     } catch (e) {
       setStatusBarMessage({ type: "error", message: t('app_manager.clear_data_fail') + `: ${e}` });
     }
-  }, [selectedDevice, deviceService, setStatusBarMessage, t]);
+  }, [device, deviceService, setStatusBarMessage, t]);
 
   // 导出APK：pm path 获取路径，再 adb pull
   const handleExportApk = useCallback(async (pkg: string) => {
-    if (!selectedDevice) return;
+    if (!checkMode()) return;
+    if (!device) return;
     try {
-      const targetDir = await openDialog({ directory: true, multiple: false });
-      if (!targetDir || typeof targetDir !== "string") {
-        setStatusBarMessage({ type: "info", message: t('app_manager.export_cancelled') });
-        return;
+      // 获取用户路径
+      const { documentDir, join } = await import('@tauri-apps/api/path');
+      const docDir = await documentDir();
+      const exportDir = await join(docDir, 'ADMT', 'apk_export');
+      
+      // 检查并创建目录
+      const { exists, mkdir } = await import('@tauri-apps/plugin-fs');
+      if (!(await exists(exportDir))) {
+        await mkdir(exportDir, { recursive: true });
       }
 
-      // 获取APK路径
-      const pathResult = await deviceService.executeAdbCommand(selectedDevice.serial, "shell", [`pm path ${pkg}`]);
-      if (!pathResult.success || !pathResult.output) {
-        setStatusBarMessage({ type: "error", message: pathResult.error || t('app_manager.get_apk_path_fail') });
-        return;
-      }
-      const apkLine = pathResult.output.split(/\r?\n/).find(l => l.startsWith("package:"));
-      if (!apkLine) {
-        setStatusBarMessage({ type: "error", message: t('app_manager.no_apk_path_found') });
-        return;
-      }
-      const remotePath = apkLine.replace("package:", "").trim();
-      const localPath = `${targetDir}/${pkg}.apk`;
-
-      // 执行 pull
-      const pullResult = await deviceService.executeAdbCommand(selectedDevice.serial, "pull", [remotePath, localPath]);
-      if (pullResult.success) {
-        setStatusBarMessage({ type: "success", message: t('app_manager.export_apk_success', { path: localPath }) });
-      } else {
-        setStatusBarMessage({ type: "error", message: pullResult.output || pullResult.error || t('common.fail') });
-      }
+      await deviceService.exportApk(device.serial, pkg, exportDir);
+      setStatusBarMessage({ type: "success", message: t('app_manager.export_apk_success', { path: exportDir }) });
     } catch (e) {
       setStatusBarMessage({ type: "error", message: t('common.fail') + `: ${e}` });
     }
-  }, [selectedDevice, deviceService, setStatusBarMessage, t]);
+  }, [device, deviceService, setStatusBarMessage, t]);
+
+
 
   const renderContent = () => {
     return (
@@ -1602,6 +1648,7 @@ const AppManagerPanel: React.FC = () => {
                 <Text size={200}>{t('unlock.select_device_hint')}</Text>
 
               </div>
+
             ) : (
               <div className={styles.tableContainer}>
                 <Table arial-label={t('app_manager.card_title')} style={{ tableLayout: 'fixed', width: '100%' }}>
@@ -1640,7 +1687,13 @@ const AppManagerPanel: React.FC = () => {
                         </TableCell>
                         <TableCell className={styles.compactCell}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <Text size={300} weight="semibold" className={styles.packageNameText} title={app.packageName}>
+                            <Text 
+                              size={300} 
+                              weight="semibold" 
+                              className={styles.packageNameText} 
+                              title={app.packageName}
+                              onClick={() => handleShowDetails(app)}
+                            >
                               {app.packageName}
                             </Text>
                           </div>
@@ -1675,9 +1728,7 @@ const AppManagerPanel: React.FC = () => {
                               <MenuList>
                                 <MenuItem
                                   icon={<Info24Regular />}
-                                  onClick={() => {
-                                    // 可以在这里显示应用详细信息对话框
-                                  }}
+                                  onClick={() => handleShowDetails(app)}
                                 >
                                   {t('app_properties.detail_info')}
                                 </MenuItem>
@@ -1691,18 +1742,21 @@ const AppManagerPanel: React.FC = () => {
                                   </MenuItem>,
                                   <MenuItem
                                     key={`freeze-${app.packageName}`}
+                                    icon={app.isEnabled ? <LockClosed24Regular /> : <LockOpen24Regular />}
                                     onClick={() => handleFreezeToggle(app.packageName, app.isEnabled)}
                                   >
                                     {app.isEnabled ? t('app_manager.freeze') : t('app_manager.unfreeze')}
                                   </MenuItem>,
                                   <MenuItem
                                     key={`clear-${app.packageName}`}
+                                    icon={<Eraser24Regular />}
                                     onClick={() => handleClearData(app.packageName)}
                                   >
                                     {t('app_manager.clear_data')}
                                   </MenuItem>,
                                   <MenuItem
                                     key={`export-${app.packageName}`}
+                                    icon={<Save24Regular />}
                                     onClick={() => handleExportApk(app.packageName)}
                                   >
                                     {t('app_manager.export_apk')}
@@ -1768,6 +1822,71 @@ const AppManagerPanel: React.FC = () => {
       </Dialog>
 
 
+      {/* 应用详情对话框 */}
+      <Dialog open={detailsDialogOpen} onOpenChange={(_, data) => setDetailsDialogOpen(data.open)}>
+        <DialogSurface>
+          <DialogTitle>{t('app_properties.detail_info')}</DialogTitle>
+          <DialogContent>
+            <div className={styles.detailsGrid}>
+              <div className={styles.detailsLabel}>{t('app_manager.package_name')}:</div>
+              <div className={styles.detailsValue}>{selectedAppForDetails?.packageName}</div>
+              
+              <div className={styles.detailsLabel}>{t('app_manager.version_name')}:</div>
+              <div className={styles.detailsValue}>{selectedAppForDetails?.versionName || t('common.unknown')}</div>
+              
+              <div className={styles.detailsLabel}>{t('app_manager.version_code')}:</div>
+              <div className={styles.detailsValue}>{selectedAppForDetails?.versionCode || t('common.unknown')}</div>
+              
+              <div className={styles.detailsLabel}>{t('app_manager.status')}:</div>
+              <div className={styles.detailsValue}>
+                {selectedAppForDetails?.isEnabled ? t('app_manager.enabled') : t('app_manager.disabled')}
+              </div>
+              
+              <div className={styles.detailsLabel}>{t('app_properties.is_system_app')}:</div>
+              <div className={styles.detailsValue}>
+                {selectedAppForDetails?.isSystemApp ? t('common.yes') : t('common.no')}
+              </div>
+
+              {selectedAppForDetails?.apkPath && (
+                <>
+                  <div className={styles.detailsLabel}>{t('app_properties.apk_path')}:</div>
+                  <div className={styles.detailsValue}>{selectedAppForDetails.apkPath}</div>
+                </>
+              )}
+
+              {selectedAppForDetails?.installTime && (
+                <>
+                  <div className={styles.detailsLabel}>{t('app_properties.install_time')}:</div>
+                  <div className={styles.detailsValue}>{selectedAppForDetails.installTime}</div>
+                </>
+              )}
+
+              {selectedAppForDetails?.updateTime && (
+                <>
+                  <div className={styles.detailsLabel}>{t('app_properties.update_time')}:</div>
+                  <div className={styles.detailsValue}>{selectedAppForDetails.updateTime}</div>
+                </>
+              )}
+
+              {selectedAppForDetails?.permissions && selectedAppForDetails.permissions.length > 0 && (
+                <>
+                  <div className={styles.detailsLabel}>{t('app_properties.permissions')}:</div>
+                  <div className={styles.detailsValue} style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                    {selectedAppForDetails.permissions.map((p, i) => (
+                      <div key={i}>{p}</div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogContent>
+          <DialogActions>
+            <DialogTrigger disableButtonEnhancement>
+              <Button appearance="primary">{t('common.close')}</Button>
+            </DialogTrigger>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };

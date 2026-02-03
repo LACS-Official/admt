@@ -1,9 +1,8 @@
-import React, { useState }  from 'react';
-import {
-  makeStyles,
-  Text,
+import React, { useState } from "react";
+import { makeStyles, Text,
   TabList,
   Tab,
+  Button,
 } from "@fluentui/react-components";
 import {
   CloudArrowUp24Regular,
@@ -51,23 +50,23 @@ const useStyles = makeStyles({
       color: "var(--colorNeutralForeground2)",
       margin: "0 4px",
       border: "1px solid var(--colorNeutralStroke2)",
-      
+
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground2)",
         color: "var(--colorNeutralForeground1)",
         transform: "translateY(-1px)",
         boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
-      
+
       "&[aria-selected='true']": {
         backgroundColor: "var(--colorBrandBackground2)",
         color: "var(--colorBrandForeground1)",
         border: "1px solid var(--colorBrandStroke2)",
         fontWeight: 600,
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
-    
+
     "@media (max-width: 768px)": {
       "& .fui-Tab": {
         fontSize: "11px",
@@ -110,6 +109,44 @@ const useStyles = makeStyles({
   tabContent: {
     flex: 1,
     overflow: "auto",
+    position: "relative",
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(128, 128, 128, 0.1)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 100,
+    gap: "20px",
+    textAlign: "center",
+    padding: "20px",
+    borderRadius: "8px",
+    transition: "all 0.3s ease",
+  },
+  overlayIcon: {
+    fontSize: "64px",
+    color: "var(--colorBrandForeground1)",
+    filter: "drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1))",
+    marginBottom: "8px",
+  },
+  overlayText: {
+    maxWidth: "400px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  overlayActions: {
+    marginTop: "16px",
+    display: "flex",
+    justifyContent: "center",
   },
   warningCard: {
     backgroundColor: "var(--colorPaletteRedBackground1)",
@@ -136,31 +173,42 @@ const useStyles = makeStyles({
   },
 });
 
-type FlashZoneView =  "unlock-tools" | "image-flash" | "xiaomi-flash" | "system-backup";
+type FlashZoneView =
+  | "unlock-tools"
+  | "image-flash"
+  | "xiaomi-flash"
+  | "system-backup";
 
 const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
   const [currentView, setCurrentView] = useState<FlashZoneView>("unlock-tools");
-  const connectedDevices = devices.filter(d => d.connected);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const connectedDevices = devices.filter((d) => d.connected);
 
-
+  // 检查设备是否处于 Fastboot 或 Fastbootd 模式
+  const isFastbootMode =
+    selectedDevice?.mode === "fastboot" || selectedDevice?.mode === "fastbootd";
+  
+  const triggerOverlay = () => {
+    setShowOverlay(true);
+  };
 
   const tabs = [
     {
       id: "unlock-tools" as FlashZoneView,
-      label: t('flash.tab_unlock'),
+      label: t("flash.tab_unlock"),
       icon: <LockOpen24Regular />,
     },
     {
       id: "image-flash" as FlashZoneView,
-      label: t('flash.tab_image'),
+      label: t("flash.tab_image"),
       icon: <CloudArrowUp24Regular />,
     },
     {
       id: "xiaomi-flash" as FlashZoneView,
-      label: t('flash.tab_rom'),
+      label: t("flash.tab_rom"),
       icon: <Flash24Regular />,
     },
   ];
@@ -171,59 +219,100 @@ const FlashZonePanel: React.FC = () => {
 
     switch (currentView) {
       case "unlock-tools":
-        return deviceToUse ? <XiaomiUnlockCard device={deviceToUse} /> : <XiaomiUnlockCard device={null} />;
+        return deviceToUse ? (
+          <XiaomiUnlockCard device={deviceToUse} />
+        ) : (
+          <XiaomiUnlockCard device={null} />
+        );
       case "image-flash":
-        return deviceToUse ? <ImageFlashCard device={deviceToUse} /> : <ImageFlashCard device={null} />;
+        return deviceToUse ? (
+          <ImageFlashCard device={deviceToUse} onFastbootRequired={triggerOverlay} />
+        ) : (
+          <ImageFlashCard device={null as any} onFastbootRequired={triggerOverlay} />
+        );
       case "xiaomi-flash":
-        return deviceToUse ? <XiaomiFlashCard device={deviceToUse} /> : <XiaomiFlashCard device={null} />;
+        return deviceToUse ? (
+          <XiaomiFlashCard device={deviceToUse} onFastbootRequired={triggerOverlay} />
+        ) : (
+          <XiaomiFlashCard device={null as any} onFastbootRequired={triggerOverlay} />
+        );
       default:
-       return deviceToUse ? <XiaomiUnlockCard device={deviceToUse} /> : <XiaomiUnlockCard device={null} />;
+        return deviceToUse ? (
+          <XiaomiUnlockCard device={deviceToUse} />
+        ) : (
+          <XiaomiUnlockCard device={null} />
+        );
     }
   };
 
   return (
-        <div className={styles.container}>
-  {connectedDevices.length === 0 ? (
+    <div className={styles.container}>
+      {false ? (
         <div className={styles.noDevice}>
-          <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>{t('flash.no_device_title')}</Text>
+          <Code24Regular
+            style={{
+              fontSize: "48px",
+              color: "var(--colorNeutralForeground3)",
+            }}
+          />
+          <Text size={400}>{t("flash.no_device_title")}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            {t('flash.no_device_hint')}
+            {t("flash.no_device_hint")}
           </Text>
         </div>
-      ) : !selectedDevice ? (
+      ) : false ? (
         <div className={styles.noDevice}>
-          <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>{t('flash.select_device_title')}</Text>
+          <Settings24Regular
+            style={{
+              fontSize: "48px",
+              color: "var(--colorNeutralForeground3)",
+            }}
+          />
+          <Text size={400}>{t("flash.select_device_title")}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            {t('flash.select_device_hint')}
+            {t("flash.select_device_hint")}
           </Text>
         </div>
       ) : (
-      <div className={styles.content}>
-        <div className={styles.tabContainer}>
-          <TabList
-            selectedValue={currentView}
-            onTabSelect={(_, data) => setCurrentView(data.value as FlashZoneView)}
-            className={styles.headerTabList}
-          >
-            {tabs.map((tab) => (
-              <Tab
-                key={tab.id}
-                value={tab.id}
-                icon={tab.icon}
-              >
-                {tab.label}
-              </Tab>
-            ))}
-          </TabList>
+        <div className={styles.content}>
+          <div className={styles.tabContainer}>
+            <TabList
+              selectedValue={currentView}
+              onTabSelect={(_, data) =>
+                setCurrentView(data.value as FlashZoneView)
+              }
+              className={styles.headerTabList}
+            >
+              {tabs.map((tab) => (
+                <Tab key={tab.id} value={tab.id} icon={tab.icon}>
+                  {tab.label}
+                </Tab>
+              ))}
+            </TabList>
 
-          <div className={styles.tabContent}>
+            <div className={styles.tabContent}>
             {renderContent()}
+            {showOverlay && (
+              <div className={styles.overlay}>
+                <div className={styles.overlayText}>
+                  <Text size={600} weight="bold">
+                    {t('flash.fastboot_mode_required_title')}
+                  </Text>
+                  <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
+                    {t('flash.fastboot_mode_required_desc')}
+                  </Text>
+                  <div className={styles.overlayActions}>
+                    <Button appearance="primary" onClick={() => setShowOverlay(false)}>
+                      {t('common.close')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           </div>
         </div>
-      </div>
-          )}
+      )}
     </div>
   );
 };
