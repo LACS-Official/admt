@@ -182,10 +182,9 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
       return;
     }
 
-    setIsExecuting(true);
-
+    const appStore = useAppStore.getState();
     try {
-      await UnlockService.executeUnlockTool(toolId, device, setStatusBarMessage);
+      await UnlockService.executeUnlockTool(toolId, device, setStatusBarMessage, appStore);
     } catch (error) {
       // 错误处理已在服务类中完成
       console.error(t('unlock.execute_failed_log'), error);

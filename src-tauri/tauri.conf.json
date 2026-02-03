@@ -57,7 +57,7 @@
     "category": "Utility",
     "shortDescription": "Android设备跨平台全能管家",
     "longDescription": "玩机管家是一个现代化的Android设备跨平台全能管家，提供设备信息查看、文件管理、ADB工具、应用管理等功能。",
-    "copyright": "© 2020-2025 领创工作室 All rights reserved.",
+    "copyright": "Copyright © 2020-2026 领创工作室. All rights reserved.",
     "externalBin": [],
     "resources": [
       "tools",
@@ -85,9 +85,11 @@
         "mergeRefs": []
       },
       "nsis": {
-        "displayLanguageSelector": false,
+        "displayLanguageSelector": true,
         "languages": [
-          "SimpChinese"
+          "SimpChinese",
+          "TradChinese",
+          "English"
         ],
         "headerImage": null,
         "sidebarImage": null,

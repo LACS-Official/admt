@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState }  from 'react';
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   makeStyles,
@@ -28,8 +28,8 @@ import {
   Warning24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import confetti from 'canvas-confetti';
-import DeviceSelectionDialog from './DeviceSelectionDialog';
+import confetti from "canvas-confetti";
+import DeviceSelectionDialog from "./DeviceSelectionDialog";
 import { getDeviceIcon } from "../../assets/icons";
 import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
 import { useAppStore } from "../../stores/appStore";
@@ -41,27 +41,26 @@ import HomePage from "../Home/HomePage";
 import AdbZonePanel from "../AdbTools/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
-import OnlineZonePanel from "../OnlineResources/OnlineZonePanel"; 
+import OnlineZonePanel from "../OnlineResources/OnlineZonePanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
 import RootPanel from "../Root/RootPanel";
-import CommandExecutePanel from '../Others/CommandExecutePanel';
-import LogsPanel from '../Others/LogsPanel';
+import CommandExecutePanel from "../Others/CommandExecutePanel";
+import LogsPanel from "../Others/LogsPanel";
 
 import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
 
-
 const useStyles = makeStyles({
-  '@keyframes pulse': {
-    '&from': {
+  "@keyframes pulse": {
+    "&from": {
       opacity: "1",
     },
-    '&50%': {
+    "&50%": {
       opacity: "0.8",
     },
-    '&to': {
+    "&to": {
       opacity: "1",
     },
   },
@@ -86,7 +85,8 @@ const useStyles = makeStyles({
     position: "relative",
     zIndex: 10,
     // 添加渐变背景
-    background: "linear-gradient(180deg, var(--colorNeutralBackground2) 0%, var(--colorNeutralBackground1) 100%)",
+    background:
+      "linear-gradient(180deg, var(--colorNeutralBackground2) 0%, var(--colorNeutralBackground1) 100%)",
   },
   deviceInfo: {
     padding: "5px", // 增加内边距
@@ -115,7 +115,7 @@ const useStyles = makeStyles({
     transition: "all 0.2s ease",
     cursor: "pointer",
     borderRadius: "8px",
-    
+
     "&:hover": {
       opacity: 1,
     },
@@ -167,7 +167,7 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    '&:hover': {
+    "&:hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
       border: "1px solid var(--colorNeutralStroke1)",
     },
@@ -259,7 +259,6 @@ const useStyles = makeStyles({
     border: "1px solid var(--colorNeutralStroke2)",
     color: "var(--colorNeutralForeground1)",
     backgroundColor: "var(--colorNeutralBackground1)",
-
   },
   deviceTextInfo: {
     marginTop: "8px",
@@ -441,7 +440,7 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
     boxSizing: "border-box",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
-    
+
     // Add a subtle gradient overlay
     "&::after": {
       content: '""',
@@ -450,10 +449,11 @@ const useStyles = makeStyles({
       left: 0,
       right: 0,
       height: "8px",
-      background: "linear-gradient(to bottom, var(--colorNeutralBackground1), transparent)",
+      background:
+        "linear-gradient(to bottom, var(--colorNeutralBackground1), transparent)",
       pointerEvents: "none",
       zIndex: 1,
-    }
+    },
   },
   tabList: {
     backgroundColor: "transparent",
@@ -469,7 +469,7 @@ const useStyles = makeStyles({
     scrollBehavior: "smooth",
     scrollPaddingTop: "8px",
     scrollPaddingBottom: "16px",
-    
+
     // Enhanced scrollbar styling
     "&::-webkit-scrollbar": {
       width: "4px",
@@ -504,7 +504,7 @@ const useStyles = makeStyles({
     boxSizing: "border-box",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)", // Subtle shadow for depth
-    
+
     // Icon styles
     "& .fui-Tab__icon": {
       color: "var(--colorNeutralForeground3)",
@@ -554,11 +554,11 @@ const useStyles = makeStyles({
         borderRadius: "0 3px 3px 0",
         transition: "all 0.3s ease",
       },
-      
+
       // Add subtle pulse animation on selection
       "@media (prefers-reduced-motion: no-preference)": {
         animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-      }
+      },
     },
 
     // 简化活跃状态
@@ -599,12 +599,12 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground2)",
     color: "var(--colorNeutralForeground2)",
     gap: "6px", // 添加图标和文字之间的间距
-    
+
     "&:hover": {
       backgroundColor: "var(--colorBrandBackground2)",
       color: "var(--colorBrandForeground1)",
     },
-    
+
     "&:active": {
       transform: "scale(0.98)",
     },
@@ -628,7 +628,8 @@ const useStyles = makeStyles({
       left: 0,
       right: 0,
       bottom: 0,
-      background: "radial-gradient(circle at 50% 50%, var(--colorNeutralBackground2) 0%, transparent 70%)",
+      background:
+        "radial-gradient(circle at 50% 50%, var(--colorNeutralBackground2) 0%, transparent 70%)",
       opacity: 0.3,
       pointerEvents: "none",
     },
@@ -638,53 +639,61 @@ const useStyles = makeStyles({
 const MainContent: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { currentView, setCurrentView, config, setStatusBarMessage } = useAppStore();
-  const { selectedDevice, devices, selectDevice } = useDeviceStore();
-  const { showConfetti } = useThemeStore();
+  const currentView = useAppStore((state) => state.currentView);
+  const setCurrentView = useAppStore((state) => state.setCurrentView);
+  const config = useAppStore((state) => state.config);
+  const setStatusBarMessage = useAppStore((state) => state.setStatusBarMessage);
+
+  const selectedDevice = useDeviceStore((state) => state.selectedDevice);
+  const devices = useDeviceStore((state) => state.devices);
+  const selectDevice = useDeviceStore((state) => state.selectDevice);
+
+  const showConfetti = useThemeStore((state) => state.showConfetti);
 
   const tabs = [
     {
       id: "home" as AppView,
-      label: t('sidebar.home'),
+      label: t("sidebar.home"),
       icon: <Home24Regular />,
     },
     {
       id: "adb-zone" as AppView,
-      label: t('sidebar.system_zone'),
+      label: t("sidebar.system_zone"),
       icon: <Code24Regular />,
     },
     {
       id: "flash-zone" as AppView,
-      label: t('sidebar.flash_zone'),
+      label: t("sidebar.flash_zone"),
       icon: <CloudArrowUp24Regular />,
     },
     {
       id: "online-resources" as AppView,
-      label: t('sidebar.online_resources'),
+      label: t("sidebar.online_resources"),
       icon: <CloudArrowDown24Regular />,
     },
     {
       id: "settings" as AppView,
-      label: t('sidebar.settings'),
+      label: t("sidebar.settings"),
       icon: <Settings24Regular />,
     },
   ];
   const { startScanning, stopScanning, refreshDeviceInfo } = useDeviceService();
   const prevConnectedCount = useRef<number>(0);
-  
+
   // 版本检查相关状态
   const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
   const [updateCheckCompleted, setUpdateCheckCompleted] = useState(false);
-  
+
   // 设备选择弹窗状态
-  const [isDeviceSelectionDialogOpen, setIsDeviceSelectionDialogOpen] = useState(false);
-  
+  const [isDeviceSelectionDialogOpen, setIsDeviceSelectionDialogOpen] =
+    useState(false);
+
   // 离线弹窗状态
   const [isOfflineDialogOpen, setIsOfflineDialogOpen] = useState(false);
-  
-  // 未授权弹窗状态
-  const [isUnauthorizedDialogOpen, setIsUnauthorizedDialogOpen] = useState(false);
 
+  // 未授权弹窗状态
+  const [isUnauthorizedDialogOpen, setIsUnauthorizedDialogOpen] =
+    useState(false);
 
   // 全局设备扫描 - 根据配置控制是否启用和扫描间隔
   useEffect(() => {
@@ -696,7 +705,12 @@ const MainContent: React.FC = () => {
       stopScanning();
     }
     return () => stopScanning();
-  }, [config.autoDetectDevices, config.scanInterval, startScanning, stopScanning]);
+  }, [
+    config.autoDetectDevices,
+    config.scanInterval,
+    startScanning,
+    stopScanning,
+  ]);
 
   // 监听设备状态变化，检测离线和未授权设备
   useEffect(() => {
@@ -705,13 +719,13 @@ const MainContent: React.FC = () => {
         setIsOfflineDialogOpen(true);
         setStatusBarMessage({
           type: "warning",
-          message: t('status.device_offline'),
+          message: t("status.device_offline"),
         });
       } else if (selectedDevice.mode === "unauthorized") {
         setIsUnauthorizedDialogOpen(true);
         setStatusBarMessage({
           type: "warning",
-          message: t('status.device_unauthorized'),
+          message: t("status.device_unauthorized"),
         });
       }
     }
@@ -719,32 +733,35 @@ const MainContent: React.FC = () => {
 
   // 监听设备连接/断开，提示状态栏消息
   useEffect(() => {
-    const connectedCount = devices.filter(d => d.connected).length;
+    const connectedCount = devices.filter((d) => d.connected).length;
     const prev = prevConnectedCount.current;
 
     if (prev === 0 && connectedCount > 0) {
       // 首次检测到设备
       setStatusBarMessage({
         type: "success",
-        message: connectedCount === 1 ? t('status.device_detected_single') : t('status.device_detected_multiple', { count: connectedCount }),
+        message:
+          connectedCount === 1
+            ? t("status.device_detected_single")
+            : t("status.device_detected_multiple", { count: connectedCount }),
       });
     } else if (prev > 0 && connectedCount === 0) {
       // 所有设备断开
       setStatusBarMessage({
         type: "warning",
-        message: t('status.device_disconnected'),
+        message: t("status.device_disconnected"),
       });
     } else if (connectedCount < prev && connectedCount > 0) {
       // 有设备断开但仍有设备连接
       setStatusBarMessage({
         type: "warning",
-        message: t('status.device_disconnected_some'),
+        message: t("status.device_disconnected_some"),
       });
     } else if (connectedCount > prev && prev > 0) {
       // 新增设备连接
       setStatusBarMessage({
         type: "success",
-        message: t('status.device_new_connected'),
+        message: t("status.device_new_connected"),
       });
     }
 
@@ -753,8 +770,15 @@ const MainContent: React.FC = () => {
 
   // 当选择设备时自动获取设备属性
   useEffect(() => {
-    if (selectedDevice && selectedDevice.connected && !selectedDevice.properties) {
-      setStatusBarMessage({ type: "info", message: t('status.fetching_device_info') });
+    if (
+      selectedDevice &&
+      selectedDevice.connected &&
+      !selectedDevice.properties
+    ) {
+      setStatusBarMessage({
+        type: "info",
+        message: t("status.fetching_device_info"),
+      });
       refreshDeviceInfo(selectedDevice.serial);
     }
   }, [selectedDevice, refreshDeviceInfo]);
@@ -762,15 +786,18 @@ const MainContent: React.FC = () => {
   // 调试设备属性变化
   useEffect(() => {
     if (selectedDevice?.properties) {
-      console.log('设备属性已更新:', {
+      console.log("设备属性已更新:", {
         marketName: selectedDevice.properties.marketName,
         model: selectedDevice.properties.model,
         brand: selectedDevice.properties.brand,
         manufacturer: selectedDevice.properties.manufacturer,
         deviceName: selectedDevice.properties.deviceName,
-        serial: selectedDevice.serial
+        serial: selectedDevice.serial,
       });
-      setStatusBarMessage({ type: "success", message: t('status.device_info_fetched') });
+      setStatusBarMessage({
+        type: "success",
+        message: t("status.device_info_fetched"),
+      });
     }
   }, [selectedDevice?.properties]);
 
@@ -778,30 +805,31 @@ const MainContent: React.FC = () => {
   useEffect(() => {
     const trackMainContentEntry = async () => {
       try {
-        console.log('🏢 MainContent组件已挂载，开始备用追踪...');
-        console.log('🏢 当前时间:', new Date().toISOString());
-        console.log('🏢 组件挂载位置: MainContent.tsx useEffect');
+        console.log("🏢 MainContent组件已挂载，开始备用追踪...");
+        console.log("🏢 当前时间:", new Date().toISOString());
+        console.log("🏢 组件挂载位置: MainContent.tsx useEffect");
 
         // 延迟一段时间，确保HomePage组件有机会先执行
         setTimeout(async () => {
           try {
             await usageTrackingService.trackMainPageEntry();
-            console.log('🏢 MainContent备用追踪调用完成');
+            console.log("🏢 MainContent备用追踪调用完成");
           } catch (error) {
-            console.error('❌ MainContent备用追踪失败:', error);
+            console.error("❌ MainContent备用追踪失败:", error);
           }
         }, 2000); // 2秒延迟
-
       } catch (error) {
-        console.error('❌ MainContent备用追踪设置失败:', error);
+        console.error("❌ MainContent备用追踪设置失败:", error);
       }
     };
 
-    console.log('🏢 MainContent useEffect 被触发');
+    console.log("🏢 MainContent useEffect 被触发");
     trackMainContentEntry();
 
     // 首次进入应用的庆祝彩带 (如果刚刚同意了隐私政策，且开启了设置)
-    const celebrationDone = sessionStorage.getItem('app_entrance_celebration_done');
+    const celebrationDone = sessionStorage.getItem(
+      "app_entrance_celebration_done",
+    );
     if (!celebrationDone && showConfetti) {
       const duration = 2 * 1000;
       const end = Date.now() + duration;
@@ -826,11 +854,11 @@ const MainContent: React.FC = () => {
           requestAnimationFrame(frame);
         }
       };
-      
+
       // 稍微延迟一下，配合进入动画
       setTimeout(() => {
         frame();
-        sessionStorage.setItem('app_entrance_celebration_done', 'true');
+        sessionStorage.setItem("app_entrance_celebration_done", "true");
       }, 500);
     }
   }, []); // 空依赖数组，确保只在组件挂载时执行一次
@@ -840,14 +868,17 @@ const MainContent: React.FC = () => {
     const initializeSystemTray = async () => {
       try {
         // 检查是否已经初始化，避免重复初始化
-        if (!systemTrayManager.isReady() && !systemTrayManager.isInitializingNow()) {
+        if (
+          !systemTrayManager.isReady() &&
+          !systemTrayManager.isInitializingNow()
+        ) {
           await systemTrayManager.initialize({
             systemTrayEnabled: config.systemTrayEnabled,
-            minimizeToTrayOnClose: config.minimizeToTrayOnClose
+            minimizeToTrayOnClose: config.minimizeToTrayOnClose,
           });
         }
       } catch (error) {
-        console.error('系统托盘初始化失败:', error);
+        console.error("系统托盘初始化失败:", error);
       }
     };
 
@@ -866,10 +897,10 @@ const MainContent: React.FC = () => {
       try {
         await systemTrayManager.updateConfig({
           systemTrayEnabled: config.systemTrayEnabled,
-          minimizeToTrayOnClose: config.minimizeToTrayOnClose
+          minimizeToTrayOnClose: config.minimizeToTrayOnClose,
         });
       } catch (error) {
-        console.error('更新系统托盘配置失败:', error);
+        console.error("更新系统托盘配置失败:", error);
       }
     };
 
@@ -881,7 +912,7 @@ const MainContent: React.FC = () => {
     // 延迟执行版本检查，确保应用完全加载
     const timer = setTimeout(() => {
       if (!updateCheckCompleted) {
-        console.log('🔄 开始自动检测更新...');
+        console.log("🔄 开始自动检测更新...");
         setTriggerVersionCheck(true);
       }
     }, 10);
@@ -891,42 +922,50 @@ const MainContent: React.FC = () => {
 
   // 处理版本检查完成
   const handleUpdateCheckComplete = () => {
-    console.log('✅ 版本检查完成');
+    console.log("✅ 版本检查完成");
     setUpdateCheckCompleted(true);
     setTriggerVersionCheck(false);
   };
 
-  const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
-    setCurrentView(data.value as AppView);
-  };
-
-
+  const handleTabSelect = useCallback(
+    (_event: SelectTabEvent, data: SelectTabData) => {
+      if (data.value && data.value !== currentView) {
+        setCurrentView(data.value as AppView);
+      }
+    },
+    [currentView, setCurrentView],
+  );
 
   const handleDeviceSelect = (device: any) => {
     selectDevice(device);
   };
 
-
-
   const getDeviceMode = () => {
     if (!selectedDevice) return "";
 
     switch (selectedDevice.mode) {
-      case "sys": return t('device_mode.system');
-      case "rec": return t('device_mode.recovery');
-      case "fastboot": return t('device_mode.fastboot');
-      case "fastbootd": return t('device_mode.fastbootd');
-      case "sideload": return t('device_mode.sideload');
-      case "edl": return t('device_mode.edl');
-      case "unauthorized": return t('device_mode.unauthorized');
-      case "offline": return t('device_mode.offline');
-      default: return t('device_mode.unknown');
+      case "sys":
+        return t("device_mode.system");
+      case "rec":
+        return t("device_mode.recovery");
+      case "fastboot":
+        return t("device_mode.fastboot");
+      case "fastbootd":
+        return t("device_mode.fastbootd");
+      case "sideload":
+        return t("device_mode.sideload");
+      case "edl":
+        return t("device_mode.edl");
+      case "unauthorized":
+        return t("device_mode.unauthorized");
+      case "offline":
+        return t("device_mode.offline");
+      default:
+        return t("device_mode.unknown");
     }
   };
 
-
-
-  const connectedDevices = devices.filter(d => d.connected);
+  const connectedDevices = devices.filter((d) => d.connected);
 
   // 自动选择第一个设备
   useEffect(() => {
@@ -939,33 +978,35 @@ const MainContent: React.FC = () => {
     if (connectedDevices.length === 0) {
       return (
         <div className={styles.deviceInfo} id="tour-device-info">
-          <div 
+          <div
             className={styles.deviceInfoOverlay}
             onClick={() => setIsDeviceSelectionDialogOpen(true)}
           >
             <div className={styles.deviceInfoOverlayText}>
-               {/* <Swap24Regular /> */}
-               选择其他设备
+              {/* <Swap24Regular /> */}
+              选择其他设备
             </div>
           </div>
           <div className={styles.deviceInfoContainer}>
             {/* 上半部分：左侧背景图片 + 右侧无设备提示 */}
             <div className={styles.deviceInfoTop}>
-            {/* 左侧：设备状态图片 */}
-            <div className={styles.deviceIconSection}>
-              <img
-                src={UnlinkIcon}
-                alt="UnlinkIcon"
-                className={styles.deviceIconImage}
-              />
-            </div>
+              {/* 左侧：设备状态图片 */}
+              <div className={styles.deviceIconSection}>
+                <img
+                  src={UnlinkIcon}
+                  alt="UnlinkIcon"
+                  className={styles.deviceIconImage}
+                />
+              </div>
 
               {/* 右侧：无设备提示信息 */}
               <div className={styles.deviceTextInfo}>
                 <div className={styles.noDeviceMessageSection}>
-                  <Text className={styles.noDeviceTitle}>{t('main.no_device_title')}</Text>
+                  <Text className={styles.noDeviceTitle}>
+                    {t("main.no_device_title")}
+                  </Text>
                   <Text className={styles.noDeviceSubtitle}>
-                    {t('main.no_device_desc')}
+                    {t("main.no_device_desc")}
                   </Text>
                 </div>
               </div>
@@ -984,22 +1025,30 @@ const MainContent: React.FC = () => {
     // 获取设备名称，对于fastboot模式，使用fastboot getvar product命令获取
     const getDeviceName = () => {
       // 对于fastboot模式，优先使用product_name
-      if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
+      if (
+        selectedDevice.mode === "fastboot" ||
+        selectedDevice.mode === "fastbootd"
+      ) {
         return selectedDevice.properties?.productName || selectedDevice.serial;
       }
       // 对于其他模式，使用原有的逻辑
-      return selectedDevice.properties?.marketName ||
-             selectedDevice.properties?.model ||
-             selectedDevice.serial;
+      return (
+        selectedDevice.properties?.marketName ||
+        selectedDevice.properties?.model ||
+        selectedDevice.serial
+      );
     };
 
     const getDeviceOptionText = (device: any) => {
       // 直接返回设备序列号
       return device.serial;
     };
-    
+
     const getDeviceCodeName = () => {
-      if (selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd") {
+      if (
+        selectedDevice.mode === "fastboot" ||
+        selectedDevice.mode === "fastbootd"
+      ) {
         // 对于fastboot模式，使用product_name作为设备代号
         return selectedDevice.properties?.productName || selectedDevice.serial;
       }
@@ -1008,13 +1057,13 @@ const MainContent: React.FC = () => {
 
     return (
       <div className={styles.deviceInfo} id="tour-device-info">
-        <div 
+        <div
           className={styles.deviceInfoOverlay}
           onClick={() => setIsDeviceSelectionDialogOpen(true)}
         >
           <div className={styles.deviceInfoOverlayText}>
-             {/* <Swap24Regular /> */}
-             选择其他设备
+            {/* <Swap24Regular /> */}
+            选择其他设备
           </div>
         </div>
         <div className={styles.deviceInfoContainer}>
@@ -1034,13 +1083,12 @@ const MainContent: React.FC = () => {
               {/* 设备名称区域 */}
               <div className={styles.deviceNameSection}>
                 {/* 设备序列号 */}
-                <Text className={styles.deviceName}>
-                  {getDeviceName()}
-                </Text>
+                <Text className={styles.deviceName}>{getDeviceName()}</Text>
 
                 {/* 设备代号 */}
                 {selectedDevice.properties?.deviceName && (
-                  <Badge                     appearance="outline"
+                  <Badge
+                    appearance="outline"
                     color="brand"
                     size="medium"
                     className={styles.compactBadge}
@@ -1127,12 +1175,8 @@ const MainContent: React.FC = () => {
   };
 
   return (
-    <div 
-      className={`${styles.container} startup-optimized`}
-    >
-      <div 
-        className={`${styles.sidebar} sidebar-enter`}
-      >
+    <div className={`${styles.container} startup-optimized`}>
+      <div className={`${styles.sidebar} sidebar-enter`}>
         {/* 设备信息区域 */}
         {renderDeviceInfo()}
 
@@ -1157,31 +1201,30 @@ const MainContent: React.FC = () => {
           ))}
         </TabList>
 
-
         {/* 轮播图区域 */}
         <div className={styles.carouselContainer}>
           <CarouselComponent autoPlayInterval={config.carouselInterval} />
         </div>
-          <div className={styles.buttonGroupContainer}>
-            {/* 打开命令行按钮 */}
-            <div 
-              className={`${styles.actionButton} ${currentView === "command-line" ? styles.actionButtonSelected : ""}`}
-              onClick={() => setCurrentView("command-line")}
-              title={t('main.command_line')}
-            >
-              <Icons24Regular />
-              <Text>{t('main.command_line')}</Text>
-            </div>
-            {/* 打开日志窗口按钮 */}
-            <div 
-              className={`${styles.actionButton} ${currentView === "logs" ? styles.actionButtonSelected : ""}`}
-              onClick={() => setCurrentView("logs")}
-              title={t('main.logs')}
-            >
-              <Notepad24Regular />
-              <Text>{t('main.logs')}</Text>
-            </div>
+        <div className={styles.buttonGroupContainer}>
+          {/* 打开命令行按钮 */}
+          <div
+            className={`${styles.actionButton} ${currentView === "command-line" ? styles.actionButtonSelected : ""}`}
+            onClick={() => setCurrentView("command-line")}
+            title={t("main.command_line")}
+          >
+            <Icons24Regular />
+            <Text>{t("main.command_line")}</Text>
           </div>
+          {/* 打开日志窗口按钮 */}
+          <div
+            className={`${styles.actionButton} ${currentView === "logs" ? styles.actionButtonSelected : ""}`}
+            onClick={() => setCurrentView("logs")}
+            title={t("main.logs")}
+          >
+            <Notepad24Regular />
+            <Text>{t("main.logs")}</Text>
+          </div>
+        </div>
       </div>
 
       {/* 设备选择弹窗 */}
@@ -1196,20 +1239,23 @@ const MainContent: React.FC = () => {
         }}
       />
 
-      <div className={`${styles.content} main-content-enter`} id="tour-main-content">
-        <AnimatePresence mode="wait">
+      <div
+        className={`${styles.content} main-content-enter`}
+        id="tour-main-content"
+      >
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={currentView}
             initial={{ opacity: 0, x: 20, filter: "blur(5px)" }}
             animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, x: -20, filter: "blur(5px)" }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 300, 
+            transition={{
+              type: "spring",
+              stiffness: 300,
               damping: 30,
-              opacity: { duration: 0.2 }
+              opacity: { duration: 0.2 },
             }}
-            style={{ width: '100%', height: '100%', overflow: 'hidden' }}
+            style={{ width: "100%", height: "100%", overflow: "hidden" }}
           >
             {renderContent()}
           </motion.div>
@@ -1219,57 +1265,63 @@ const MainContent: React.FC = () => {
       {/* 版本检查组件 - 隐藏但功能完整 */}
       <VersionChecker
         triggerCheck={triggerVersionCheck}
-        onCheckUpdate={() => console.log('🔄 开始检查更新...')}
+        onCheckUpdate={() => console.log("🔄 开始检查更新...")}
         onUpdateFound={(result) => {
-          console.log('🆕 发现新版本:', result);
+          console.log("🆕 发现新版本:", result);
           handleUpdateCheckComplete();
         }}
         onNoUpdate={(currentVersion) => {
-          console.log('✅ 当前已是最新版本:', currentVersion);
+          console.log("✅ 当前已是最新版本:", currentVersion);
           handleUpdateCheckComplete();
         }}
         onError={(error) => {
-          console.error('❌ 版本检查失败:', error);
+          console.error("❌ 版本检查失败:", error);
           handleUpdateCheckComplete();
         }}
         showStatusMessage={false} // 不显示状态消息，避免干扰用户
       />
-      
+
       {/* 离线设备提示弹窗 */}
       <Dialog
-        onOpenChange={
-          (isOpen) => setIsOfflineDialogOpen(!!isOpen)
-        }
+        onOpenChange={(isOpen) => setIsOfflineDialogOpen(!!isOpen)}
         open={isOfflineDialogOpen}
       >
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>{t('main.device_offline_title')}</DialogTitle>
+            <DialogTitle>{t("main.device_offline_title")}</DialogTitle>
             <DialogContent>
-              <p>{t('main.device_offline_desc')}</p>
+              <p>{t("main.device_offline_desc")}</p>
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setIsOfflineDialogOpen(false)}>{t('main.i_know')}</Button>
+              <Button
+                appearance="secondary"
+                onClick={() => setIsOfflineDialogOpen(false)}
+              >
+                {t("main.i_know")}
+              </Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
       </Dialog>
-      
+
       {/* 未授权设备提示弹窗 */}
       <Dialog
-        onOpenChange={
-          (isOpen) => setIsUnauthorizedDialogOpen(!!isOpen)
-        }
+        onOpenChange={(isOpen) => setIsUnauthorizedDialogOpen(!!isOpen)}
         open={isUnauthorizedDialogOpen}
       >
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>{t('main.device_unauthorized_title')}</DialogTitle>
+            <DialogTitle>{t("main.device_unauthorized_title")}</DialogTitle>
             <DialogContent>
-              <p>{t('main.device_unauthorized_desc')}</p>
+              <p>{t("main.device_unauthorized_desc")}</p>
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setIsUnauthorizedDialogOpen(false)}>{t('main.i_know')}</Button>
+              <Button
+                appearance="secondary"
+                onClick={() => setIsUnauthorizedDialogOpen(false)}
+              >
+                {t("main.i_know")}
+              </Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>

@@ -1,8 +1,8 @@
 import React from 'react';
 import { logService } from '../services/logService';
 import { SecurityConfigService } from '../services/SecurityConfigService';
-import { SecureDataTransferService } from '../services/SecureDataTransferService';
-import { UserBehaviorService } from '../services/userBehaviorService';
+import { SecureDataTransmissionService } from '../services/secureDataTransmissionService';
+import { UsageTrackingService } from '../services/usageTrackingService';
 
 export class DebugTools {
   static checkReactVersion(): void {
@@ -48,8 +48,8 @@ export class DebugTools {
   static async checkServiceStatus(): Promise<void> {
     const status = {
       security: SecurityConfigService.getInstance().isInitialized(),
-      dataTransfer: SecureDataTransferService.getInstance().isInitialized(),
-      userBehavior: UserBehaviorService.getInstance().isInitialized(),
+      dataTransfer: SecureDataTransmissionService.getInstance().isServiceInitialized(),
+      userBehavior: UsageTrackingService.getInstance().getSessionInfo().isInitialized,
       logging: true // logService 总是可用的
     };
 
@@ -76,8 +76,8 @@ export class DebugTools {
       },
       services: {
         security: SecurityConfigService.getInstance().isInitialized(),
-        dataTransfer: SecureDataTransferService.getInstance().isInitialized(),
-        userBehavior: UserBehaviorService.getInstance().isInitialized(),
+        dataTransfer: SecureDataTransmissionService.getInstance().isServiceInitialized(),
+        userBehavior: UsageTrackingService.getInstance().getSessionInfo().isInitialized,
         logging: true // logService 总是可用的
       },
       logs: logService.getLogs().slice(-10), // 最近10条日志
