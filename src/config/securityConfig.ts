@@ -4,9 +4,10 @@
  */
 
 import { invoke } from '@tauri-apps/api/core'
+import { getVersion } from '@tauri-apps/api/app'
 
 // 检查是否在Tauri环境中
-const isTauriEnvironment = typeof window !== 'undefined' && window.__TAURI__;
+const isTauriEnvironment = typeof window !== 'undefined' && (window.__TAURI__ || (window as any).__TAURI_INTERNALS__);
 
 /**
  * 安全配置接口（匹配Rust结构体字段名）
@@ -30,6 +31,7 @@ export class SecurityConfigManager {
   private static instance: SecurityConfigManager;
   private config: SecurityConfig | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   private constructor() {}
 
@@ -51,36 +53,34 @@ export class SecurityConfigManager {
       return;
     }
 
-    try {
-      // 从Tauri后端获取安全配置（仅在Tauri环境中）
-      if (isTauriEnvironment) {
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = (async () => {
+      try {
         const config = await invoke<SecurityConfig>('get_security_config');
-        
-        // 验证配置完整性
         this.validateConfig(config);
-        
         this.config = config;
         this.isInitialized = true;
-        
         console.log('✅ 安全配置初始化成功');
-      } else {
-        // 非Tauri环境，直接使用默认配置
-        console.log('🔄 非Tauri环境，使用默认配置...');
+      } catch (error) {
+        const isNotTauri = error instanceof Error && 
+          (error.message.includes('window.__TAURI_IPC__') || error.message.includes('not found'));
+        
+        if (isNotTauri) {
+          console.log('🔄 非Tauri环境，使用默认配置...');
+        } else {
+          console.warn('⚠️ 获取安全配置失败 (可能在开发环境):', error);
+        }
+        
         await this.initializeWithDefaults();
+      } finally {
+        this.initializationPromise = null;
       }
-    } catch (error) {
-      console.error('❌ 安全配置初始化失败:', error);
-      
-      // 尝试使用默认配置进行降级初始化
-      try {
-        console.log('🔄 尝试使用默认配置进行降级初始化...');
-        await this.initializeWithDefaults();
-        console.log('✅ 降级初始化成功');
-      } catch (fallbackError) {
-        console.error('❌ 降级初始化也失败:', fallbackError);
-        throw new Error('Failed to initialize security configuration');
-      }
-    }
+    })();
+
+    return this.initializationPromise;
   }
 
   /**
@@ -95,15 +95,23 @@ export class SecurityConfigManager {
    * 使用默认配置初始化
    */
   private async initializeWithDefaults(): Promise<void> {
+    let appVersion = '1.3.0'; // 默认版本更新为 1.3.0
+    try {
+      // 尝试直接通过 getVersion 获取，如果失败则维持默认值
+      appVersion = await getVersion();
+    } catch (e) {
+      // 忽略错误，使用默认值
+    }
+
     const defaultConfig: SecurityConfig = {
       api_base_url: 'https://api-g.lacs.cc/',
       api_key: this.generateSecureKey(32),
-      app_id: 'admt-app',
+      app_id: `admt-app-v${appVersion}`,
       app_secret: this.generateSecureKey(16),
       signature_secret: this.generateSecureKey(32),
       enable_signature: false,
       enable_strict_user_agent: false,
-      app_version: '1.0.0',
+      app_version: appVersion,
       software_id: 1
     }
 

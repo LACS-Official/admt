@@ -44,6 +44,7 @@ export class DeviceConnectionTrackingService {
   private isInitialized = false;
   private deviceFingerprint: string | null = null;
   private lastRequestTime = 0;
+  private reportedSerials = new Set<string>(); // 记录已上报的序列号，防止重复访问API
   private readonly RATE_LIMIT_INTERVAL = 10000; // 10秒频率限制
 
   private constructor() {}
@@ -96,9 +97,15 @@ export class DeviceConnectionTrackingService {
         return;
       }
 
-      // 检查频率限制
+      // 检查该设备是否已在此会话中成功上报
+      if (this.reportedSerials.has(connectionData.deviceSerial)) {
+        console.log(`📊 设备 ${connectionData.deviceSerial} 已在此会话中成功上报，跳过重复访问`);
+        return;
+      }
+
+      // 检查频率限制 (IP级别/整体频率)
       if (!this.checkRateLimit()) {
-        console.log('⏰ 频率限制：距离上次请求不足10秒，跳过设备连接记录');
+        console.log('⏰ 频率限制：距离上次请求不足10秒，跳过本次设备统计');
         return;
       }
 
@@ -120,6 +127,7 @@ export class DeviceConnectionTrackingService {
 
       if (success) {
         this.lastRequestTime = Date.now();
+        this.reportedSerials.add(connectionData.deviceSerial); // 标记为已成功上报
         console.log('✅ 设备连接记录发送成功');
       } else {
         console.warn('⚠️ 设备连接记录发送失败，但不影响应用正常使用');

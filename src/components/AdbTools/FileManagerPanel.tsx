@@ -56,6 +56,7 @@ import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "react-i18next";
 import { DeviceInfo } from "../../types/device";
+import { logService } from "../../services/logService";
 
 
 const useStyles = makeStyles({
@@ -612,21 +613,22 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
         message: t('file_manager.msg_pulling', { name: file.name }),
       });
 
-      console.log('尝试拉取单个文件:', file.path, '到:', localPath, '设备状态:', device.mode);
       const result = await deviceService.pullFile(device.serial, file.path, localPath);
       if (result.success) {
+        await logService.info(`成功导出文件: ${file.name}`, '文件管理', { remotePath: file.path, localPath });
         setStatusBarMessage({
           type: "success",
           message: t('file_manager.msg_pull_success', { name: file.name, dir: downloadDir }),
         });
       } else {
+        await logService.error(`导出文件失败: ${file.name}`, '文件管理', { error: result.error, remotePath: file.path });
         setStatusBarMessage({
           type: "error",
           message: t('file_manager.msg_pull_fail', { error: result.error || t('common.unknown') }),
         });
       }
     } catch (error) {
-      console.error('单文件传出失败:', error, '设备状态:', device.mode);
+      await logService.error(`导出文件过程异常: ${file.name}`, '文件管理', { error: String(error) });
       setStatusBarMessage({
         type: "error",
         message: t('file_manager.msg_pull_fail', { error }),
@@ -673,16 +675,17 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
         if (file.type === 'file') {
           try {
             const localPath = await join(downloadDir, file.name);
-            console.log('尝试拉取文件:', file.path, '到:', localPath, '设备状态:', device.mode);
             const result = await deviceService.pullFile(device.serial, file.path, localPath);
 
             if (result.success) {
               successCount++;
+              await logService.info(`成功导出文件(批量): ${file.name}`, '文件管理', { remotePath: file.path, localPath });
             } else {
               failCount++;
+              await logService.error(`导出文件失败(批量): ${file.name}`, '文件管理', { error: result.error, remotePath: file.path });
             }
           } catch (error) {
-            console.error('文件拉取失败:', error, '设备状态:', device.mode);
+            await logService.error(`批量导出文件过程异常: ${file.name}`, '文件管理', { error: String(error) });
             failCount++;
           }
         }
@@ -692,8 +695,9 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
         type: successCount > 0 ? "success" : "error",
         message: t('file_manager.msg_batch_pull_result', { success: successCount, fail: failCount, dir: downloadDir }),
       });
+      await logService.info(`批量导出完成: 成功 ${successCount}, 失败 ${failCount}`, '文件管理', { exportDir: downloadDir });
     } catch (error) {
-      console.error('导出文件失败:', error);
+      await logService.error(`批量导出失败`, '文件管理', { error: String(error) });
       setStatusBarMessage({
         type: "error",
         message: t('file_manager.msg_pull_fail', { error }),
@@ -705,26 +709,28 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
 
   // 打开导出目录
   const handleOpenExportDirectory = async () => {
+    let exportDir = '';
     try {
       const docDir = await documentDir();
-      const exportDir = await join(docDir, 'ADMT', 'output');
+      exportDir = await join(docDir, 'ADMT', 'output');
       
       // 确保目录存在
       const dirExists = await exists(exportDir);
       if (!dirExists) {
         await mkdir(exportDir, { recursive: true });
-        console.log('创建导出目录:', exportDir);
+        await logService.info(`创建本地导出目录: ${exportDir}`, '文件管理');
       }
       
       // 打开目录 - 使用Tauri的invoke方式
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke('open_folder', { path: exportDir });
+      await logService.info(`打开本地导出文件夹: ${exportDir}`, '文件管理');
       setStatusBarMessage({
         type: "success",
         message: t('file_manager.msg_open_dir_success'),
       });
     } catch (error) {
-      console.error('打开导出目录失败:', error);
+      await logService.error(`打开导出文件夹失败: ${exportDir || '未知路径'}`, '文件管理', { error: String(error) });
       setStatusBarMessage({
         type: "error",
         message: t('file_manager.msg_open_dir_fail', { error }),
@@ -756,10 +762,13 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
 
         for (const filePath of selected) {
           const result = await deviceService.pushFile(device.serial, filePath, currentPath);
+          const fileName = filePath.split(/[/\\]/).pop() || filePath;
           if (result.success) {
             successCount++;
+            await logService.info(`成功上传文件: ${fileName}`, '文件管理', { localPath: filePath, remoteDir: currentPath });
           } else {
             failCount++;
+            await logService.error(`上传文件失败: ${fileName}`, '文件管理', { error: result.error, localPath: filePath });
           }
         }
 

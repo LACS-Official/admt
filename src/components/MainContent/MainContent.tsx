@@ -53,17 +53,6 @@ import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
 
 const useStyles = makeStyles({
-  "@keyframes pulse": {
-    "&from": {
-      opacity: "1",
-    },
-    "&50%": {
-      opacity: "0.8",
-    },
-    "&to": {
-      opacity: "1",
-    },
-  },
   container: {
     flex: 1,
     display: "flex",
@@ -698,13 +687,12 @@ const MainContent: React.FC = () => {
   // 全局设备扫描 - 根据配置控制是否启用和扫描间隔
   useEffect(() => {
     if (config.autoDetectDevices) {
-      // 如果扫描间隔改变，需要重新启动扫描
-      stopScanning();
+      // startScanning 内部已有 isScanningNow 检查，不会重复启动
       startScanning();
     } else {
       stopScanning();
     }
-    return () => stopScanning();
+    // 页面内保持扫描运行，不随 useEffect 清理而停止
   }, [
     config.autoDetectDevices,
     config.scanInterval,
@@ -804,23 +792,8 @@ const MainContent: React.FC = () => {
   // 用户行为追踪 - 在MainContent组件挂载时发送使用数据（备用方案）
   useEffect(() => {
     const trackMainContentEntry = async () => {
-      try {
-        console.log("🏢 MainContent组件已挂载，开始备用追踪...");
-        console.log("🏢 当前时间:", new Date().toISOString());
-        console.log("🏢 组件挂载位置: MainContent.tsx useEffect");
-
-        // 延迟一段时间，确保HomePage组件有机会先执行
-        setTimeout(async () => {
-          try {
-            await usageTrackingService.trackMainPageEntry();
-            console.log("🏢 MainContent备用追踪调用完成");
-          } catch (error) {
-            console.error("❌ MainContent备用追踪失败:", error);
-          }
-        }, 2000); // 2秒延迟
-      } catch (error) {
-        console.error("❌ MainContent备用追踪设置失败:", error);
-      }
+      // 启动流程已经处理了 trackMainPageEntry
+      console.log("🏢 MainContent 已挂载");
     };
 
     console.log("🏢 MainContent useEffect 被触发");
@@ -907,17 +880,18 @@ const MainContent: React.FC = () => {
     updateTrayConfig();
   }, [config.systemTrayEnabled, config.minimizeToTrayOnClose]);
 
-  // 进入主页面时自动检测更新
+  // 进入主页面时不再自动触发版本检查，除非确实没有完成（这已经在 StartupFlow 处理）
   useEffect(() => {
-    // 延迟执行版本检查，确保应用完全加载
-    const timer = setTimeout(() => {
-      if (!updateCheckCompleted) {
-        console.log("🔄 开始自动检测更新...");
-        setTriggerVersionCheck(true);
-      }
-    }, 10);
-
-    return () => clearTimeout(timer);
+    // 这里仅作为兜底，如果因为某些原因 StartupFlow 没完成检查
+    if (!updateCheckCompleted) {
+      const timer = setTimeout(() => {
+        // 如果是生产环境且未完成检查，则触发一次
+        // 但建议保持手动触发或依赖 StartupFlow
+        // console.log("🔄 开始自动检测更新...");
+        // setTriggerVersionCheck(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
   }, [updateCheckCompleted]);
 
   // 处理版本检查完成

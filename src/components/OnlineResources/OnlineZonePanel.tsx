@@ -2,7 +2,6 @@
 在线资源-在线资源区域卡片页面
 */  
 import React, { useState, useEffect} from 'react';
-import { useTranslation } from "react-i18next";
 import {
   makeStyles,
   TabList,
@@ -135,23 +134,12 @@ const useStyles = makeStyles({
     textAlign: "center",
     color: "var(--colorNeutralForeground2)",
   },
-  // Animations
-  fadeIn: {
-    animationName: {
-      from: { opacity: 0, transform: 'translateY(10px)' },
-      to: { opacity: 1, transform: 'translateY(0)' },
-    },
-    animationDuration: '0.3s',
-    animationFillMode: 'forwards',
-    animationTimingFunction: 'cubic-bezier(0.33, 1, 0.68, 1)',
-  },
 });
 
 type FlashZoneView =  "online-resources" | "rom-download" | "download-manager";
 
 const OnlineZonePanel: React.FC = () => {
   const styles = useStyles();
-  const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<FlashZoneView>("online-resources");
   const [downloadStats, setDownloadStats] = useState({
     total: 0,
@@ -184,17 +172,17 @@ const OnlineZonePanel: React.FC = () => {
   const tabs = [
     {
       id: "online-resources" as FlashZoneView,
-      label: t('online.app_store'),
+      label: "软件商店",
       icon: <CloudArrowUp24Regular />,
     },
-    // {
-    //   id: "rom-download" as FlashZoneView,
-    //   label: t('online.rom_store'),
-    //   icon: <CloudArrowUp24Regular />,
-    // },
+    {
+      id: "rom-download" as FlashZoneView,
+      label: "ROM商店",
+      icon: <CloudArrowUp24Regular />,
+    },
     {
       id: "download-manager" as FlashZoneView,
-      label: t('online.download_manager'),
+      label: "下载管理",
       icon: <CloudArrowUp24Regular />,
     },
   ];
@@ -206,8 +194,8 @@ const OnlineZonePanel: React.FC = () => {
         return <OnlineResourcesPanel />;
       case "download-manager":
         return <DownloadManagerPanel onBack={() => {}}/>;
-      // case "rom-download":
-      //   return <RomDownloadPanel/>;
+      case "rom-download":
+        return <RomDownloadPanel/>;
       default:
        return <OnlineResourcesPanel />;
     }
@@ -241,7 +229,7 @@ const OnlineZonePanel: React.FC = () => {
             ))}
           </TabList>
 
-          <div key={currentView} className={`${styles.tabContent} ${styles.fadeIn}`}>
+          <div className={styles.tabContent}>
             {renderContent()}
           </div>
         </div>

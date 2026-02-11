@@ -12,7 +12,6 @@ import {
   Tab,
   TabList,
 } from "@fluentui/react-components";
-import { useTranslation } from "react-i18next";
 import {
   Battery024Regular,
   Storage24Regular,
@@ -71,6 +70,7 @@ interface MemoryStorageInfo {
 
 const useStyles = makeStyles({
   title: {
+    selector: ".MuiCardContent-root",
     fontSize: "1.2rem",
     fontWeight: "600",
     color: "var(--colorNeutralForeground1)",
@@ -380,6 +380,9 @@ const useStyles = makeStyles({
   },
   noSelect: {
     userSelect: 'none',
+    WebkitUserSelect: 'none',
+    MozUserSelect: 'none',
+    msUserSelect: 'none',
   },
 });
 
@@ -391,9 +394,8 @@ interface DeviceOverviewCardProps {
 }
 
 
-export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCustomize }) => {
+const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCustomize }) => {
   const styles = useStyles();
-  const { t } = useTranslation();
   const { setStatusBarMessage } = useAppStore();
   const { dispatchToast } = useToastController();
 
@@ -448,13 +450,13 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
       await navigator.clipboard.writeText(value);
         setStatusBarMessage({
           type: "info",
-          message: t('device_overview.copy_success', { label: label }),
+          message: `已复制 ${label} 到剪贴板`,
           duration: 1000,
         });
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: t('device_overview.copy_failed', { label: label }),
+        message: `复制 ${label} 失败`,
         duration: 2000,
       });
     }
@@ -474,8 +476,8 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
             {device.mode === "fastboot" ? (
             
               <div className={styles.fastbootDeviceInfoRow}>
-                <div className={styles.title}>{t('device_overview.panel_title')}</div>
-                <Text style={{ fontSize: '12px', color: 'var(--colorBrandForeground2)' }}>{t('device_overview.click_to_copy')}</Text>
+                <div className={styles.title}>设备信息面板</div>
+                <Text style={{ fontSize: '12px', color: 'var(--colorBrandForeground2)' }}>点击值可以复制</Text>
                 <div style={{ display: 'flex', gap: '4px' }}>
                   {/* 刷新按钮 */}
                   {device.connected && (
@@ -485,7 +487,7 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
                       icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
                       onClick={fetchMemoryStorageInfo}
                       disabled={isLoadingMemoryStorage}
-                      title={t('device_overview.refresh_info')}
+                      title="刷新内存和存储信息"
                       className={styles.headerRefreshButton}
                     />
                   )}
@@ -497,11 +499,11 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
                   onTabSelect={(_, data) => setSelectedTab(data.value as string)}
                   className={styles.headerTabList}
                 >
-                  <Tab value="basic">{t('device_overview.tab_basic')}</Tab>
-                  <Tab value="fastboot-security">{t('device_overview.tab_fb_security')}</Tab>
-                  <Tab value="fastboot-partition">{t('device_overview.tab_fb_partition')}</Tab>
-                  <Tab value="fastboot-hardware">{t('device_overview.tab_fb_hardware')}</Tab>
-                  <Tab value="fastboot-storage">{t('device_overview.tab_fb_storage')}</Tab>
+                  <Tab value="basic">基本信息</Tab>
+                  <Tab value="fastboot-security">安全状态</Tab>
+                  <Tab value="fastboot-partition">A/B分区</Tab>
+                  <Tab value="fastboot-hardware">硬件状态</Tab>
+                  <Tab value="fastboot-storage">分区信息</Tab>
 
                 </TabList>
               </div>
@@ -510,8 +512,8 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
               <>
                 {/* 第一行：信息面板标题 */}
                 <div className={styles.deviceInfoRow}>
-                  <div className={styles.title}>{t('device_overview.panel_title')}</div>
-                    <Text style={{ fontSize: '12px', color: 'var(--colorBrandForeground2)' }}>{t('device_overview.click_to_copy')}</Text>
+                  <div className={styles.title}>设备信息面板</div>
+                    <Text style={{ fontSize: '12px', color: 'var(--colorBrandForeground2)' }}>点击值可以复制</Text>
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {/* 刷新按钮 */}
                     {device.connected && (
@@ -521,7 +523,7 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
                         icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
                         onClick={fetchMemoryStorageInfo}
                         disabled={isLoadingMemoryStorage}
-                        title={t('device_overview.refresh_info')}
+                        title="刷新内存和存储信息"
                         className={styles.headerRefreshButton}
                       />
                     )}
@@ -535,11 +537,11 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
                     onTabSelect={(_, data) => setSelectedTab(data.value as string)}
                     className={styles.headerTabList}
                   >
-                    <Tab value="basic">{t('device_overview.tab_basic')}</Tab>
-                    <Tab value="hardware">{t('device_overview.tab_hardware')}</Tab>
-                    <Tab value="system">{t('device_overview.tab_system')}</Tab>
-                    <Tab value="security">{t('device_overview.tab_security')}</Tab>
-                    <Tab value="network">{t('device_overview.tab_network')}</Tab>
+                    <Tab value="basic">基本信息</Tab>
+                    <Tab value="hardware">硬件信息</Tab>
+                    <Tab value="system">系统信息</Tab>
+                    <Tab value="security">安全信息</Tab>
+                    <Tab value="network">网络信息</Tab>
                   </TabList>
                 </div>
               </>
@@ -556,7 +558,7 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
                   <div className={styles.progressHeader}>
                     <div className={styles.progressLabel}>
                       <Battery024Regular />
-                      <Text>{t('device_overview.battery')}</Text>
+                      <Text>电量</Text>
                     </div>
                     <Text className={styles.progressValue}>{device.properties?.batteryLevel || 0}%</Text>
                   </div>
@@ -571,7 +573,7 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
                   <div className={styles.progressHeader}>
                     <div className={styles.progressLabel}>
                       <DesktopPulse24Regular />
-                      <Text>{t('device_overview.temperature')}</Text>
+                      <Text>温度</Text>
                     </div>
                     <Text className={styles.progressValue}>
                       {getTemperatureInfo(memoryStorageInfo).temperature !== null ?
@@ -592,7 +594,7 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
                   <div className={styles.progressHeader}>
                     <div className={styles.progressLabel}>
                       <Storage24Regular />
-                      <Text>{t('device_overview.storage')}</Text>
+                      <Text>存储</Text>
                     </div>
                     <Text className={styles.progressValue}>{getStorageInfo(memoryStorageInfo).used}%</Text>
                   </div>
@@ -607,7 +609,7 @@ export const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, 
                   <div className={styles.progressHeader}>
                     <div className={styles.progressLabel}>
                       <Flash24Regular />
-                      <Text>{t('device_overview.memory')}</Text>
+                      <Text>内存</Text>
                     </div>
                     <Text className={styles.progressValue}>{getMemoryUsage(memoryStorageInfo).used}%</Text>
                   </div>
@@ -756,11 +758,10 @@ interface BooleanValueItemProps {
 const BooleanValueItem: React.FC<BooleanValueItemProps> = ({ 
   label, value, trueText, falseText, copyLabel, onCopyValue, styles 
 }) => {
-  const { t } = useTranslation();
   const displayValue = String(value) === "false" ? falseText : 
-                       String(value) === "true" ? trueText : t('device_overview.unknown');
+                       String(value) === "true" ? trueText : "未知";
   const copyValue = String(value) === "false" ? falseText : 
-                   String(value) === "true" ? trueText : t('device_overview.unknown');
+                   String(value) === "true" ? trueText : "未知";
 
   return (
     <div className={styles.infoItem}>
@@ -779,7 +780,6 @@ const BooleanValueItem: React.FC<BooleanValueItemProps> = ({
 
 // 基本信息面板
 const BasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
-  const { t } = useTranslation();
   const [boardSerialNumber, setBoardSerialNumber] = useState<string | null>(null);
 
   useEffect(() => {
@@ -803,49 +803,49 @@ const BasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles 
 
   const basicInfoItems = [
     {
-      label: t('device_overview.device_name'),
-      value: device.properties?.marketName || device.properties?.model || t('device_overview.unknown'),
-      copyLabel: t('device_overview.device_name'),
+      label: "设备名称",
+      value: device.properties?.marketName || device.properties?.model || "未知",
+      copyLabel: "设备名称"
     },
     {
-      label: t('device_overview.brand'),
-      value: device.properties?.brand || t('device_overview.unknown'),
-      copyLabel: t('device_overview.brand'),
+      label: "品牌",
+      value: device.properties?.brand || "未知",
+      copyLabel: "品牌"
     },
     {
-      label: t('device_overview.model'),
-      value: device.properties?.model || t('device_overview.unknown'),
-      copyLabel: t('device_overview.model'),
+      label: "型号",
+      value: device.properties?.model || "未知",
+      copyLabel: "型号"
     },
     {
-      label: t('device_overview.serial_number'),
+      label: "序列号",
       value: device.serial,
-      copyLabel: t('device_overview.serial_number'),
+      copyLabel: "序列号"
     },
     {
-      label: t('device_overview.android_version'),
-      value: `Android ${device.properties?.androidVersion || t('device_overview.unknown')}`,
-      copyLabel: t('device_overview.android_version'),
+      label: "Android版本",
+      value: `Android ${device.properties?.androidVersion || "未知"}`,
+      copyLabel: "Android版本"
     },
     {
-      label: t('device_overview.sdk_version'),
-      value: device.properties?.sdkVersion || t('device_overview.unknown'),
-      copyLabel: t('device_overview.sdk_version'),
+      label: "SDK版本",
+      value: device.properties?.sdkVersion || "未知",
+      copyLabel: "SDK版本"
     },
     {
-      label: t('device_overview.device_code'),
-      value: device.properties?.deviceName || t('device_overview.unknown'),
-      copyLabel: t('device_overview.device_code'),
+      label: "设备代号",
+      value: device.properties?.deviceName || "未知",
+      copyLabel: "设备代号"
     },
     {
-      label: t('device_overview.build_time'),
-      value: device.properties?.buildId || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_time'),
+      label: "编译时间",
+      value: device.properties?.buildId || "未知",
+      copyLabel: "编译时间"
     },
     {
-      label: t('device_overview.board_id'),
-      value: boardSerialNumber || t('device_overview.unknown'),
-      copyLabel: t('device_overview.board_id'),
+      label: "主板ID",
+      value: boardSerialNumber || "未知",
+      copyLabel: "主板ID"
     }
   ];
 
@@ -867,52 +867,51 @@ const BasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles 
 
 // 硬件信息面板
 const HardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
-  const { t } = useTranslation();
   const hardwareInfoItems = [
     {
-      label: t('device_overview.cpu_arch'),
+      label: "CPU架构",
       value: device.properties?.cpuAbi || "arm64-v8a",
-      copyLabel: t('device_overview.cpu_arch'),
+      copyLabel: "CPU架构"
     },
     {
-      label: t('device_overview.cpu_code'),
-      value: device.properties?.hardware || t('device_overview.unknown'),
-      copyLabel: t('device_overview.cpu_code'),
+      label: "CPU代号",
+      value: device.properties?.hardware || "未知",
+      copyLabel: "CPU代号"
     },
     {
-      label: t('device_overview.soc_manufacturer'),
-      value: device.properties?.socManufacturer || t('device_overview.unknown'),
-      copyLabel: t('device_overview.soc_manufacturer'),
+      label: "SoC制造商",
+      value: device.properties?.socManufacturer || "未知",
+      copyLabel: "SoC制造商"
     },
     {
-      label: t('device_overview.soc_model'),
-      value: device.properties?.socModel || t('device_overview.unknown'),
-      copyLabel: t('device_overview.soc_model'),
+      label: "SoC型号",
+      value: device.properties?.socModel || "未知",
+      copyLabel: "SoC型号"
     },
     {
-      label: t('device_overview.resolution'),
-      value: device.properties?.screenResolution || t('device_overview.unknown'),
-      copyLabel: t('device_overview.resolution'),
+      label: "分辨率",
+      value: device.properties?.screenResolution || "未知",
+      copyLabel: "分辨率"
     },
     {
-      label: t('device_overview.lcd_density'),
-      value: device.properties?.lcdDensity || t('device_overview.unknown'),
-      copyLabel: t('device_overview.lcd_density'),
+      label: "显示密度",
+      value: device.properties?.lcdDensity || "未知",
+      copyLabel: "显示密度"
     },
     {
-      label: t('device_overview.hardware_chip'),
-      value: device.properties?.hardwareChipname || t('device_overview.unknown'),
-      copyLabel: t('device_overview.hardware_chip'),
+      label: "硬件芯片",
+      value: device.properties?.hardwareChipname || "未知",
+      copyLabel: "硬件芯片"
     },
     {
-      label: t('device_overview.board_platform'),
-      value: device.properties?.boardPlatform || t('device_overview.unknown'),
-      copyLabel: t('device_overview.board_platform'),
+      label: "主板平台",
+      value: device.properties?.boardPlatform || "未知",
+      copyLabel: "主板平台"
     },
     {
-      label: t('device_overview.product_board'),
-      value: device.properties?.productBoard || t('device_overview.unknown'),
-      copyLabel: t('device_overview.product_board'),
+      label: "产品主板",
+      value: device.properties?.productBoard || "未知",
+      copyLabel: "产品主板"
     }
   ];
 
@@ -934,52 +933,51 @@ const HardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styl
 
 // 系统信息面板
 const SystemInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
-  const { t } = useTranslation();
   const systemInfoItems = [
     {
-      label: t('device_overview.android_version'),
-      value: device.properties?.androidVersion || t('device_overview.unknown'),
-      copyLabel: t('device_overview.android_version'),
+      label: "Android版本",
+      value: device.properties?.androidVersion || "未知",
+      copyLabel: "Android版本"
     },
     {
-      label: "Android SDK",
-      value: device.properties?.sdkVersion || t('device_overview.unknown'),
-      copyLabel: "Android SDK",
+      label: "Android SDK版本",
+      value: device.properties?.sdkVersion || "未知",
+      copyLabel: "Android SDK版本"
     },
     {
-      label: t('device_overview.security_patch'),
-      value: device.properties?.securityPatchLevel || t('device_overview.unknown'),
-      copyLabel: t('device_overview.security_patch'),
+      label: "安全补丁级别",
+      value: device.properties?.securityPatchLevel || "未知",
+      copyLabel: "安全补丁级别"
     },
     {
-      label: t('device_overview.build_id'),
-      value: device.properties?.buildId || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_id'),
+      label: "构建ID",
+      value: device.properties?.buildId || "未知",
+      copyLabel: "构建ID"
     },
     {
-      label: t('device_overview.build_date'),
-      value: device.properties?.buildDate || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_date'),
+      label: "构建日期",
+      value: device.properties?.buildDate || "未知",
+      copyLabel: "构建日期"
     },
     {
-      label: t('device_overview.build_user'),
-      value: device.properties?.buildUser || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_user'),
+      label: "构建用户",
+      value: device.properties?.buildUser || "未知",
+      copyLabel: "构建用户"
     },
     {
-      label: t('device_overview.build_host'),
-      value: device.properties?.buildHost || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_host'),
+      label: "构建主机",
+      value: device.properties?.buildHost || "未知",
+      copyLabel: "构建主机"
     },
     {
-      label: t('device_overview.build_display_id'),
-      value: device.properties?.buildDisplayId || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_display_id'),
+      label: "构建显示ID",
+      value: device.properties?.buildDisplayId || "未知",
+      copyLabel: "构建显示ID"
     },
     {
-      label: t('device_overview.system_version'),
-      value: device.properties?.systemVersion || t('device_overview.unknown'),
-      copyLabel: t('device_overview.system_version'),
+      label: "系统版本",
+      value: device.properties?.systemVersion || "未知",
+      copyLabel: "系统版本"
     }
   ];
 
@@ -1022,7 +1020,7 @@ const getTemperatureInfo = (memoryStorageInfo: MemoryStorageInfo | null): {
         return {
           temperature: battery_temperature,
           temperaturePercent: tempPercent,
-          status: "正常", // This status is not visually shown when temperature is available
+          status: "正常",
         };
       } else {
         return {
@@ -1037,7 +1035,7 @@ const getTemperatureInfo = (memoryStorageInfo: MemoryStorageInfo | null): {
   return {
     temperature: null,
     temperaturePercent: null,
-    status: "...", // Simplified status
+    status: "获取中...",
   };
 };
 
@@ -1081,9 +1079,9 @@ const getStorageInfo = (memoryStorageInfo: MemoryStorageInfo | null) => {
   return {
     used: 0,
     total: 100,
-    text: "...",
-    usedGB: "unknown",
-    totalGB: "unknown",
+    text: "获取中...",
+    usedGB: "未知",
+    totalGB: "未知",
   };
 };
 
@@ -1103,63 +1101,62 @@ const getMemoryUsage = (memoryStorageInfo: MemoryStorageInfo | null) => {
 
   return {
     used: 0,
-    usedGB: "...",
-    totalGB: "...",
+    usedGB: "获取中...",
+    totalGB: "获取中...",
   };
 };
 
 // 安全信息面板
 const SecurityInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
-  const { t } = useTranslation();
   const securityInfoItems = [
     {
-      label: t('device_overview.bootloader_status'),
-      value: String(device.properties?.bootloaderLocked) === "false" ? t('device_info.unlocked') :
-             String(device.properties?.bootloaderLocked) === "true" ? t('device_info.locked') : t('device_overview.unknown'),
-      copyLabel: t('device_overview.bootloader_status'),
+      label: "Bootloader状态",
+      value: String(device.properties?.bootloaderLocked) === "false" ? "已解锁" :
+             String(device.properties?.bootloaderLocked) === "true" ? "已锁定" : "未知",
+      copyLabel: "Bootloader状态"
     },
     {
-      label: t('device_overview.verified_boot'),
-      value: device.properties?.verifiedBootState || t('device_overview.unknown'),
-      copyLabel: t('device_overview.verified_boot'),
+      label: "验证启动",
+      value: device.properties?.verifiedBootState || "未知",
+      copyLabel: "验证启动"
     },
     {
-      label: t('device_overview.integrity_verity'),
-      value: device.properties?.verityMode || t('device_overview.unknown'),
-      copyLabel: t('device_overview.integrity_verity'),
+      label: "完整性验证",
+      value: device.properties?.verityMode || "未知",
+      copyLabel: "完整性验证"
     },
     {
-      label: t('device_overview.debug_mode'),
-      value: String(device.properties?.debuggable) === "true" ? t('device_overview.enabled') :
-             String(device.properties?.debuggable) === "false" ? t('device_overview.disabled') : t('device_overview.unknown'),
-      copyLabel: t('device_overview.debug_mode'),
+      label: "调试模式",
+      value: String(device.properties?.debuggable) === "true" ? "已启用" :
+             String(device.properties?.debuggable) === "false" ? "已禁用" : "未知",
+      copyLabel: "调试模式"
     },
     {
-      label: t('device_overview.secure_mode'),
-      value: String(device.properties?.secure) === "true" ? t('device_overview.enabled') :
-             String(device.properties?.secure) === "false" ? t('device_overview.disabled') : t('device_overview.unknown'),
-      copyLabel: t('device_overview.secure_mode'),
+      label: "安全模式",
+      value: String(device.properties?.secure) === "true" ? "已启用" :
+             String(device.properties?.secure) === "false" ? "已禁用" : "未知",
+      copyLabel: "安全模式"
     },
     {
-      label: t('device_overview.adb_secure'),
-      value: String(device.properties?.adbSecure) === "true" ? t('device_overview.enabled') :
-             String(device.properties?.adbSecure) === "false" ? t('device_overview.disabled') : t('device_overview.unknown'),
-      copyLabel: t('device_overview.adb_secure'),
+      label: "ADB安全",
+      value: String(device.properties?.adbSecure) === "true" ? "已启用" :
+             String(device.properties?.adbSecure) === "false" ? "已禁用" : "未知",
+      copyLabel: "ADB安全"
     },
     {
-      label: t('device_overview.security_patch'),
-      value: device.properties?.securityPatchLevel || t('device_overview.unknown'),
-      copyLabel: t('device_overview.security_patch'),
+      label: "安全补丁级别",
+      value: device.properties?.securityPatchLevel || "未知",
+      copyLabel: "安全补丁级别"
     },
     {
-      label: t('device_overview.build_user'),
-      value: device.properties?.buildUser || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_user'),
+      label: "构建用户",
+      value: device.properties?.buildUser || "未知",
+      copyLabel: "构建用户"
     },
     {
-      label: t('device_overview.build_host'),
-      value: device.properties?.buildHost || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_host'),
+      label: "构建主机",
+      value: device.properties?.buildHost || "未知",
+      copyLabel: "构建主机"
     }
   ];
 
@@ -1181,52 +1178,51 @@ const SecurityInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styl
 
 // 网络信息面板
 const NetworkInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
-  const { t } = useTranslation();
   const networkInfoItems = [
     {
-      label: t('device_overview.imei'),
-      value: device.properties?.imei || t('device_overview.unknown'),
-      copyLabel: t('device_overview.imei'),
+      label: "IMEI",
+      value: device.properties?.imei || "未知",
+      copyLabel: "IMEI"
     },
     {
-      label: t('device_overview.default_network'),
-      value: device.properties?.defaultNetwork || t('device_overview.unknown'),
-      copyLabel: t('device_overview.default_network'),
+      label: "默认网络",
+      value: device.properties?.defaultNetwork || "未知",
+      copyLabel: "默认网络"
     },
     {
-      label: t('device_overview.locale'),
-      value: device.properties?.locale || t('device_overview.unknown'),
-      copyLabel: t('device_overview.locale'),
+      label: "语言区域",
+      value: device.properties?.locale || "未知",
+      copyLabel: "语言区域"
     },
     {
-      label: t('device_overview.timezone'),
-      value: device.properties?.timezone || t('device_overview.unknown'),
-      copyLabel: t('device_overview.timezone'),
+      label: "时区",
+      value: device.properties?.timezone || "未知",
+      copyLabel: "时区"
     },
     {
-      label: t('device_overview.first_api'),
-      value: device.properties?.firstApiLevel || t('device_overview.unknown'),
-      copyLabel: t('device_overview.first_api'),
+      label: "首次API级别",
+      value: device.properties?.firstApiLevel || "未知",
+      copyLabel: "首次API级别"
     },
     {
-      label: t('device_overview.vndk_version'),
-      value: device.properties?.vndkVersion || t('device_overview.unknown'),
-      copyLabel: t('device_overview.vndk_version'),
+      label: "VNDK版本",
+      value: device.properties?.vndkVersion || "未知",
+      copyLabel: "VNDK版本"
     },
     {
-      label: t('device_overview.cpu_arch_list'),
-      value: device.properties?.cpuAbiList || t('device_overview.unknown'),
-      copyLabel: t('device_overview.cpu_arch_list'),
+      label: "CPU架构列表",
+      value: device.properties?.cpuAbiList || "未知",
+      copyLabel: "CPU架构列表"
     },
     {
-      label: t('device_overview.build_date'),
-      value: device.properties?.buildDate || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_date'),
+      label: "构建日期",
+      value: device.properties?.buildDate || "未知",
+      copyLabel: "构建日期"
     },
     {
-      label: t('device_overview.build_user'),
-      value: device.properties?.buildUser || t('device_overview.unknown'),
-      copyLabel: t('device_overview.build_user'),
+      label: "构建用户",
+      value: device.properties?.buildUser || "未知",
+      copyLabel: "构建用户"
     }
   ];
 
@@ -1248,44 +1244,43 @@ const NetworkInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, style
 
 // Fastboot 模式基础信息面板
 const FastbootBasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
-  const { t } = useTranslation();
   // Fastboot 模式下的基础信息
   const fastbootBasicInfoItems = [
     {
-      label: t('device_overview.product_code'),
-      value: device.properties?.productName || t('device_overview.unknown'),
-      copyLabel: t('device_overview.product_code'),
-      description: t('device_overview.product_code_desc')
+      label: "设备型号代码",
+      value: device.properties?.productName || "未知",
+      copyLabel: "设备型号代码",
+      description: "设备型号代码（关键！）：可通过此确定设备具体机型。"
     },
     {
-      label: t('device_overview.serial_number_fb'),
-      value: device.serial || t('device_overview.unknown'),
-      copyLabel: t('device_overview.serial_number_fb'),
-      description: t('device_overview.serial_number_fb_desc')
+      label: "设备序列号",
+      value: device.serial || "未知",
+      copyLabel: "设备序列号",
+      description: "设备唯一序列号：每台设备的专属标识，用于区分不同设备，类似 '设备身份证'。"
     },
     {
-      label: t('device_overview.boot_method'),
-      value: device.properties?.hardware || t('device_overview.unknown'),
-      copyLabel: t('device_overview.boot_method'),
-      description: t('device_overview.boot_method_desc')
+      label: "设备启动方式",
+      value: device.properties?.hardware || "未知",
+      copyLabel: "设备启动方式",
+      description: "设备启动方式：采用 UEFI 启动（现代安卓设备主流方式，替代传统 BIOS），影响 bootloader 兼容性。"
     },
     {
-      label: t('device_overview.max_download_size'),
-      value: device.properties?.totalMemory || t('device_overview.unknown'),
-      copyLabel: t('device_overview.max_download_size'),
-      description: t('device_overview.max_download_size_desc')
+      label: "最大下载大小",
+      value: device.properties?.totalMemory || "未知",
+      copyLabel: "最大下载大小",
+      description: "fastboot 最大下载大小：单次通过 fastboot 刷入的镜像文件不能超过此大小（防止传输异常）。"
     },
     {
-      label: t('device_overview.parallel_flash'),
-      value: device.properties?.parallelDownloadFlash ? t('device_overview.yes') : t('device_overview.no'),
-      copyLabel: t('device_overview.parallel_flash'),
-      description: t('device_overview.parallel_flash_desc')
+      label: "支持并行刷写",
+      value: device.properties?.parallelDownloadFlash ? "是" : "否",
+      copyLabel: "支持并行刷写",
+      description: "支持并行刷写：表示可同时刷入多个分区镜像（如同时刷 boot、dtbo），提升刷机速度。"
     },
     {
-      label: t('device_overview.off_mode_charge'),
-      value: device.properties?.offModeCharge ? t('device_overview.on') : t('device_overview.off'),
-      copyLabel: t('device_overview.off_mode_charge'),
-      description: t('device_overview.off_mode_charge_desc')
+      label: "关机充电模式",
+      value: device.properties?.offModeCharge ? "开启" : "关闭",
+      copyLabel: "关机充电模式",
+      description: "关机充电模式：表示关闭 '关机充电时显示充电界面'（部分设备可自定义），1 则开启。"
     }
   ];
 
@@ -1309,32 +1304,31 @@ const FastbootBasicInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue,
 
 // Fastboot 模式安全状态面板
 const FastbootSecurityInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
-  const { t } = useTranslation();
   // Fastboot 模式下的安全状态信息
   const fastbootSecurityInfoItems = [
     {
-      label: t('device_overview.fb_unlock_status'),
-      value: device.properties?.bootloaderLocked ? t('device_info.unlocked') : t('device_info.locked'),
-      copyLabel: t('device_overview.fb_unlock_status'),
-      description: t('device_overview.fb_unlock_status_desc'),
+      label: "Bootloader 解锁状态",
+      value: device.properties?.bootloaderLocked ? "已解锁" : "已锁定",
+      copyLabel: "Bootloader 解锁状态",
+      description: "Bootloader 已解锁（核心！）：表示设备已解锁，支持刷入第三方 ROM、recovery 等；锁定状态则无法修改系统底层。"
     },
     {
-      label: t('device_overview.fb_secure_boot'),
-      value: device.properties?.secure ? t('device_overview.enabled') : t('device_overview.disabled'),
-      copyLabel: t('device_overview.fb_secure_boot'),
-      description: t('device_overview.fb_secure_boot_desc'),
+      label: "安全启动",
+      value: device.properties?.secure ? "启用" : "禁用",
+      copyLabel: "安全启动",
+      description: "启用安全启动：表示设备开启 Secure Boot（安全启动），仅允许验证通过的系统镜像（如官方 ROM）启动；若需刷第三方镜像，可能需关闭（部分设备支持）。"
     },
     {
-      label: t('device_overview.fb_anti_rollback'),
-      value: device.properties?.antiRollback ? t('device_overview.enabled') : t('device_overview.disabled'),
-      copyLabel: t('device_overview.fb_anti_rollback'),
-      description: t('device_overview.fb_anti_rollback_desc'),
+      label: "防回滚保护",
+      value: device.properties?.antiRollback ? "启用" : "禁用",
+      copyLabel: "防回滚保护",
+      description: "防回滚保护：表示启用防回滚（Anti-Rollback），禁止刷入版本号更低的 bootloader / 基带，避免降级漏洞。"
     },
     {
-      label: t('device_overview.fb_current_mode'),
-      value: device.properties?.verityMode === "enforcing" ? t('device_overview.fb_verity_mode_user') : t('device_overview.fb_verity_mode_bl'),
-      copyLabel: t('device_overview.fb_current_mode'),
-      description: t('device_overview.fb_current_mode_desc'),
+      label: "当前模式",
+      value: device.properties?.verityMode === "enforcing" ? "用户空间模式" : "bootloader 底层模式",
+      copyLabel: "当前模式",
+      description: "当前模式：表示处于纯 bootloader 底层模式（未加载安卓用户空间），用户空间模式则少见。"
     }
   ];
 
@@ -1424,19 +1418,18 @@ const FastbootPartitionInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVa
   };
 
   // Fastboot 模式下的 A/B 分区信息
-  const { t } = useTranslation();
   const fastbootPartitionInfoItems = [
     {
-      label: t('device_overview.fb_slot_count'),
-      value: isLoading ? t('device_overview.loading') : (slotCount || t('device_overview.unknown')),
-      copyLabel: t('device_overview.fb_slot_count'),
-      description: t('device_overview.fb_slot_count_desc'),
+      label: "分区槽位数量",
+      value: isLoading ? "加载中..." : (slotCount || "未知"),
+      copyLabel: "分区槽位数量",
+      description: "分区槽位数量：表示支持 A/B 双槽（A 槽：_a 后缀分区，B 槽：_b 后缀分区）。"
     },
     {
-      label: t('device_overview.fb_active_slot'),
-      value: isLoading ? t('device_overview.loading') : (currentSlot || t('device_overview.unknown')),
-      copyLabel: t('device_overview.fb_active_slot'),
-      description: t('device_overview.fb_active_slot_desc'),
+      label: "当前活跃槽位",
+      value: isLoading ? "加载中..." : (currentSlot || "未知"),
+      copyLabel: "当前活跃槽位",
+      description: "当前活跃槽位：设备当前使用 A 槽（_a 分区）启动系统，若 A 槽故障，会自动切换到 B 槽。"
     },
   ];
 
@@ -1458,7 +1451,7 @@ const FastbootPartitionInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVa
       {slotCount === "2" && currentSlot && (
         <div className="mt-4 flex flex-col items-center justify-center">
           <div className="flex items-center justify-between mb-2">
-            <Text className="text-sm font-medium">{t('device_overview.fb_switch_partition')}</Text>
+            <Text className="text-sm font-medium">切换A/B分区:</Text>
           </div>
           <div className="flex space-x-2 justify-center items-center mt-2"> 
             <Button
@@ -1468,7 +1461,7 @@ const FastbootPartitionInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVa
               size="small"
               style={{ minWidth: '80px' }}
             >
-              {t('device_overview.fb_partition_a')}
+              A分区
             </Button>
             <Button
               onClick={() => handleSwitchPartition('b')}
@@ -1477,12 +1470,12 @@ const FastbootPartitionInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVa
               size="small"
               style={{ minWidth: '80px' }}
             >
-              {t('device_overview.fb_partition_b')}
+              B分区
             </Button>
           </div>
           {isSwitching && (
             <Text className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              {t('device_overview.fb_switching_wait')}
+              正在切换分区，请稍候...
             </Text>
           )}
         </div>
@@ -1493,32 +1486,31 @@ const FastbootPartitionInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVa
 
 // Fastboot 模式硬件状态面板
 const FastbootHardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyValue, styles }) => {
-  const { t } = useTranslation();
   // Fastboot 模式下的硬件状态信息
   const fastbootHardwareInfoItems = [
     {
-      label: t('device_overview.fb_hw_version'),
-      value: device.properties?.socManufacturer || t('device_overview.unknown'),
-      copyLabel: t('device_overview.fb_hw_version'),
-      description: t('device_overview.fb_hw_version_desc'),
+      label: "硬件版本号",
+      value: device.properties?.socManufacturer || "未知",
+      copyLabel: "硬件版本号",
+      description: "硬件版本号：区分设备的硬件批次（如不同工厂、不同配件版本），硬件版本不同可能影响 ROM 适配。"
     },
     {
-      label: t('device_overview.fb_battery_voltage'),
-      value: device.properties?.batteryLevel ? `${device.properties.batteryLevel}%` : t('device_overview.unknown'),
-      copyLabel: t('device_overview.fb_battery_voltage'),
-      description: t('device_overview.fb_battery_voltage_desc'),
+      label: "当前电池电压",
+      value: device.properties?.batteryLevel ? `${device.properties.batteryLevel}%` : "未知",
+      copyLabel: "当前电池电压",
+      description: "当前电池电压：单位为 mV（毫伏），属于正常电池电压范围（满电约 4.4-4.5V），说明电池当前供电正常。"
     },
     {
-      label: t('device_overview.fb_battery_status'),
-      value: device.properties?.batteryLevel && device.properties.batteryLevel > 20 ? t('device_overview.fb_battery_full') : t('device_overview.fb_battery_low'),
-      copyLabel: t('device_overview.fb_battery_status'),
-      description: t('device_overview.fb_battery_status_desc'),
+      label: "电池电量状态",
+      value: device.properties?.batteryLevel && device.properties.batteryLevel > 20 ? "充足" : "不足",
+      copyLabel: "电池电量状态",
+      description: "电池电量状态：表示电池电量充足（通常 > 20%），满足刷机 / 操作需求；电量过低则无法执行底层操作。"
     },
     {
-      label: t('device_overview.fb_cpuid'),
-      value: device.properties?.cpuid || t('device_overview.unknown'),
-      copyLabel: t('device_overview.fb_cpuid'),
-      description: t('device_overview.fb_cpuid_desc'),
+      label: "CPU 唯一 ID",
+      value: device.properties?.cpuid || "未知",
+      copyLabel: "CPU 唯一 ID",
+      description: "CPU 唯一 ID：识别设备 CPU 芯片的专属标识，用于区分不同 CPU 批次（一般调试时用）。"
     }
   ];
 

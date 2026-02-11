@@ -27,6 +27,7 @@ import {
 } from '@fluentui/react-icons';
 import { DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
+import { logService } from '../../services/logService';
 
 const useStyles = makeStyles({
   infoText: {
@@ -481,9 +482,9 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
 
       // 从下载管理器中移除任务
       onlineResourcesService.removeDownloadTask(task.id);
-      console.log('✅ 已删除下载任务:', task.id);
+      await logService.info(`已删除下载任务: ${task.softwareName}`, '下载管理', { taskId: task.id, filePath: task.filePath });
     } catch (error) {
-      console.error('❌ 删除任务失败:', error);
+      await logService.error(`删除任务失败: ${task.softwareName}`, '下载管理', { error: String(error) });
     }
   };
 
@@ -496,10 +497,10 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
         const filePath = task.filePath;
         const dirPath = filePath.substring(0, filePath.lastIndexOf('\\'));
         await invoke('open_folder', { path: dirPath });
-        console.log('✅ 已打开文件位置:', dirPath);
+        await logService.info(`已打开文件位置: ${dirPath}`, '下载管理', { softwareName: task.softwareName });
       }
     } catch (error) {
-      console.error('❌ 打开文件位置失败:', error);
+      logService.error('打开文件位置失败', '下载管理', { error: String(error) });
     }
   };
 
