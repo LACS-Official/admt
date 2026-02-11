@@ -85,6 +85,28 @@ export class ActivationService {
     };
   }
 
+  public loadActivationData(): {
+    isActivated: boolean;
+    activationCode: string;
+    activationDate: string;
+    expiryDate: string;
+    apiValidation: {
+      expiresAt: string;
+      message: string;
+    };
+  } {
+    return {
+      isActivated: true,
+      activationCode: "PERM-LACS-PRO-CODE",
+      activationDate: "2024-01-01T00:00:00Z",
+      expiryDate: "2099-12-31T23:59:59Z",
+      apiValidation: {
+        expiresAt: "2099-12-31T23:59:59Z",
+        message: "永久授权"
+      }
+    };
+  }
+
   public clearActivationData(): void {
     // No-op
   }
