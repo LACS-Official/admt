@@ -21,7 +21,8 @@ pub struct AdbIntegrityReport {
 }
 
 /// 获取打包后的ADB工具路径信息
-pub fn get_adb_tools_info(app_handle: &tauri::AppHandle) -> Result<AdbToolsInfo> {
+#[tauri::command]
+pub fn get_adb_tools_info(app_handle: tauri::AppHandle) -> Result<AdbToolsInfo> {
     let mut adb_info = AdbToolsInfo {
         adb_path: None,
         fastboot_path: None,
@@ -31,7 +32,7 @@ pub fn get_adb_tools_info(app_handle: &tauri::AppHandle) -> Result<AdbToolsInfo>
     };
 
     // 尝试解析ADB工具路径
-    match resolve_adb_tools_paths(app_handle) {
+    match resolve_adb_tools_paths(&app_handle) {
         Ok((adb_path, fastboot_path)) => {
             log::info!(
                 "ADB工具路径解析成功: ADB={}, Fastboot={}",
@@ -133,8 +134,9 @@ fn get_adb_version(adb_path: &Path) -> Result<String> {
     Ok(version_output.trim().to_string())
 }
 
-/// 验证ADB工具文件完整性
-pub fn verify_adb_tools_integrity(_app_handle: &tauri::AppHandle) -> Result<AdbIntegrityReport> {
+/// 验证ADB工具的完整性并检查权限
+#[tauri::command]
+pub fn verify_adb_tools_integrity(app_handle: tauri::AppHandle) -> Result<AdbIntegrityReport> {
     let mut missing_files = Vec::new();
 
     // 使用与cache.rs相同的路径查找逻辑

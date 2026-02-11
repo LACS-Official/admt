@@ -133,6 +133,10 @@
     "device_unauthorized_desc": "當前設備未授權，請在設備上允許USB調試授權後，重新插拔數據線。",
     "i_know": "我知道了"
   },
+  "device_connection": {
+    "wired": "有線",
+    "wireless": "無線"
+  },
   "guide": {
     "title": "連接指南",
     "docs": "文檔中心",

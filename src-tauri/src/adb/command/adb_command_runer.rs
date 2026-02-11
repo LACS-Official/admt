@@ -152,6 +152,29 @@ pub async fn execute_adb_command(
     utils_execute_adb_command(&cmd_args, timeout).await
 }
 
+/// 执行直接的ADB命令（不带-s参数，用于全局命令如connect, pair）
+#[tauri::command]
+pub async fn execute_adb_command_direct(
+    command: String,
+    args: Vec<String>,
+    timeout: Option<u64>,
+) -> Result<CommandResult> {
+    let mut cmd_args = vec![command.as_str()];
+
+    let string_args: Vec<String> = args
+        .iter()
+        .map(|s| s.as_str())
+        .collect::<Vec<&str>>()
+        .join(" ")
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect();
+    let str_args: Vec<&str> = string_args.iter().map(|s| s.as_str()).collect();
+    cmd_args.extend(str_args);
+
+    utils_execute_adb_command(&cmd_args, timeout).await
+}
+
 /// 结束ADB服务
 #[tauri::command]
 pub async fn finish_adb_service() -> Result<CommandResult> {

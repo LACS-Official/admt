@@ -182,7 +182,7 @@ const HomePage: React.FC = () => {
             />
           </div>
         ) : (
-          /* 有设备连接时：显示优化后的主页布局 */
+          /* 有设备连接时：显示主页布局 */
           <div className={mergeClasses(styles.deviceSection)}>
               {selectedDevice ? (
                 <>

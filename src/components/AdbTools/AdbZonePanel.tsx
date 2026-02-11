@@ -14,6 +14,7 @@ import {
   Play24Regular,
   Apps24Regular,
   Folder24Regular,
+  Wifi124Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
@@ -21,6 +22,7 @@ import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
 import AppManagerPanel from './AppManagerPanel';
 import AppInstallPanel from './AppInstallPanel';
 import FileManagerPanel from './FileManagerPanel';
+import WirelessDebuggingPanel from './WirelessDebuggingPanel';
 import KeySimulationCard from "../DeviceControl/KeySimulationCard";
 import { useTranslation } from "react-i18next";
 
@@ -170,7 +172,7 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "device-control" | "screen-mirror" | "app_install" | "app-manager" | "file-manager" | "settings-center";
+type AdbZoneView = "device-control" | "screen-mirror" | "app_install" | "app-manager" | "file-manager" | "settings-center" | "wireless-debugging";
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -210,6 +212,11 @@ const AdbZonePanel: React.FC = () => {
       id: "file-manager" as AdbZoneView,
       label: t('adb.file_manager'),
       icon: <Folder24Regular />,
+    },
+    {
+      id: "wireless-debugging" as AdbZoneView,
+      label: t('wireless.title'),
+      icon: <Wifi124Regular />,
     },
 
   /* New Tab for Settings Center */
@@ -274,6 +281,12 @@ const AdbZonePanel: React.FC = () => {
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
             <FileManagerPanel device={device} onAdbRequired={triggerOverlay} />
+          </div>
+        );
+      case "wireless-debugging":
+        return (
+          <div style={{ height: "100%", overflow: "hidden" }}>
+            <WirelessDebuggingPanel device={device} onAdbRequired={triggerOverlay} />
           </div>
         );
       default:

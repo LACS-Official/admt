@@ -18,7 +18,7 @@ use crate::commands::{get_resource_path, read_resource_file};
 use activation::check_activation_expiry;
 use adb::app::app_management::*;
 use adb::command::adb_command_runer::{
-    execute_adb_command, execute_batch_file, execute_batch_file_stream, finish_adb5037,
+    execute_adb_command, execute_adb_command_direct, execute_batch_file, execute_batch_file_stream,
     finish_adb_service,
 };
 use adb::command::adb_system_controler::{
@@ -30,22 +30,22 @@ use adb::scrcpy::screen_mirror::{
     check_screen_mirror_support, diagnose_scrcpy, get_active_mirror_sessions, is_device_mirroring,
     start_screen_mirror, stop_screen_mirror, MirrorManager,
 };
+use adb_commands::{get_adb_tools_info, verify_adb_tools_integrity};
 use cache::cache_cleanup_task;
 use commands::{
     activate_application, cancel_download, check_activation_status, check_adb_availability,
     check_device_connection, check_fastboot_availability, check_file_exists, check_process_alive,
     cleanup_downloads, clear_all_cache, delete_file, diagnose_adb_fastboot_paths,
     download_and_extract_software, download_apk, download_file, execute_adb_command_with_path,
-    execute_script_in_new_window, exit_app, fastboot_flash_image, get_adb_tools_info,
-    get_apk_files, get_app_config, get_app_environment, get_cache_stats,
-    get_default_download_directory, get_detailed_device_fingerprint, get_device_connection_info,
-    get_device_fingerprint, get_device_memory_storage_info, get_device_performance_info,
-    get_device_properties, get_download_size, get_downloads_directory, get_platform_info,
-    get_security_config, get_system_arch, get_window_always_on_top, invalidate_device_cache,
-    is_debug_mode, open_devtools, open_folder, read_json_file, save_app_config, scan_devices,
+    execute_script_in_new_window, exit_app, fastboot_flash_image, get_apk_files, get_app_config,
+    get_app_environment, get_cache_stats, get_default_download_directory,
+    get_detailed_device_fingerprint, get_device_connection_info, get_device_fingerprint,
+    get_device_memory_storage_info, get_device_performance_info, get_device_properties,
+    get_download_size, get_downloads_directory, get_platform_info, get_security_config,
+    get_system_arch, get_window_always_on_top, invalidate_device_cache, is_debug_mode,
+    open_devtools, open_folder, read_json_file, save_app_config, scan_devices,
     set_window_always_on_top, terminate_process, validate_activation_code_format,
-    validate_local_activation_data, validate_security_config, verify_adb_tools_integrity,
-    watch_config_file, write_json_file,
+    validate_local_activation_data, validate_security_config, watch_config_file, write_json_file,
 };
 use core::log::*;
 use downloads::get_rom::{download_rom, fetch_rom_list};
@@ -97,6 +97,7 @@ pub fn run() {
             version::check_for_updates,
             scan_devices,
             execute_adb_command,
+            execute_adb_command_direct,
             get_resource_path,
             read_resource_file,
             execute_adb_command_with_path,
@@ -194,7 +195,6 @@ pub fn run() {
             execute_batch_file,
             execute_batch_file_stream,
             finish_adb_service,
-            finish_adb5037,
             open_device_manager,
             open_task_manager,
             get_detailed_device_fingerprint,

@@ -182,7 +182,7 @@ const CarouselComponent: React.FC<CarouselProps> = ({
   };
 
   const currentSlide = banners[imageIndex];
-  const isEnglish = i18n.language.startsWith('en');
+  const isEnglish = i18n.language?.startsWith('en') || false;
 
   const displayTitle = (isEnglish && currentSlide.titleEn) ? currentSlide.titleEn : currentSlide.title;
   const displayDesc = (isEnglish && currentSlide.descriptionEn) ? currentSlide.descriptionEn : currentSlide.description;

@@ -254,6 +254,10 @@
     "device_unauthorized_desc": "The device is unauthorized. Please allow USB debugging on the device and reconnect.",
     "i_know": "I Know"
   },
+  "device_connection": {
+    "wired": "Wired",
+    "wireless": "Wireless"
+  },
   "adb": {
     "device_control": "Device Control",
     "screen_mirror": "Screen Mirror",
