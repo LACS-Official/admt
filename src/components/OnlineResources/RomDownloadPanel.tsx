@@ -28,6 +28,7 @@ import {
 import { useDeviceStore } from '../../stores/deviceStore';
 import { useRomDownloadStore } from '../../stores/romDownloadStore';
 import { RomInfo } from '../../types/rom';
+import { logService } from '../../services/logService';
 
 
 const useStyles = makeStyles({
@@ -369,15 +370,14 @@ const RomDownloadPanel: React.FC = () => {
     
     try {
       const deviceCode = selectedDevice.properties.deviceName;
-      console.log(`正在获取设备 ${deviceCode} 的ROM列表`);
-      console.log(`使用token: ${token}`);
+      logService.info(`正在获取设备 ${deviceCode} 的ROM列表`, 'ROM下载UI');
       
       setDeviceCode(deviceCode);
       await fetchRomList(deviceCode, token);
       
-      console.log(`成功获取设备 ${deviceCode} 的ROM列表`);
+      logService.info(`成功获取设备 ${deviceCode} 的ROM列表`, 'ROM下载UI');
     } catch (error) {
-      console.error('获取ROM列表失败:', error);
+      logService.error('获取ROM列表失败', 'ROM下载UI', { error: String(error) });
     }
   };
   

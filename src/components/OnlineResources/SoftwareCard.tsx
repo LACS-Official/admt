@@ -17,6 +17,7 @@ import {
 } from '@fluentui/react-icons';
 import { OnlineSoftware } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
+import { logService } from '../../services/logService';
 
 const useStyles = makeStyles({
   softwareCard: {
@@ -130,8 +131,9 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke('open_folder', { path: downloadStatus.filePath });
+      await logService.info(`已通过卡片打开文件夹: ${downloadStatus.filePath}`, '在线资源UI', { softwareName: software.name });
     } catch (error) {
-      console.error('打开文件夹失败:', error);
+      logService.error(`打开文件夹失败: ${software.name}`, '在线资源UI', { error: String(error) });
     }
   };
 

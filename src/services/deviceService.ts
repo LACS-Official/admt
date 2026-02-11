@@ -14,6 +14,11 @@ export class DeviceService {
   private isScanning = false;
   private connectedDevices = new Map<string, { connectedAt: Date; properties?: DeviceProperties }>();
   private adbInitialized = false;
+  private initialScanDone = false; // 确保启动前连接提示只出现一次
+  
+  public isScanningNow(): boolean {
+    return this.isScanning;
+  }
 
   /**
    * 初始化ADB工具路径
@@ -467,7 +472,7 @@ export class DeviceService {
       const result = await invoke<CommandResult>("stop_adb_server");
       return result;
     } catch (error) {
-      console.error("Failed to stop ADB server:", error);
+      logService.error("停止 ADB 服务失败", "设备服务", { error: String(error) });
       throw error;
     }
   }
@@ -477,7 +482,7 @@ export class DeviceService {
       const result = await invoke<CommandResult>("restart_adb_server");
       return result;
     } catch (error) {
-      console.error("Failed to restart ADB server:", error);
+      logService.error("重启 ADB 服务失败", "设备服务", { error: String(error) });
       throw error;
     }
   }
@@ -485,9 +490,10 @@ export class DeviceService {
   async installDeviceDriver(): Promise<CommandResult> {
     try {
       const result = await invoke<CommandResult>("install_device_driver");
+      logService.info("已触发安装设备驱动程序", "设备服务");
       return result;
     } catch (error) {
-      console.error("Failed to install device driver:", error);
+      logService.error("安装设备驱动程序失败", "设备服务", { error: String(error) });
       throw error;
     }
   }
@@ -495,9 +501,10 @@ export class DeviceService {
   async fixUsb3Connection(): Promise<CommandResult> {
     try {
       const result = await invoke<CommandResult>("fix_usb3_connection");
+      logService.info("已尝试修复 USB 3.0 连接", "设备服务");
       return result;
     } catch (error) {
-      console.error("Failed to fix USB 3.0 connection:", error);
+      logService.error("修复 USB 3.0 连接失败", "设备服务", { error: String(error) });
       throw error;
     }
   }
@@ -515,43 +522,45 @@ export class DeviceService {
   async diagnoseDeviceConnection(serial: string): Promise<CommandResult> {
     try {
       const result = await invoke<CommandResult>("diagnose_device_connection", { serial });
+      logService.info(`已对设备进行连接诊断: ${serial}`, "设备服务");
       return result;
     } catch (error) {
-      console.error("Failed to diagnose device connection:", error);
+      logService.error(`诊断设备连接失败: ${serial}`, "设备服务", { error: String(error) });
       throw error;
     }
   }
 
   startScanning(interval = 2000): void {
     if (this.isScanning) {
-      logService.debug("设备扫描已在运行中", "DeviceService");
       return;
     }
 
-    logService.info("开始设备扫描...", "DeviceService");
+    logService.info("开启设备动态监控", "DeviceService");
     this.isScanning = true;
     useDeviceStore.getState().setScanning(true);
 
     const scanDevicesInternal = async () => {
       try {
-        // 如果正在执行刷写操作，则跳过设备扫描
         const isFlashing = useDeviceStore.getState().isFlashing;
         if (isFlashing) {
-          logService.debug("正在执行刷写操作，跳过设备扫描", "DeviceService");
           return;
         }
         
         const devices = await this.scanDevices();
         useDeviceStore.getState().setDevices(devices);
       } catch (error) {
-        logService.error("设备扫描失败", "DeviceService", error);
+        // 静默处理轮询中的常规错误
       }
     };
 
     this.scanInterval = setInterval(scanDevicesInternal, interval);
 
-    // 立即执行一次扫描，并处理启动前已连接的设备
-    this.initialDeviceScan();
+    // 仅在首次启动时执行“初始扫描”逻辑（用于统计冷启动时的已连接设备）
+    if (!this.initialScanDone) {
+      this.initialDeviceScan().finally(() => {
+        this.initialScanDone = true;
+      });
+    }
   }
 
   /**
@@ -610,11 +619,10 @@ export class DeviceService {
 
   stopScanning(): void {
     if (!this.isScanning) {
-      logService.debug("设备扫描未在运行", "DeviceService");
       return;
     }
 
-    logService.info("停止设备扫描...", "DeviceService");
+    logService.info("停止设备动态监控", "DeviceService");
     this.isScanning = false;
     useDeviceStore.getState().setScanning(false);
 
@@ -889,30 +897,23 @@ export const useDeviceService = () => {
   const scanningRef = useRef(false);
 
   const startScanning = useCallback(() => {
-    if (scanningRef.current) {
-      console.log("useDeviceService: Scanning already started by this hook");
+    // 统一改为静默检查，如果已经在扫描则不重复执行
+    if (deviceService.isScanningNow()) {
       return;
     }
-
-    console.log("useDeviceService: Starting device scanning with interval:", config.scanInterval);
-    scanningRef.current = true;
+    
     deviceService.startScanning(config.scanInterval);
-
-    // 显示启动扫描通知
+    
+    // 仅在首次启动时打印到状态栏（可选）
+    /*
     setStatusBarMessage({
       type: "info",
-      message: `开始扫描连接的设备（间隔：${config.scanInterval}ms）`,
+      message: `设备监控已就绪`,
     });
-  }, [setStatusBarMessage, config.scanInterval]);
+    */
+  }, [config.scanInterval]);
 
   const stopScanning = useCallback(() => {
-    if (!scanningRef.current) {
-      console.log("useDeviceService: Scanning not started by this hook");
-      return;
-    }
-
-    console.log("useDeviceService: Stopping device scanning");
-    scanningRef.current = false;
     deviceService.stopScanning();
   }, []);
 

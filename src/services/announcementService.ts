@@ -21,6 +21,9 @@ export interface AnnouncementQueryParams {
 export class AnnouncementService {
   private static instance: AnnouncementService;
   private configManager: SecurityConfigManager;
+  private cache: Map<string, { data: AnnouncementResponse; timestamp: number }> = new Map();
+  private pendingRequests: Map<string, Promise<AnnouncementResponse>> = new Map();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
 
   private constructor() {
     this.configManager = SecurityConfigManager.getInstance();
@@ -37,78 +40,84 @@ export class AnnouncementService {
    * 获取公告列表
    */
   public async getAnnouncements(params: AnnouncementQueryParams = {}): Promise<AnnouncementResponse> {
-    try {
-      console.log('📢 开始获取公告列表...', params);
+    const cacheKey = JSON.stringify(params);
 
-      // 确保安全配置已初始化
-      await this.configManager.initialize();
-      const config = this.configManager.getConfig();
-
-      // 构建查询参数
-      const queryParams = new URLSearchParams({
-        page: (params.page || 1).toString(),
-        limit: (params.limit || 10).toString(),
-        type: params.type || 'all',
-        priority: params.priority || 'all',
-        isPublished: (params.isPublished !== undefined ? params.isPublished : true).toString(),
-        sortBy: params.sortBy || 'publishedAt',
-        sortOrder: params.sortOrder || 'desc',
-      });
-
-      // 使用软件ID获取公告
-      let softwareId;
-      try {
-        softwareId = getSoftwareId();
-      } catch (error) {
-        console.warn('⚠️ 无法获取软件ID，尝试使用安全配置管理器');
-        softwareId = this.configManager.getSoftwareId();
-      }
-      
-      const endpoint = `/app/software/id/${softwareId}/announcements?${queryParams.toString()}`;
-
-      console.log('📢 请求公告API:', endpoint, '软件ID:', softwareId);
-
-      // 使用 tauriHttpService 替代原生 fetch
-      const response = await tauriHttpService.get<AnnouncementResponse>(endpoint, {
-        timeout: 10000, // 10秒超时
-      });
-
-      if (!response.success || !response.data) {
-        throw new Error(response.error || '获取公告失败');
-      }
-
-      const data = response.data;
-
-      if (!data.success) {
-        throw new Error(`公告API返回错误: ${data.error || '未知错误'}`);
-      }
-
-      console.log('✅ 公告获取成功:', {
-        count: data.data.announcements.length,
-        software: data.data.software.name,
-      });
-
-      return data;
-
-    } catch (error) {
-      console.error('❌ 获取公告失败:', error);
-      
-      // 返回空的公告响应，不阻止应用启动
-      return {
-        success: true, // 改为true，避免因为网络问题导致应用退出
-        data: {
-          software: { id: this.configManager.getSoftwareId(), name: '玩机管家' },
-          announcements: [],
-          pagination: {
-            page: params.page || 1,
-            limit: params.limit || 10,
-            total: 0,
-            totalPages: 0
-          }
-        },
-        error: error instanceof Error ? error.message : '获取公告失败'
-      };
+    // 1. 检查是否有正在进行的相同请求
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log('📢 公告请求已在进行中，合并请求:', cacheKey);
+      return this.pendingRequests.get(cacheKey)!;
     }
+
+    // 2. 检查缓存
+    const cached = this.cache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+      console.log('📢 使用缓存的公告数据');
+      return cached.data;
+    }
+
+    // 3. 执行新请求
+    const requestPromise = (async () => {
+      try {
+        console.log('📢 开始获取公告列表...', params);
+
+        await this.configManager.initialize();
+
+        const queryParams = new URLSearchParams({
+          page: (params.page || 1).toString(),
+          limit: (params.limit || 10).toString(),
+          type: params.type || 'all',
+          priority: params.priority || 'all',
+          isPublished: (params.isPublished !== undefined ? params.isPublished : true).toString(),
+          sortBy: params.sortBy || 'publishedAt',
+          sortOrder: params.sortOrder || 'desc',
+        });
+
+        let softwareId;
+        try {
+          softwareId = getSoftwareId();
+        } catch (error) {
+          softwareId = this.configManager.getSoftwareId();
+        }
+        
+        const endpoint = `/app/software/id/${softwareId}/announcements?${queryParams.toString()}`;
+        console.log('📢 请求公告API:', endpoint);
+
+        const response = await tauriHttpService.get<AnnouncementResponse>(endpoint, {
+          timeout: 10000,
+        });
+
+        if (!response.success || !response.data) {
+          throw new Error(response.error || '获取公告失败');
+        }
+
+        const data = response.data;
+        if (!data.success) {
+          throw new Error(`公告API返回错误: ${data.error || '未知错误'}`);
+        }
+
+        console.log('✅ 公告获取成功');
+        
+        this.cache.set(cacheKey, { data, timestamp: Date.now() });
+        return data;
+
+      } catch (error) {
+        console.error('❌ 获取公告失败:', error);
+        return {
+          success: true,
+          data: {
+            software: { id: this.configManager.getSoftwareId(), name: '玩机管家' },
+            announcements: [],
+            pagination: { page: params.page || 1, limit: params.limit || 10, total: 0, totalPages: 0 }
+          },
+          error: error instanceof Error ? error.message : '获取公告失败'
+        };
+      } finally {
+        this.pendingRequests.delete(cacheKey);
+      }
+    })();
+
+    this.pendingRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   }
 
   /**

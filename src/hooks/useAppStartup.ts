@@ -9,6 +9,8 @@ import { preloadService } from "../services/preloadService";
 import { SecurityConfigManager } from "../config/securityConfig";
 import { unifiedVersionService } from "../services/unifiedVersionService";
 import { activationService } from "../services/activationService";
+import { usageTrackingService } from "../services/usageTrackingService";
+import { deviceService } from "../services/deviceService";
 
 export const useAppStartup = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +46,7 @@ export const useAppStartup = () => {
   const preloadRef = useRef(false);
   const securityConfigRef = useRef(false);
   const adbInitRef = useRef(false);
+  const completionRef = useRef(false); // 保护完成回调只执行一次
 
   // 禁用F5刷新功能
   useEffect(() => {
@@ -191,6 +194,16 @@ export const useAppStartup = () => {
           } catch (error) {
             console.error('❌ ADB工具初始化失败:', error);
           }
+        })(),
+
+        // 统一开启设备扫描
+        (async () => {
+          try {
+            console.log('🔍 开启全局设备扫描...');
+            deviceService.startScanning(config.scanInterval);
+          } catch (error) {
+            console.error('❌ 设备扫描开启失败:', error);
+          }
         })()
       ];
       
@@ -249,11 +262,21 @@ export const useAppStartup = () => {
   ]);
 
   const handleStartupFlowComplete = useCallback(() => {
+    if (completionRef.current) return;
+    completionRef.current = true;
+    
     logService.info('启动流程完成', 'App');
     
     const metrics = getPerformanceMetrics();
     logService.info('启动流程性能指标', 'App', metrics);
     
+    // 异步追踪进入主页面，不阻塞 UI 渲染
+    setTimeout(() => {
+      usageTrackingService.trackMainPageEntry().catch(err => {
+        logService.error('主页面进入追踪失败', 'App', err);
+      });
+    }, 1000);
+
     setShowTransition(true);
   }, [getPerformanceMetrics]);
 

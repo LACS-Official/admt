@@ -1673,9 +1673,7 @@ pub async fn get_default_download_directory() -> Result<String> {
     let app_downloads_dir = get_app_downloads_dir()?;
 
     // 确保目录存在
-    std::fs::create_dir_all(&app_downloads_dir).map_err(|e| AdmtError::IoError {
-        message: e.to_string(),
-    })?;
+    std::fs::create_dir_all(&app_downloads_dir).map_err(|e| AdmtError::Io(e.to_string()))?;
 
     Ok(app_downloads_dir.to_string_lossy().to_string())
 }
@@ -1730,13 +1728,9 @@ pub async fn delete_file(path: String) -> Result<()> {
     let path = std::path::Path::new(&path);
 
     if path.is_file() {
-        std::fs::remove_file(path).map_err(|e| AdmtError::IoError {
-            message: e.to_string(),
-        })?;
+        std::fs::remove_file(path).map_err(|e| AdmtError::Io(e.to_string()))?;
     } else if path.is_dir() {
-        std::fs::remove_dir_all(path).map_err(|e| AdmtError::IoError {
-            message: e.to_string(),
-        })?;
+        std::fs::remove_dir_all(path).map_err(|e| AdmtError::Io(e.to_string()))?;
     }
 
     Ok(())
@@ -1755,14 +1749,10 @@ pub async fn read_json_file(path: String) -> Result<serde_json::Value> {
         });
     }
 
-    let content = fs::read_to_string(path).map_err(|e| AdmtError::IoError {
-        message: format!("Failed to read file: {}", e),
-    })?;
+    let content = fs::read_to_string(path).map_err(|e| AdmtError::Io(format!("Failed to read file: {}", e)))?;
 
     let json: serde_json::Value =
-        serde_json::from_str(&content).map_err(|e| AdmtError::IoError {
-            message: format!("Failed to parse JSON: {}", e),
-        })?;
+        serde_json::from_str(&content).map_err(|e| AdmtError::Io(format!("Failed to parse JSON: {}", e)))?;
 
     Ok(json)
 }
@@ -1778,9 +1768,7 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
         Path::new(&script_path).to_path_buf()
     } else {
         std::env::current_dir()
-            .map_err(|e| AdmtError::IoError {
-                message: format!("Failed to get current directory: {}", e),
-            })?
+            .map_err(|e| AdmtError::Io(format!("Failed to get current directory: {}", e)))?
             .join(&script_path)
     };
 
@@ -1796,16 +1784,12 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
     #[cfg(target_os = "windows")]
     {
         // 获取脚本的绝对路径
-        let script_absolute_path = path.canonicalize().map_err(|e| AdmtError::IoError {
-            message: format!("Failed to canonicalize path: {}", e),
-        })?;
+        let script_absolute_path = path.canonicalize().map_err(|e| AdmtError::Io(format!("Failed to canonicalize path: {}", e)))?;
 
         // 设置工作目录为脚本所在目录
         let working_dir = script_absolute_path
             .parent()
-            .ok_or_else(|| AdmtError::IoError {
-                message: "Failed to get script parent directory".to_string(),
-            })?;
+            .ok_or_else(|| AdmtError::Io("Failed to get script parent directory".to_string()))?;
 
         log::info!("Script absolute path: {}", script_absolute_path.display());
         log::info!("Working directory: {}", working_dir.display());
@@ -1845,18 +1829,14 @@ pub async fn execute_script_in_new_window(script_path: String) -> Result<Command
     #[cfg(not(target_os = "windows"))]
     {
         // 对于非Windows系统，使用默认终端
-        let script_absolute_path = path.canonicalize().map_err(|e| AdmtError::IoError {
-            message: format!("Failed to canonicalize path: {}", e),
-        })?;
+        let script_absolute_path = path.canonicalize().map_err(|e| AdmtError::Io(format!("Failed to canonicalize path: {}", e)))?;
 
         let script_str = script_absolute_path.to_string_lossy().to_string();
 
         // 设置工作目录为脚本所在目录
         let working_dir = script_absolute_path
             .parent()
-            .ok_or_else(|| AdmtError::IoError {
-                message: "Failed to get script parent directory".to_string(),
-            })?;
+            .ok_or_else(|| AdmtError::Io("Failed to get script parent directory".to_string()))?;
 
         log::info!("Script absolute path: {}", script_str);
         log::info!("Working directory: {}", working_dir.display());
@@ -1899,22 +1879,16 @@ pub async fn write_json_file(path: String, content: String) -> Result<()> {
     // 确保父目录存在
     if let Some(parent) = path.parent() {
         if !parent.exists() {
-            fs::create_dir_all(parent).map_err(|e| AdmtError::IoError {
-                message: format!("Failed to create directory: {}", e),
-            })?;
+            fs::create_dir_all(parent).map_err(|e| AdmtError::Io(format!("Failed to create directory: {}", e)))?;
         }
     }
 
     // 验证内容是有效的JSON
     let _json: serde_json::Value =
-        serde_json::from_str(&content).map_err(|e| AdmtError::IoError {
-            message: format!("Invalid JSON content: {}", e),
-        })?;
+        serde_json::from_str(&content).map_err(|e| AdmtError::Io(format!("Invalid JSON content: {}", e)))?;
 
     // 写入文件
-    fs::write(path, content).map_err(|e| AdmtError::IoError {
-        message: format!("Failed to write file: {}", e),
-    })?;
+    fs::write(path, content).map_err(|e| AdmtError::Io(format!("Failed to write file: {}", e)))?;
 
     log::info!("Successfully wrote JSON file: {}", path.display());
     Ok(())
@@ -1930,27 +1904,19 @@ pub async fn watch_config_file(_app_handle: tauri::AppHandle, window: tauri::Win
     use std::time::Duration;
 
     // 确定配置文件路径
-    let config_path = get_config_file_path().map_err(|e| AdmtError::IoError {
-        message: format!("Failed to get config path: {}", e),
-    })?;
+    let config_path = get_config_file_path().map_err(|e| AdmtError::Io(format!("Failed to get config path: {}", e)))?;
 
     let (tx, rx) = mpsc::channel();
 
     // 创建文件监听器
-    let mut watcher = notify::recommended_watcher(tx).map_err(|e| AdmtError::IoError {
-        message: format!("Failed to create file watcher: {}", e),
-    })?;
+    let mut watcher = notify::recommended_watcher(tx).map_err(|e| AdmtError::Io(format!("Failed to create file watcher: {}", e)))?;
 
     // 监听配置文件所在目录
-    let config_dir = config_path.parent().ok_or_else(|| AdmtError::IoError {
-        message: "Failed to get config directory".to_string(),
-    })?;
+    let config_dir = config_path.parent().ok_or_else(|| AdmtError::Io("Failed to get config directory".to_string()))?;
 
     watcher
         .watch(config_dir, RecursiveMode::NonRecursive)
-        .map_err(|e| AdmtError::IoError {
-            message: format!("Failed to watch config directory: {}", e),
-        })?;
+        .map_err(|e| AdmtError::Io(format!("Failed to watch config directory: {}", e)))?;
 
     log::info!("Started watching config file: {}", config_path.display());
 
@@ -2178,9 +2144,7 @@ pub async fn read_resource_file<R: tauri::Runtime>(
     let file_path = get_resource_path(app_handle, path.clone()).await?;
 
     // 读取文件内容
-    let content = std::fs::read(&file_path).map_err(|e| AdmtError::IoError {
-        message: format!("Failed to read resource file {}: {}", file_path, e),
-    })?;
+    let content = std::fs::read(&file_path).map_err(|e| AdmtError::Io(format!("Failed to read resource file {}: {}", file_path, e)))?;
 
     log::info!(
         "Successfully read resource file: {} ({} bytes)",

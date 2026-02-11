@@ -43,6 +43,7 @@ export class UsageTrackingService {
   private isInitialized = false;
   private sessionId: string;
   private hasTrackedThisSession = false;
+  private isTrackingInProgress = false; // 新向：平衡并发请求
   private deviceFingerprint: string | null = null;
   private lastRequestTimes: Map<string, number> = new Map(); // IP级别频率限制
 
@@ -64,21 +65,12 @@ export class UsageTrackingService {
    * 初始化服务
    */
   public async initialize(): Promise<void> {
-    if (this.isInitialized) {
-      return;
-    }
-
+    if (this.isInitialized) return;
     try {
-      console.log('🔧 初始化用户使用数据追踪服务...');
-      
-      // 生成设备指纹
       await this.generateDeviceFingerprint();
-      
       this.isInitialized = true;
-      console.log('✅ 用户使用数据追踪服务初始化完成');
     } catch (error) {
-      console.error('❌ 用户使用数据追踪服务初始化失败:', error);
-      throw error;
+      this.isInitialized = false;
     }
   }
 
@@ -99,11 +91,9 @@ export class UsageTrackingService {
       }
 
       // 检查本会话是否已经发送过数据
-      if (this.hasTrackedThisSession) {
-        console.log('📊 本会话已发送过使用数据，跳过重复发送');
+      if (this.hasTrackedThisSession || this.isTrackingInProgress) {
+        console.log('📊 数据发送已完成或正在进行中，跳过本次请求');
         return;
-      } else {
-        console.log('📊 本会话尚未发送使用数据，继续检查...');
       }
 
       // 检查用户是否同意隐私政策
@@ -154,13 +144,18 @@ export class UsageTrackingService {
         used: usageData.used
       });
 
-      const success = await this.sendUsageData(usageData);
+      this.isTrackingInProgress = true;
+      try {
+        const success = await this.sendUsageData(usageData);
 
-      if (success) {
-        this.hasTrackedThisSession = true;
-        console.log('✅ 用户使用数据发送成功，会话状态已更新');
-      } else {
-        console.warn('⚠️ 用户使用数据发送失败，但不影响应用正常使用');
+        if (success) {
+          this.hasTrackedThisSession = true;
+          console.log('✅ 用户使用数据发送成功，会话状态已更新');
+        } else {
+          console.warn('⚠️ 用户使用数据发送失败，但不影响应用正常使用');
+        }
+      } finally {
+        this.isTrackingInProgress = false;
       }
 
     } catch (error) {

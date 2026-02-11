@@ -66,7 +66,7 @@ fn read_version_config() -> Result<VersionConfig, String> {
 }
 
 /// 获取统一的版本号（优先使用配置文件）
-fn get_unified_version() -> String {
+pub fn get_unified_version() -> String {
     match read_version_config() {
         Ok(config) => config.version,
         Err(_) => env!("CARGO_PKG_VERSION").to_string(),

@@ -23,6 +23,7 @@ import {
 } from '@fluentui/react-icons';
 import { OnlineSoftware } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
+import { logService } from '../../services/logService';
 
 const useStyles = makeStyles({
   dialogContent: {
@@ -76,11 +77,12 @@ const useStyles = makeStyles({
 const openUrl = (url: string) => {
   import('@tauri-apps/plugin-shell').then(({ open }) => {
     open(url).catch((error) => {
-      console.error('Failed to open URL:', error);
+      logService.error(`打开外部链接失败: ${url}`, '在线资源UI', { error: String(error) });
       // 如果 Tauri shell 插件不可用，使用 window.open
       window.open(url, '_blank');
     });
-  }).catch(() => {
+  }).catch((err) => {
+    logService.error('加载 shell 插件失败', '在线资源UI', { error: String(err) });
     // 如果 Tauri shell 插件不可用，使用 window.open
     window.open(url, '_blank');
   });
@@ -126,7 +128,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
         setDetailData(detail);
       }
     } catch (error) {
-      console.error('获取软件详情失败:', error);
+      logService.error(`获取资源详情失败: ${software.name}`, '在线资源UI', { error: String(error) });
     } finally {
       setLoading(false);
     }
@@ -220,7 +222,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     // 检查下载限制
     const limitCheck = onlineResourcesService.canStartDownload();
     if (!limitCheck.canDownload) {
-      console.warn('下载被限制:', limitCheck.reason);
+      logService.warning(`下载受限: ${limitCheck.reason}`, '在线资源UI');
       return;
     }
 
@@ -252,8 +254,9 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke('open_folder', { path });
+      await logService.info(`已通过详情页打开文件夹: ${path}`, '在线资源UI', { softwareName: currentData.name });
     } catch (error) {
-      console.error('❌ 打开文件夹失败:', error);
+      logService.error(`打开文件夹失败: ${currentData.name}`, '在线资源UI', { error: String(error) });
     }
   };
 

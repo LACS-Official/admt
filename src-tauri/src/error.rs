@@ -63,9 +63,6 @@ pub enum AdmtError {
     #[error("IO error: {0}")]
     Io(String),
 
-    #[error("IO error: {message}")]
-    IoError { message: String },
-
     #[error("Device error: {0}")]
     Device(String),
 

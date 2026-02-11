@@ -27,6 +27,7 @@ import { writeTextFile, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
 import { useDeviceStore } from "../../stores/deviceStore";
+import { logService } from "../../services/logService";
 
 // 简化的批处理执行参数接口
 interface BatchExecuteParams {
@@ -398,6 +399,8 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         const commandString = `执行批处理文件: ${batchFileName}`;
         const initialOutput = `${commandString}\n工作目录: ${workingDirectory}\n${'='.repeat(80)}\n\n`;
         setOutput(initialOutput);
+
+        await logService.info(`启动批处理脚本: ${batchFileName}`, '脚本执行服务', { workingDirectory });
         
         // 写入初始日志
         try {
@@ -452,9 +455,11 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         if (result.success) {
           resultOutput = `\n${'='.repeat(80)}\n[执行完成] 批处理文件执行成功\n退出码: ${result.exit_code || 0}\n`;
           appendOutput(resultOutput, 'info');
+          await logService.info(`批处理脚本执行成功: ${batchFileName}`, '脚本执行服务', { exitCode: result.exit_code || 0 });
         } else {
           resultOutput = `\n${'='.repeat(80)}\n[执行失败] ${result.error || '未知错误'}\n退出码: ${result.exit_code || 1}\n`;
           appendOutput(resultOutput, 'error');
+          await logService.error(`批处理脚本执行失败: ${batchFileName}`, '脚本执行服务', { error: result.error, exitCode: result.exit_code || 1 });
         }
         
         // 如果有额外输出，也添加进去
@@ -468,6 +473,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         setIsCompleted(true);
         const errorOutput = `\n${'='.repeat(80)}\n[错误] ${error.message || error}\n`;
         appendOutput(errorOutput, 'error');
+        await logService.error(`批处理脚本执行异常: ${batchFileName}`, '脚本执行服务', { error: String(error) });
         console.error('批处理文件执行失败:', error);
       } finally {
         setIsRunning(false);
