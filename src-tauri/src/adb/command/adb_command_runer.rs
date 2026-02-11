@@ -16,114 +16,116 @@ pub async fn execute_batch_file(
         working_directory
     );
 
-    #[cfg(windows)]
-    {
-        use std::path::Path;
+    let is_windows = cfg!(windows);
+    let _path_sep = if is_windows { ";" } else { ":" };
 
-        // 验证工作目录存在
-        let work_dir = Path::new(&working_directory);
-        if !work_dir.exists() {
-            return Ok(CommandResult {
-                success: false,
-                output: String::new(),
-                error: Some(format!("工作目录不存在: {}", working_directory)),
-                exit_code: Some(1),
-            });
-        }
+    // 验证工作目录存在
+    let work_dir = std::path::Path::new(&working_directory);
+    if !work_dir.exists() {
+        return Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some(format!("工作目录不存在: {}", working_directory)),
+            exit_code: Some(1),
+        });
+    }
 
-        // 构建批处理文件的完整路径
-        let batch_path = work_dir.join(&batch_file_name);
-        if !batch_path.exists() {
-            return Ok(CommandResult {
-                success: false,
-                output: String::new(),
-                error: Some(format!("批处理文件不存在: {}", batch_path.display())),
-                exit_code: Some(1),
-            });
-        }
+    // 构建脚本文件的完整路径
+    let script_path = work_dir.join(&batch_file_name);
+    if !script_path.exists() {
+        return Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some(format!("脚本文件不存在: {}", script_path.display())),
+            exit_code: Some(1),
+        });
+    }
 
-        log::info!("Executing batch file at: {}", batch_path.display());
+    log::info!("Executing script at: {}", script_path.display());
 
-        // 使用cmd执行批处理文件，确保继承完整的环境变量
+    // 确保具有执行权限 (针对 Linux)
+    let _ = crate::utils::ensure_executable(&script_path);
+
+    let mut cmd = if is_windows {
+        let mut c = Command::new("cmd");
+        c.args(["/c", &batch_file_name]);
+        c
+    } else {
+        let mut c = Command::new("sh");
+        c.arg(&batch_file_name);
+        c
+    };
+
+    cmd.current_dir(&working_directory)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    // 设置环境变量
+    let current_path = std::env::var("PATH").unwrap_or_default();
+    if is_windows {
         let system_root = std::env::var("SYSTEMROOT").unwrap_or("C:\\Windows".to_string());
-        let current_path = std::env::var("PATH").unwrap_or_default();
         let enhanced_path = format!(
             "{};{}\\System32;{}\\System32\\Wbem",
             current_path, system_root, system_root
         );
-
-        let mut cmd = Command::new("cmd");
-        cmd.args(["/c", &batch_file_name])
-            .current_dir(&working_directory)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .env("PATH", enhanced_path)
+        cmd.env("PATH", enhanced_path)
             .env("SYSTEMROOT", &system_root)
-            .env("WINDIR", &system_root)
-            .envs(std::env::vars().filter(|(key, _)| key != "PATH")); // 继承除PATH外的所有环境变量
-
-        // 在发布版中隐藏控制台窗口，在调试版中保持可见
-        #[cfg(all(windows, not(debug_assertions)))]
-        {
-            use std::os::windows::process::CommandExt;
-            const CREATE_NO_WINDOW: u32 = 0x08000000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-            log::debug!("批处理文件流式执行设置隐藏窗口");
-        }
-
-        // 在调试版中保持窗口可见以便调试
-        #[cfg(all(windows, debug_assertions))]
-        {
-            log::debug!("批处理文件流式执行保持窗口可见 (调试版)");
-        }
-
-        match cmd.output() {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                let combined_output = if stderr.is_empty() {
-                    stdout.to_string()
-                } else {
-                    format!("{}\n{}", stdout, stderr)
-                };
-
-                log::info!(
-                    "Batch file execution completed with exit code: {:?}",
-                    output.status.code()
-                );
-
-                Ok(CommandResult {
-                    success: output.status.success(),
-                    output: combined_output,
-                    error: if output.status.success() {
-                        None
-                    } else {
-                        Some(stderr.to_string())
-                    },
-                    exit_code: output.status.code(),
-                })
-            }
-            Err(e) => {
-                let error_msg = format!("执行批处理文件失败: {}", e);
-                log::error!("{}", error_msg);
-                Ok(CommandResult {
-                    success: false,
-                    output: String::new(),
-                    error: Some(error_msg),
-                    exit_code: Some(1),
-                })
-            }
-        }
+            .env("WINDIR", &system_root);
+    } else {
+        // Linux 平台环境变量增强 (如果需要)
+        cmd.env(
+            "PATH",
+            format!("{}:/usr/local/bin:/usr/bin:/bin", current_path),
+        );
     }
 
-    #[cfg(not(windows))]
+    // 继承除PATH外的所有环境变量
+    cmd.envs(std::env::vars().filter(|(key, _)| key != "PATH"));
+
+    // 在发布版中隐藏控制台窗口 (仅 Windows)
+    #[cfg(all(windows, not(debug_assertions)))]
     {
-        Ok(CommandResult {
-            success: false,
-            output: String::new(),
-            error: Some("批处理文件执行功能仅在Windows系统上可用".to_string()),
-            exit_code: Some(1),
-        })
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    match cmd.output() {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let combined_output = if stderr.is_empty() {
+                stdout.to_string()
+            } else {
+                format!("{}\n{}", stdout, stderr)
+            };
+
+            log::info!(
+                "Script execution completed with exit code: {:?}",
+                output.status.code()
+            );
+
+            Ok(CommandResult {
+                success: output.status.success(),
+                output: combined_output,
+                error: if output.status.success() {
+                    None
+                } else {
+                    Some(stderr.to_string())
+                },
+                exit_code: output.status.code(),
+            })
+        }
+        Err(e) => {
+            let error_msg = format!("执行脚本失败: {}", e);
+            log::error!("{}", error_msg);
+            Ok(CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some(error_msg),
+                exit_code: Some(1),
+            })
+        }
     }
 }
 
@@ -255,6 +257,8 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
 
 /// 结束ADB-5037端口
 #[tauri::command]
+// 可选：如果不再需要可以删除，或者保留并加上 #[allow(dead_code)]
+#[allow(dead_code)]
 pub async fn finish_adb5037() -> Result<CommandResult> {
     log::info!("Finishing ADB process on port 5037");
 

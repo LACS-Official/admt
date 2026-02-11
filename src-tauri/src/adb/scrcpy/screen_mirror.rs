@@ -120,7 +120,12 @@ pub async fn diagnose_scrcpy() -> Result<serde_json::Value> {
 
                 // 检查依赖文件
                 if let Some(parent_dir) = std::path::Path::new(&path).parent() {
-                    let required_files = ["scrcpy-server", "adb.exe", "SDL2.dll", "avcodec-61.dll"];
+                    let required_files = if cfg!(windows) {
+                        vec!["scrcpy-server", "adb.exe", "SDL2.dll", "avcodec-61.dll"]
+                    } else {
+                        vec!["scrcpy-server"] // Linux 下 scrcpy 通常动态链接或作为独立二进制运行
+                    };
+
                     let mut dependencies = serde_json::Map::new();
 
                     for file in &required_files {
@@ -180,7 +185,8 @@ pub async fn diagnose_scrcpy() -> Result<serde_json::Value> {
     }
 
     // 3. 检查系统PATH中的scrcpy
-    let mut cmd = std::process::Command::new("where");
+    let find_cmd = if cfg!(windows) { "where" } else { "which" };
+    let mut cmd = std::process::Command::new(find_cmd);
     cmd.arg("scrcpy");
 
     #[cfg(windows)]
@@ -404,7 +410,12 @@ async fn start_scrcpy_process(args: &[String]) -> Result<std::process::Child> {
         log::info!("scrcpy directory: {}", parent_dir.display());
 
         // 检查必要的依赖文件
-        let required_files = ["scrcpy-server", "adb.exe"];
+        let required_files = if cfg!(windows) {
+            vec!["scrcpy-server", "adb.exe"]
+        } else {
+            vec!["scrcpy-server"]
+        };
+
         for file in &required_files {
             let file_path = parent_dir.join(file);
             if !file_path.exists() {
@@ -578,7 +589,8 @@ fn find_scrcpy_executable() -> Result<String> {
 
     // 3. 最后检查系统PATH中是否有scrcpy
     {
-        let mut cmd = std::process::Command::new("where");
+        let find_cmd = if cfg!(windows) { "where" } else { "which" };
+        let mut cmd = std::process::Command::new(find_cmd);
         cmd.arg("scrcpy");
 
         // 在Windows上隐藏命令行窗口
@@ -623,29 +635,39 @@ fn find_project_scrcpy() -> Result<String> {
         let src_tauri = current_dir.join("src-tauri");
 
         if package_json.exists() || src_tauri.exists() {
+            use std::env::consts::EXE_SUFFIX;
+            let scrcpy_filename = format!("scrcpy{}", EXE_SUFFIX);
+
             // 找到项目根目录，检查 scrcpy 的可能位置
             let scrcpy_locations = [
                 // 直接在根目录
-                current_dir.join("scrcpy.exe"),
+                current_dir.join(&scrcpy_filename),
                 // 在 scrcpy-win32 目录
-                current_dir.join("scrcpy-win32-v3.3.1").join("scrcpy.exe"),
+                current_dir
+                    .join("scrcpy-win32-v3.3.1")
+                    .join(&scrcpy_filename),
                 // 在 scrcpy-win64 目录
-                current_dir.join("scrcpy-win64-v3.3.1").join("scrcpy.exe"),
+                current_dir
+                    .join("scrcpy-win64-v3.3.1")
+                    .join(&scrcpy_filename),
                 // 在 scrcpy 目录
-                current_dir.join("scrcpy").join("scrcpy.exe"),
+                current_dir.join("scrcpy").join(&scrcpy_filename),
                 // 在 tools 目录
-                current_dir.join("tools").join("scrcpy.exe"),
-                current_dir.join("tools").join("scrcpy").join("scrcpy.exe"),
+                current_dir.join("tools").join(&scrcpy_filename),
+                current_dir
+                    .join("tools")
+                    .join("scrcpy")
+                    .join(&scrcpy_filename),
                 // 在 tools/scrcpy-win32-v3.3.1 目录 (用户指定路径)
                 current_dir
                     .join("tools")
                     .join("scrcpy-win32-v3.3.1")
-                    .join("scrcpy.exe"),
-                // 在 tools/scrcpy-win64-v3.3.1 目录
+                    .join(&scrcpy_filename),
+                // 在 tools/scrcpy-v3.3.1 目录 (Linux 可能的路径)
                 current_dir
                     .join("tools")
-                    .join("scrcpy-win64-v3.3.1")
-                    .join("scrcpy.exe"),
+                    .join("scrcpy-v3.3.1")
+                    .join(&scrcpy_filename),
             ];
 
             for scrcpy_path in &scrcpy_locations {
@@ -678,12 +700,10 @@ fn find_project_scrcpy() -> Result<String> {
 
 /// 运行ADB命令
 async fn run_adb_command(args: &[&str]) -> Result<String> {
-    // 这里需要导入ADB命令功能
-    // 由于当前代码结构，我们暂时简化实现
-    // 实际项目中应该调用ADB模块的相关函数
     use std::process::Command;
+    let adb_path = crate::cache::get_cached_adb_path();
 
-    let output = Command::new("adb")
+    let output = Command::new(adb_path)
         .args(args)
         .output()
         .map_err(|e| AdmtError::Process(format!("Failed to execute ADB command: {}", e)))?;

@@ -10,10 +10,13 @@ use tokio::time::timeout;
 #[deprecated(note = "Use get_cached_adb_path() for better performance")]
 #[allow(dead_code)]
 pub fn get_adb_path() -> PathBuf {
+    use std::env::consts::EXE_SUFFIX;
+    let adb_filename = format!("adb{}", EXE_SUFFIX);
+
     // 1. 优先尝试从应用工具目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
-            let adb_path = parent.join("tools").join("adb").join("adb.exe");
+            let adb_path = parent.join("tools").join("adb").join(&adb_filename);
             if adb_path.exists() {
                 log::info!("Found ADB at app tools: {}", adb_path.display());
                 return adb_path;
@@ -27,7 +30,7 @@ pub fn get_adb_path() -> PathBuf {
         .join("src-tauri")
         .join("tools")
         .join("adb")
-        .join("adb.exe");
+        .join(&adb_filename);
     if current_dir_tools.exists() {
         log::info!(
             "Found ADB at current dir tools: {}",
@@ -37,29 +40,28 @@ pub fn get_adb_path() -> PathBuf {
     }
 
     // 3. 尝试从相对路径获取（开发模式备选）
-    let relative_path = PathBuf::from("src-tauri/tools/adb/adb.exe");
+    let relative_path = PathBuf::from(format!("src-tauri/tools/adb/{}", adb_filename));
     if relative_path.exists() {
         log::info!("Found ADB at relative path: {}", relative_path.display());
         return relative_path;
     }
 
     // 如果所有路径都找不到，记录错误并返回默认名称
-    if let Ok(cwd) = std::env::current_dir() {
-        log::error!("Current working directory: {}", cwd.display());
-    }
-    log::error!("ADB executable not found in any expected location, this may cause device detection to fail");
-    log::error!("Please ensure adb.exe is present in src-tauri/tools/adb/ directory");
-    PathBuf::from("adb.exe")
+    log::error!("ADB executable not found in any expected location");
+    PathBuf::from(adb_filename)
 }
 
 /// 获取Fastboot可执行文件路径（已弃用，请使用缓存版本）
 #[deprecated(note = "Use get_cached_fastboot_path() for better performance")]
 #[allow(dead_code)]
 pub fn get_fastboot_path() -> PathBuf {
+    use std::env::consts::EXE_SUFFIX;
+    let fb_filename = format!("fastboot{}", EXE_SUFFIX);
+
     // 1. 优先尝试从应用工具目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
-            let fastboot_path = parent.join("tools").join("adb").join("fastboot.exe");
+            let fastboot_path = parent.join("tools").join("adb").join(&fb_filename);
             if fastboot_path.exists() {
                 log::info!("Found Fastboot at app tools: {}", fastboot_path.display());
                 return fastboot_path;
@@ -73,7 +75,7 @@ pub fn get_fastboot_path() -> PathBuf {
         .join("src-tauri")
         .join("tools")
         .join("adb")
-        .join("fastboot.exe");
+        .join(&fb_filename);
     if current_dir_tools.exists() {
         log::info!(
             "Found Fastboot at current dir tools: {}",
@@ -83,7 +85,7 @@ pub fn get_fastboot_path() -> PathBuf {
     }
 
     // 3. 尝试从相对路径获取（开发模式备选）
-    let relative_path = PathBuf::from("src-tauri/tools/adb/fastboot.exe");
+    let relative_path = PathBuf::from(format!("src-tauri/tools/adb/{}", fb_filename));
     if relative_path.exists() {
         log::info!(
             "Found Fastboot at relative path: {}",
@@ -93,12 +95,27 @@ pub fn get_fastboot_path() -> PathBuf {
     }
 
     // 如果所有路径都找不到，记录错误并返回默认名称
-    if let Ok(cwd) = std::env::current_dir() {
-        log::error!("Current working directory: {}", cwd.display());
+    log::error!("Fastboot executable not found in any expected location");
+    PathBuf::from(fb_filename)
+}
+
+/// 确保文件在 Unix 系统上具有执行权限
+pub fn ensure_executable(path: &std::path::Path) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if path.exists() {
+            let mut perms = std::fs::metadata(path)?.permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(path, perms)?;
+            log::info!("Set executable permission for: {}", path.display());
+        }
     }
-    log::error!("Fastboot executable not found in any expected location, this may cause device detection to fail");
-    log::error!("Please ensure fastboot.exe is present in src-tauri/tools/adb/ directory");
-    PathBuf::from("fastboot.exe")
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
+    Ok(())
 }
 
 /// 执行ADB命令（使用缓存路径）

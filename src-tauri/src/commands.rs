@@ -1,7 +1,6 @@
 use crate::activation::{ActivationRequest, ActivationResponse, ActivationValidator, AppConfig};
 use crate::adb::device::device_info::{get_device_info, get_device_properties_batch};
 
-use crate::adb_commands::{AdbIntegrityReport, AdbToolsInfo};
 use crate::cache::get_cache_manager;
 use crate::device::{CommandResult, DeviceInfo, DeviceMode, DeviceProperties};
 use crate::download_manager::DownloadManager;
@@ -272,6 +271,9 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
 
     // 检查资源目录（仅检查预期的路径）
     let mut resource_paths = Vec::new();
+    use std::env::consts::EXE_SUFFIX;
+    let adb_filename = format!("adb{}", EXE_SUFFIX);
+    let fb_filename = format!("fastboot{}", EXE_SUFFIX);
 
     // 1. 生产环境资源目录
     if let Ok(exe_dir) = std::env::current_exe() {
@@ -281,8 +283,8 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
                 "path": tools_dir.display().to_string(),
                 "exists": tools_dir.exists(),
                 "type": "production_tools",
-                "adb_exists": tools_dir.join("adb.exe").exists(),
-                "fastboot_exists": tools_dir.join("fastboot.exe").exists()
+                "adb_exists": tools_dir.join(&adb_filename).exists(),
+                "fastboot_exists": tools_dir.join(&fb_filename).exists()
             }));
         }
     }
@@ -297,8 +299,8 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
         "path": dev_tools.display().to_string(),
         "exists": dev_tools.exists(),
         "type": "development_tools",
-        "adb_exists": dev_tools.join("adb.exe").exists(),
-        "fastboot_exists": dev_tools.join("fastboot.exe").exists()
+        "adb_exists": dev_tools.join(&adb_filename).exists(),
+        "fastboot_exists": dev_tools.join(&fb_filename).exists()
     }));
 
     // 3. 相对路径工具目录
@@ -307,8 +309,8 @@ pub async fn diagnose_adb_fastboot_paths() -> Result<serde_json::Value> {
         "path": relative_tools.display().to_string(),
         "exists": relative_tools.exists(),
         "type": "relative_tools",
-        "adb_exists": relative_tools.join("adb.exe").exists(),
-        "fastboot_exists": relative_tools.join("fastboot.exe").exists()
+        "adb_exists": relative_tools.join(&adb_filename).exists(),
+        "fastboot_exists": relative_tools.join(&fb_filename).exists()
     }));
 
     diagnosis.insert(

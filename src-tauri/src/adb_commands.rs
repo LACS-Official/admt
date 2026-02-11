@@ -136,16 +136,21 @@ fn get_adb_version(adb_path: &Path) -> Result<String> {
 
 /// 验证ADB工具的完整性并检查权限
 #[tauri::command]
-pub fn verify_adb_tools_integrity(app_handle: tauri::AppHandle) -> Result<AdbIntegrityReport> {
+pub fn verify_adb_tools_integrity(_app_handle: tauri::AppHandle) -> Result<AdbIntegrityReport> {
     let mut missing_files = Vec::new();
 
     // 使用与cache.rs相同的路径查找逻辑
     let adb_path = crate::cache::get_cached_adb_path();
     let fastboot_path = crate::cache::get_cached_fastboot_path();
 
+    // 验证ADB、Fastboot是否存在
+    use std::env::consts::EXE_SUFFIX;
+    let adb_filename = format!("adb{}", EXE_SUFFIX);
+    let fb_filename = format!("fastboot{}", EXE_SUFFIX);
+
     // 检查ADB文件
     if !adb_path.exists() {
-        missing_files.push(format!("adb.exe - {}", adb_path.display()));
+        missing_files.push(format!("{} - {}", adb_filename, adb_path.display()));
         log::warn!("Missing ADB file: {}", adb_path.display());
     } else {
         log::debug!("ADB tool file exists: {:?}", adb_path);
@@ -153,7 +158,7 @@ pub fn verify_adb_tools_integrity(app_handle: tauri::AppHandle) -> Result<AdbInt
 
     // 检查Fastboot文件
     if !fastboot_path.exists() {
-        missing_files.push(format!("fastboot.exe - {}", fastboot_path.display()));
+        missing_files.push(format!("{} - {}", fb_filename, fastboot_path.display()));
         log::warn!("Missing Fastboot file: {}", fastboot_path.display());
     } else {
         log::debug!("Fastboot tool file exists: {:?}", fastboot_path);
