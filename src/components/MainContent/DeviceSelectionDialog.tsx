@@ -262,12 +262,17 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
              device.serial;
     };
 
-    const getDeviceCodeName = (device: Device) => { // Fixed: pass device as arg
+    const getDeviceCodeName = (device: Device) => {
       if (device.mode === "fastboot" || device.mode === "fastbootd") {
         // 对于fastboot模式，使用product_name作为设备代号
         return device.properties?.productName || device.serial;
       }
       return device.properties?.deviceName || "";
+    };
+
+    const getDeviceConnectionType = (device: Device) => {
+      const isWireless = device.serial.includes(':') || device.serial.includes('.');
+      return isWireless ? t('device_connection.wireless') : t('device_connection.wired');
     };
 
 
@@ -323,6 +328,13 @@ const DeviceSelectionDialog: React.FC<DeviceSelectionDialogProps> = ({
                           <Text size={200} style={{ color: 'var(--colorNeutralForeground2)' }}>
                             {t('device_selection.codename', { codename: getDeviceCodeName(device) })}
                           </Text>
+                          <Badge
+                            appearance="tint"
+                            color="important"
+                            size="small"
+                          >
+                            {getDeviceConnectionType(device)}
+                          </Badge>
                         </div>
                       </div>
                     </div>

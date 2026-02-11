@@ -203,7 +203,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
     width: "40px",
     height: "auto", // 改为自动高度
-    minHeight: "100px", // 设置最小高度以匹配文字信息区域
+    minHeight: "120px", // 设置最小高度以匹配文字信息区域
     flexShrink: 0,
     borderRadius: "6px",
     backgroundColor: "var(--colorNeutralBackground2)",
@@ -915,8 +915,6 @@ const MainContent: React.FC = () => {
   };
 
   const getDeviceMode = () => {
-    if (!selectedDevice) return "";
-
     switch (selectedDevice.mode) {
       case "sys":
         return t("device_mode.system");
@@ -937,6 +935,13 @@ const MainContent: React.FC = () => {
       default:
         return t("device_mode.unknown");
     }
+  };
+
+  const getDeviceConnectionType = () => {
+    if (!selectedDevice) return "";
+    // 如果序列号包含冒号或点号（IP地址特征），或者是无线调试特定的序列号格式，判定为无线
+    const isWireless = selectedDevice.serial.includes(':') || selectedDevice.serial.includes('.');
+    return isWireless ? t('device_connection.wireless') : t('device_connection.wired');
   };
 
   const connectedDevices = devices.filter((d) => d.connected);
@@ -1055,14 +1060,14 @@ const MainContent: React.FC = () => {
             {/* 右侧：设备文字信息 */}
             <div className={styles.deviceTextInfo}>
               {/* 设备名称区域 */}
-              <div className={styles.deviceNameSection}>
+              <div className={styles.deviceStatusSection}>
                 {/* 设备序列号 */}
                 <Text className={styles.deviceName}>{getDeviceName()}</Text>
 
                 {/* 设备代号 */}
                 {selectedDevice.properties?.deviceName && (
                   <Badge
-                    appearance="outline"
+                    appearance="tint"
                     color="brand"
                     size="medium"
                     className={styles.compactBadge}
@@ -1075,49 +1080,25 @@ const MainContent: React.FC = () => {
               {/* 状态信息区域 */}
               <div className={styles.deviceStatusSection}>
                 {/* 设备模式 */}
-                <div className={styles.statusBadgeRow}>
-                  <Badge
-                    appearance="outline"
-                    color="brand"
-                    size="medium"
-                    className={styles.compactBadge}
-                  >
-                    {getDeviceMode()}
-                  </Badge>
-                </div>
+                <Badge
+                  appearance="tint"
+                  color="brand"
+                  size="medium"
+                  className={styles.compactBadge}
+                >
+                  {getDeviceMode()}
+                </Badge>
+                <Badge
+                  appearance="tint"
+                  color="brand"
+                  size="medium"
+                  className={styles.compactBadge}
+                >
+                  {getDeviceConnectionType()}
+                </Badge>
               </div>
             </div>
           </div>
-
-          {/* 下半部分：设备选择框 */}
-          {/* <div className={styles.deviceSelectorArea}>
-            {connectedDevices.length > 0 ? (
-              <div 
-                className={styles.deviceSelectCard}
-                onClick={() => setIsDeviceSelectionDialogOpen(true)}
-              >
-                <div className={styles.deviceSelectCardContent}>
-                  
-                    <div className={styles.deviceSelectCardTitle}>
-                       {t('main.select_device_label')}
-                     {getDeviceOptionText(selectedDevice)}
-                  </div>
-                </div>
-                <ChevronDown24Regular />
-              </div>
-            ) : (
-              <div 
-                className={styles.deviceSelectCard}
-              >
-                <div className={styles.deviceSelectCardContent}>
-                    <div className={styles.deviceSelectCardTitle}>
-                     {t('main.no_device_connected')}
-                  </div>
-                </div>
-                <Warning24Regular />
-              </div>
-            )}
-          </div> */}
         </div>
       </div>
     );

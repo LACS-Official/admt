@@ -1,0 +1,69 @@
+    Checking admt-lacs v1.3.1 (E:\tauri\admt\src-tauri)
+error[E0277]: the trait bound `&AppHandle: CommandArg<'_, tauri_runtime_wry::Wry<EventLoopMessage>>` is not satisfied
+   --> src\commands.rs:416:1
+    |
+416 |   #[tauri::command]
+    |   ^^^^^^^^^^^^^^^^^ the trait `Deserialize<'_>` is not implemented for `&AppHandle`
+    |
+   ::: src\lib.rs:94:25
+    |
+ 94 |           .invoke_handler(tauri::generate_handler![
+    |  _________________________-
+ 95 | |             version::get_app_version,
+ 96 | |             version::get_app_info,
+ 97 | |             version::check_for_updates,
+...   |
+221 | |             check_process_alive
+222 | |         ])
+    | |_________- in this macro invocation
+    |
+    = help: the following other types implement trait `Deserialize<'de>`:
+              `&'a [u8]` implements `Deserialize<'de>`
+              `&'a serde_json::value::RawValue` implements `Deserialize<'de>`
+              `&'a std::path::Path` implements `Deserialize<'de>`
+              `&'a str` implements `Deserialize<'de>`
+              `&'p jsonptr::pointer::Pointer` implements `Deserialize<'de>`
+              `()` implements `Deserialize<'de>`
+              `(T,)` implements `Deserialize<'de>`
+              `(T0, T1)` implements `Deserialize<'de>`
+            and 479 others
+    = note: required for `&AppHandle` to implement `CommandArg<'_, tauri_runtime_wry::Wry<EventLoopMessage>>`
+    = note: the full name for the type has been written to 'E:\tauri\admt\src-tauri\target\debug\deps\app_lib-9654eafdf3acd945.long-type-4103861530638573182.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+    = note: this error originates in the macro `__cmd__get_adb_tools_info` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `&AppHandle: CommandArg<'_, tauri_runtime_wry::Wry<EventLoopMessage>>` is not satisfied
+   --> src\commands.rs:422:1
+    |
+422 |   #[tauri::command]
+    |   ^^^^^^^^^^^^^^^^^ the trait `Deserialize<'_>` is not implemented for `&AppHandle`
+    |
+   ::: src\lib.rs:94:25
+    |
+ 94 |           .invoke_handler(tauri::generate_handler![
+    |  _________________________-
+ 95 | |             version::get_app_version,
+ 96 | |             version::get_app_info,
+ 97 | |             version::check_for_updates,
+...   |
+221 | |             check_process_alive
+222 | |         ])
+    | |_________- in this macro invocation
+    |
+    = help: the following other types implement trait `Deserialize<'de>`:
+              `&'a [u8]` implements `Deserialize<'de>`
+              `&'a serde_json::value::RawValue` implements `Deserialize<'de>`
+              `&'a std::path::Path` implements `Deserialize<'de>`
+              `&'a str` implements `Deserialize<'de>`
+              `&'p jsonptr::pointer::Pointer` implements `Deserialize<'de>`
+              `()` implements `Deserialize<'de>`
+              `(T,)` implements `Deserialize<'de>`
+              `(T0, T1)` implements `Deserialize<'de>`
+            and 479 others
+    = note: required for `&AppHandle` to implement `CommandArg<'_, tauri_runtime_wry::Wry<EventLoopMessage>>`
+    = note: the full name for the type has been written to 'E:\tauri\admt\src-tauri\target\debug\deps\app_lib-9654eafdf3acd945.long-type-4103861530638573182.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+    = note: this error originates in the macro `__cmd__verify_adb_tools_integrity` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `admt-lacs` (lib) due to 2 previous errors

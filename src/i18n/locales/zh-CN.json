@@ -287,6 +287,37 @@
     "adb_mode_required_title": "设备未处于 ADB 模式",
     "adb_mode_required_desc": "此功能仅在系统模式或 Recovery 模式下可用，请在设备重启后重试。"
   },
+  "wireless": {
+    "title": "无线调试",
+    "usb_to_wireless": "有线转无线",
+    "usb_to_wireless_desc": "将通过 USB 连接的设备切换到无线调试模式",
+    "switch_to_tcpip": "切换到 TCP/IP 模式",
+    "detect_ip": "自动检测 IP 地址",
+    "device_ip": "设备 IP",
+    "port": "端口",
+    "standalone_connection": "独立无线连接",
+    "standalone_connection_desc": "直接通过 IP 地址连接已开启无线调试的设备",
+    "connect_btn": "连接",
+    "pairing_section": "无线配对 (Android 11+)",
+    "pairing_desc": "输入配对码以建立新的无线调试连接",
+    "pairing_code": "配对码",
+    "pair_btn": "配对并连接",
+    "msg_switching": "正在切换到 TCP/IP 模式...",
+    "msg_switch_success": "成功切换到 TCP/IP 模式，现在可以断开 USB 线了",
+    "msg_detect_ip_success": "成功检测到 IP: {{ip}}",
+    "msg_detect_ip_failed": "检测 IP 地址失败，请手动输入",
+    "msg_connecting": "正在连接 {{ip}}:{{port}}...",
+    "msg_connect_success": "成功连接到 {{ip}}:{{port}}",
+    "msg_connect_failed": "连接失败: {{error}}",
+    "msg_pairing": "正在配对 {{ip}}:{{port}}...",
+    "msg_pair_success": "配对成功，正在尝试连接...",
+    "msg_pair_failed": "配对失败: {{error}}",
+    "usb_hint": "提示：点击切换后，当显示成功即可断开 USB 线。"
+  },
+  "device_connection": {
+    "wired": "有线连接",
+    "wireless": "无线连接"
+  },
   "device_control": {
     "power_management": "电源管理",
     "screen_timeout": "自动锁屏",
