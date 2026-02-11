@@ -18,14 +18,14 @@ name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.3.1", features = [] }
+tauri-build = { version = "2", features = [] }
 chrono = { version = "0.4", features = ["serde"] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.7.0", features = ["tray-icon"] }
+tauri = { version = "2.10", features = ["tray-icon"] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
@@ -45,7 +45,7 @@ futures = "0.3"
 dirs = "5.0"
 zip = "0.6"
 sevenz-rust = "0.5"
-tauri-plugin-process = "2.3.0"
+tauri-plugin-process = "2"
 hostname = "0.3"
 once_cell = "1.19"
 
