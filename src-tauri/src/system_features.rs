@@ -246,13 +246,18 @@ pub async fn get_auto_start_status(app_name: String) -> Result<AutoStartStatus, 
         get_windows_auto_start_status(app_name).await
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "linux")]
+    {
+        get_linux_auto_start_status(app_name).await
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         Ok(AutoStartStatus {
             is_enabled: false,
             method: "none".to_string(),
             path: None,
-            error: Some("Auto-start only supported on Windows currently".to_string()),
+            error: Some("Auto-start only supported on Windows and Linux currently".to_string()),
         })
     }
 }
@@ -265,10 +270,15 @@ pub async fn enable_auto_start(config: AutoStartConfig) -> Result<bool, String> 
         enable_windows_auto_start(config).await
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "linux")]
     {
-        let _ = config; // 避免未使用变量警告
-        Err("Auto-start only supported on Windows currently".to_string())
+        enable_linux_auto_start(config).await
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        let _ = config;
+        Err("Auto-start only supported on Windows and Linux currently".to_string())
     }
 }
 
@@ -280,22 +290,27 @@ pub async fn disable_auto_start(app_name: String) -> Result<bool, String> {
         disable_windows_auto_start(app_name).await
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "linux")]
     {
-        let _ = app_name; // 避免未使用变量警告
-        Err("Auto-start only supported on Windows currently".to_string())
+        disable_linux_auto_start(app_name).await
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        let _ = app_name;
+        Err("Auto-start only supported on Windows and Linux currently".to_string())
     }
 }
 
 /// 检查是否支持自启动功能
 #[tauri::command]
 pub async fn is_auto_start_supported() -> Result<bool, String> {
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
         Ok(true)
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         Ok(false)
     }
@@ -430,6 +445,80 @@ async fn disable_windows_auto_start(app_name: String) -> Result<bool, String> {
             }
         }
     }
+}
+
+// ============ Linux 特定实现 ============
+
+#[cfg(target_os = "linux")]
+fn get_linux_autostart_path(app_name: &str) -> Result<std::path::PathBuf, String> {
+    let home = std::env::var("HOME").map_err(|e| format!("Failed to get HOME env: {}", e))?;
+    let path = std::path::PathBuf::from(home)
+        .join(".config")
+        .join("autostart")
+        .join(format!("{}.desktop", app_name));
+    Ok(path)
+}
+
+#[cfg(target_os = "linux")]
+async fn get_linux_auto_start_status(app_name: String) -> Result<AutoStartStatus, String> {
+    let path = get_linux_autostart_path(&app_name)?;
+    if path.exists() {
+        Ok(AutoStartStatus {
+            is_enabled: true,
+            method: "desktop_file".to_string(),
+            path: Some(path.to_string_lossy().to_string()),
+            error: None,
+        })
+    } else {
+        Ok(AutoStartStatus {
+            is_enabled: false,
+            method: "none".to_string(),
+            path: None,
+            error: None,
+        })
+    }
+}
+
+#[cfg(target_os = "linux")]
+async fn enable_linux_auto_start(config: AutoStartConfig) -> Result<bool, String> {
+    let path = get_linux_autostart_path(&config.app_name)?;
+
+    // Ensure dir exists
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create autostart dir: {}", e))?;
+    }
+
+    let app_path = if config.app_path.is_empty() {
+        get_current_app_path().await?
+    } else {
+        config.app_path
+    };
+
+    let content = format!(
+        "[Desktop Entry]\n\
+        Type=Application\n\
+        Name={}\n\
+        Exec=\"{}\"\n\
+        Terminal=false\n\
+        X-GNOME-Autostart-enabled=true\n",
+        config.app_name, app_path
+    );
+
+    std::fs::write(&path, content).map_err(|e| format!("Failed to write desktop file: {}", e))?;
+
+    println!("✅ Linux 自启已启用: {}", path.display());
+    Ok(true)
+}
+
+#[cfg(target_os = "linux")]
+async fn disable_linux_auto_start(app_name: String) -> Result<bool, String> {
+    let path = get_linux_autostart_path(&app_name)?;
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(|e| format!("Failed to remove desktop file: {}", e))?;
+        println!("✅ Linux 自启已禁用");
+    }
+    Ok(true)
 }
 
 // 辅助 trait

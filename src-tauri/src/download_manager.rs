@@ -48,29 +48,44 @@ impl DownloadManager {
 
     /// 获取应用程序下载目录
     fn get_app_downloads_dir() -> Result<PathBuf> {
-        // 尝试获取应用程序可执行文件所在目录
+        // 1. 优先尝试应用程序目录下的 downloads 文件夹 (适合 Windows 便携版或开发模式)
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
                 let downloads_dir = exe_dir.join("downloads");
-                println!(
-                    "🎯 使用应用程序目录下的downloads: {}",
-                    downloads_dir.display()
-                );
-                return Ok(downloads_dir);
+
+                // 检查目录是否存在或是否可创建/写入
+                if let Ok(_) = fs::create_dir_all(&downloads_dir) {
+                    // 简单检查是否可写 (创建测试文件)
+                    let test_file = downloads_dir.join(".write_test");
+                    if fs::File::create(&test_file).is_ok() {
+                        let _ = fs::remove_file(test_file);
+                        log::info!("🎯 使用可写的应用目录下载路径: {}", downloads_dir.display());
+                        return Ok(downloads_dir);
+                    }
+                }
             }
         }
 
-        // 如果无法获取可执行文件目录，使用应用数据目录作为备选
-        if let Some(data_dir) = dirs::data_dir() {
-            let app_data_dir = data_dir.join("ADMT").join("downloads");
-            println!("🎯 使用应用数据目录: {}", app_data_dir.display());
-            return Ok(app_data_dir);
+        // 2. 如果应用目录不可写 (通常是 Linux 下安装在 /usr/bin)，则使用系统的下载目录
+        if let Some(user_download_dir) = dirs::download_dir() {
+            let admt_dir = user_download_dir.join("ADMT");
+            if let Ok(_) = fs::create_dir_all(&admt_dir) {
+                log::info!(
+                    "🎯 应用目录不可写，回退到系统下载目录: {}",
+                    admt_dir.display()
+                );
+                return Ok(admt_dir);
+            }
         }
 
-        // 最后回退到临时目录
-        let temp_dir = std::env::temp_dir().join("admt_downloads");
-        println!("🎯 使用临时目录: {}", temp_dir.display());
-        Ok(temp_dir)
+        // 3. 最后回退到应用数据目录或临时目录
+        let fallback_dir = dirs::data_dir()
+            .map(|d| d.join("ADMT").join("downloads"))
+            .unwrap_or_else(|| std::env::temp_dir().join("admt_downloads"));
+
+        let _ = fs::create_dir_all(&fallback_dir);
+        log::info!("🎯 使用最终回退下载目录: {}", fallback_dir.display());
+        Ok(fallback_dir)
     }
 
     /// 下载文件并自动解压

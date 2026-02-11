@@ -340,173 +340,147 @@ pub fn verify_tool_paths() -> bool {
 /// 查找ADB路径（仅在首次调用时执行）
 /// 统一使用 tools/adb 目录中的可执行文件
 fn find_adb_path() -> PathBuf {
-    log::info!("Starting ADB path discovery (tools/adb directory only)...");
+    use std::env::consts::EXE_SUFFIX;
+    let platform_dir = if cfg!(windows) { "windows" } else { "linux" };
+    let adb_filename = format!("adb{}", EXE_SUFFIX);
 
-    // 记录当前工作目录用于调试
-    if let Ok(cwd) = std::env::current_dir() {
-        log::info!("Current working directory: {}", cwd.display());
-    }
+    log::info!(
+        "Starting ADB path discovery (platform={} suffix={})...",
+        platform_dir,
+        EXE_SUFFIX
+    );
 
     // 1. 生产环境：可执行文件目录下的 tools/adb 文件夹
     if let Ok(exe_dir) = std::env::current_exe() {
-        log::info!("Executable path: {}", exe_dir.display());
         if let Some(parent) = exe_dir.parent() {
-            log::info!("Executable parent directory: {}", parent.display());
-
             // 生产环境的多个可能路径
             let production_paths = [
-                parent.join("tools").join("adb").join("adb.exe"),
+                parent
+                    .join("tools")
+                    .join("adb")
+                    .join(platform_dir)
+                    .join(&adb_filename),
                 parent
                     .join("resources")
                     .join("tools")
                     .join("adb")
-                    .join("adb.exe"),
-                parent.join("adb").join("adb.exe"), // 备用路径
+                    .join(platform_dir)
+                    .join(&adb_filename),
+                parent.join("tools").join("adb").join(&adb_filename), // 兼容老路径
+                parent.join("adb").join(&adb_filename),               // 兼容老路径
             ];
 
             for path in &production_paths {
-                log::info!("Checking production path: {}", path.display());
                 if path.exists() {
                     log::info!("✅ Found ADB at production path: {}", path.display());
+                    // 确保具有执行权限 (针对 Linux)
+                    let _ = crate::utils::ensure_executable(path);
                     return path.clone();
-                } else {
-                    log::warn!("❌ ADB not found at production path: {}", path.display());
                 }
             }
         }
-    } else {
-        log::warn!("❌ Failed to get current executable path");
     }
 
-    // 2. 开发环境：当前工作目录下的 tools/adb（考虑当前目录可能已经在 src-tauri 中）
+    // 2. 开发环境
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    log::info!(
-        "Current directory for development search: {}",
-        current_dir.display()
-    );
-
-    let dev_paths = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
-        // 如果当前目录已经是 src-tauri，直接使用 tools/adb
-        vec![current_dir.join("tools").join("adb").join("adb.exe")]
+    let dev_root = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
+        current_dir
     } else {
-        // 否则尝试多个开发环境路径
-        vec![
-            current_dir
-                .join("src-tauri")
-                .join("tools")
-                .join("adb")
-                .join("adb.exe"),
-            current_dir.join("tools").join("adb").join("adb.exe"),
-        ]
+        current_dir.join("src-tauri")
     };
 
+    let dev_paths = [
+        dev_root
+            .join("tools")
+            .join("adb")
+            .join(platform_dir)
+            .join(&adb_filename),
+        dev_root.join("tools").join("adb").join(&adb_filename), // 兼容老路径
+    ];
+
     for path in &dev_paths {
-        log::info!("Checking development path: {}", path.display());
         if path.exists() {
             log::info!("✅ Found ADB at development path: {}", path.display());
+            // 确保具有执行权限 (针对 Linux)
+            let _ = crate::utils::ensure_executable(path);
             return path.clone();
-        } else {
-            log::warn!("❌ ADB not found at development path: {}", path.display());
         }
     }
 
-    // 如果所有路径都找不到，记录错误并返回空路径
-    log::error!("❌ ADB executable not found in any directory!");
-    log::error!("Searched paths:");
-    log::error!("  - Production: {{exe_dir}}/tools/adb/adb.exe");
-    log::error!("  - Production: {{exe_dir}}/resources/tools/adb/adb.exe");
-    log::error!("  - Development: src-tauri/tools/adb/adb.exe");
-    log::error!("  - Development: tools/adb/adb.exe");
-    log::error!("Please ensure adb.exe is placed in the correct tools/adb/ directory");
-
-    // 返回一个明显无效的路径，这样后续的存在性检查会失败
+    log::error!("❌ ADB executable not found!");
     PathBuf::from("INVALID_ADB_PATH")
 }
 
 /// 查找Fastboot路径（仅在首次调用时执行）
 /// 统一使用 tools/adb 目录中的可执行文件
 fn find_fastboot_path() -> PathBuf {
-    log::info!("Starting Fastboot path discovery (tools/adb directory only)...");
+    use std::env::consts::EXE_SUFFIX;
+    let platform_dir = if cfg!(windows) { "windows" } else { "linux" };
+    let fb_filename = format!("fastboot{}", EXE_SUFFIX);
 
-    // 1. 生产环境：可执行文件目录下的 tools/adb 文件夹
+    log::info!(
+        "Starting Fastboot path discovery (platform={} suffix={})...",
+        platform_dir,
+        EXE_SUFFIX
+    );
+
+    // 1. 生产环境
     if let Ok(exe_dir) = std::env::current_exe() {
-        log::info!("Executable path: {}", exe_dir.display());
         if let Some(parent) = exe_dir.parent() {
-            log::info!("Executable parent directory: {}", parent.display());
-
-            // 生产环境的多个可能路径
             let production_paths = [
-                parent.join("tools").join("adb").join("fastboot.exe"),
+                parent
+                    .join("tools")
+                    .join("adb")
+                    .join(platform_dir)
+                    .join(&fb_filename),
                 parent
                     .join("resources")
                     .join("tools")
                     .join("adb")
-                    .join("fastboot.exe"),
-                parent.join("adb").join("fastboot.exe"), // 备用路径
+                    .join(platform_dir)
+                    .join(&fb_filename),
+                parent.join("tools").join("adb").join(&fb_filename), // 兼容老路径
+                parent.join("adb").join(&fb_filename),               // 兼容老路径
             ];
 
             for path in &production_paths {
-                log::info!("Checking production path: {}", path.display());
                 if path.exists() {
                     log::info!("✅ Found Fastboot at production path: {}", path.display());
+                    // 确保具有执行权限 (针对 Linux)
+                    let _ = crate::utils::ensure_executable(path);
                     return path.clone();
-                } else {
-                    log::warn!(
-                        "❌ Fastboot not found at production path: {}",
-                        path.display()
-                    );
                 }
             }
         }
-    } else {
-        log::warn!("❌ Failed to get current executable path");
     }
 
-    // 2. 开发环境：当前工作目录下的 tools/adb（考虑当前目录可能已经在 src-tauri 中）
+    // 2. 开发环境
     let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    log::info!(
-        "Current directory for development search: {}",
-        current_dir.display()
-    );
-
-    let dev_paths = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
-        // 如果当前目录已经是 src-tauri，直接使用 tools/adb
-        vec![current_dir.join("tools").join("adb").join("fastboot.exe")]
+    let dev_root = if current_dir.file_name().and_then(|n| n.to_str()) == Some("src-tauri") {
+        current_dir
     } else {
-        // 否则尝试多个开发环境路径
-        vec![
-            current_dir
-                .join("src-tauri")
-                .join("tools")
-                .join("adb")
-                .join("fastboot.exe"),
-            current_dir.join("tools").join("adb").join("fastboot.exe"),
-        ]
+        current_dir.join("src-tauri")
     };
 
+    let dev_paths = [
+        dev_root
+            .join("tools")
+            .join("adb")
+            .join(platform_dir)
+            .join(&fb_filename),
+        dev_root.join("tools").join("adb").join(&fb_filename), // 兼容老路径
+    ];
+
     for path in &dev_paths {
-        log::info!("Checking development path: {}", path.display());
         if path.exists() {
             log::info!("✅ Found Fastboot at development path: {}", path.display());
+            // 确保具有执行权限 (针对 Linux)
+            let _ = crate::utils::ensure_executable(path);
             return path.clone();
-        } else {
-            log::warn!(
-                "❌ Fastboot not found at development path: {}",
-                path.display()
-            );
         }
     }
 
-    // 如果所有路径都找不到，记录错误并返回空路径
-    log::error!("❌ Fastboot executable not found in any directory!");
-    log::error!("Searched paths:");
-    log::error!("  - Production: {{exe_dir}}/tools/adb/fastboot.exe");
-    log::error!("  - Production: {{exe_dir}}/resources/tools/adb/fastboot.exe");
-    log::error!("  - Development: src-tauri/tools/adb/fastboot.exe");
-    log::error!("  - Development: tools/adb/fastboot.exe");
-    log::error!("Please ensure fastboot.exe is placed in the correct tools/adb/ directory");
-
-    // 返回一个明显无效的路径，这样后续的存在性检查会失败
+    log::error!("❌ Fastboot executable not found!");
     PathBuf::from("INVALID_FASTBOOT_PATH")
 }
 
