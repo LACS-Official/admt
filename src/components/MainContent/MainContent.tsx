@@ -31,7 +31,7 @@ import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
 import DeviceSelectionDialog from "./DeviceSelectionDialog";
 import { getDeviceIcon } from "../../assets/icons";
-import UnlinkIcon from "../../assets/icons/devices/unlink.gif";
+import UnlinkIcon from "../../assets/icons/devices/Unlink.gif";
 import { useAppStore } from "../../stores/appStore";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useThemeStore } from "../../stores/themeStore";
