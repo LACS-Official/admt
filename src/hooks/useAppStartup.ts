@@ -196,15 +196,7 @@ export const useAppStartup = () => {
           }
         })(),
 
-        // 统一开启设备扫描
-        (async () => {
-          try {
-            console.log('🔍 开启全局设备扫描...');
-            deviceService.startScanning(config.scanInterval);
-          } catch (error) {
-            console.error('❌ 设备扫描开启失败:', error);
-          }
-        })()
+        // 开启设备扫描的操作将被移到启动完成后执行，减少启动时的负载
       ];
       
       await Promise.all(initTasks);
@@ -270,15 +262,19 @@ export const useAppStartup = () => {
     const metrics = getPerformanceMetrics();
     logService.info('启动流程性能指标', 'App', metrics);
     
-    // 异步追踪进入主页面，不阻塞 UI 渲染
+    // 追踪进入主页面
     setTimeout(() => {
       usageTrackingService.trackMainPageEntry().catch(err => {
         logService.error('主页面进入追踪失败', 'App', err);
       });
+      
+      // 启动流程彻底完成后，再开启设备扫描，并给予一定的缓冲时间
+      console.log('🔍 启动流程彻底完成，延迟开启设备扫描...');
+      deviceService.startScanning(config.scanInterval, 2000); 
     }, 1000);
 
     setShowTransition(true);
-  }, [getPerformanceMetrics]);
+  }, [getPerformanceMetrics, config.scanInterval]);
 
   const handleStartupFlowError = useCallback(async (error: string) => {
     logService.error('启动流程失败', 'App', error);

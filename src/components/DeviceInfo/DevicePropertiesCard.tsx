@@ -1,69 +1,122 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   makeStyles,
   Card,
   CardHeader,
   Text,
+  Tooltip,
+  Button,
+  mergeClasses,
+  shorthands,
 } from "@fluentui/react-components";
 import {
   Settings24Regular,
+  Copy16Regular,
+  Checkmark16Regular,
+  Info16Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { DeviceInfo } from "../../types/device";
+import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
   card: {
     height: "100%",
     display: "flex",
     flexDirection: "column",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    border: "1px solid var(--colorNeutralStroke1)",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
+  },
+  cardHeader: {
+    ...shorthands.padding("12px", "16px"),
+    ...shorthands.borderBottom("1px", "solid", "var(--colorNeutralStroke2)"),
   },
   content: {
     flex: 1,
-    padding: "12px",
-    overflow: "auto",
+    ...shorthands.padding("16px"),
+    ...shorthands.overflow("auto"),
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "24px",
   },
   categorySection: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "12px",
   },
   categoryTitle: {
-    fontSize: "14px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginBottom: "4px",
+  },
+  categoryTitleText: {
+    fontSize: "13px",
     fontWeight: "600",
-    color: "var(--colorNeutralForeground1)",
-    paddingBottom: "4px",
-    borderBottom: "1px solid var(--colorNeutralStroke2)",
+    color: "var(--colorNeutralForeground3)",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  categoryDivider: {
+    height: "1px",
+    flex: 1,
+    backgroundColor: "var(--colorNeutralStroke3)",
   },
   propertyGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr",
-    gap: "6px",
+    gridTemplateColumns: "repeat(2, 1fr)", // Tile grid
+    gap: "10px",
+    "@media (max-width: 600px)": {
+      gridTemplateColumns: "1fr",
+    },
   },
-  propertyRow: {
+  propertyTile: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "4px 6px",
+    flexDirection: "column",
+    gap: "4px",
+    ...shorthands.padding("10px", "12px"),
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "3px",
-    minHeight: "28px",
+    ...shorthands.borderRadius("8px"),
+    transition: "all 0.2s ease",
+    position: "relative",
+    ...shorthands.border("1px", "solid", "transparent"),
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke3)"),
+    },
+    "&:hover .copy-button": {
+      opacity: 1,
+    },
   },
   propertyLabel: {
-    fontSize: "12px",
-    color: "var(--colorNeutralForeground2)",
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground3)",
     fontWeight: "500",
-    minWidth: "80px",
+  },
+  valueWrapper: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
   },
   propertyValue: {
-    fontSize: "12px",
+    fontSize: "13px",
     fontWeight: "600",
-    textAlign: "right",
+    color: "var(--colorNeutralForeground1)",
     wordBreak: "break-all",
-    flex: 1,
-    marginLeft: "8px",
+    lineHeight: "1.4",
+  },
+  copyButton: {
+    opacity: 0,
+    transition: "opacity 0.2s ease",
+    minWidth: "24px",
+    height: "24px",
+    padding: "0",
+    "&.fui-Button": {
+      backgroundColor: "transparent",
+      border: "none",
+    },
   },
   noData: {
     display: "flex",
@@ -76,8 +129,39 @@ const useStyles = makeStyles({
   },
 });
 
+interface CopyButtonProps {
+  value: string;
+  label: string;
+}
 
+const CopyButton: React.FC<CopyButtonProps> = ({ value, label }) => {
+  const styles = useStyles();
+  const [copied, setCopied] = useState(false);
+  const { t } = useTranslation();
 
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  return (
+    <Tooltip content={(copied ? t("common.success") : t("common.copy_value", "复制内容")) as string} relationship="label">
+      <Button
+        size="small"
+        className={mergeClasses(styles.copyButton, "copy-button")}
+        icon={copied ? <Checkmark16Regular style={{ color: "var(--colorPaletteGreenForeground1)" }} /> : <Copy16Regular />}
+        onClick={handleCopy}
+        appearance="subtle"
+      />
+    </Tooltip>
+  );
+};
 
 interface DevicePropertiesCardProps {
   device: DeviceInfo;
@@ -136,7 +220,8 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
     if (props.bootloaderLocked !== undefined) {
       securityInfo.push({
         property: t('device_info.bootloader'),
-        value: props.bootloaderLocked ? `🔒 ${t('device_info.locked')}` : `🔓 ${t('device_info.unlocked')}`
+        value: props.bootloaderLocked ? t('device_info.locked') : t('device_info.unlocked'),
+        icon: props.bootloaderLocked ? "🔒" : "🔓"
       });
     }
     if (props.verifiedBootState) securityInfo.push({ property: t('device_overview.verified_boot'), value: props.verifiedBootState });
@@ -144,19 +229,22 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
     if (props.debuggable !== undefined) {
       securityInfo.push({
         property: t('device_overview.debug_mode'),
-        value: props.debuggable ? `✅ ${t('device_overview.enabled')}` : `❌ ${t('device_overview.disabled')}`
+        value: props.debuggable ? t('device_overview.enabled') : t('device_overview.disabled'),
+        icon: props.debuggable ? "✅" : "❌"
       });
     }
     if (props.secure !== undefined) {
       securityInfo.push({
         property: t('device_overview.secure_mode'),
-        value: props.secure ? `✅ ${t('device_overview.enabled')}` : `❌ ${t('device_overview.disabled')}`
+        value: props.secure ? t('device_overview.enabled') : t('device_overview.disabled'),
+        icon: props.secure ? "✅" : "❌"
       });
     }
     if (props.adbSecure !== undefined) {
       securityInfo.push({
         property: t('device_overview.adb_secure'),
-        value: props.adbSecure ? `✅ ${t('device_overview.enabled')}` : `❌ ${t('device_overview.disabled')}`
+        value: props.adbSecure ? t('device_overview.enabled') : t('device_overview.disabled'),
+        icon: props.adbSecure ? "✅" : "❌"
       });
     }
     if (securityInfo.length > 0) {
@@ -181,10 +269,11 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
   return (
     <Card className={styles.card}>
       <CardHeader
+        className={styles.cardHeader}
         image={<Settings24Regular />}
-        header={<Text weight="semibold">{t('device_properties.card_title')}</Text>}
+        header={<Text weight="semibold" size={400}>{t('device_properties.card_title')}</Text>}
         description={
-          <Text size={200}>
+          <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
             {propertyCategories.length > 0
               ? t('device_properties.properties_summary', { 
                   count: propertyCategories.reduce((total, cat) => total + cat.items.length, 0),
@@ -200,12 +289,21 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
         {propertyCategories.length > 0 ? (
           propertyCategories.map((category, index) => (
             <div key={index} className={styles.categorySection}>
-              <Text className={styles.categoryTitle}>{category.title}</Text>
+              <div className={styles.categoryTitle}>
+                <Text className={styles.categoryTitleText}>{category.title}</Text>
+                <div className={styles.categoryDivider} />
+              </div>
               <div className={styles.propertyGrid}>
-                {category.items.map((item, itemIndex) => (
-                  <div key={itemIndex} className={styles.propertyRow}>
+                {category.items.map((item: any, itemIndex) => (
+                  <div key={itemIndex} className={styles.propertyTile}>
                     <Text className={styles.propertyLabel}>{item.property}</Text>
-                    <Text className={styles.propertyValue}>{item.value}</Text>
+                    <div className={styles.valueWrapper}>
+                      <Text className={styles.propertyValue}>
+                        {item.icon && <span style={{ marginRight: '4px' }}>{item.icon}</span>}
+                        {item.value}
+                      </Text>
+                      <CopyButton value={item.value} label={item.property} />
+                    </div>
                   </div>
                 ))}
               </div>

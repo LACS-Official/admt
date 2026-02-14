@@ -11,6 +11,9 @@ use crate::utils::{
 };
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::fs::File;
+use std::io::{BufReader, Read};
 use std::path::PathBuf;
 use tauri::Emitter;
 use tauri::Manager;
@@ -2151,4 +2154,43 @@ pub async fn read_resource_file<R: tauri::Runtime>(
         content.len()
     );
     Ok(content)
+}
+
+/// 计算文件哈希 (SHA256)
+#[tauri::command]
+pub async fn get_file_hash(path: String) -> Result<String> {
+    log::info!("Calculating hash for file: {}", path);
+
+    // 在异步线程中执行耗时的IO操作
+    let hash_result = tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(path);
+        if !path.exists() {
+            return Err(AdmtError::Io(format!("File not found: {:?}", path)));
+        }
+
+        let file = File::open(path).map_err(|e| AdmtError::Io(e.to_string()))?;
+        let mut reader = BufReader::new(file);
+        let mut hasher = Sha256::new();
+        let mut buffer = [0; 8192]; // 8KB buffer
+
+        loop {
+            let count = reader
+                .read(&mut buffer)
+                .map_err(|e| AdmtError::Io(e.to_string()))?;
+            if count == 0 {
+                break;
+            }
+            hasher.update(&buffer[..count]);
+        }
+
+        let result = hasher.finalize();
+        Ok(hex::encode(result))
+    })
+    .await
+    .map_err(|e| AdmtError::Unknown {
+        message: e.to_string(),
+    })??;
+
+    log::info!("Hash calculation completed: {}", hash_result);
+    Ok(hash_result)
 }

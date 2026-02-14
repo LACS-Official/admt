@@ -113,8 +113,17 @@ fn resolve_adb_tools_paths(_app_handle: &tauri::AppHandle) -> Result<(PathBuf, P
 
 /// 获取ADB版本信息
 fn get_adb_version(adb_path: &Path) -> Result<String> {
-    let output = Command::new(adb_path)
-        .arg("version")
+    let mut cmd = Command::new(adb_path);
+    cmd.arg("version");
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = cmd
         .output()
         .map_err(|e| AdmtError::Command(format!("执行ADB version命令失败: {}", e)))?;
 
@@ -226,20 +235,14 @@ pub async fn execute_adb_command_with_path(
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
 
-    // 在发布版中隐藏控制台窗口，在调试版中保持可见
-    #[cfg(all(windows, not(debug_assertions)))]
+    // 在Windows端隐藏控制台窗口
+    #[cfg(windows)]
     {
         #[allow(unused_imports)]
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);
-        log::debug!("ADB命令设置隐藏窗口 (发布版): {}", adb_path.display());
-    }
-
-    // 在调试版中保持窗口可见以便调试
-    #[cfg(all(windows, debug_assertions))]
-    {
-        log::debug!("ADB命令保持窗口可见 (调试版): {}", adb_path.display());
+        log::debug!("ADB命令设置隐藏窗口: {}", adb_path.display());
     }
 
     // 非Windows平台的处理
@@ -316,26 +319,14 @@ pub async fn execute_fastboot_command_with_path(
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
 
-    // 在发布版中隐藏控制台窗口，在调试版中保持可见
-    #[cfg(all(windows, not(debug_assertions)))]
+    // 在Windows端隐藏控制台窗口
+    #[cfg(windows)]
     {
         #[allow(unused_imports)]
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         cmd.creation_flags(CREATE_NO_WINDOW);
-        log::debug!(
-            "Fastboot命令设置隐藏窗口 (发布版): {}",
-            fastboot_path.display()
-        );
-    }
-
-    // 在调试版中保持窗口可见以便调试
-    #[cfg(all(windows, debug_assertions))]
-    {
-        log::debug!(
-            "Fastboot命令保持窗口可见 (调试版): {}",
-            fastboot_path.display()
-        );
+        log::debug!("Fastboot命令设置隐藏窗口: {}", fastboot_path.display());
     }
 
     // 非Windows平台的处理
@@ -343,15 +334,6 @@ pub async fn execute_fastboot_command_with_path(
     {
         log::debug!(
             "Fastboot命令在非Windows平台执行: {}",
-            fastboot_path.display()
-        );
-    }
-
-    // 在调试版中保持窗口可见以便调试
-    #[cfg(all(windows, debug_assertions))]
-    {
-        log::debug!(
-            "Fastboot命令保持窗口可见 (调试版): {}",
             fastboot_path.display()
         );
     }

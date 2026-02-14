@@ -1,6 +1,6 @@
 import React, { useState, useEffect} from 'react';
 import { versionManager, useVersionInfo } from '../../utils/versionManager';
-import { admtbgIcon } from "../../assets/icons";
+import { admtLogo128 } from "../../assets/icons";
 import { lacsbgIcon } from "../../assets/icons";
 import VersionChecker from "../Common/VersionChecker";
 
@@ -18,6 +18,8 @@ import {
   DialogContent,
   DialogActions,
   Spinner,
+  shorthands,
+  Tooltip,
 } from "@fluentui/react-components";
 import {
   Info24Regular,
@@ -27,6 +29,10 @@ import {
   Person24Regular,
   Building24Regular,
   ArrowUpload24Regular,
+  BookOpen24Regular,
+  Chat24Regular,
+  Map24Regular,
+  Handshake24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 
@@ -35,119 +41,162 @@ import { useTranslation } from "react-i18next";
 
 
 const useStyles = makeStyles({
-  appIconImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: "8px",
-  },
   container: {
-    padding: "8px",
+    ...shorthands.padding("12px"),
     height: "100%",
-    overflow: "auto",
+    ...shorthands.overflow("auto"),
+    backgroundColor: "var(--colorNeutralBackground3)", // Subtle background for the whole page
   },
   content: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "20px",
-    maxWidth: "1000px",
-    margin: "0 auto",
+    gridTemplateColumns: "1.2fr 0.8fr", // Asymmetric layout
+    ...shorthands.gap("20px"),
+    maxWidth: "1100px",
+    ...shorthands.margin("0", "auto"),
+    "@media (max-width: 900px)": {
+      gridTemplateColumns: "1fr",
+    },
   },
-  card: {
-    height: "fit-content",
-    borderRadius: "8px",
-    border: "1px solid var(--colorNeutralStroke2)",
+  // Hero section (About App)
+  heroCard: {
+    gridColumn: "1 / 2",
+    "@media (max-width: 900px)": {
+      gridColumn: "1 / -1",
+    },
+    ...shorthands.border("none"),
+    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
   },
-  cardContent: {
-    padding: "10px",
+  heroContent: {
+    padding: "32px 24px",
+    display: "flex",
+    flexDirection: "row",
+    gap: "32px",
+    alignItems: "center",
+    "@media (max-width: 600px)": {
+      flexDirection: "column",
+      textAlign: "center",
+    },
+  },
+  appLogoLarge: {
+    width: "120px",
+    height: "120px",
+    ...shorthands.borderRadius("20px"),
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+  },
+  logoSection: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    alignItems: "center",
+    gap: "12px",
   },
-  aboutSection: {
-    gridColumn: "1 / -1",
-  },
-  aboutContent: {
-    padding: "14px",
+  heroInfo: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
-    textAlign: "center",
-    alignItems: "center",
-  },
-  versionBadge: {
-    alignSelf: "center",
-  },
-  buttonGroup: {
-    display: "flex",
-    gap: "12px",
-    justifyContent: "center",
-    flexWrap: "wrap",
-    textAlign: "center" ,
-  },
-  infoRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "8px 0",
-    borderBottom: "1px solid var(--colorNeutralStroke2)",
-  },
-  infoLabel: {
-    fontWeight: "400",
-    color: "var(--colorNeutralForeground2)",
-  },
-  infoValue: {
-    fontWeight: "600",
-  },
-  licenseSection: {
-    backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "8px",
-    padding: "16px",
-    marginTop: "8px",
-  },
-  teamSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  teamMember: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "8px",
-    borderRadius: "6px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-  },
-  memberAvatar: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    backgroundColor: "var(--colorBrandBackground)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "white",
-    fontSize: "14px",
-    fontWeight: "600",
-  },
-  memberInfo: {
+    gap: "8px",
     flex: 1,
   },
-  teamMembers: {
+  versionText: {
+    color: "var(--colorBrandForeground1)",
+    letterSpacing: "0.02em",
+  },
+  heroButtonGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    ...shorthands.gap("8px"),
+    marginTop: "8px",
+  },
+  heroButton: {
+    ...shorthands.padding("0", "12px"),
+    height: "36px",
+    justifyContent: "center",
+  },
+  
+  // Team side card
+  teamCard: {
+    gridColumn: "2 / 3",
+    "@media (max-width: 900px)": {
+      gridColumn: "1 / -1",
+    },
+    ...shorthands.border("none"),
+    backgroundColor: "var(--colorNeutralBackground1)",
+  },
+  teamContent: {
+    ...shorthands.padding("24px"),
     display: "flex",
     flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
     gap: "12px",
+  },
+  teamLogoRect: {
+    width: "140px",
+    height: "78.75px", // 16:9 aspect ratio (140 / 16 * 9)
+    ...shorthands.borderRadius("12px"),
+    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke3)"),
+    marginBottom: "8px",
+    objectFit: "cover",
+  },
+  teamButtonGrid: {
+    display: "flex",
+    gap: "8px",
+    marginTop: "8px",
+  },
+
+  // Social/Community section
+  communitySection: {
+    gridColumn: "1 / -1",
+    ...shorthands.padding("16px", "0"),
+  },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "16px",
+    ...shorthands.padding("0", "8px"),
+  },
+  headerLine: {
+    height: "1px",
+    flex: 1,
+    backgroundColor: "var(--colorNeutralStroke2)",
+  },
+  socialGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+    gap: "12px",
+  },
+  socialButton: {
+    height: "56px",
+    justifyContent: "flex-start",
+    ...shorthands.padding("0", "16px"),
+    "& svg": {
+      fontSize: "20px",
+    },
+  },
+
+  // Footer Grid removed as per user request
+
+  // Dialog styles
+  openSourceDialog: {
+    maxWidth: "800px",
+    maxHeight: "80vh",
+  },
+  openSourceGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+    gap: "16px",
+    marginTop: "16px",
+    ...shorthands.overflow("auto"),
+    maxHeight: "400px",
+    paddingRight: "8px",
   },
   openSourceItem: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "12px",
-    borderRadius: "6px",
+    ...shorthands.padding("12px"),
+    ...shorthands.borderRadius("6px"),
     backgroundColor: "var(--colorNeutralBackground2)",
-    border: "1px solid var(--colorNeutralStroke2)",
-  },
-  openSourceInfo: {
-    flex: 1,
+    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
   },
   openSourceName: {
     fontWeight: "600",
@@ -161,29 +210,9 @@ const useStyles = makeStyles({
     fontSize: "11px",
     color: "var(--colorNeutralForeground3)",
     backgroundColor: "var(--colorNeutralBackground3)",
-    padding: "2px 6px",
-    borderRadius: "4px",
+    ...shorthands.padding("2px", "6px"),
+    ...shorthands.borderRadius("4px"),
     fontWeight: "500",
-  },
-  categoryHeader: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "var(--colorNeutralForeground1)",
-    marginBottom: "8px",
-    marginTop: "16px",
-  },
-  openSourceDialog: {
-    maxWidth: "800px",
-    maxHeight: "80vh",
-  },
-  openSourceGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "16px",
-    marginTop: "16px",
-    maxHeight: "400px",
-    overflowY: "auto",
-    paddingRight: "8px",
   },
 });
 
@@ -362,176 +391,178 @@ const AboutPanel: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        {/* 关于 - 应用信息 */}
-        <Card className={mergeClasses(styles.card)}>
-          <CardHeader
-            image={<Info24Regular />}
-            header={<Text weight="semibold">{t('settings.about_app')}</Text>}
-          />
-
-          <div className={styles.aboutContent}>
-            <img src={admtbgIcon} alt="appIcon" className={styles.appIconImage}/>
-            
-            <Text size={600} weight="bold">
-              {t('settings.app_name')}
-            </Text>
-            <Text size={400} weight="bold">
-              {versionLoading ? 'v1.0.0' : fullVersionString}
-            </Text>
-            <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
-              {t('settings.app_desc')}
-            </Text>
-
-            <div className={styles.buttonGroup}>
+        {/* --- Hero Section: About Application --- */}
+        <Card className={styles.heroCard}>
+          <div className={styles.heroContent}>
+            <div className={styles.logoSection}>
+              <img src={admtLogo128} alt="appIcon" className={styles.appLogoLarge} />
               <Button 
-                appearance="primary" 
-                size="medium"
-                icon={isCheckingUpdate ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
-                onClick={handleCheckUpdate}
-                disabled={isCheckingUpdate}
-              >
-                {isCheckingUpdate ? t('settings.checking_update') : t('settings.check_update')}
-              </Button>
-              <Button 
-                appearance="secondary" 
-                size="medium"
+                appearance="subtle" 
+                size="small"
                 icon={<Globe24Regular />}
-                onClick={handleOpenManual}
-              >
-                {t('settings.user_manual')}
-              </Button>
-              <Button 
-                appearance="secondary" 
-                size="medium"
-                icon={<Heart24Regular />}
-                onClick={handleFeedback}
-              >
-                {t('settings.feedback')}
-              </Button>
-              <Button 
-                appearance="secondary" 
-                size="medium"
-                icon={<Code24Regular />}
                 onClick={OpenofficialADMTWeb}
               >
                 {t('settings.official_website')}
               </Button>
             </div>
             
-            {/* 隐藏的版本检查组件，只用于显示更新弹窗或最新版提示 */}
-            <VersionChecker 
-              triggerCheck={triggerVersionCheck}
-              onCheckUpdate={handleUpdateCheckComplete}
-              onNoUpdate={handleUpdateCheckComplete}
-              onError={handleUpdateCheckComplete}
-            />
+            <div className={styles.heroInfo}>
+              <Text size={700} weight="bold">
+                {t('settings.app_name')}
+              </Text>
+              <Text size={300} weight="semibold" className={styles.versionText}>
+                {versionLoading ? 'v1.0.0' : fullVersionString}
+              </Text>
+              <Text size={300} style={{ color: "var(--colorNeutralForeground2)", margin: '12px 0' }}>
+                {t('settings.app_desc')}
+              </Text>
+
+              <div className={styles.heroButtonGrid}>
+                <Button 
+                  appearance="primary" 
+                  size="small"
+                  className={styles.heroButton}
+                  icon={isCheckingUpdate ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
+                  onClick={handleCheckUpdate}
+                  disabled={isCheckingUpdate}
+                >
+                  {isCheckingUpdate ? t('settings.checking_update') : t('settings.check_update')}
+                </Button>
+                <Button 
+                  appearance="outline" 
+                  size="small"
+                  className={styles.heroButton}
+                  icon={<Heart24Regular />}
+                  onClick={handleDonate}
+                >
+                  {t('settings.donate_us')}
+                </Button>
+                <Button 
+                  appearance="outline" 
+                  size="small"
+                  className={styles.heroButton}
+                  icon={<Code24Regular />}
+                  onClick={handleOpenSourceInfo}
+                >
+                  {t('settings.opensource_projects')}
+                </Button>
+                <Button 
+                  appearance="outline" 
+                  size="small"
+                  className={styles.heroButton}
+                  icon={<Code24Regular />}
+                  onClick={handleThanksInfo}
+                >
+                  {t('settings.thanks_list')}
+                </Button>
+              </div>
+            </div>
           </div>
+          
+          {/* Hidden Version Checker */}
+          <VersionChecker 
+            triggerCheck={triggerVersionCheck}
+            onCheckUpdate={handleUpdateCheckComplete}
+            onNoUpdate={handleUpdateCheckComplete}
+            onError={handleUpdateCheckComplete}
+          />
         </Card>
 
-        
-
-        {/* 开发团队信息 */}
-        <Card className={mergeClasses(styles.card)}>
-          <CardHeader
-            image={<Building24Regular />}
-            header={<Text weight="semibold">{t('settings.team_info')}</Text>}
-          />
-
-          <div className={styles.aboutContent}>
-            <img src={lacsbgIcon} alt="appIcon" className={styles.appIconImage}/>
-            
-            <Text size={600} weight="bold">{t('settings.team_name')}</Text>
-            <Text size={400} weight="bold">
+        {/* --- Team Info Side Card --- */}
+        <Card className={styles.teamCard}>
+          <div className={styles.teamContent}>
+            <img src={lacsbgIcon} alt="teamIcon" className={styles.teamLogoRect} />
+            <Text size={500} weight="bold">{t('settings.team_name')}</Text>
+            <Text size={200} weight="semibold" style={{ color: "var(--colorNeutralForeground3)" }}>
               Lead And Creative Studio
             </Text>
-            <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center" }}>
+            <Text size={200} style={{ color: "var(--colorNeutralForeground2)", marginTop: '4px' }}>
               {t('settings.team_desc')}
             </Text>
-
-
-            <div className={styles.buttonGroup}>
+            <div className={styles.teamButtonGrid}>
               <Button 
-                appearance="primary" 
-                size="medium"
+                appearance="subtle" 
+                size="small"
                 icon={<Globe24Regular />}
                 onClick={() => openUrl(links.officialWebsite)}
               >
                 {t('settings.official_website')}
               </Button>
               <Button 
-                appearance="secondary" 
-                size="medium"
-                icon={<Person24Regular />}
-                onClick={() => openUrl(links.officialGroup)}
-              >
-                {t('settings.official_group')}
-              </Button>
-              <Button 
-                appearance="secondary" 
-                size="medium"
-                icon={<Heart24Regular />}
+                appearance="subtle" 
+                size="small"
+                icon={<Map24Regular />}
                 onClick={() => openUrl(links.otherapps)}
               >
                 {t('settings.our_products')}
               </Button>
-              <Button 
-                appearance="secondary" 
-                size="medium"
-                icon={<Code24Regular />}
-                onClick={() => openUrl(links.contact)}
-              >
-                {t('settings.contact_us')}
-              </Button>
             </div>
           </div>
         </Card>
 
-        {/* 开源项目 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Code24Regular />}
-            header={<Text weight="semibold">{t('settings.opensource_thanks')}</Text>}
-          />
-          <div className={styles.cardContent}>
-            <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
-              {t('settings.opensource_desc')}
+        {/* --- Community & Social Section --- */}
+        <div className={styles.communitySection}>
+          <div className={styles.sectionHeader}>
+            <Text size={400} weight="semibold" style={{ color: "var(--colorNeutralForeground3)" }}>
+              {t('common.community_social', "社区与社交")}
             </Text>
-            
-            <div style={{ textAlign: "center" , display: "flex", gap: "12px", justifyContent: "center" }}>
-              <Button 
-                appearance="primary" 
-                size="medium"
-                icon={<Code24Regular />}
-                onClick={handleOpenSourceInfo}
-              >
-                {t('settings.opensource_projects')}
-              </Button>
-              <Button 
-                appearance="primary" 
-                size="medium"
-                icon={<Code24Regular />}
-                onClick={handleThanksInfo}
-              >
-                {t('settings.thanks_list')}
-              </Button>
-            </div>
+            <div className={styles.headerLine} />
           </div>
-        </Card>
 
-        
+          <div className={styles.socialGrid}>
+            <Button 
+              className={styles.socialButton}
+              appearance="outline"
+              icon={<BookOpen24Regular />}
+              onClick={handleOpenManual}
+            >
+              {t('settings.user_manual')}
+            </Button>
+            <Button 
+              className={styles.socialButton}
+              appearance="outline"
+              icon={<Chat24Regular />}
+              onClick={() => openUrl(links.officialGroup)}
+            >
+              {t('settings.official_group')}
+            </Button>
+            <Button 
+              className={styles.socialButton}
+              appearance="outline"
+              icon={<Person24Regular />}
+              onClick={() => openUrl(links.contact)}
+            >
+              {t('settings.contact_us')}
+            </Button>
+            <Tooltip content={t('settings.feedback')} relationship="label">
+              <Button 
+                className={styles.socialButton}
+                appearance="outline"
+                icon={<Heart24Regular />}
+                onClick={handleFeedback}
+              >
+                {t('settings.feedback')}
+              </Button>
+            </Tooltip>
+          </div>
+        </div>
+
+        {/* --- Footer Banners removed --- */}
+
+        {/* --- Dialogs --- */}
         <Dialog open={isOpenSourceDialogOpen} onOpenChange={(_e, data) => setIsOpenSourceDialogOpen(data.open)}>
           <DialogSurface className={styles.openSourceDialog}>
             <DialogBody>
               <DialogTitle>{t('settings.opensource_details')}</DialogTitle>
               <DialogContent>
-                <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
+                <Text size={300} style={{ color: "var(--colorNeutralForeground2)", display: 'block', marginBottom: '16px' }}>
                   {t('settings.opensource_desc')}
                 </Text>
                 
                 <div className={styles.openSourceGrid}>
                   {OPEN_SOURCE_PROJECTS.map((project, index) => (
                     <div key={index} className={styles.openSourceItem}>
-                      <div className={styles.openSourceInfo}>
+                      <div>
                         <div className={styles.openSourceName}>{project.name}</div>
                         <div className={styles.openSourceDesc}>{project.description}</div>
                       </div>
@@ -548,33 +579,27 @@ const AboutPanel: React.FC = () => {
             </DialogBody>
           </DialogSurface>
         </Dialog>
-        {/* 致谢列表弹窗 */}
+
         <Dialog open={isThanksDialogOpen} onOpenChange={(_e, data) => setIsThanksDialogOpen(data.open)}>
           <DialogSurface className={styles.openSourceDialog}>
             <DialogBody>
               <DialogTitle>{t('settings.thanks_details')}</DialogTitle>
-              <DialogActions>
-                <Button appearance="secondary" onClick={() => setIsThanksDialogOpen(false)}>
-                  {t('settings.close')}
-                </Button>
-              </DialogActions>
               <DialogContent>
-                <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
+                <Text size={300} style={{ color: "var(--colorNeutralForeground2)", display: 'block', marginBottom: '16px' }}>
                   {t('settings.thanks_header')}
                 </Text>
                 <div className={styles.openSourceGrid}>
                   {Object.entries(GROUPED_PROJECTS).map(([category, projects]) => (
                     <div key={category}>
-
                       {projects.map((project, index) => (
                         <div key={index} className={styles.openSourceItem}>
-                          <div className={styles.openSourceInfo}>
+                          <div style={{ flex: 1 }}>
                             <div className={styles.openSourceName}>{project.name}</div>
                             <div className={styles.openSourceDesc}>{project.description}</div>
                           </div>
                           <Button 
-                            appearance="secondary" 
-                            size="medium"
+                            appearance="subtle" 
+                            size="small"
                             onClick={() => openUrl(project.url)}
                           >
                             {t('settings.view')}
@@ -585,44 +610,14 @@ const AboutPanel: React.FC = () => {
                   ))}
                 </div>
               </DialogContent>
+              <DialogActions>
+                <Button appearance="secondary" onClick={() => setIsThanksDialogOpen(false)}>
+                  {t('settings.close')}
+                </Button>
+              </DialogActions>
             </DialogBody>
           </DialogSurface>
         </Dialog>
-
-
-
-        {/* 捐赠/支持 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Code24Regular />}
-            header={<Text weight="semibold">{t('settings.donate_support')}</Text>}
-          />
-          <div className={styles.cardContent}>
-            <Text size={300} style={{ color: "var(--colorNeutralForeground2)", textAlign: "center", marginBottom: "16px" }}>
-              {t('settings.donate_desc')}
-            </Text>
-            <div className={styles.buttonGroup}>
-              <Button 
-                appearance="primary" 
-                size="medium"
-                icon={<Code24Regular />}
-                onClick={handleDonate}
-              >
-                {t('settings.donate_us')}
-              </Button>
-              <Button 
-                appearance="primary" 
-                size="medium"
-                icon={<Code24Regular />}
-                onClick={handleDonate}
-              >
-                {t('settings.support_list')}
-              </Button>
-            </div>
-          </div>
-        </Card>
-
-        
       </div>
     </div>
   );

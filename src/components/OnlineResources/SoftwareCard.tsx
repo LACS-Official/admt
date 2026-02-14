@@ -14,8 +14,12 @@ import {
 import {
   CheckmarkCircle24Filled,
   FolderOpen24Regular,
+  ArrowDownload24Regular,
+  Apps24Regular,
+  Navigation24Regular,
 } from '@fluentui/react-icons';
-import { OnlineSoftware } from '../../types/app';
+import { ProgressBar } from '@fluentui/react-components';
+import { OnlineSoftware, DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 import { logService } from '../../services/logService';
 
@@ -79,8 +83,52 @@ const useStyles = makeStyles({
   actionButtons: {
     display: 'flex',
     gap: '8px',
-    marginTop: '8px',
+    marginTop: 'auto',
+    justifyContent: 'flex-end',
+    paddingTop: '8px',
   },
+  cardHeader: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'flex-start',
+  },
+  iconWrapper: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '12px',
+    backgroundColor: 'var(--colorNeutralBackground3)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    overflow: 'hidden',
+    border: '1px solid var(--colorNeutralStroke3)',
+  },
+  iconImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  headerText: {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    overflow: 'hidden',
+  },
+  metaInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginTop: '4px',
+    color: 'var(--colorNeutralForeground3)',
+  },
+  progressBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '2px',
+  }
 });
 
 
@@ -103,12 +151,22 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
   }>({ isDownloaded: false });
 
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [activeTask, setActiveTask] = useState<DownloadTask | null>(null);
 
-  // 检查下载状态
+  // 检查下载状态并监听任务进度
   const checkDownloadStatus = async () => {
     try {
       const status = await onlineResourcesService.checkSoftwareDownloaded(software);
       setDownloadStatus(status);
+      
+      // 如果没有下载完成，检查是否有正在进行的任务
+      if (!status.isDownloaded) {
+        const tasks = onlineResourcesService.getAllDownloadTasks();
+        const ongoingTask = tasks.find(t => t.softwareId === software.id && (t.status === 'downloading' || t.status === 'extracting' || t.status === 'pending'));
+        if (ongoingTask) {
+          setActiveTask(ongoingTask);
+        }
+      }
     } catch (error) {
       console.error('检查下载状态失败:', error);
     } finally {
@@ -118,13 +176,34 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
 
   useEffect(() => {
     checkDownloadStatus();
-  }, [software.id]);
+
+    // 轮询活跃任务进度
+    let intervalId: any;
+    if (!downloadStatus.isDownloaded) {
+      intervalId = setInterval(() => {
+        const tasks = onlineResourcesService.getAllDownloadTasks();
+        const ongoingTask = tasks.find(t => t.softwareId === software.id);
+        if (ongoingTask) {
+          setActiveTask(ongoingTask);
+          if (ongoingTask.status === 'completed') {
+            setDownloadStatus({ isDownloaded: true, filePath: ongoingTask.filePath });
+            setActiveTask(null);
+            clearInterval(intervalId);
+          }
+        }
+      }, 500);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [software.id, downloadStatus.isDownloaded]);
 
 
 
   // 打开文件位置
   const handleOpenFolder = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // 阻止卡片点击事件
+    e.stopPropagation();
     
     if (!downloadStatus.filePath) return;
     
@@ -137,71 +216,114 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
     }
   };
 
+  // 开始下载
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const taskId = await onlineResourcesService.downloadSoftware(software);
+      const task = onlineResourcesService.getDownloadTask(taskId);
+      if (task) setActiveTask(task);
+    } catch (error) {
+      logService.error(`下载失败: ${software.name}`, '在线资源UI', { error: String(error) });
+    }
+  };
+
+  const formatSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
     <Card className={styles.softwareCard} onClick={onClick}>
       <div className={styles.cardContent}>
-        <Text className={styles.softwareTitle}>{software.name}</Text>
+        {/* 顶部标题与图标 */}
+        <div className={styles.cardHeader}>
+          <div className={styles.iconWrapper}>
+            {software.iconUrl ? (
+              <img src={software.iconUrl} className={styles.iconImage} alt={software.name} />
+            ) : (
+              <Apps24Regular style={{ color: 'var(--colorNeutralForeground3)' }} />
+            )}
+          </div>
+          <div className={styles.headerText}>
+            <Text className={styles.softwareTitle}>{software.name}</Text>
+            <div className={styles.metaInfo}>
+              <Caption1>{formatSize(software.fileSize)}</Caption1>
+              {software.fileSize && <Caption1>• {software.fileSize}</Caption1>}
+              <Caption1>• v{software.currentVersion}</Caption1>
+            </div>
+          </div>
+        </div>
 
         <Text className={styles.softwareDescription}>
           {software.description}
         </Text>
 
         <div className={styles.softwareInfo}>
-          <Badge className={styles.versionBadge} appearance="outline">
-            v{software.currentVersion}
-          </Badge>
-
           {software.category && (
             <Badge className={styles.versionBadge} appearance="tint">
               {software.category}
             </Badge>
           )}
-
-          {/* 下载状态指示器 */}
-          {isCheckingStatus ? (
-            <Badge appearance="outline">
-              <Spinner size="tiny" style={{ marginRight: '4px' }} />
-              检查中...
+          {software.metadata?.platform && Array.isArray(software.metadata.platform) && (
+            <Badge className={styles.versionBadge} appearance="outline">
+              {software.metadata.platform[0]}
             </Badge>
-          ) : downloadStatus.isDownloaded ? (
-            <Badge className={styles.downloadedBadge} appearance="filled">
-              <CheckmarkCircle24Filled style={{ marginRight: '4px' }} />
-              已下载
-            </Badge>
-          ) : null}
+          )}
+          
+          {software.updatedAt && (
+             <Caption1 style={{ color: 'var(--colorNeutralForeground4)', marginLeft: 'auto' }}>
+               {new Date(software.updatedAt).toLocaleDateString('zh-CN')}
+             </Caption1>
+          )}
         </div>
 
-        {software.updatedAt && (
-          <div className={styles.softwareInfo}>
-            <Caption1 style={{ color: 'var(--colorNeutralForeground3)' }}>
-              更新于 {new Date(software.updatedAt).toLocaleDateString('zh-CN')}
-            </Caption1>
-          </div>
-        )}
-
-        {software.filetype && (
-          <div className={styles.softwareInfo}>
-            <Badge appearance="outline" size="small">
-              {software.filetype.toUpperCase()}
-            </Badge>
-          </div>
-        )}
-
-        {/* 下载状态指示 */}
-        {!isCheckingStatus && downloadStatus.isDownloaded && (
-          <div className={styles.actionButtons}>
+        {/* 操作按钮区 */}
+        <div className={styles.actionButtons}>
+          {isCheckingStatus ? (
+            <Button size="small" disabled icon={<Spinner size="tiny" />}>
+              检查中
+            </Button>
+          ) : downloadStatus.isDownloaded ? (
             <Button
               size="small"
               appearance="outline"
-              icon={<FolderOpen24Regular />}
+              icon={<CheckmarkCircle24Filled />}
               onClick={handleOpenFolder}
-              disabled={!downloadStatus.filePath}
             >
               打开位置
             </Button>
-          </div>
-        )}
+          ) : activeTask ? (
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<Spinner size="tiny" />}
+              disabled
+            >
+              {activeTask.status === 'extracting' ? '正在解压' : '正在下载'}
+            </Button>
+          ) : (
+            <Button
+              size="small"
+              appearance="primary"
+              icon={<ArrowDownload24Regular />}
+              onClick={handleDownload}
+            >
+              立即下载
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* 底部进度条 */}
+      {activeTask && (activeTask.status === 'downloading' || activeTask.status === 'extracting') && (
+        <ProgressBar
+          className={styles.progressBar}
+          value={activeTask.progress / 100}
+          color={activeTask.status === 'extracting' ? 'warning' : 'brand'}
+        />
+      )}
     </Card>
   );
 };

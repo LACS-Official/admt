@@ -530,8 +530,14 @@ export class DeviceService {
     }
   }
 
-  startScanning(interval = 2000): void {
+  startScanning(interval = 2000, delay = 0): void {
     if (this.isScanning) {
+      return;
+    }
+
+    if (delay > 0) {
+      logService.info(`设备动态监控将延迟 ${delay}ms 开启`, "DeviceService");
+      setTimeout(() => this.startScanning(interval, 0), delay);
       return;
     }
 
@@ -885,6 +891,58 @@ export class DeviceService {
     } catch (error) {
       console.error("[DeviceService] 获取分区信息失败:", error);
       throw error;
+    }
+  }
+
+  /**
+   * 获取设备网络状态 (WiFi SSID, WiFi状态, 移动数据状态, 飞行模式状态)
+   */
+  async getNetworkStatus(serial: string): Promise<{
+    wifiEnabled: boolean;
+    wifiSsid: string | null;
+    mobileDataEnabled: boolean;
+    airplaneModeEnabled: boolean;
+  }> {
+    try {
+      // 1. 获取 WiFi 状态
+      const wifiOnResult = await this.executeAdbCommand(serial, 'shell', ['settings', 'get', 'global', 'wifi_on']);
+      const wifiEnabled = wifiOnResult.success && wifiOnResult.output.trim() === '1';
+
+      // 2. 获取 WiFi SSID
+      let wifiSsid = null;
+      if (wifiEnabled) {
+        const ssidResult = await this.executeAdbCommand(serial, 'shell', ['dumpsys', 'wifi', '|', 'grep', '-i', 'mNetworkInfo']);
+        if (ssidResult.success && ssidResult.output) {
+          // 格式通常为: mNetworkInfo [type: WIFI[], state: CONNECTED/CONNECTED, reason: (unspecified), extra: "SSID_NAME", ...]
+          const match = ssidResult.output.match(/extra:\s+"([^"]+)"/);
+          if (match && match[1]) {
+            wifiSsid = match[1];
+          }
+        }
+      }
+
+      // 3. 获取移动数据状态
+      const dataOnResult = await this.executeAdbCommand(serial, 'shell', ['settings', 'get', 'global', 'mobile_data']);
+      const mobileDataEnabled = dataOnResult.success && dataOnResult.output.trim() === '1';
+
+      // 4. 获取飞行模式状态
+      const airplaneOnResult = await this.executeAdbCommand(serial, 'shell', ['settings', 'get', 'global', 'airplane_mode_on']);
+      const airplaneModeEnabled = airplaneOnResult.success && airplaneOnResult.output.trim() === '1';
+
+      return {
+        wifiEnabled,
+        wifiSsid,
+        mobileDataEnabled,
+        airplaneModeEnabled,
+      };
+    } catch (error) {
+      console.error("Failed to get network status:", error);
+      return {
+        wifiEnabled: false,
+        wifiSsid: null,
+        mobileDataEnabled: false,
+        airplaneModeEnabled: false,
+      };
     }
   }
 }

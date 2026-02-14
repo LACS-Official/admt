@@ -240,6 +240,7 @@ export interface DownloadTask {
   filePath?: string; // 下载完成后的文件路径
   extractedPath?: string; // 解压后的目录路径
   openname?: string; // 启动文件名或命令
+  iconUrl?: string; // 软件图标 URL
 }
 
 // 下载管理状态

@@ -12,12 +12,26 @@ import {
 } from "@fluentui/react-components";
 import {
   Globe24Regular,
-  Accessibility24Regular,
+  Globe20Regular,
   ArrowMinimize24Regular,
+  ArrowMinimize20Regular,
   Play24Regular,
+  Play20Regular,
   Warning24Regular,
   CheckmarkCircle24Regular,
+  Settings24Regular,
+  ArrowCounterclockwise24Regular,
+  Speaker224Regular,
+  Speaker220Regular,
+  Clock20Regular,
+  CalendarLtr20Regular,
 } from "@fluentui/react-icons";
+import { 
+    TabList, 
+    Tab, 
+    mergeClasses,
+    shorthands 
+} from "@fluentui/react-components";
 import { useAppStore } from '../../stores/appStore';
 import { systemTrayService } from '../../services/systemTrayService';
 import { systemTrayManager } from '../../services/systemTrayManager';
@@ -103,38 +117,53 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "16px",
   },
-  settingRow: {
+  settingTile: {
+    ...shorthands.padding("12px", "16px"),
+    backgroundColor: "var(--colorNeutralBackground2)",
+    ...shorthands.borderRadius("12px"),
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    transition: "background-color 0.2s ease",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)",
+    },
+  },
+  rowContent: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: "12px",
+    width: "100%",
   },
-  settingInfo: {
-    flex: 1,
-  },
-  buttonGroup: {
+  titleWithIcon: {
     display: "flex",
-    gap: "8px",
-    justifyContent: "flex-end",
-    marginTop: "16px",
-  },
-  fullWidth: {
-    gridColumn: "1 / -1",
-  },
-  checkboxGroup: {
-    display: "flex",
-    flexDirection: "column",
+    alignItems: "center",
     gap: "8px",
   },
-  sliderContainer: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
+  description: {
+    color: "var(--colorNeutralForeground4)",
+    fontSize: "12px",
+    lineHeight: "1.4",
   },
-  sliderValue: {
-    textAlign: "center",
-    fontWeight: "600",
+  previewText: {
     color: "var(--colorBrandForeground1)",
+    fontSize: "12px",
+    fontWeight: "bold",
+    fontFamily: "monospace",
+    marginTop: "4px",
+  },
+  segmentedContainer: {
+    backgroundColor: "var(--colorNeutralBackground3)",
+    ...shorthands.padding("2px"),
+    ...shorthands.borderRadius("8px"),
+  },
+  restoreBar: {
+    gridColumn: "1 / -1",
+    display: "flex",
+    justifyContent: "center",
+    marginTop: "20px",
+    ...shorthands.padding("10px"),
+    ...shorthands.borderTop("1px", "solid", "var(--colorNeutralStroke2)"),
   },
 });
 
@@ -316,133 +345,187 @@ function handleStartWithSystemChange(checked: boolean): void {
     })();
   }
 
+  const handleRestoreDefaults = () => {
+    // 简单的恢复默认逻辑
+    const defaultSettings = {
+      language: "zh-CN" as "zh-CN",
+      systemTrayEnabled: false,
+      autoStartEnabled: false,
+      soundEnabled: true,
+      // ... 其他默认值
+    };
+    updateConfig(defaultSettings);
+    setStatusBarMessage({
+      type: 'success',
+      message: '设置已恢复默认'
+    });
+  };
+
+  // 生成实时预览
+  const now = new Date();
+  const datePreview = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const timePreview = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-
-        {/* 语言和地区 */}
+        {/* 语言和地区 (常规设置) */}
         <Card className={styles.card}>
           <CardHeader
             image={<Globe24Regular />}
             header={<Text weight="semibold">{t('settings.language_region')}</Text>}
-            description={<Text size={200}>{t('settings.language_region_desc')}</Text>}
+            description={<Text size={200} className={styles.description}>{t('settings.language_region_desc')}</Text>}
           />
 
           <div className={styles.cardContent}>
-            <Field label={t('settings.interface_language') + ":"}>
-              <Select
-                value={config.language}
-                onChange={(_, data) => handleLanguageChange(data.value)}
-              >
-                <option value="zh-CN">{t('settings.simplified_chinese')}</option>
-                <option value="zh-TW">{t('settings.traditional_chinese')}</option>
-                <option value="en-US">{t('settings.english')}</option>
-              </Select>
-            </Field>
+            {/* 界面语言 */}
+            <div className={styles.settingTile}>
+              <div className={styles.rowContent}>
+                <div className={styles.titleWithIcon}>
+                  <Globe20Regular />
+                  <Text weight="semibold">{t('settings.interface_language')}</Text>
+                </div>
+                <Select
+                  value={config.language}
+                  onChange={(_, data) => handleLanguageChange(data.value)}
+                  size="small"
+                >
+                  <option value="zh-CN">{t('settings.simplified_chinese')}</option>
+                  <option value="zh-TW">{t('settings.traditional_chinese')}</option>
+                  <option value="en-US">{t('settings.english')}</option>
+                </Select>
+              </div>
+            </div>
 
-            <Field label="日期格式:">
-              <Select defaultValue="yyyy-mm-dd">
-                <option value="yyyy-mm-dd">2024-01-01</option>
-              </Select>
-            </Field>
+            {/* 日期格式 - 分段选择器预览 */}
+            <div className={styles.settingTile}>
+              <div className={styles.rowContent}>
+                <div className={styles.titleWithIcon}>
+                  <CalendarLtr20Regular />
+                  <Text weight="semibold">日期格式</Text>
+                </div>
+                <div className={styles.segmentedContainer}>
+                  <TabList size="small" selectedValue="ymd" appearance="subtle">
+                    <Tab value="ymd">YYYY-MM-DD</Tab>
+                    <Tab value="mdy" disabled>MM/DD/YYYY</Tab>
+                  </TabList>
+                </div>
+              </div>
+              <Text className={styles.previewText}>当前预览：{datePreview}</Text>
+            </div>
 
-            <Field label="时间格式:">
-              <Select defaultValue="24h">
-                <option value="24h">24小时制</option>
-              </Select>
-            </Field>
+            {/* 时间格式 - 分段选择器预览 */}
+            <div className={styles.settingTile}>
+              <div className={styles.rowContent}>
+                <div className={styles.titleWithIcon}>
+                  <Clock20Regular />
+                  <Text weight="semibold">时间格式</Text>
+                </div>
+                <div className={styles.segmentedContainer}>
+                  <TabList size="small" selectedValue="24h" appearance="subtle">
+                    <Tab value="24h">24 小时制</Tab>
+                    <Tab value="12h" disabled>12 小时制</Tab>
+                  </TabList>
+                </div>
+              </div>
+              <Text className={styles.previewText}>当前预览：{timePreview}</Text>
+            </div>
           </div>
         </Card>
 
-        {/* 行为设置 */}
+        {/* 系统行为设置 (常规设置) */}
         <Card className={styles.card}>
           <CardHeader
-            image={<Accessibility24Regular />}
-            header={<Text weight="semibold">行为设置</Text>}
-            description={<Text size={200}>应用行为和启动选项</Text>}
+            image={<Settings24Regular />}
+            header={<Text weight="semibold">常规设置</Text>}
+            description={<Text size={200} className={styles.description}>应用行为和系统启动选项</Text>}
           />
 
           <div className={styles.cardContent}>
             {/* 加载指示器 */}
             {loading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <Spinner size="tiny" />
-                <Text size={200}>正在处理...</Text>
+                <Text size={200} className={styles.description}>正在同步系统状态...</Text>
               </div>
             )}
 
             {/* 系统托盘设置 */}
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">
-                  <ArrowMinimize24Regular style={{ marginRight: '8px' }} />
-                  启用系统托盘
-                </Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  {traySupported 
-                    ? "启用后程序将显示在系统托盘中，关闭后将最小化到托盘" 
-                    : "当前系统不支持系统托盘功能"
-                  }
-                </Text>
-                <StatusIndicator status={trayStatus} />
+            <div className={styles.settingTile}>
+              <div className={styles.rowContent}>
+                <div className={styles.titleWithIcon}>
+                  <ArrowMinimize20Regular />
+                  <Text weight="semibold">启用系统托盘</Text>
+                </div>
+                <Switch
+                  checked={minimizeToTray}
+                  disabled={!traySupported || loading}
+                  onChange={(_, data) => handleMinimizeToTrayChange(data.checked === true)}
+                />
               </div>
-              <Switch
-                checked={minimizeToTray}
-                disabled={!traySupported || loading}
-                onChange={(_, data) => handleMinimizeToTrayChange(data.checked === true)}
-              />
+              <Text className={styles.description}>
+                {traySupported 
+                  ? "程序运行在系统托盘，关闭窗口将最小化到托盘" 
+                  : "当前环境不支持托盘。"}
+              </Text>
+              <StatusIndicator status={trayStatus} />
             </div>
 
-
             {/* 开机自启动设置 */}
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">
-                  <Play24Regular style={{ marginRight: '8px' }} />
-                  开机自启动
-                </Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  {autoStartSupported 
-                    ? "系统启动时自动运行应用" 
-                    : "当前系统不支持开机自启动功能"
-                  }
-                </Text>
-                <StatusIndicator status={autoStartStatus} />
+            <div className={styles.settingTile}>
+              <div className={styles.rowContent}>
+                <div className={styles.titleWithIcon}>
+                  <Play20Regular />
+                  <Text weight="semibold">开机自启动</Text>
+                </div>
+                <Switch
+                  checked={startWithSystem}
+                  disabled={!autoStartSupported || loading}
+                  onChange={(_, data) => handleStartWithSystemChange(data.checked === true)}
+                />
               </div>
-              <Switch
-                checked={startWithSystem}
-                disabled={!autoStartSupported || loading}
-                onChange={(_, data) => handleStartWithSystemChange(data.checked === true)}
-              />
+              <Text className={styles.description}>
+                {autoStartSupported 
+                  ? "设备开机后自动拉起玩机管家" 
+                  : "当前系统不支持自启动设置。"}
+              </Text>
+              <StatusIndicator status={autoStartStatus} />
             </div>
             
             {/* 通知音效设置 */}
-            <div className={styles.settingRow}>
-              <div className={styles.settingInfo}>
-                <Text weight="semibold">
-                  <Play24Regular style={{ marginRight: '8px' }} />
-                  通知音效
-                </Text>
-                <br />
-                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  开启后，通知和状态消息将播放相应的音效
-                </Text>
+            <div className={styles.settingTile}>
+              <div className={styles.rowContent}>
+                <div className={styles.titleWithIcon}>
+                  <Speaker220Regular />
+                  <Text weight="semibold">通知音效</Text>
+                </div>
+                <Switch
+                  checked={soundEnabled}
+                  disabled={loading}
+                  onChange={(_, data) => {
+                    const checked = data.checked === true;
+                    setSoundEnabled(checked);
+                    updateConfig({ soundEnabled: checked });
+                  }}
+                />
               </div>
-              <Switch
-                checked={soundEnabled}
-                disabled={loading}
-                onChange={(_, data) => {
-                  const checked = data.checked === true;
-                  setSoundEnabled(checked);
-                  updateConfig({ soundEnabled: checked });
-                }}
-              />
+              <Text className={styles.description}>
+                在执行任务完成或收到重要消息时播放提示音
+              </Text>
             </div>
           </div>
         </Card>
 
+        {/* 恢复默认设置 */}
+        <div className={styles.restoreBar}>
+          <Button 
+            appearance="subtle" 
+            icon={<ArrowCounterclockwise24Regular />}
+            onClick={handleRestoreDefaults}
+          >
+            恢复所有设置到默认状态
+          </Button>
+        </div>
       </div>
     </div>
   );
