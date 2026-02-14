@@ -15,15 +15,19 @@ import {
   Option,
   Spinner,
   Tooltip,
+  mergeClasses,
 } from '@fluentui/react-components';
 import {
+  ArrowDownload24Regular,
+  Folder24Regular,
+  Apps24Regular,
+  CheckmarkCircle24Filled,
+  Delete20Regular,
   Delete24Regular,
-  FolderOpen24Regular,
   Pause24Regular,
   Play24Regular,
   Dismiss24Regular,
-  ArrowDownload24Regular,
-  Folder24Regular,
+  FolderOpen24Regular,
 } from '@fluentui/react-icons';
 import { DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
@@ -84,6 +88,11 @@ const useStyles = makeStyles({
     color: 'var(--colorNeutralForeground2)',
     marginTop: '4px',
   },
+  statNumberBrand: { color: 'var(--colorBrandForeground1)' },
+  statNumberSuccess: { color: 'var(--colorPaletteGreenForeground1)' },
+  statNumberWarning: { color: 'var(--colorPaletteOrangeForeground1)' },
+  statNumberDanger: { color: 'var(--colorPaletteRedForeground1)' },
+  
   taskList: {
     display: 'flex',
     flexDirection: 'column',
@@ -140,12 +149,29 @@ const useStyles = makeStyles({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  taskFileName: {
-    fontSize: '12px',
-    color: 'var(--colorNeutralForeground2)',
+  taskIconWrapper: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    backgroundColor: 'var(--colorNeutralBackground3)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: '12px',
+    flexShrink: 0,
+    border: '1px solid var(--colorNeutralStroke2)',
     overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+  },
+  taskIconImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  taskNameContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    minWidth: 0,
+    flex: 1,
   },
   taskProgress: {
     display: 'flex',
@@ -212,6 +238,14 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [downloadDirectory, setDownloadDirectory] = useState('');
+  const [showTip, setShowTip] = useState(true); // 控制提示显示
+
+  // 检查是否有失败任务，用于自动显示提示
+  useEffect(() => {
+    if (tasks.some(t => t.status === 'failed')) {
+      setShowTip(true);
+    }
+  }, [tasks]);
 
   // 加载下载任务
   const loadTasks = () => {
@@ -326,19 +360,30 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
   return (
     <div className={styles.container}>
 
-      {/* 提示*/}
-      <div style={{
-        backgroundColor: '#FFF9C4',
-        border: '1px solid #FFD600',
-        borderRadius: '8px',
-        padding: '12px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}>
-        <span style={{ color: '#F57F17', fontWeight: '600' }}>💡 提示：</span>
-        <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请在指定资源详情弹窗内点击“使用Appfun下载”进行资源获取</span>
-      </div>
+      {/* 提示 (仅当有失败任务或手动未关闭时显示) */}
+      {showTip && stats.failed > 0 && (
+        <div style={{
+          backgroundColor: '#FFF9C4',
+          border: '1px solid #FFD600',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#F57F17', fontWeight: '600' }}>💡 提示：</span>
+            <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请在指定资源详情弹窗内点击“使用Appfun下载”进行资源获取</span>
+          </div>
+          <Button 
+            appearance="transparent" 
+            icon={<Dismiss24Regular />} 
+            onClick={() => setShowTip(false)}
+            size="small"
+          />
+        </div>
+      )}
 
 
       {/* 统计信息 */}
@@ -349,19 +394,19 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
             <div className={styles.statLabel}>总任务</div>
           </div>
           <div className={styles.statItem}>
-            <div className={styles.statNumber}>{stats.downloading}</div>
+            <div className={mergeClasses(styles.statNumber, styles.statNumberBrand)}>{stats.downloading}</div>
             <div className={styles.statLabel}>下载中</div>
           </div>
           <div className={styles.statItem}>
-            <div className={styles.statNumber}>{stats.extracting}</div>
+            <div className={mergeClasses(styles.statNumber, styles.statNumberWarning)}>{stats.extracting}</div>
             <div className={styles.statLabel}>提取中</div>
           </div>
           <div className={styles.statItem}>
-            <div className={styles.statNumber}>{stats.completed}</div>
+            <div className={mergeClasses(styles.statNumber, styles.statNumberSuccess)}>{stats.completed}</div>
             <div className={styles.statLabel}>已完成</div>
           </div>
           <div className={styles.statItem}>
-            <div className={styles.statNumber}>{stats.failed}</div>
+            <div className={mergeClasses(styles.statNumber, styles.statNumberDanger)}>{stats.failed}</div>
             <div className={styles.statLabel}>失败</div>
           </div>
         </div>
@@ -414,8 +459,22 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
             }
           }}
 
+
         >
-          打开资源下载目录
+          打开下载目录
+        </Button>
+        <Button
+          appearance="subtle"
+          icon={<Delete20Regular />}
+          onClick={() => {
+            if (window.confirm('确定要清除所有已显示的“已完成”任务记录吗？(不会删除文件)')) {
+              onlineResourcesService.clearCompletedTasks();
+              loadTasks(); // 刷新列表
+            }
+          }}
+          disabled={stats.completed === 0}
+        >
+          清理已完成
         </Button>
       </div>
 
@@ -546,12 +605,24 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
   return (
     <div className={styles.taskRow}>
       {/* 软件名称和文件名 */}
-      <div className={styles.taskMainInfo}>
-        <div className={styles.taskName} title={task.softwareName}>
-          {task.softwareName}
+      {/* 软件名称和文件名 */}
+      <div className={styles.taskNameContainer}>
+        {/* 图标 */}
+        <div className={styles.taskIconWrapper}>
+            {task.iconUrl ? (
+                <img src={task.iconUrl} className={styles.taskIconImage} alt="" />
+            ) : (
+                <Apps24Regular style={{ color: 'var(--colorNeutralForeground3)' }} />
+            )}
         </div>
-        <div className={styles.taskFileName} title={task.fileName}>
-          {task.fileName}
+        
+        <div className={styles.taskMainInfo}>
+            <div className={styles.taskName} title={task.softwareName}>
+            {task.softwareName}
+            </div>
+            <div className={styles.taskFileName} title={task.fileName}>
+            {task.fileName}
+            </div>
         </div>
       </div>
 
@@ -571,8 +642,9 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
             </div>
           </>
         ) : task.status === 'completed' ? (
-          <div className={styles.taskProgressText}>
-            {task.downloadedSize && onlineResourcesService.formatFileSize(task.downloadedSize)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--colorPaletteGreenForeground1)' }}>
+            <CheckmarkCircle24Filled />
+            <span style={{ fontSize: '12px' }}>已完成</span>
           </div>
         ) : (
           <div className={styles.taskProgressText}>-</div>

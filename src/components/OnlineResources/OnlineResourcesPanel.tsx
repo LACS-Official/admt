@@ -5,14 +5,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   makeStyles,
+  mergeClasses,
   Button,
   SearchBox,
   Spinner,
   Body1,
   Caption1,
-  Dropdown,
   Option,
   Toaster,
+  Link,
+  shorthands,
 } from '@fluentui/react-components';
 import {
   CloudArrowDown24Regular,
@@ -58,7 +60,38 @@ const useStyles = makeStyles({
   },
   searchBox: {
     flex: 1,
-    maxWidth: '400px',
+    minWidth: '200px',
+  },
+  categoryChips: {
+    display: 'flex',
+    gap: '8px',
+    padding: '4px 0',
+    overflowX: 'auto',
+    '::-webkit-scrollbar': {
+      display: 'none',
+    },
+    msOverflowStyle: 'none',
+    scrollbarWidth: 'none',
+    marginBottom: '8px',
+  },
+  chip: {
+    padding: '6px 12px',
+    borderRadius: '16px',
+    ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke1)'),
+    cursor: 'pointer',
+    fontSize: '12px',
+    transition: 'all 0.2s ease',
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    whiteSpace: 'nowrap',
+    '&:hover': {
+      backgroundColor: 'var(--colorNeutralBackground1Hover)',
+    }
+  },
+  chipActive: {
+    backgroundColor: 'var(--colorBrandBackground2)',
+    color: 'var(--colorBrandForeground2)',
+    ...shorthands.borderColor('var(--colorBrandStroke2)'),
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -313,6 +346,16 @@ const OnlineResourcesPanel: React.FC = () => {
     );
   }
 
+  const categories = [
+    { value: 'ADMT', label: '全部' },
+    { value: '脚本', label: '脚本' },
+    { value: '驱动', label: '驱动' },
+    { value: '设置文件', label: '设置' },
+    { value: 'RootApp', label: 'RootApp' },
+    { value: '小米解锁', label: '小米解锁' },
+    { value: '其它', label: '其它' },
+  ];
+
   return (
     <div className={styles.container}>
       <div className={styles.searchContainer}>
@@ -323,31 +366,29 @@ const OnlineResourcesPanel: React.FC = () => {
           onChange={(_, data) => setSearchKeyword(data.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
         />
-        <Body1>分类:</Body1>
-        <Dropdown
-          placeholder="选择分类"
-          selectedOptions={[activeCategory]}
-          onOptionSelect={(_, data) => {
-            handleCategoryChange(data.optionValue || 'ADMT');
-          }}
-          style={{ minWidth: '120px' }}
-        >
-          <Option value="ADMT">全部</Option>
-          <Option value="脚本">脚本</Option>
-          <Option value="驱动">驱动</Option>
-          <Option value="设置文件">设置文件</Option>
-          <Option value="RootApp">RootApp</Option>
-          <Option value="小米解锁">小米解锁</Option>
-          <Option value="其它">其它</Option>
-        </Dropdown>
         <Button
+          appearance="primary"
           icon={<Search24Regular />}
           onClick={handleSearch}
           disabled={loading}
-          title="搜索关键词"
         >
           搜索
         </Button>
+      </div>
+
+      <div className={styles.categoryChips}>
+        {categories.map((cat) => (
+          <div
+            key={cat.value}
+            className={mergeClasses(
+              styles.chip,
+              activeCategory === cat.value && styles.chipActive
+            )}
+            onClick={() => handleCategoryChange(cat.value)}
+          >
+            {cat.label}
+          </div>
+        ))}
       </div>
 
       <div className={styles.content}>
@@ -366,7 +407,7 @@ const OnlineResourcesPanel: React.FC = () => {
           <div className={styles.emptyContainer}>
             <CloudArrowDown24Regular style={{ fontSize: '48px', color: 'var(--colorNeutralForeground3)' }} />
             <Body1>暂无可用的软件资源</Body1>
-            <Caption1>请尝试搜索其他关键词或稍后再试</Caption1>
+            <Caption1>没找到想要的？ <Link onClick={() => window.open('https://github.com/LACS-Official/admt/issues')}>提交软件需求</Link></Caption1>
           </div>
         ) : (
           <div className={styles.softwareGrid}>

@@ -7,6 +7,7 @@ import {
   ProgressBar,
   Spinner,
   Badge,
+  Tooltip,
 } from "@fluentui/react-components";
 import {
   Warning24Regular,
@@ -14,6 +15,7 @@ import {
   Play24Regular,
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
+  LockClosed24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
@@ -128,6 +130,17 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "flex-start",
     gap: "12px",
+  },
+  actionButtonContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "4px",
+    flex: 1,
+  },
+  actionButton: {
+    minHeight: "36px",
+    width: "100%",
   },
 });
 
@@ -363,25 +376,54 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                           setPackageInfo(null);
                           setDeviceCompatible(null);
                         }}>{t('common.clear')}</Button>
-                      </>
-                    )}
-                  </div>
-                  {selectedFolderPath && (
-                    <div className={styles.packageInfo}>
-                      <div>{t('flash.directory')}{selectedFolderPath}</div>
-                      {missingFiles.length > 0 ? (
-                        <div style={{ color: "var(--colorPaletteRedForeground2)", fontWeight: 600 }}>
-                          {t('flash.package_incomplete')}{missingFiles.join(", ")}
-                        </div>
-                      ) : (
-                        <div style={{ color: "var(--colorPaletteGreenForeground1)", fontWeight: 600 }}>
-                          {t('flash.package_valid')}flash_all.bat / flash_all_except_storage.bat / flash_all_lock.bat
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
+              {selectedFolderPath && (
+                <div className={styles.packageInfo}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <Text weight="semibold">{t('flash.directory')}</Text>
+                    <Tooltip content={selectedFolderPath} relationship="label">
+                      <Text style={{ 
+                        flex: 1, 
+                        whiteSpace: 'nowrap', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis',
+                        fontFamily: 'monospace',
+                        color: 'var(--colorNeutralForeground2)'
+                      }}>
+                        {selectedFolderPath}
+                      </Text>
+                    </Tooltip>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <Badge 
+                      appearance={missingFiles.includes('flash_all.bat') ? "ghost" : "filled"}
+                      color={missingFiles.includes('flash_all.bat') ? "danger" : "brand"}
+                      icon={missingFiles.includes('flash_all.bat') ? <ErrorCircle24Regular /> : <CheckmarkCircle24Regular />}
+                    >
+                      flash_all.bat (Clean)
+                    </Badge>
+                    <Badge 
+                      appearance={missingFiles.includes('flash_all_except_storage.bat') ? "ghost" : "filled"}
+                      color={missingFiles.includes('flash_all_except_storage.bat') ? "danger" : "success"}
+                      icon={missingFiles.includes('flash_all_except_storage.bat') ? <ErrorCircle24Regular /> : <CheckmarkCircle24Regular />}
+                    >
+                      flash_all_except_storage.bat (Keep)
+                    </Badge>
+                    <Badge 
+                      appearance={missingFiles.includes('flash_all_lock.bat') ? "ghost" : "filled"}
+                      color={missingFiles.includes('flash_all_lock.bat') ? "danger" : "danger"}
+                      icon={missingFiles.includes('flash_all_lock.bat') ? <ErrorCircle24Regular /> : <LockClosed24Regular />}
+                    >
+                      flash_all_lock.bat (Lock)
+                    </Badge>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
               {/* 刷入进度 */}
               {flashStatus !== "idle" && (
@@ -405,39 +447,81 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
               )}
 
               {/* 操作按钮（仅当三个脚本都存在时显示） */}
-              {selectedFolderPath && missingFiles.length === 0 && (
-                <div className={styles.actions}>
-                  <Text>{t('flash.xiaomi_step2')}</Text>
-                  <Button appearance="primary" icon={<Play24Regular />} onClick={() => {
-                    if (!checkMode()) return;
-                    setBatchDialogTitle(`${t('flash.flash_clean')} (flash_all.bat)`);
-                    setBatchFileName("flash_all.bat");
-                    setBatchWorkingDirectory(selectedFolderPath);
-                    setBatchDialogOpen(true);
-                  }}>
-                    {t('flash.flash_clean')}
-                  </Button>
-                  <Button appearance="secondary" icon={<Play24Regular />} onClick={() => {
-                    if (!checkMode()) return;
-                    setBatchDialogTitle(`${t('flash.flash_keep')} (flash_all_except_storage.bat)`);
-                    setBatchFileName("flash_all_except_storage.bat");
-                    setBatchWorkingDirectory(selectedFolderPath);
-                    setBatchDialogOpen(true);
-                  }}>
-                    {t('flash.flash_keep')}
-                  </Button>
-                  <Button appearance="outline" icon={<Play24Regular />} onClick={() => {
-                    if (!checkMode()) return;
-                    setBatchDialogTitle(`${t('flash.flash_lock')} (flash_all_lock.bat)`);
-                    setBatchFileName("flash_all_lock.bat");
-                    setBatchWorkingDirectory(selectedFolderPath);
-                    setBatchDialogOpen(true);
-                  }}>
-                    {t('flash.flash_lock')}
-                  </Button>
+              {selectedFolderPath && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginTop: 'auto' }}>
+                  {/* Clean Data */}
+                  <div className={styles.actionButtonContainer}>
+                    <Button 
+                      className={styles.actionButton}
+                      appearance="primary" 
+                      icon={<Play24Regular />} 
+                      disabled={missingFiles.includes('flash_all.bat')}
+                      onClick={() => {
+                        if (!checkMode()) return;
+                        setBatchDialogTitle(`${t('flash.flash_clean')} (flash_all.bat)`);
+                        setBatchFileName("flash_all.bat");
+                        setBatchWorkingDirectory(selectedFolderPath);
+                        setBatchDialogOpen(true);
+                      }}
+                    >
+                      {t('flash.flash_clean')}
+                    </Button>
+                    <Text size={200} align="center" style={{ color: "var(--colorNeutralForeground3)" }}>
+                      {t('flash.flash_clean_sub')}
+                    </Text>
+                  </div>
+
+                  {/* Keep Data */}
+                  <div className={styles.actionButtonContainer}>
+                    <Button 
+                      className={styles.actionButton}
+                      // Use a customized style for "Green" feel or just standard outline which is cleaner
+                      // Fluent UI doesn't have a direct "Success" button, utilizing inline style for green tint if needed
+                      // For now, Outline is distinct enough, or we can use a light green background if appearance="secondary"
+                      appearance="outline"
+                      style={{ color: "var(--colorPaletteGreenForeground1)", borderColor: "var(--colorPaletteGreenBorder1)" }}
+                      icon={<Play24Regular />} 
+                      disabled={missingFiles.includes('flash_all_except_storage.bat')}
+                      onClick={() => {
+                        if (!checkMode()) return;
+                        setBatchDialogTitle(`${t('flash.flash_keep')} (flash_all_except_storage.bat)`);
+                        setBatchFileName("flash_all_except_storage.bat");
+                        setBatchWorkingDirectory(selectedFolderPath);
+                        setBatchDialogOpen(true);
+                      }}
+                    >
+                      {t('flash.flash_keep')}
+                    </Button>
+                    <Text size={200} align="center" style={{ color: "var(--colorNeutralForeground3)" }}>
+                      {t('flash.flash_keep_sub')}
+                    </Text>
+                  </div>
+
+                  {/* Lock */}
+                  <div className={styles.actionButtonContainer}>
+                    <Button 
+                      className={styles.actionButton}
+                      appearance="primary"
+                      style={{ backgroundColor: "var(--colorPaletteRedBackground3)", borderColor: "var(--colorPaletteRedBorderActive)" }}
+                      icon={<LockClosed24Regular />} 
+                      disabled={missingFiles.includes('flash_all_lock.bat')}
+                      onClick={() => {
+                        if (!checkMode()) return;
+                        setBatchDialogTitle(`${t('flash.flash_lock')} (flash_all_lock.bat)`);
+                        setBatchFileName("flash_all_lock.bat");
+                        setBatchWorkingDirectory(selectedFolderPath);
+                        setBatchDialogOpen(true);
+                      }}
+                    >
+                      {t('flash.flash_lock')}
+                    </Button>
+                    <Text size={200} align="center" style={{ color: "var(--colorPaletteRedForeground2)" }}>
+                      {t('flash.flash_lock_sub')}
+                    </Text>
+                  </div>
                 </div>
-          )}
-        </div>
+              )}
+          </div>
       </Card>
 
       {/* 批处理文件执行弹窗 */}

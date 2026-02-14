@@ -121,7 +121,9 @@
     "next": "下一步",
     "prev": "上一步",
     "done": "完成",
-    "clear": "清除"
+    "clear": "清除",
+    "frequent": "常用功能",
+    "all_functions": "所有功能"
   },
   "tour": {
     "start_tour": "应用操作引导",
@@ -260,14 +262,32 @@
     "xiaomi_log": "线刷日志",
     "xiaomi_step2": "2. 开始线刷",
     "flash_clean": "线刷清数据",
+    "flash_clean_sub": "推荐：全新安装，清除所有数据",
     "flash_keep": "线刷不清数据",
+    "flash_keep_sub": "升级：仅更新系统，保留用户数据",
     "flash_lock": "线刷清数据并回锁",
+    "flash_lock_sub": "危险：清除数据并重新上锁 (可能变砖)",
+    "script_found": "检测到脚本：",
+    "script_missing": "缺失脚本：",
+    "path_tooltip": "点击复制完整路径",
+    "confirm_script_title": "确认刷入脚本",
+    "confirm_script_desc": "即将执行以下脚本，请确认无误：",
+    "script_content_preview": "脚本预览 (前10行):",
     "status_checking": "检查中",
     "status_flashing": "刷入中",
     "status_success": "成功",
     "status_failed": "失败",
     "fastboot_mode_required_title": "设备未处于 Fastboot 模式",
-    "fastboot_mode_required_desc": "此功能仅在 Fastboot 或 Fastbootd 模式下可用，请在设备重启后重试。"
+    "fastboot_mode_required_desc": "此功能仅在 Fastboot 或 Fastbootd 模式下可用，请在设备重启后重试。",
+    "hash_too_large": "文件过大 (>1GB)，跳过哈希计算",
+    "calculating_hash": "正在计算哈希...",
+    "hash_error": "哈希计算失败",
+    "hash_calculation_placeholder": "点击计算哈希 (仅限小文件)",
+    "hash_calc_not_supported": "暂不支持前端计算 (建议在后端实现)",
+    "goto_backup": "👉 前往备份分区数据 (Backup)",
+    "ab_not_supported_hint": "* 当前设备不支持 A/B 分区，已自动禁用相关选项。",
+    "confirm_backup_checkbox": "我已备份重要数据，并知晓刷机风险",
+    "hash_label": "文件哈希 (MD5/SHA1): "
   },
 
   "online": {
@@ -312,7 +332,22 @@
     "msg_pairing": "正在配对 {{ip}}:{{port}}...",
     "msg_pair_success": "配对成功，正在尝试连接...",
     "msg_pair_failed": "配对失败: {{error}}",
-    "usb_hint": "提示：点击切换后，当显示成功即可断开 USB 线。"
+    "usb_hint": "提示：点击切换后，当显示成功即可断开 USB 线。",
+    "qr_pairing_title": "扫码配对 (Android 11+)",
+    "qr_pairing_desc": "在手机上扫描此二维码以快速完成无线调试配对",
+    "qr_pairing_start": "启动配对服务器",
+    "qr_pairing_stop": "停止配对",
+    "qr_pairing_waiting": "等待手机扫描...",
+    "qr_pairing_success": "配对成功！设备已添加到列表",
+    "qr_pairing_failed": "配对服务器启动失败",
+    "qr_pairing_step1": "1. 手机进入'开发者选项' -> '无线调试'",
+    "qr_pairing_step2": "2. 选择'使用二维码配对设备'",
+    "qr_pairing_step3": "3. 扫描下方显示的二维码",
+    "disconnect_btn": "断开连接",
+    "disconnect_all": "断开所有无线",
+    "msg_disconnecting": "正在断开无线连接...",
+    "msg_disconnect_success": "成功断开无线连接",
+    "msg_disconnect_failed": "断开连接失败: {{error}}"
   },
   "device_connection": {
     "wired": "有线连接",
@@ -681,6 +716,7 @@
     "detail_info": "详细信息"
   },
   "app_install": {
+    "select":"选择安装包",
     "card_title": "APK安装",
     "card_desc": "安装Android应用程序包",
     "path_label": "APK文件路径:",

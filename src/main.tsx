@@ -6,6 +6,7 @@ import {
   webDarkTheme,
 } from "@fluentui/react-components";
 import App from "./App";
+import { useAppStore } from "./stores/appStore";
 import { useThemeStore } from "./stores/themeStore";
 import { activationService } from "./services/activationService";
 import { useStartupFlowStore } from "./stores/startupFlowStore";
@@ -19,7 +20,7 @@ import "./styles/startup-animations.css";
 // 导入安全保护模块，确保在应用启动时加载
 import "./utils/securityProtection";
 import "./utils/devtools";
-import "./i18n/config";
+import i18n from "./i18n/config";
 
 // 在应用启动时清除 localStorage 中的 token
 localStorage.removeItem("rom-download-storage");
@@ -40,6 +41,7 @@ function AppWithTheme() {
     hasAcceptedPrivacyPolicy,
     hasAcceptedUserAgreement,
   } = usePrivacyConsentStore();
+  const { config } = useAppStore();
 
   // 监听系统主题变化
   useEffect(() => {
@@ -56,6 +58,14 @@ function AppWithTheme() {
       return () => mediaQuery.removeEventListener("change", handler);
     }
   }, [followSystemTheme, updateThemeBasedOnSystem]);
+  
+  // 监听并同步语言设置
+  useEffect(() => {
+    if (config.language && i18n.language !== config.language) {
+      console.log(`🌐 正在同步应用语言为: ${config.language}`);
+      i18n.changeLanguage(config.language);
+    }
+  }, [config.language]);
 
   // 监听跨页面的主题变化
   useEffect(() => {

@@ -15,11 +15,13 @@ import {
   UsbPlug24Regular,
   Link24Regular,
   Key24Regular,
+  LinkDismiss24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 import { DeviceInfo } from "../../types/device";
 import { useTranslation } from "react-i18next";
+import { QRCodeSVG } from "qrcode.react";
 import { wirelessService } from "../../services/wirelessService";
 
 const useStyles = makeStyles({
@@ -62,6 +64,22 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground2)",
     fontSize: "12px",
   },
+  qrContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "12px",
+    padding: "16px",
+    backgroundColor: "white",
+    borderRadius: "8px",
+    marginTop: "8px",
+  },
+  stepList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    marginTop: "8px",
+  },
 });
 
 interface WirelessDebuggingPanelProps {
@@ -82,12 +100,43 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
   const [targetIp, setTargetIp] = useState("");
   const [targetPort, setTargetPort] = useState("5555");
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   
   // Pairing State
   const [pairIp, setPairIp] = useState("");
   const [pairPort, setPairPort] = useState("");
   const [pairCode, setPairCode] = useState("");
   const [isPairing, setIsPairing] = useState(false);
+
+  // QR Pairing State
+  const [qrPairingInfo, setQrPairingInfo] = useState<{ serviceName: string; port: number; pairingCode: string } | null>(null);
+  const [isStartingQrServer, setIsStartingQrServer] = useState(false);
+
+  const startQrPairing = async () => {
+    try {
+      setIsStartingQrServer(true);
+      const info = await wirelessService.startPairingServer();
+      setQrPairingInfo(info);
+      setStatusBarMessage({ type: "info", message: t('wireless.qr_pairing_waiting') });
+    } catch (error) {
+      setStatusBarMessage({ type: "error", message: t('wireless.qr_pairing_failed') });
+    } finally {
+      setIsStartingQrServer(false);
+    }
+  };
+
+  const stopQrPairing = async () => {
+    try {
+      await wirelessService.stopPairingServer();
+      setQrPairingInfo(null);
+    } catch (error) {
+      // Ignore
+    }
+  };
+
+  const qrValue = qrPairingInfo 
+    ? `WIFI:T:ADB;S:${qrPairingInfo.serviceName};P:${qrPairingInfo.pairingCode};;`
+    : "";
 
   const handleSwitchToTcpIp = async () => {
     if (!device) {
@@ -147,6 +196,27 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
       setStatusBarMessage({ type: "error", message: String(error) });
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async (all = false) => {
+    try {
+      setIsDisconnecting(true);
+      const ip = all ? undefined : targetIp;
+      const port = all ? undefined : (parseInt(targetPort) || 5555);
+      
+      setStatusBarMessage({ type: "info", message: t('wireless.msg_disconnecting') });
+      const result = await wirelessService.disconnectWireless(ip, port);
+      
+      if (result.success) {
+        setStatusBarMessage({ type: "success", message: t('wireless.msg_disconnect_success') });
+      } else {
+        setStatusBarMessage({ type: "error", message: result.error || t('wireless.msg_disconnect_failed', { error: "" }) });
+      }
+    } catch (error) {
+      setStatusBarMessage({ type: "error", message: String(error) });
+    } finally {
+      setIsDisconnecting(false);
     }
   };
 
@@ -240,13 +310,33 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
                 />
               </Field>
             </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button
+                appearance="primary"
+                icon={isConnecting ? <Spinner size="tiny" /> : <Link24Regular />}
+                onClick={handleConnect}
+                disabled={isConnecting || isDisconnecting}
+                style={{ flex: 1 }}
+              >
+                {t('wireless.connect_btn')}
+              </Button>
+              <Button
+                appearance="secondary"
+                icon={isDisconnecting ? <Spinner size="tiny" /> : <LinkDismiss24Regular />}
+                onClick={() => handleDisconnect(false)}
+                disabled={isConnecting || isDisconnecting}
+                style={{ flex: 1 }}
+              >
+                {t('wireless.disconnect_btn')}
+              </Button>
+            </div>
             <Button
-              appearance="primary"
-              icon={isConnecting ? <Spinner size="tiny" /> : <Link24Regular />}
-              onClick={handleConnect}
-              disabled={isConnecting}
-            >
-              {t('wireless.connect_btn')}
+                appearance="subtle"
+                size="small"
+                onClick={() => handleDisconnect(true)}
+                disabled={isConnecting || isDisconnecting}
+              >
+                {t('wireless.disconnect_all')}
             </Button>
           </div>
         </Card>
@@ -290,6 +380,47 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
             >
               {t('wireless.pair_btn')}
             </Button>
+          </div>
+        </Card>
+
+        {/* QR Code Pairing Card */}
+        <Card className={styles.card}>
+          <CardHeader
+            image={<Wifi124Regular />}
+            header={<Text weight="semibold">{t('wireless.qr_pairing_title')}</Text>}
+            description={<Text size={200}>{t('wireless.qr_pairing_desc')}</Text>}
+          />
+          <div className={styles.content}>
+            {!qrPairingInfo ? (
+              <Button
+                appearance="primary"
+                icon={isStartingQrServer ? <Spinner size="tiny" /> : <Wifi124Regular />}
+                onClick={startQrPairing}
+                disabled={isStartingQrServer}
+              >
+                {t('wireless.qr_pairing_start')}
+              </Button>
+            ) : (
+              <>
+                <div className={styles.qrContainer}>
+                  <QRCodeSVG value={qrValue} size={180} />
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <Badge appearance="filled" color="brand">{qrPairingInfo.pairingCode}</Badge>
+                    <Text size={200} style={{ color: '#666' }}>{qrPairingInfo.serviceName}:{qrPairingInfo.port}</Text>
+                  </div>
+                </div>
+                
+                <div className={styles.stepList}>
+                   <Text size={200}>{t('wireless.qr_pairing_step1')}</Text>
+                   <Text size={200}>{t('wireless.qr_pairing_step2')}</Text>
+                   <Text size={200}>{t('wireless.qr_pairing_step3')}</Text>
+                </div>
+
+                <Button appearance="secondary" onClick={stopQrPairing}>
+                  {t('wireless.qr_pairing_stop')}
+                </Button>
+              </>
+            )}
           </div>
         </Card>
       </div>

@@ -20,8 +20,15 @@ import {
 } from '@fluentui/react-components';
 import {
   ArrowDownload24Regular,
+  Apps24Regular,
+  Info20Regular,
 } from '@fluentui/react-icons';
-import { OnlineSoftware } from '../../types/app';
+import { 
+    mergeClasses,
+    shorthands,
+    ProgressBar 
+} from '@fluentui/react-components';
+import { OnlineSoftware, DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 import { logService } from '../../services/logService';
 
@@ -37,8 +44,11 @@ const useStyles = makeStyles({
   },
   infoGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '12px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '16px',
+    backgroundColor: 'var(--colorNeutralBackground2)',
+    ...shorthands.padding('12px'),
+    ...shorthands.borderRadius('8px'),
   },
   infoItem: {
     display: 'flex',
@@ -46,14 +56,18 @@ const useStyles = makeStyles({
     gap: '4px',
   },
   infoLabel: {
+    fontSize: '11px',
     fontWeight: '600',
-    color: 'var(--colorNeutralForeground2)',
+    color: 'var(--colorNeutralForeground3)',
+    textTransform: 'uppercase',
   },
   infoValue: {
+    fontSize: '13px',
     color: 'var(--colorNeutralForeground1)',
+    fontWeight: '500',
   },
   downloadButton: {
-    minWidth: '120px',
+    minWidth: '140px',
   },
   loadingContainer: {
     display: 'flex',
@@ -65,12 +79,52 @@ const useStyles = makeStyles({
     wordWrap: 'break-word',
     overflowWrap: 'break-word',
     whiteSpace: 'pre-wrap',
+    color: 'var(--colorNeutralForeground2)',
+    lineHeight: '1.6',
   },
   dialogSurface: {
+    maxWidth: '560px',
+    width: '100%',
     maxHeight: '90vh',
     display: 'flex',
     flexDirection: 'column',
   },
+  modalHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  iconWrapper: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '8px',
+    backgroundColor: 'var(--colorNeutralBackground3)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke3)'),
+  },
+  iconImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  warningBox: {
+    backgroundColor: 'var(--colorNeutralBackground4)', 
+    ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke2)'), 
+    ...shorthands.borderRadius('8px'), 
+    ...shorthands.padding('12px'), 
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+    marginTop: '16px'
+  },
+  warningText: {
+    color: 'var(--colorNeutralForeground3)', 
+    fontSize: '13px',
+    lineHeight: '1.4',
+  }
 });
 
 // 打开链接的通用函数
@@ -270,23 +324,22 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(_, data) => !data.open && onClose()}>
       <DialogSurface className={styles.dialogSurface}>
-        <DialogTitle
-        >
-          资源：{currentData.name}
-              {/* 提示*/}
-          <div style={{ 
-            backgroundColor: '#FFF9C4', 
-            border: '1px solid #FFD600', 
-            borderRadius: '8px', 
-            padding: '12px 16px', 
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginTop: '8px'
-          }}>
-            <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请点击“使用Appfun下载”进行资源获取</span>
+        <DialogTitle>
+          <div className={styles.modalHeader}>
+            <div className={styles.iconWrapper}>
+              {currentData.iconUrl ? (
+                <img src={currentData.iconUrl} className={styles.iconImage} alt={currentData.name} />
+              ) : (
+                <Apps24Regular />
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <Text size={400} weight="semibold">资源：{currentData.name}</Text>
+              <Caption1 style={{ color: 'var(--colorNeutralForeground3)' }}>
+                {currentData.category || '软件资源'} • v{currentData.currentVersion}
+              </Caption1>
+            </div>
           </div>
-    
         </DialogTitle>
         
         <DialogContent className={styles.dialogContent}>
@@ -302,13 +355,6 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                   <Caption1 className={styles.infoLabel}>当前版本</Caption1>
                   <Text className={styles.infoValue}>v{currentData.currentVersion}</Text>
                 </div>
-                
-                {currentData.category && (
-                  <div className={styles.infoItem}>
-                    <Caption1 className={styles.infoLabel}>软件分类</Caption1>
-                    <Text className={styles.infoValue}>{currentData.category}</Text>
-                  </div>
-                )}
                 
                 {currentData.filetype && (
                   <div className={styles.infoItem}>
@@ -330,18 +376,19 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                 <>
                   <Divider />
                   <div>
-                    <Subtitle1 style={{ marginBottom: '8px' }}>软件描述</Subtitle1>
+                    <Subtitle1 style={{ marginBottom: '8px', display: 'block', fontWeight: '600' }}>详细说明</Subtitle1>
                     <Body1 className={styles.descriptionContainer}>{currentData.description}</Body1>
                   </div>
                 </>
               )}
 
-              {/* 系统要求 */}
-              {currentData.systemRequirements && (
+              {/* 系统要求 - 条件隐藏 */}
+              {currentData.systemRequirements && 
+               (currentData.systemRequirements.os || currentData.systemRequirements.memory || currentData.systemRequirements.storage) && (
                 <>
                   <Divider />
                   <div>
-                    <Subtitle1 style={{ marginBottom: '8px' }}>系统要求</Subtitle1>
+                    <Subtitle1 style={{ marginBottom: '8px', display: 'block', fontWeight: '600' }}>运行环境</Subtitle1>
                     <div className={styles.infoGrid}>
                       {currentData.systemRequirements.os && (
                         <div className={styles.infoItem}>
@@ -368,22 +415,32 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                 </>
               )}
 
-              {/* 启动信息 */}
+              {/* 启动信息 - 条件隐藏 */}
               {currentData.openname && (
                 <>
                   <Divider />
                   <div>
-                    <Subtitle1 style={{ marginBottom: '8px' }}>启动信息</Subtitle1>
-                    <div className={styles.infoItem}>
-                      <Caption1 className={styles.infoLabel}>启动文件</Caption1>
-                      <Text className={styles.infoValue}>{currentData.openname}</Text>
+                    <Subtitle1 style={{ marginBottom: '8px', display: 'block', fontWeight: '600' }}>开发者备注 / 启动项</Subtitle1>
+                    <div style={{ backgroundColor: 'var(--colorNeutralBackground3)', padding: '12px', borderRadius: '8px' }}>
+                      <div className={styles.infoItem}>
+                        <Caption1 className={styles.infoLabel}>执行入口</Caption1>
+                        <Text className={styles.infoValue}>{currentData.openname}</Text>
+                      </div>
+                      <Caption1 style={{ color: 'var(--colorNeutralForeground3)', marginTop: '8px', display: 'block' }}>
+                        💡 提示：下载并自动解压后，该文件通常位于软件根目录下。
+                      </Caption1>
                     </div>
-                    <Caption1 style={{ color: 'var(--colorNeutralForeground3)', marginTop: '4px' }}>
-                      下载解压后，可通过此文件启动软件
-                    </Caption1>
                   </div>
                 </>
               )}
+
+              {/* 底部警告框 - 降噪移位 */}
+              <div className={styles.warningBox}>
+                <Info20Regular style={{ color: 'var(--colorNeutralForeground3)', marginTop: '2px' }} />
+                <div className={styles.warningText}>
+                  若由于网络原因下载资源频繁失败或文件校验错误，请尝试使用“Appfun”外部渠道进行手动获取。
+                </div>
+              </div>
             </>
           )}
         </DialogContent>

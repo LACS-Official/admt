@@ -301,6 +301,7 @@ class OnlineResourcesService {
         softwareName: software.name,
         fileName: `${software.name}.${fileExtension}`,
         downloadUrl: software.latestDownloadUrl,
+        iconUrl: software.iconUrl,
         progress: 0,
         status: 'pending',
         startTime: new Date(),

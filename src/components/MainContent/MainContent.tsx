@@ -828,13 +828,17 @@ const MainContent: React.FC = () => {
         }
       };
 
-      // 稍微延迟一下，配合进入动画
+      // 稍微延迟一下，确保主页面已经完全稳定并显示在最上层
+      // 这里的 1200ms 大于 StartupTransition 的过渡时间 (800ms)
       setTimeout(() => {
-        frame();
-        sessionStorage.setItem("app_entrance_celebration_done", "true");
-      }, 500);
+        // 再次检查确认没执行过，避免重复
+        if (!sessionStorage.getItem("app_entrance_celebration_done")) {
+          frame();
+          sessionStorage.setItem("app_entrance_celebration_done", "true");
+        }
+      }, 1200);
     }
-  }, []); // 空依赖数组，确保只在组件挂载时执行一次
+  }, [showConfetti]); // 允许 showConfetti 变化时触发，但 sessionStorage 会确保本会话只执行一次
 
   // 系统托盘初始化 - 单例模式管理，确保只在应用启动时初始化一次
   useEffect(() => {
@@ -1209,6 +1213,7 @@ const MainContent: React.FC = () => {
               stiffness: 300,
               damping: 30,
               opacity: { duration: 0.2 },
+              filter: { type: "tween", duration: 0.3, ease: "easeInOut" }
             }}
             style={{ width: "100%", height: "100%", overflow: "hidden" }}
           >
