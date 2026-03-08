@@ -15,7 +15,8 @@ export interface StatusBarMessage {
 interface AppStoreState extends AppState {
   notifications: NotificationMessage[];
   statusBarMessage: StatusBarMessage | null;
-  setCurrentView: (view: AppView) => void;
+  navigationParams?: Record<string, any>; // 用于视图间传递参数
+  setCurrentView: (view: AppView, params?: Record<string, any>) => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | undefined) => void;
   updateConfig: (config: Partial<AppConfig>) => void;
@@ -24,6 +25,7 @@ interface AppStoreState extends AppState {
   clearNotifications: () => void;
   setStatusBarMessage: (message: Omit<StatusBarMessage, "id" | "timestamp"> | null) => void;
   clearStatusBarMessage: () => void;
+  setNavigationParams: (params: Record<string, any> | undefined) => void;
   initialize: () => void;
 }
 
@@ -52,8 +54,10 @@ export const useAppStore = create<AppStoreState>()(
       error: undefined,
       notifications: [],
       statusBarMessage: null,
+      navigationParams: undefined,
 
-      setCurrentView: (view: AppView) => set({ currentView: view }),
+      setCurrentView: (view: AppView, params?: Record<string, any>) => set({ currentView: view, navigationParams: params }),
+      setNavigationParams: (params: Record<string, any> | undefined) => set({ navigationParams: params }),
 
       setLoading: (isLoading: boolean) => set({ isLoading }),
 

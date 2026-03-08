@@ -127,7 +127,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
   const styles = useStyles();
   const { deviceService } = useDeviceService();
   const { setFlashing, updateDevice } = useDeviceStore();
-  const { config, updateConfig, setStatusBarMessage } = useAppStore();
+  const { config, updateConfig, setStatusBarMessage, setCurrentView } = useAppStore();
   const { t } = useTranslation();
 
   
@@ -421,7 +421,9 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
             </Text>
             {/* 备份链接 */}
             <div style={{ marginTop: "8px" }}>
-                <Link onClick={() => { /* TODO: Navigate to backup page */ }}>
+                <Link onClick={() => { 
+                    setCurrentView('flash-zone', { flashTab: 'system-backup' });
+                }}>
                     {t('flash.goto_backup')}
                 </Link>
             </div>

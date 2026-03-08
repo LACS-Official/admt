@@ -50,6 +50,7 @@ import {
   Apps24Regular,
   Settings24Regular,
   DocumentText24Regular,
+  Info24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -57,14 +58,57 @@ import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "react-i18next";
 import { DeviceInfo } from "../../types/device";
 import { logService } from "../../services/logService";
-
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 const useStyles = makeStyles({
   container: {
     height: "100%",
     display: "flex",
+    gap: "12px",
+  },
+  sidebar: {
+    width: "200px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "8px",
+    padding: "12px",
+    flexShrink: 0,
+  },
+  sidebarHeader: {
+    padding: "0 8px 8px 8px",
+    fontWeight: 600,
+    fontSize: "14px",
+    color: "var(--colorNeutralForeground2)",
+    borderBottom: "1px solid var(--colorNeutralStroke2)",
+    marginBottom: "4px",
+  },
+  sidebarItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "13px",
+    color: "var(--colorNeutralForeground1)",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1)",
+    },
+  },
+  sidebarItemActive: {
+    backgroundColor: "var(--colorNeutralBackground1)",
+    fontWeight: 600,
+    color: "var(--colorBrandForeground1)",
+  },
+  mainContent: {
+    flex: 1,
+    display: "flex",
     flexDirection: "column",
     gap: "12px",
+    minWidth: 0, 
+    height: "100%",
   },
   card: {
     height: "100%",
@@ -248,17 +292,27 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  // Context Menu State
+  const [contextMenuLocation, setContextMenuLocation] = useState<{ left: number, top: number } | null>(null);
+  const [contextMenuTarget, setContextMenuTarget] = useState<HTMLElement | null>(null);
+  const [contextMenuFile, setContextMenuFile] = useState<FileItem | null>(null);
   // 排序：name_asc, name_desc, date_desc (新-旧), date_asc (旧-新)
   const [sortMode, setSortMode] = useState<'name_asc' | 'name_desc' | 'date_desc' | 'date_asc'>('name_asc');
   const [iconColor, setIconColor] = useState<string>('#0078d4'); // 默认图标颜色
 
   // Quick navigation paths
   const quickPaths = [
-    { label: t('file_manager.root_dir'), path: '/' },
-    { label: t('file_manager.internal_storage'), path: '/storage/emulated/0' },
-    { label: 'data', path: '/data' },
-    { label: 'system', path: '/system' },
-    { label: 'Download', path: '/storage/emulated/0/Download' },
+    { label: t('file_manager.root_dir'), path: '/', icon: <Storage24Regular /> },
+    { label: t('file_manager.internal_storage'), path: '/storage/emulated/0', icon: <Home24Regular /> },
+    { label: 'Camera (DCIM)', path: '/storage/emulated/0/DCIM', icon: <Image24Regular /> },
+    { label: 'Download', path: '/storage/emulated/0/Download', icon: <ArrowDownload24Regular /> },
+    { label: 'Pictures', path: '/storage/emulated/0/Pictures', icon: <Image24Regular /> },
+    { label: 'Movies', path: '/storage/emulated/0/Movies', icon: <Video24Regular /> },
+    { label: 'Music', path: '/storage/emulated/0/Music', icon: <Mic24Regular /> },
+    { label: 'Documents', path: '/storage/emulated/0/Documents', icon: <DocumentText24Regular /> },
+    { label: 'Android Data', path: '/storage/emulated/0/Android/data', icon: <Folder24Regular /> },
   ];
 
   const loadFiles = useCallback(async (path: string) => {
@@ -422,61 +476,61 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
   // 格式化文件大小显示
   // 文件类型识别函数
   const getFileIcon = (fileName: string, fileType: 'file' | 'directory'): React.ReactElement => {
-    const iconProps = { style: { color: iconColor } };
+    const minSize = { width: '20px', height: '20px' };
     
     if (fileType === 'directory') {
-      return <Folder24Regular {...iconProps} />;
+      return <Folder24Regular style={{ ...minSize, color: "#FCD116" }} />; // Folder Yellow
     }
 
     const ext = fileName.toLowerCase().split('.').pop() || '';
     
     // 图片文件
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif'].includes(ext)) {
-      return <Image24Regular {...iconProps} />;
+      return <Image24Regular style={{ ...minSize, color: "#9333EA" }} />; // Purple
     }
     
     // 视频文件
     if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v', '3gp'].includes(ext)) {
-      return <Video24Regular {...iconProps} />;
+      return <Video24Regular style={{ ...minSize, color: "#EF4444" }} />; // Red
     }
     
     // 音频文件
     if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'].includes(ext)) {
-      return <Mic24Regular {...iconProps} />;
+      return <Mic24Regular style={{ ...minSize, color: "#EC4899" }} />; // Pink
     }
     
     // 文档文件
     if (['pdf'].includes(ext)) {
-      return <DocumentPdf24Regular {...iconProps} />;
+      return <DocumentPdf24Regular style={{ ...minSize, color: "#F59E0B" }} />; // Orange
     }
     
     // 压缩文件
     if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) {
-      return <Archive24Regular {...iconProps} />;
+      return <Archive24Regular style={{ ...minSize, color: "#6366F1" }} />; // Indigo
     }
     
     // 代码文件
     if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'scss', 'less', 'json', 'xml', 'py', 'java', 'cpp', 'c', 'h', 'php', 'rb', 'go', 'rs', 'sh', 'bat', 'md'].includes(ext)) {
-      return <Code24Regular {...iconProps} />;
+      return <Code24Regular style={{ ...minSize, color: "#10B981" }} />; // Emerald
     }
     
     // APK文件
     if (['apk'].includes(ext)) {
-      return <Apps24Regular {...iconProps} />;
+      return <Apps24Regular style={{ ...minSize, color: "#14B8A6" }} />; // Teal
     }
     
     // 镜像文件
     if (['img', 'iso', 'dmg', 'vmdk', 'vhd', 'qcow2'].includes(ext)) {
-      return <Settings24Regular {...iconProps} />;
+      return <Settings24Regular style={{ ...minSize, color: "#64748B" }} />; // Slate
     }
     
     // 文本文件
     if (['txt', 'log', 'ini', 'conf', 'cfg', 'yml', 'yaml', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
-      return <DocumentText24Regular {...iconProps} />;
+      return <DocumentText24Regular style={{ ...minSize, color: "#3B82F6" }} />; // Blue
     }
     
     // 默认文件图标
-    return <Document24Regular {...iconProps} />;
+    return <Document24Regular style={{ ...minSize, color: "#94A3B8" }} />; // Gray
   };
 
   const formatFileSize = (size: string): string => {
@@ -796,6 +850,128 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent, file: FileItem) => {
+    e.preventDefault();
+    setContextMenuLocation({ left: e.clientX, top: e.clientY });
+    setContextMenuTarget(e.target as HTMLElement);
+    setContextMenuFile(file);
+  };
+
+  const handleCalculateSize = async (file: FileItem) => {
+    if (!checkMode()) return;
+    if (!device) return;
+
+    setStatusBarMessage({
+      type: "info",
+      message: t('file_manager.calculating_size', { name: file.name }),
+    });
+
+    try {
+      const result = await deviceService.executeAdbCommand(
+        device.serial,
+        'shell',
+        [`du -sh "${file.path}"`]
+      );
+
+      if (result.success && result.output) {
+        const size = result.output.split(/\s+/)[0];
+        setStatusBarMessage({
+          type: "success",
+          message: t('file_manager.size_result', { name: file.name, size }),
+        });
+      } else {
+         setStatusBarMessage({
+          type: "error",
+          message: t('file_manager.calc_size_fail', { error: result.error || 'Unknown error' }),
+        });
+      }
+    } catch (error) {
+      setStatusBarMessage({
+        type: "error",
+        message: t('file_manager.calc_size_fail', { error }),
+      });
+    }
+    setContextMenuLocation(null);
+  };
+
+  // Drag and drop handlers
+  useEffect(() => {
+    const unlistenPromise = (async () => {
+      const appWindow = getCurrentWebviewWindow();
+      
+      const unlisten = await appWindow.onDragDropEvent((event) => {
+        if (event.payload.type === 'enter') {
+          console.log('User started dragging file over window');
+          setIsDragging(true);
+        } else if (event.payload.type === 'drop') {
+          console.log('User dropped file', event.payload.paths);
+          setIsDragging(false);
+          
+          // Handle dropped files
+          if (event.payload.paths && event.payload.paths.length > 0) {
+            handleDroppedFiles(event.payload.paths);
+          }
+        } else if (event.payload.type === 'leave') {
+          console.log('User left dragging');
+          setIsDragging(false);
+        }
+      });
+      return unlisten;
+    })();
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten());
+    };
+  }, [device, currentPath]);
+
+  const handleDroppedFiles = async (paths: string[]) => {
+    if (!checkMode()) return;
+    if (!device) return;
+
+    setIsUploading(true);
+    setStatusBarMessage({
+      type: "info",
+      message: t('file_manager.msg_uploading'),
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+        for (const filePath of paths) {
+          const result = await deviceService.pushFile(device.serial, filePath, currentPath);
+          const fileName = filePath.split(/[/\\]/).pop() || filePath;
+          if (result.success) {
+            successCount++;
+            await logService.info(`成功上传文件(拖拽): ${fileName}`, '文件管理', { localPath: filePath, remoteDir: currentPath });
+          } else {
+            failCount++;
+            await logService.error(`上传文件失败(拖拽): ${fileName}`, '文件管理', { error: result.error, localPath: filePath });
+          }
+        }
+
+        if (successCount > 0) {
+          setStatusBarMessage({
+            type: "success",
+            message: t('file_manager.msg_upload_success_batch', { success: successCount, fail: failCount }),
+          });
+          loadFiles(currentPath); // Refresh file list
+        } else {
+          setStatusBarMessage({
+            type: "error",
+            message: t('file_manager.msg_upload_fail', { error: t('common.fail') }),
+          });
+        }
+    } catch (error) {
+       setStatusBarMessage({
+        type: "error",
+        message: t('file_manager.msg_upload_fail', { error }),
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const renderBreadcrumb = () => {
     const pathParts = currentPath.split('/').filter(Boolean);
     
@@ -848,180 +1024,233 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
 
   return (
     <div className={styles.container}>
-      <Card className={styles.card}>
-
-        <div className={styles.content}>
-          {/* Navigation Bar */}
-          <div className={styles.navigationBar}>
-            <Button
-              appearance="subtle"
-              icon={<ArrowUp24Regular />}
-              onClick={handleNavigateUp}
-              disabled={currentPath === '/'}
-              title={t('file_manager.nav_up_title')}
-            />
-            {/*  文件路径输入框 */}
-            <div className={styles.pathInput}>
-              {renderBreadcrumb()}
+      {/* Sidebar Quick Access */}
+      <div className={styles.sidebar}>
+         <div className={styles.sidebarHeader}>{t('file_manager.quick_access')}</div>
+         {quickPaths.map((item) => (
+            <div 
+              key={item.path} 
+              className={`${styles.sidebarItem} ${currentPath.startsWith(item.path) && item.path !== '/' ? styles.sidebarItemActive : ''}`}
+              onClick={() => handleNavigateToPath(item.path)}
+            >
+              {item.icon}
+              <Text>{item.label}</Text>
             </div>
-            {/* 排序选择 */}
-            <div className={styles.sortContainer}>
-              <Text size={200}>{t('file_manager.sort_label')}</Text>
-              <Dropdown
-                size="small"
-                selectedOptions={[sortMode]}
-                onOptionSelect={handleSortChange}
-              >
-                <Option value="name_asc">{t('file_manager.sort_name_asc')}</Option>
-                <Option value="name_desc">{t('file_manager.sort_name_desc')}</Option>
-                <Option value="date_desc">{t('file_manager.sort_date_desc')}</Option>
-                <Option value="date_asc">{t('file_manager.sort_date_asc')}</Option>
-              </Dropdown>
-            </div>
+         ))}
+      </div>
 
-            {/* 快速导航按钮 */}
-            <div className={styles.quickNavButtons}>
-              {quickPaths.map((item) => (
-                <Button
-                  key={item.path}
-                  appearance="subtle"
+      {/* Main Content */}
+      <div className={styles.mainContent}>
+        <Card className={styles.card}>
+          {isDragging && (
+             <div style={{
+               position: 'absolute',
+               top: 0, left: 0, right: 0, bottom: 0,
+               backgroundColor: 'rgba(0, 120, 212, 0.1)',
+               zIndex: 100,
+               border: '2px dashed var(--colorBrandStroke1)',
+               borderRadius: '8px',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               pointerEvents: 'none',
+             }}>
+               <div style={{ padding: '20px', backgroundColor: 'var(--colorNeutralBackground1)', borderRadius: '8px', boxShadow: '0 4px 14px rgba(0,0,0,0.1)' }}>
+                  <Text size={500} weight="semibold" style={{ color: 'var(--colorBrandForeground1)' }}>
+                    {t('file_manager.drop_files_here')}
+                  </Text>
+               </div>
+             </div>
+          )}
+
+          <div className={styles.content}>
+            {/* Navigation Bar */}
+            <div className={styles.navigationBar}>
+              <Button
+                appearance="subtle"
+                icon={<ArrowUp24Regular />}
+                onClick={handleNavigateUp}
+                disabled={currentPath === '/'}
+                title={t('file_manager.nav_up_title')}
+              />
+              {/*  文件路径输入框 */}
+              <div className={styles.pathInput}>
+                {renderBreadcrumb()}
+              </div>
+              {/* 排序选择 */}
+              <div className={styles.sortContainer}>
+                <Text size={200}>{t('file_manager.sort_label')}</Text>
+                <Dropdown
                   size="small"
-                  onClick={() => handleNavigateToPath(item.path)}
+                  selectedOptions={[sortMode]}
+                  onOptionSelect={handleSortChange}
                 >
-                  {item.label}
-                </Button>
-              ))}
+                  <Option value="name_asc">{t('file_manager.sort_name_asc')}</Option>
+                  <Option value="name_desc">{t('file_manager.sort_name_desc')}</Option>
+                  <Option value="date_desc">{t('file_manager.sort_date_desc')}</Option>
+                  <Option value="date_asc">{t('file_manager.sort_date_asc')}</Option>
+                </Dropdown>
+              </div>
+
             </div>
-          </div>
 
-          {/* Action Bar */}
-          <div className={styles.actionBar}>
-            <Button
-              appearance="primary"
-              icon={isUploading ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
-              onClick={handleUploadFile}
-              disabled={isUploading}
-            >
-              {isUploading ? t('file_manager.uploading') : t('file_manager.upload_file')}
-            </Button>
+            {/* Action Bar */}
+            <div className={styles.actionBar}>
+              <Button
+                appearance="primary"
+                icon={isUploading ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
+                onClick={handleUploadFile}
+                disabled={isUploading}
+              >
+                {isUploading ? t('file_manager.uploading') : t('file_manager.upload_file')}
+              </Button>
 
-            <Button
-              appearance="secondary"
-              icon={<Folder24Regular />}
-              onClick={handleOpenExportDirectory}
-            >
-              {t('file_manager.open_export_dir')}
-            </Button>
-            {selectedFiles.size > 0 && (
-              <>
-                <div className={styles.selectedInfo}>
-                  {t('file_manager.selected_count', { count: selectedFiles.size })}
-                </div>
-                <Button
-                  appearance="primary"
-                  icon={<ArrowDownload24Regular />}
-                  onClick={handleBatchDownload}
-                >
-                  {t('file_manager.batch_export')}
-                </Button>
-              </>
+              <Button
+                appearance="secondary"
+                icon={<Folder24Regular />}
+                onClick={handleOpenExportDirectory}
+              >
+                {t('file_manager.open_export_dir')}
+              </Button>
+              {selectedFiles.size > 0 && (
+                <>
+                  <div className={styles.selectedInfo}>
+                    {t('file_manager.selected_count', { count: selectedFiles.size })}
+                  </div>
+                  <Button
+                    appearance="primary"
+                    icon={<ArrowDownload24Regular />}
+                    onClick={handleBatchDownload}
+                  >
+                    {t('file_manager.batch_export')}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* File List */}
+            {isLoading ? (
+              <div className={styles.loadingContainer}>
+                <Spinner size="large" label={t('file_manager.loading_files')} />
+              </div>
+            ) : files.length === 0 ? (
+              <div className={styles.emptyState}>
+                <Folder24Regular style={{ fontSize: "48px" }} />
+                <Text>{t('file_manager.empty_dir')}</Text>
+                <Text size={200}>{t('file_manager.empty_dir_desc')}</Text>
+              </div>
+            ) : (
+              <div className={styles.tableContainer}>
+                <Table arial-label="文件列表">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHeaderCell className={styles.compactCell}>
+                        <Checkbox
+                          checked={selectedFiles.size === files.length && files.length > 0}
+                          onChange={(_, data) => handleSelectAll(data.checked === true)}
+                        />
+                      </TableHeaderCell>
+                      <TableHeaderCell>{t('file_manager.header_name')}</TableHeaderCell>
+                      <TableHeaderCell>{t('file_manager.header_size')}</TableHeaderCell>
+                      <TableHeaderCell>{t('file_manager.header_actions')}</TableHeaderCell>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {files.map((file) => (
+                      <TableRow 
+                        key={file.name} 
+                        className={styles.fileRow}
+                        onContextMenu={(e) => handleContextMenu(e, file)}
+                        style={{ cursor: 'context-menu' }}
+                      >
+                        <TableCell className={styles.compactCell}>
+                          <Checkbox
+                            checked={selectedFiles.has(file.name)}
+                            onChange={(_, data) => handleFileSelect(file.name, data.checked === true)}
+                          />
+                        </TableCell>
+                        <TableCell className={styles.compactCell}>
+                          <div className={styles.fileName} onClick={() => handleFileClick(file)}>
+                            <div className={styles.fileIcon}>
+                              {getFileIcon(file.name, file.type)}
+                            </div>
+                            <Text weight={file.type === 'directory' ? "semibold" : "regular"}>
+                              {file.name}
+                            </Text>
+                          </div>
+                        </TableCell>
+                        <TableCell className={styles.compactCell}>
+                          <Text className={styles.fileSize}>
+                            {file.size}
+                          </Text>
+                        </TableCell>
+                        <TableCell className={styles.compactCell}>
+                           <div style={{ display: 'flex', gap: '4px' }}>
+                              {file.type === 'file' && (
+                                <Button
+                                  appearance="subtle"
+                                  icon={<ArrowDownload24Regular />}
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownloadFile(file);
+                                  }}
+                                  title={t('file_manager.pull_file')}
+                                />
+                              )}
+                              <Menu>
+                                <MenuTrigger disableButtonEnhancement>
+                                  <Button
+                                    appearance="subtle"
+                                    icon={<MoreHorizontal24Regular />}
+                                    size="small"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </MenuTrigger>
+                                <MenuPopover>
+                                  <MenuList>
+                                    {file.type === 'file' && (
+                                      <MenuItem
+                                        icon={<ArrowDownload24Regular />}
+                                        onClick={() => handleDownloadFile(file)}
+                                      >
+                                        {t('file_manager.pull_file')}
+                                      </MenuItem>
+                                    )}
+                                    <MenuItem
+                                      icon={<Copy24Regular />}
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(file.path);
+                                        setStatusBarMessage({
+                                          type: "success",
+                                          message: t('file_manager.msg_copied'),
+                                        });
+                                      }}
+                                    >
+                                      {t('file_manager.copy_path')}
+                                    </MenuItem>
+                                    {file.type === 'directory' && (
+                                       <MenuItem
+                                          icon={<Info24Regular />}
+                                          onClick={() => handleCalculateSize(file)}
+                                       >
+                                          {t('file_manager.calculate_size')}
+                                       </MenuItem>
+                                    )}
+                                  </MenuList>
+                                </MenuPopover>
+                              </Menu>
+                           </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </div>
-
-          {/* File List */}
-          {isLoading ? (
-            <div className={styles.loadingContainer}>
-              <Spinner size="large" label={t('file_manager.loading_files')} />
-            </div>
-          ) : files.length === 0 ? (
-            <div className={styles.emptyState}>
-              <Folder24Regular style={{ fontSize: "48px" }} />
-              <Text>{t('file_manager.empty_dir')}</Text>
-              <Text size={200}>{t('file_manager.empty_dir_desc')}</Text>
-            </div>
-          ) : (
-            <div className={styles.tableContainer}>
-              <Table arial-label="文件列表">
-                <TableHeader>
-                  <TableRow>
-                    <TableHeaderCell className={styles.compactCell}>
-                      <Checkbox
-                        checked={selectedFiles.size === files.length && files.length > 0}
-                        onChange={(_, data) => handleSelectAll(data.checked === true)}
-                      />
-                    </TableHeaderCell>
-                    <TableHeaderCell>{t('file_manager.header_name')}</TableHeaderCell>
-                    <TableHeaderCell>{t('file_manager.header_size')}</TableHeaderCell>
-                    <TableHeaderCell>{t('file_manager.header_actions')}</TableHeaderCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {files.map((file) => (
-                    <TableRow key={file.name} className={styles.fileRow}>
-                      <TableCell className={styles.compactCell}>
-                        <Checkbox
-                          checked={selectedFiles.has(file.name)}
-                          onChange={(_, data) => handleFileSelect(file.name, data.checked === true)}
-                        />
-                      </TableCell>
-                      <TableCell className={styles.compactCell}>
-                        <div className={styles.fileName} onClick={() => handleFileClick(file)}>
-                          <div className={styles.fileIcon}>
-                            {getFileIcon(file.name, file.type)}
-                          </div>
-                          <Text weight={file.type === 'directory' ? "semibold" : "regular"}>
-                            {file.name}
-                          </Text>
-                        </div>
-                      </TableCell>
-                      <TableCell className={styles.compactCell}>
-                        <Text className={styles.fileSize}>
-                          {file.size}
-                        </Text>
-                      </TableCell>
-                      <TableCell className={styles.compactCell}>
-                        <Menu>
-                          <MenuTrigger disableButtonEnhancement>
-                            <Button
-                              appearance="subtle"
-                              icon={<MoreHorizontal24Regular />}
-                              size="small"
-                            />
-                          </MenuTrigger>
-                          <MenuPopover>
-                            <MenuList>
-                              {file.type === 'file' && (
-                                <MenuItem
-                                  icon={<ArrowDownload24Regular />}
-                                  onClick={() => handleDownloadFile(file)}
-                                >
-                                  {t('file_manager.pull_file')}
-                                </MenuItem>
-                              )}
-                              <MenuItem
-                                icon={<Copy24Regular />}
-                                onClick={() => {
-                                  navigator.clipboard.writeText(file.path);
-                                  setStatusBarMessage({
-                                    type: "success",
-                                    message: t('file_manager.msg_copied'),
-                                  });
-                                }}
-                              >
-                                {t('file_manager.copy_path')}
-                              </MenuItem>
-                            </MenuList>
-                          </MenuPopover>
-                        </Menu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

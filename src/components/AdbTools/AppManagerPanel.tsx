@@ -28,6 +28,10 @@ import {
   MenuPopover,
   MenuList,
   MenuItem,
+  OverlayDrawer,
+  DrawerBody,
+  DrawerHeader,
+  DrawerHeaderTitle,
 } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { Apps24Regular,
@@ -42,6 +46,10 @@ import { Apps24Regular,
   Save24Regular,
   Eraser24Regular,
   ShieldLock24Regular,
+  Open24Regular,
+  Copy24Regular,
+  AppsListDetail24Regular,
+  Play24Regular,
 } from "@fluentui/react-icons";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
@@ -248,6 +256,41 @@ const useStyles = makeStyles({
     wordBreak: "break-all",
     fontFamily: "monospace",
   },
+  // New styles for enhanced UI
+  appIconLarge: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    fontSize: "20px",
+  },
+  appNamePrimary: {
+    fontWeight: "600",
+    fontSize: "14px",
+    color: "var(--colorNeutralForeground1)",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  appNameSecondary: {
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground3)",
+    fontFamily: "monospace",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  filterBadge: {
+    marginLeft: "4px",
+    fontSize: "10px",
+    height: "16px",
+    minWidth: "16px",
+    padding: "0 4px",
+  },
 });
 
 interface InstallStatus {
@@ -322,6 +365,14 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
   const [frozenAppsWithVersion, setFrozenAppsWithVersion] = useState<InstalledApp[]>([]);
   const [selectedAppForDetails, setSelectedAppForDetails] = useState<InstalledApp | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  
+  // State for Context Menu
+  const [contextMenuLocation, setContextMenuLocation] = useState<{ left: number, top: number } | null>(null);
+  const [contextMenuTarget, setContextMenuTarget] = useState<HTMLElement | null>(null);
+  const [contextMenuApp, setContextMenuApp] = useState<InstalledApp | null>(null);
+
+  // State for Drawer
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
   // 规范化版本信息，处理各种格式问题
   const normalizeVersionInfo = useCallback((versionInfo: string): string => {
@@ -788,9 +839,14 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
       source = [];
     }
 
-    const filtered = query
-      ? source.filter(app => app.packageName?.toLowerCase().includes(query))
-      : source;
+    // Smart Filter: Filter by Name OR Package Name
+    const filtered = source.filter(app => {
+      // If we had a label field, we would search it too. 
+      // For now we assume app.label might exist or we search package/version
+      const matchPackage = app.packageName?.toLowerCase().includes(query);
+      const matchName = (app as any).label?.toLowerCase().includes(query) || false; // Future proofing
+      return matchPackage || matchName;
+    });
 
     setFilteredApps(filtered);
   }, [apps, frozenAppsWithVersion, currentApp, searchQuery, viewSource, loadFrozenApps, loadCurrentApp, t]);
@@ -849,7 +905,14 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
   
   const handleShowDetails = (app: InstalledApp) => {
     setSelectedAppForDetails(app);
-    setDetailsDialogOpen(true);
+    setIsDrawerOpen(true);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, app: InstalledApp) => {
+    e.preventDefault();
+    setContextMenuLocation({ left: e.clientX, top: e.clientY });
+    setContextMenuTarget(e.target as HTMLElement);
+    setContextMenuApp(app);
   };
 
   const handleSelectApp = (packageName: string, checked: boolean) => {
@@ -1550,6 +1613,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
                       disabled={isLoadingApps}
                     >
                       {t('app_manager.system_app')}
+                      {includeSystemApps && <span className={styles.filterBadge}>({filteredApps.filter(a => a.isSystemApp).length})</span>}
                     </Button>
                     <Button
                       appearance={viewSource === "current" ? "primary" : "secondary"}
@@ -1566,6 +1630,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
                       disabled={isLoadingApps}
                     >
                       {t('app_manager.tab_frozen')}
+                      {viewSource === "frozen" && <span className={styles.filterBadge}>({filteredApps.length})</span>}
                     </Button>
                   </div>
                 </div>
@@ -1580,6 +1645,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
               icon={<Delete24Regular />}
               onClick={handleBatchUninstall}
               disabled={isLoadingApps || selectedApps.size === 0}
+              style={selectedApps.size > 0 ? { backgroundColor: "var(--colorPaletteRedBackground3)", borderColor: "transparent", color: "var(--colorPaletteRedForeground3)" } : {}}
             >
             {t('app_manager.uninstall')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
@@ -1591,35 +1657,39 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
               {t('app_manager.freeze')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
-              appearance="primary"
+              appearance="secondary"
               onClick={() => handleBatchFreezeToggle(false)}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
               {t('app_manager.unfreeze')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
-              appearance="primary"
+              appearance="secondary"
+              icon={<ShieldLock24Regular />}
               onClick={handleBatchForceStop}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
               {t('app_manager.force_stop')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
-              appearance="primary"
+              appearance="secondary"
+              icon={<Save24Regular />}
               onClick={handleBatchExportApk}
               disabled={isLoadingApps || selectedApps.size === 0}
             >
               {t('app_manager.export_apk')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
-              appearance="primary"
+              appearance="secondary"
+              icon={<Eraser24Regular />}
               onClick={handleBatchClearData}
               disabled={isLoadingApps || selectedApps.size === 0}
+              style={selectedApps.size > 0 ? { color: "var(--colorPaletteRedForeground1)", borderColor: "var(--colorPaletteRedBorder1)" } : {}}
             >
               {t('app_manager.clear_data')} {selectedApps.size > 0 && `(${selectedApps.size})`}
             </Button>
             <Button
-              appearance="primary"
+              appearance="secondary"
               icon={<ArrowDownload24Regular />}
               onClick={handleExportAppList}
               disabled={isLoadingApps || selectedApps.size === 0}
@@ -1670,7 +1740,8 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
                           onChange={(_, data) => handleSelectAll(data.checked === true)}
                         />
                       </TableHeaderCell>
-                      <TableHeaderCell>{t('app_manager.card_title')}</TableHeaderCell>
+                      {/* Merged Name & Package Column */}
+                      <TableHeaderCell>{t('app_manager.app_name_package')}</TableHeaderCell>
                       <TableHeaderCell>{t('app_manager.version')}</TableHeaderCell>
                       <TableHeaderCell>{t('app_manager.status')}</TableHeaderCell>
                       <TableHeaderCell>{t('app_manager.actions')}</TableHeaderCell>
@@ -1678,7 +1749,12 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
                   </TableHeader>
                   <TableBody>
                     {filteredApps.map((app) => (
-                      <TableRow key={app.packageName} className={styles.compactTableRow}>
+                      <TableRow 
+                        key={app.packageName} 
+                        className={styles.compactTableRow}
+                        onContextMenu={(e) => handleContextMenu(e, app)}
+                        style={{ cursor: 'context-menu' }}
+                      >
                         <TableCell className={styles.compactCell}>
                           <Checkbox
                             checked={selectedApps.has(app.packageName)}
@@ -1686,16 +1762,34 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
                           />
                         </TableCell>
                         <TableCell className={styles.compactCell}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <Text 
-                              size={300} 
-                              weight="semibold" 
-                              className={styles.packageNameText} 
-                              title={app.packageName}
-                              onClick={() => handleShowDetails(app)}
-                            >
-                              {app.packageName}
-                            </Text>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {/* App Icon (Visual Anchor) */}
+                            <div className={styles.appIconLarge}>
+                              {/* Use first char of package name or name as placeholder icon */}
+                              <Text weight="semibold" size={400} style={{ color: "var(--colorNeutralForeground3)" }}>
+                                {(app as any).label ? (app as any).label.charAt(0).toUpperCase() : app.packageName.split('.').pop()?.charAt(0).toUpperCase() || '?'}
+                              </Text>
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                              {/* Primary: App Name (or Package Name if no label) */}
+                              <Text 
+                                className={styles.appNamePrimary}
+                                title={(app as any).label || app.packageName}
+                                onClick={() => handleShowDetails(app)}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                {(app as any).label || app.packageName}
+                              </Text>
+                              
+                              {/* Secondary: Package Name (if label exists) or just "Package" */}
+                              <Text 
+                                className={styles.appNameSecondary}
+                                title={app.packageName}
+                              >
+                                {app.packageName}
+                              </Text>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className={styles.compactCell}>
@@ -1711,7 +1805,12 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
                           </div>
                         </TableCell>
                         <TableCell className={styles.compactCell}>
-                          <Badge appearance={app.isEnabled ? "filled" : "outline"} color={app.isEnabled ? "success" : "warning"} size="small">
+                          <Badge 
+                            appearance={app.isEnabled ? "filled" : "ghost"} 
+                            color={app.isEnabled ? "success" : "danger"} 
+                            size="small"
+                            icon={!app.isEnabled ? <LockClosed24Regular /> : undefined}
+                          >
                             {app.isEnabled ? t('app_manager.enabled') : t('app_manager.disabled')}
                           </Badge>
                         </TableCell>
@@ -1822,71 +1921,142 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
       </Dialog>
 
 
-      {/* 应用详情对话框 */}
-      <Dialog open={detailsDialogOpen} onOpenChange={(_, data) => setDetailsDialogOpen(data.open)}>
-        <DialogSurface>
-          <DialogTitle>{t('app_properties.detail_info')}</DialogTitle>
-          <DialogContent>
-            <div className={styles.detailsGrid}>
-              <div className={styles.detailsLabel}>{t('app_manager.package_name')}:</div>
-              <div className={styles.detailsValue}>{selectedAppForDetails?.packageName}</div>
-              
-              <div className={styles.detailsLabel}>{t('app_manager.version_name')}:</div>
-              <div className={styles.detailsValue}>{selectedAppForDetails?.versionName || t('common.unknown')}</div>
-              
-              <div className={styles.detailsLabel}>{t('app_manager.version_code')}:</div>
-              <div className={styles.detailsValue}>{selectedAppForDetails?.versionCode || t('common.unknown')}</div>
-              
-              <div className={styles.detailsLabel}>{t('app_manager.status')}:</div>
-              <div className={styles.detailsValue}>
-                {selectedAppForDetails?.isEnabled ? t('app_manager.enabled') : t('app_manager.disabled')}
-              </div>
-              
-              <div className={styles.detailsLabel}>{t('app_properties.is_system_app')}:</div>
-              <div className={styles.detailsValue}>
-                {selectedAppForDetails?.isSystemApp ? t('common.yes') : t('common.no')}
-              </div>
-
-              {selectedAppForDetails?.apkPath && (
-                <>
-                  <div className={styles.detailsLabel}>{t('app_properties.apk_path')}:</div>
-                  <div className={styles.detailsValue}>{selectedAppForDetails.apkPath}</div>
-                </>
-              )}
-
-              {selectedAppForDetails?.installTime && (
-                <>
-                  <div className={styles.detailsLabel}>{t('app_properties.install_time')}:</div>
-                  <div className={styles.detailsValue}>{selectedAppForDetails.installTime}</div>
-                </>
-              )}
-
-              {selectedAppForDetails?.updateTime && (
-                <>
-                  <div className={styles.detailsLabel}>{t('app_properties.update_time')}:</div>
-                  <div className={styles.detailsValue}>{selectedAppForDetails.updateTime}</div>
-                </>
-              )}
-
-              {selectedAppForDetails?.permissions && selectedAppForDetails.permissions.length > 0 && (
-                <>
-                  <div className={styles.detailsLabel}>{t('app_properties.permissions')}:</div>
-                  <div className={styles.detailsValue} style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                    {selectedAppForDetails.permissions.map((p, i) => (
-                      <div key={i}>{p}</div>
-                    ))}
-                  </div>
-                </>
-              )}
+      {/* Application Details Drawer */}
+      <OverlayDrawer
+        position="end"
+        open={isDrawerOpen}
+        onOpenChange={(_, { open }) => setIsDrawerOpen(open)}
+        style={{ width: '400px' }}
+      >
+        <DrawerHeader>
+          <DrawerHeaderTitle
+            action={
+              <Button
+                appearance="subtle"
+                aria-label="Close"
+                icon={<Delete24Regular />} // Using Delete icon as close for now, or use specialized Close icon if available
+                onClick={() => setIsDrawerOpen(false)}
+              />
+            }
+          >
+            {t('app_properties.detail_info')}
+          </DrawerHeaderTitle>
+        </DrawerHeader>
+        <DrawerBody>
+          <div className={styles.detailsGrid}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+               <div className={styles.appIconLarge} style={{ width: '64px', height: '64px', fontSize: '24px' }}>
+                  <Text weight="semibold" size={600} style={{ color: "var(--colorNeutralForeground3)" }}>
+                    {(selectedAppForDetails as any)?.label ? (selectedAppForDetails as any).label.charAt(0).toUpperCase() : selectedAppForDetails?.packageName.split('.').pop()?.charAt(0).toUpperCase() || '?'}
+                  </Text>
+               </div>
+               <div>
+                 <Text size={500} weight="bold">{(selectedAppForDetails as any)?.label || selectedAppForDetails?.packageName}</Text>
+                 <br/>
+                 <Text size={300} style={{ color: "var(--colorNeutralForeground3)" }}>{selectedAppForDetails?.packageName}</Text>
+               </div>
             </div>
-          </DialogContent>
-          <DialogActions>
-            <DialogTrigger disableButtonEnhancement>
-              <Button appearance="primary">{t('common.close')}</Button>
-            </DialogTrigger>
-          </DialogActions>
-        </DialogSurface>
-      </Dialog>
+
+            <div className={styles.detailsLabel}>{t('app_manager.version_name')}:</div>
+            <div className={styles.detailsValue}>{selectedAppForDetails?.versionName || t('common.unknown')}</div>
+            
+            <div className={styles.detailsLabel}>{t('app_manager.version_code')}:</div>
+            <div className={styles.detailsValue}>{selectedAppForDetails?.versionCode || t('common.unknown')}</div>
+            
+            <div className={styles.detailsLabel}>{t('app_manager.status')}:</div>
+            <div className={styles.detailsValue}>
+              <Badge 
+                appearance={selectedAppForDetails?.isEnabled ? "filled" : "ghost"} 
+                color={selectedAppForDetails?.isEnabled ? "success" : "danger"} 
+              >
+                {selectedAppForDetails?.isEnabled ? t('app_manager.enabled') : t('app_manager.disabled')}
+              </Badge>
+            </div>
+            
+            <div className={styles.detailsLabel}>{t('app_properties.is_system_app')}:</div>
+            <div className={styles.detailsValue}>
+              {selectedAppForDetails?.isSystemApp ? t('common.yes') : t('common.no')}
+            </div>
+
+            {selectedAppForDetails?.apkPath && (
+              <>
+                <div className={styles.detailsLabel}>{t('app_properties.apk_path')}:</div>
+                <div className={styles.detailsValue} style={{ wordBreak: 'break-all' }}>{selectedAppForDetails.apkPath}</div>
+              </>
+            )}
+
+            {selectedAppForDetails?.installTime && (
+              <>
+                <div className={styles.detailsLabel}>{t('app_properties.install_time')}:</div>
+                <div className={styles.detailsValue}>{selectedAppForDetails.installTime}</div>
+              </>
+            )}
+
+            {selectedAppForDetails?.updateTime && (
+              <>
+                <div className={styles.detailsLabel}>{t('app_properties.update_time')}:</div>
+                <div className={styles.detailsValue}>{selectedAppForDetails.updateTime}</div>
+              </>
+            )}
+            
+            <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <Button icon={<Open24Regular />}>{t('common.open_in_settings') || "Open Settings"}</Button>
+                <Button icon={<Play24Regular />} appearance="primary">{t('common.launch') || "Launch App"}</Button>
+                <Button icon={<Copy24Regular />} onClick={() => {
+                  if (selectedAppForDetails?.packageName) {
+                    navigator.clipboard.writeText(selectedAppForDetails.packageName);
+                  }
+                }}>{t('common.copy_package') || "Copy Package Name"}</Button>
+            </div>
+          </div>
+        </DrawerBody>
+      </OverlayDrawer>
+
+      {/* Context Menu */}
+      {contextMenuLocation && (
+        <Menu
+          open={true}
+          onOpenChange={(e, data) => {
+            if (!data.open) {
+              setContextMenuLocation(null);
+              setContextMenuApp(null);
+            }
+          }}
+          positioning={{ target: { getBoundingClientRect: () => ({ top: contextMenuLocation.top, left: contextMenuLocation.left, width: 0, height: 0, right: contextMenuLocation.left, bottom: contextMenuLocation.top } as DOMRect) } }}
+        >
+          <MenuPopover>
+            <MenuList>
+              <MenuItem icon={<Info24Regular />} onClick={() => contextMenuApp && handleShowDetails(contextMenuApp)}>
+                 {t('app_properties.detail_info')}
+              </MenuItem>
+              <MenuItem icon={<Copy24Regular />} onClick={() => {
+                  if (contextMenuApp?.packageName) {
+                    navigator.clipboard.writeText(contextMenuApp.packageName);
+                    setContextMenuLocation(null);
+                  }
+              }}>
+                 {t('common.copy_package') || "Copy Package Name"}
+              </MenuItem>
+              {contextMenuApp && !contextMenuApp.isSystemApp && (
+                <>
+                  <MenuItem icon={<Delete24Regular />} onClick={() => {
+                    if (contextMenuApp) handleUninstallClick(contextMenuApp);
+                    setContextMenuLocation(null);
+                  }}>
+                    {t('app_manager.uninstall')}
+                  </MenuItem>
+                  <MenuItem icon={contextMenuApp.isEnabled ? <LockClosed24Regular /> : <LockOpen24Regular />} onClick={() => {
+                    if (contextMenuApp) handleFreezeToggle(contextMenuApp.packageName, contextMenuApp.isEnabled);
+                    setContextMenuLocation(null);
+                  }}>
+                    {appToUninstall?.isEnabled ? t('app_manager.freeze') : t('app_manager.unfreeze')}
+                  </MenuItem>
+                </>
+              )}
+            </MenuList>
+          </MenuPopover>
+        </Menu>
+      )}
     </div>
   );
 };
