@@ -42,6 +42,7 @@ const defaultConfig: AppConfig = {
   startMinimizedToTray: false,
   soundEnabled: true,
   carouselInterval: 8000,
+  globalSearchHotkey: 'Ctrl+K',
 };
 
 export const useAppStore = create<AppStoreState>()(

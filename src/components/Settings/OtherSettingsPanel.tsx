@@ -21,10 +21,10 @@ import {
   CheckmarkCircle24Regular,
   Settings24Regular,
   ArrowCounterclockwise24Regular,
-  Speaker224Regular,
   Speaker220Regular,
   Clock20Regular,
   CalendarLtr20Regular,
+  Keyboard20Regular,
 } from "@fluentui/react-icons";
 import { 
     TabList, 
@@ -179,6 +179,7 @@ const OtherSettingsPanel: React.FC = () => {
   const [startMinimizedToTray, setStartMinimizedToTray] = useState(config.startMinimizedToTray);
   const [minimizeToTrayOnClose, setMinimizeToTrayOnClose] = useState(config.minimizeToTrayOnClose);
   const [soundEnabled, setSoundEnabled] = useState(config.soundEnabled);
+  const [globalSearchHotkey, setGlobalSearchHotkey] = useState(config.globalSearchHotkey || 'Ctrl+K');
   const [traySupported, setTraySupported] = useState(false);
   const [autoStartSupported, setAutoStartSupported] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -239,13 +240,13 @@ const OtherSettingsPanel: React.FC = () => {
     syncStates();
   }, []);
 
-  // 更新配置时同步状态
   useEffect(() => {
     setMinimizeToTray(config.systemTrayEnabled);
     setStartWithSystem(config.autoStartEnabled);
     setStartMinimizedToTray(config.startMinimizedToTray);
     setSoundEnabled(config.soundEnabled);
-  }, [config.systemTrayEnabled, config.autoStartEnabled, config.startMinimizedToTray, config.soundEnabled]);
+    setGlobalSearchHotkey(config.globalSearchHotkey || 'Ctrl+K');
+  }, [config.systemTrayEnabled, config.autoStartEnabled, config.startMinimizedToTray, config.soundEnabled, config.globalSearchHotkey]);
 
   // 优化的托盘切换处理
   const handleMinimizeToTrayChange = async (checked: boolean) => {
@@ -511,6 +512,32 @@ function handleStartWithSystemChange(checked: boolean): void {
               </div>
               <Text className={styles.description}>
                 在执行任务完成或收到重要消息时播放提示音
+              </Text>
+            </div>
+
+            {/* 搜索快捷键设置 */}
+            <div className={styles.settingTile}>
+              <div className={styles.rowContent}>
+                <div className={styles.titleWithIcon}>
+                  <Keyboard20Regular />
+                  <Text weight="semibold">搜索快捷键</Text>
+                </div>
+                <Select
+                  value={globalSearchHotkey}
+                  onChange={(_, data) => {
+                    setGlobalSearchHotkey(data.value);
+                    updateConfig({ globalSearchHotkey: data.value });
+                  }}
+                  size="small"
+                >
+                  <option value="Ctrl+K">Ctrl + K</option>
+                  <option value="Ctrl+F">Ctrl + F</option>
+                  <option value="Alt+S">Alt + S</option>
+                  <option value="Alt+F">Alt + F</option>
+                </Select>
+              </div>
+              <Text className={styles.description}>
+                自定义全局功能搜索的组合快捷键
               </Text>
             </div>
           </div>
