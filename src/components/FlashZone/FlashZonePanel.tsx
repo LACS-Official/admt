@@ -16,6 +16,8 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
 import ImageFlashCard from "../Tools/ImageFlashCard";
 import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
+import SystemBackupCard from "../Tools/SystemBackupCard";
+import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
   container: {
@@ -195,6 +197,17 @@ const FlashZonePanel: React.FC = () => {
     setShowOverlay(true);
   };
 
+  // Navigation Params Handling
+  const navigationParams = useAppStore((state) => state.navigationParams);
+  const setNavigationParams = useAppStore((state) => state.setNavigationParams);
+
+  React.useEffect(() => {
+    if (navigationParams?.flashTab) {
+      setCurrentView(navigationParams.flashTab as FlashZoneView);
+      setNavigationParams(undefined);
+    }
+  }, [navigationParams, setNavigationParams]);
+
   const tabs = [
     {
       id: "unlock-tools" as FlashZoneView,
@@ -210,6 +223,11 @@ const FlashZonePanel: React.FC = () => {
       id: "xiaomi-flash" as FlashZoneView,
       label: t("flash.tab_rom"),
       icon: <Flash24Regular />,
+    },
+    {
+      id: "system-backup" as FlashZoneView,
+      label: t("flash.goto_backup").replace('👉 ', '').replace(' >', ''),
+      icon: <Settings24Regular />,
     },
   ];
 
@@ -236,6 +254,8 @@ const FlashZonePanel: React.FC = () => {
         ) : (
           <XiaomiFlashCard device={null as any} onFastbootRequired={triggerOverlay} />
         );
+      case "system-backup":
+        return <SystemBackupCard device={deviceToUse} />;
       default:
         return deviceToUse ? (
           <XiaomiUnlockCard device={deviceToUse} />
