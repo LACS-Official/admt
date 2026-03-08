@@ -23,6 +23,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { admtLogo64 } from "../../assets/icons";
 import AnnouncementBar from "./AnnouncementBar";
+import { SearchModal } from "../Common/SearchModal";
+import { Search24Regular } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
   IconImage: {
@@ -110,6 +112,33 @@ const TitleBar: React.FC = () => {
   const [isMaximized, setIsMaximized] = React.useState(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = React.useState(false);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
+  
+  // 从设置获取当前搜索快捷键，默认为 Ctrl+K
+  const { config } = useAppStore();
+  const searchHotkey = config.globalSearchHotkey || 'Ctrl+K';
+
+  // 快捷键呼出搜索
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 解析当前快捷键配置
+      const isCtrl = searchHotkey.includes('Ctrl');
+      const isAlt = searchHotkey.includes('Alt');
+      const keyParts = searchHotkey.split('+');
+      const letter = keyParts.length === 2 ? keyParts[1].toLowerCase() : 'k';
+      
+      const modifierMatch = 
+        (isCtrl && (e.ctrlKey || e.metaKey) && !e.altKey) || 
+        (isAlt && e.altKey && !e.ctrlKey && !e.metaKey);
+        
+      if (modifierMatch && e.key.toLowerCase() === letter) {
+        e.preventDefault();
+        setIsSearchModalOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [searchHotkey]);
 
   // 检查窗口状态
   React.useEffect(() => {
@@ -270,6 +299,17 @@ const TitleBar: React.FC = () => {
 
         {/* 右侧区域 - 控制按钮 - 不支持拖拽 */}
         <div className={styles.rightSection} data-tauri-drag-region="false">
+          <Tooltip
+            content={`搜索功能 (${searchHotkey})`}
+            relationship="label"
+          >
+            <Button
+              appearance="subtle"
+              icon={<Search24Regular />}
+              className={styles.titleBarButton}
+              onClick={() => setIsSearchModalOpen(true)}
+            />
+          </Tooltip>
 
 
           <Tooltip
@@ -355,6 +395,7 @@ const TitleBar: React.FC = () => {
         </div>
       </div>
 
+      <SearchModal isOpen={isSearchModalOpen} onOpenChange={setIsSearchModalOpen} />
     </>
   );
 };

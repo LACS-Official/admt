@@ -13,6 +13,7 @@ export interface AppConfig {
   startMinimizedToTray: boolean;
   soundEnabled: boolean;
   carouselInterval: number;
+  globalSearchHotkey?: string;
 }
 
 export interface AppState {
