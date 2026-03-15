@@ -24,7 +24,7 @@ pub struct StructuredLogEntry {
 /// 2. 如果失败，尝试从环境变量获取
 /// 3. 最后回退到当前工作目录
 pub fn get_app_data_dir() -> Result<PathBuf> {
-    // 尝试从环境变量获取应用数据目录
+    // 1. 优先尝试从环境变量获取应用数据目录
     if let Ok(app_data_dir) = std::env::var("ADMT_APP_DATA_DIR") {
         if !app_data_dir.is_empty() {
             let path = PathBuf::from(app_data_dir);
@@ -34,26 +34,29 @@ pub fn get_app_data_dir() -> Result<PathBuf> {
         }
     }
 
-    // 尝试使用当前工作目录作为最后选项
+    // 2. 其次尝试用户系统的文档目录下的 admt 文件夹
+    if let Some(doc_dir) = dirs::document_dir() {
+        let admt_dir = doc_dir.join("admt");
+        if let Err(err) = std::fs::create_dir_all(&admt_dir) {
+            log::warn!("无法在文档目录创建 admt 文件夹: {}, 将尝试备选路径", err);
+        } else {
+            return Ok(admt_dir);
+        }
+    }
+
+    // 3. 备选方案：尝试使用当前工作目录下的 admt_data
     if let Ok(current_dir) = std::env::current_dir() {
         let app_dir = current_dir.join("admt_data");
         if let Err(err) = std::fs::create_dir_all(&app_dir) {
-            log::error!("Failed to create app data directory: {}", err);
-            return Err(AdmtError::FileOperationFailed {
-                message: format!("创建应用数据目录失败: {}", err),
-            });
+            log::error!("无法在当前目录创建 admt_data 文件夹: {}", err);
+        } else {
+            return Ok(app_dir);
         }
-        return Ok(app_dir);
     }
 
-    // 如果所有尝试都失败，返回默认路径
+    // 4. 最后的回退：当前目录下的临时路径
     let default_path = PathBuf::from("./admt_data");
-    if let Err(err) = std::fs::create_dir_all(&default_path) {
-        log::error!("Failed to create default app data directory: {}", err);
-        return Err(AdmtError::FileOperationFailed {
-            message: format!("创建默认应用数据目录失败: {}", err),
-        });
-    }
+    let _ = std::fs::create_dir_all(&default_path);
     Ok(default_path)
 }
 

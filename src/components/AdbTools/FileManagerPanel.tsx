@@ -102,6 +102,35 @@ const useStyles = makeStyles({
     fontWeight: 600,
     color: "var(--colorBrandForeground1)",
   },
+  toolbox: {
+    marginTop: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  toolboxItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "13px",
+    color: "var(--colorNeutralForeground1)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1)",
+      color: "var(--colorBrandForeground1)",
+    },
+  },
+  toolboxLabel: {
+    fontSize: "11px",
+    fontWeight: "bold",
+    color: "var(--colorNeutralForeground3)",
+    padding: "0 8px",
+    marginBottom: "4px",
+    textTransform: "uppercase",
+  },
   mainContent: {
     flex: 1,
     display: "flex",
@@ -1027,16 +1056,48 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
       {/* Sidebar Quick Access */}
       <div className={styles.sidebar}>
          <div className={styles.sidebarHeader}>{t('file_manager.quick_access')}</div>
-         {quickPaths.map((item) => (
-            <div 
-              key={item.path} 
-              className={`${styles.sidebarItem} ${currentPath.startsWith(item.path) && item.path !== '/' ? styles.sidebarItemActive : ''}`}
-              onClick={() => handleNavigateToPath(item.path)}
-            >
-              {item.icon}
-              <Text>{item.label}</Text>
-            </div>
-         ))}
+         <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+           {quickPaths.map((item) => (
+              <div 
+                key={item.path} 
+                className={`${styles.sidebarItem} ${currentPath.startsWith(item.path) && item.path !== '/' ? styles.sidebarItemActive : ''}`}
+                onClick={() => handleNavigateToPath(item.path)}
+              >
+                {item.icon}
+                <Text>{item.label}</Text>
+              </div>
+           ))}
+         </div>
+
+         {/* Toolbox */}
+         <div className={styles.toolbox}>
+           <div className={styles.sidebarHeader}>工具箱</div>
+           
+           <div className={styles.toolboxItem} onClick={handleUploadFile}>
+             {isUploading ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
+             <Text>{isUploading ? t('file_manager.uploading') : t('file_manager.upload_file')}</Text>
+           </div>
+           
+           <div className={styles.toolboxItem} onClick={handleOpenExportDirectory}>
+             <Folder24Regular />
+             <Text>{t('file_manager.open_export_dir')}</Text>
+           </div>
+
+           <div style={{ padding: '8px' }}>
+             <div className={styles.toolboxLabel}>{t('file_manager.sort_label')}</div>
+             <Dropdown
+               size="small"
+               style={{ width: '100%', minWidth: 'auto' }}
+               selectedOptions={[sortMode]}
+               onOptionSelect={handleSortChange}
+             >
+               <Option value="name_asc">{t('file_manager.sort_name_asc')}</Option>
+               <Option value="name_desc">{t('file_manager.sort_name_desc')}</Option>
+               <Option value="date_desc">{t('file_manager.sort_date_desc')}</Option>
+               <Option value="date_asc">{t('file_manager.sort_date_asc')}</Option>
+             </Dropdown>
+           </div>
+         </div>
       </div>
 
       {/* Main Content */}
@@ -1077,56 +1138,24 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
               <div className={styles.pathInput}>
                 {renderBreadcrumb()}
               </div>
-              {/* 排序选择 */}
-              <div className={styles.sortContainer}>
-                <Text size={200}>{t('file_manager.sort_label')}</Text>
-                <Dropdown
-                  size="small"
-                  selectedOptions={[sortMode]}
-                  onOptionSelect={handleSortChange}
-                >
-                  <Option value="name_asc">{t('file_manager.sort_name_asc')}</Option>
-                  <Option value="name_desc">{t('file_manager.sort_name_desc')}</Option>
-                  <Option value="date_desc">{t('file_manager.sort_date_desc')}</Option>
-                  <Option value="date_asc">{t('file_manager.sort_date_asc')}</Option>
-                </Dropdown>
-              </div>
-
             </div>
 
             {/* Action Bar */}
-            <div className={styles.actionBar}>
-              <Button
-                appearance="primary"
-                icon={isUploading ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
-                onClick={handleUploadFile}
-                disabled={isUploading}
-              >
-                {isUploading ? t('file_manager.uploading') : t('file_manager.upload_file')}
-              </Button>
+            {selectedFiles.size > 0 && (
+              <div className={styles.actionBar}>
+                <div className={styles.selectedInfo}>
+                  {t('file_manager.selected_count', { count: selectedFiles.size })}
+                </div>
+                <Button
+                  appearance="primary"
+                  icon={<ArrowDownload24Regular />}
+                  onClick={handleBatchDownload}
+                >
+                  {t('file_manager.batch_export')}
+                </Button>
+              </div>
+            )}
 
-              <Button
-                appearance="secondary"
-                icon={<Folder24Regular />}
-                onClick={handleOpenExportDirectory}
-              >
-                {t('file_manager.open_export_dir')}
-              </Button>
-              {selectedFiles.size > 0 && (
-                <>
-                  <div className={styles.selectedInfo}>
-                    {t('file_manager.selected_count', { count: selectedFiles.size })}
-                  </div>
-                  <Button
-                    appearance="primary"
-                    icon={<ArrowDownload24Regular />}
-                    onClick={handleBatchDownload}
-                  >
-                    {t('file_manager.batch_export')}
-                  </Button>
-                </>
-              )}
-            </div>
 
             {/* File List */}
             {isLoading ? (

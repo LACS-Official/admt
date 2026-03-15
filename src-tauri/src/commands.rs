@@ -1,5 +1,6 @@
 use crate::activation::{ActivationRequest, ActivationResponse, ActivationValidator, AppConfig};
 use crate::adb::device::device_info::{get_device_info, get_device_properties_batch};
+use std::collections::HashMap;
 
 use crate::cache::get_cache_manager;
 use crate::device::{CommandResult, DeviceInfo, DeviceMode, DeviceProperties};
@@ -2193,4 +2194,257 @@ pub async fn get_file_hash(path: String) -> Result<String> {
 
     log::info!("Hash calculation completed: {}", hash_result);
     Ok(hash_result)
+}
+// ==================== 硬件监控相关结构体和命令 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonitorCpuData {
+    pub total_usage: f64,
+    pub core_usages: Vec<f64>,
+    pub frequencies: HashMap<String, u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonitorMemoryData {
+    pub total: u64,
+    pub free: u64,
+    pub available: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonitorTempData {
+    pub cpu: f64,
+    pub battery: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonitorBatteryData {
+    pub level: i32,
+    pub current: f64,
+    pub voltage: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonitorDataPoint {
+    pub timestamp: i64,
+    pub cpu: MonitorCpuData,
+    pub memory: MonitorMemoryData,
+    pub temperature: MonitorTempData,
+    pub battery: MonitorBatteryData,
+}
+
+/// 获取实时监控数据
+#[tauri::command]
+pub async fn get_device_realtime_monitor_data(serial: String) -> Result<MonitorDataPoint> {
+    // 1. 获取 CPU 数据
+    let cpu_stat =
+        utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/proc/stat"], Some(5)).await?;
+    let (total_usage, core_usages) = parse_proc_stat(&cpu_stat.output);
+
+    let mut frequencies = HashMap::new();
+    let freq_res = utils_execute_adb_command(
+        &[
+            "-s",
+            &serial,
+            "shell",
+            "cat",
+            "/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
+        ],
+        Some(5),
+    )
+    .await?;
+    for (i, line) in freq_res.output.lines().enumerate() {
+        if let Ok(f) = line.trim().parse::<u64>() {
+            frequencies.insert(format!("cpu{}", i), f / 1000);
+        }
+    }
+
+    // 2. 获取内存数据
+    let mem_info =
+        utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/proc/meminfo"], Some(5))
+            .await?;
+    let (mem_total, mem_free, mem_avail) = parse_meminfo(&mem_info.output);
+
+    // 3. 获取温度数据
+    let mut cpu_temp = 0.0;
+    let temp_paths = [
+        "/sys/class/thermal/thermal_zone0/temp",
+        "/sys/class/thermal/thermal_zone1/temp",
+        "/sys/devices/virtual/thermal/thermal_zone0/temp",
+        "/sys/class/thermal/cooling_device0/cur_state",
+    ];
+    for path in temp_paths {
+        if let Ok(res) =
+            utils_execute_adb_command(&["-s", &serial, "shell", "cat", path], Some(2)).await
+        {
+            if res.success {
+                if let Ok(t) = res.output.trim().parse::<f64>() {
+                    cpu_temp = if t > 1000.0 { t / 1000.0 } else { t };
+                    if cpu_temp > 1.0 && cpu_temp < 150.0 {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    let battery_info =
+        utils_execute_adb_command(&["-s", &serial, "shell", "dumpsys", "battery"], Some(5)).await?;
+    let batt_temp = parse_battery_temp(&battery_info.output);
+    let batt_level = parse_battery_level(&battery_info.output);
+
+    // 4. 获取电池功率数据
+    let mut current = 0.0;
+    let curr_paths = [
+        "/sys/class/power_supply/battery/current_now",
+        "/sys/class/power_supply/main/current_now",
+        "/sys/class/power_supply/battery/batt_current_now",
+        "/sys/class/power_supply/battery/current_avg",
+    ];
+    for path in curr_paths {
+        if let Ok(res) =
+            utils_execute_adb_command(&["-s", &serial, "shell", "cat", path], Some(2)).await
+        {
+            if res.success {
+                if let Ok(c) = res.output.trim().parse::<f64>() {
+                    current = c;
+                    break;
+                }
+            }
+        }
+    }
+
+    let mut voltage = 0.0;
+    let volt_paths = [
+        "/sys/class/power_supply/battery/voltage_now",
+        "/sys/class/power_supply/main/voltage_now",
+        "/sys/class/power_supply/battery/batt_voltage_now",
+    ];
+    for path in volt_paths {
+        if let Ok(res) =
+            utils_execute_adb_command(&["-s", &serial, "shell", "cat", path], Some(2)).await
+        {
+            if res.success {
+                if let Ok(v) = res.output.trim().parse::<f64>() {
+                    voltage = v;
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(MonitorDataPoint {
+        timestamp: chrono::Local::now().timestamp_millis(),
+        cpu: MonitorCpuData {
+            total_usage,
+            core_usages,
+            frequencies,
+        },
+        memory: MonitorMemoryData {
+            total: mem_total,
+            free: mem_free,
+            available: mem_avail,
+        },
+        temperature: MonitorTempData {
+            cpu: cpu_temp,
+            battery: batt_temp,
+        },
+        battery: MonitorBatteryData {
+            level: batt_level,
+            current,
+            voltage,
+        },
+    })
+}
+
+// 辅助解析函数
+fn parse_proc_stat(output: &str) -> (f64, Vec<f64>) {
+    let mut total_usage = 0.0;
+    let mut core_usages = Vec::new();
+
+    for line in output.lines() {
+        if line.starts_with("cpu ") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 5 {
+                let user: f64 = parts[1].parse().unwrap_or(0.0);
+                let nice: f64 = parts[2].parse().unwrap_or(0.0);
+                let system: f64 = parts[3].parse().unwrap_or(0.0);
+                let idle: f64 = parts[4].parse().unwrap_or(0.0);
+                let total = user + nice + system + idle;
+                if total > 0.0 {
+                    total_usage = (user + nice + system) / total * 100.0;
+                }
+            }
+        } else if line.starts_with("cpu") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 5 {
+                let user: f64 = parts[1].parse().unwrap_or(0.0);
+                let nice: f64 = parts[2].parse().unwrap_or(0.0);
+                let system: f64 = parts[3].parse().unwrap_or(0.0);
+                let idle: f64 = parts[4].parse().unwrap_or(0.0);
+                let total = user + nice + system + idle;
+                if total > 0.0 {
+                    core_usages.push((user + nice + system) / total * 100.0);
+                }
+            }
+        }
+    }
+
+    (total_usage, core_usages)
+}
+
+fn parse_meminfo(output: &str) -> (u64, u64, u64) {
+    let mut total = 0;
+    let mut free = 0;
+    let mut avail = 0;
+
+    for line in output.lines() {
+        if line.starts_with("MemTotal:") {
+            total = line
+                .split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
+        } else if line.starts_with("MemFree:") {
+            free = line
+                .split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
+        } else if line.starts_with("MemAvailable:") {
+            avail = line
+                .split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
+        }
+    }
+
+    (total, free, avail)
+}
+
+fn parse_battery_temp(output: &str) -> f64 {
+    for line in output.lines() {
+        if line.trim().starts_with("temperature:") {
+            if let Some(val_str) = line.split(':').nth(1) {
+                if let Ok(val) = val_str.trim().parse::<f64>() {
+                    return val / 10.0;
+                }
+            }
+        }
+    }
+    0.0
+}
+
+fn parse_battery_level(output: &str) -> i32 {
+    for line in output.lines() {
+        if line.trim().starts_with("level:") {
+            if let Some(val_str) = line.split(':').nth(1) {
+                if let Ok(val) = val_str.trim().parse::<i32>() {
+                    return val;
+                }
+            }
+        }
+    }
+    0
 }

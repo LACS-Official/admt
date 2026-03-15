@@ -93,9 +93,9 @@ const useStyles = makeStyles({
   },
   activeButton: {
     backgroundColor: "var(--colorBrandBackground2)",
-    borderColor: "var(--colorBrandStroke2)",
+    border: "1px solid var(--colorBrandStroke2)",
     color: "var(--colorBrandForeground2)",
-  },
+  } as any,
   commandIcon: {
     fontSize: "18px",
   },
