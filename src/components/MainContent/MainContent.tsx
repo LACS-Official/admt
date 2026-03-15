@@ -46,8 +46,9 @@ import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
 import RootPanel from "../Root/RootPanel";
-import CommandExecutePanel from "../Others/CommandExecutePanel";
-import LogsPanel from "../Others/LogsPanel";
+// import CommandExecutePanel from "../Others/CommandExecutePanel";
+// import LogsPanel from "../Others/LogsPanel";
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
@@ -623,6 +624,9 @@ const useStyles = makeStyles({
       pointerEvents: "none",
     },
   },
+  openConsoleButton: {
+    // 增加一个明显的样式区分，或者保持 consistency
+  }
 });
 
 const MainContent: React.FC = () => {
@@ -914,6 +918,50 @@ const MainContent: React.FC = () => {
     [currentView, setCurrentView],
   );
 
+  const openConsoleWindow = useCallback(async (tab: 'logs' | 'command-line') => {
+    try {
+      // 检查窗口是否已存在
+      const label = tab; // 使用 'logs' 或 'command-line' 作为直接 label
+      const title = tab === 'command-line' ? '玩机管家 - 命令行' : '玩机管家 - 日志';
+      
+      let targetWindow = await WebviewWindow.getByLabel(label);
+      
+      if (targetWindow) {
+        // 如果已存在，将其置顶并聚焦
+        await targetWindow.unminimize();
+        await targetWindow.setFocus();
+      } else {
+        // 如果不存在，创建新窗口
+        const url = `${window.location.origin}/index.html`; // 路由逻辑现在由 main.tsx 中的 label 处理
+        
+        targetWindow = new WebviewWindow(label, {
+          url: url,
+          title: title,
+          width: 900,
+          height: 700,
+          minWidth: 800,
+          minHeight: 600,
+          decorations: false,
+          center: true,
+        });
+
+        targetWindow.once('tauri://created', function () {
+          console.log(`${title} 窗口创建成功`);
+        });
+
+        targetWindow.once('tauri://error', function (e) {
+          console.error(`${title} 窗口创建失败:`, e);
+        });
+      }
+    } catch (error) {
+      console.error("打开控制台子窗口失败:", error);
+      setStatusBarMessage({
+        type: 'error',
+        message: '打开控制台窗口失败'
+      });
+    }
+  }, [setStatusBarMessage]);
+
   const handleDeviceSelect = (device: any) => {
     selectDevice(device);
   };
@@ -1124,10 +1172,10 @@ const MainContent: React.FC = () => {
         return <OnlineZonePanel />;
       case "settings":
         return <SettingsPanel />;
-      case "command-line":
-        return <CommandExecutePanel />;
-      case "logs":
-        return <LogsPanel />;
+      // case "command-line":
+      //   return <CommandExecutePanel />;
+      // case "logs":
+      //   return <LogsPanel />;
       default:
         return <HomePage />;
     }
@@ -1167,8 +1215,8 @@ const MainContent: React.FC = () => {
         <div className={styles.buttonGroupContainer}>
           {/* 打开命令行按钮 */}
           <div
-            className={`${styles.actionButton} ${currentView === "command-line" ? styles.actionButtonSelected : ""}`}
-            onClick={() => setCurrentView("command-line")}
+            className={styles.actionButton}
+            onClick={() => openConsoleWindow("command-line")}
             title={t("main.command_line")}
           >
             <Icons24Regular />
@@ -1176,8 +1224,8 @@ const MainContent: React.FC = () => {
           </div>
           {/* 打开日志窗口按钮 */}
           <div
-            className={`${styles.actionButton} ${currentView === "logs" ? styles.actionButtonSelected : ""}`}
-            onClick={() => setCurrentView("logs")}
+            className={styles.actionButton}
+            onClick={() => openConsoleWindow("logs")}
             title={t("main.logs")}
           >
             <Notepad24Regular />

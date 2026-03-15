@@ -11,6 +11,7 @@ import {
 } from "@fluentui/react-components";
 import {
   Timer24Regular,
+  Pulse24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
 
@@ -98,6 +99,21 @@ const DeviceSettingsPanel: React.FC = () => {
     }
   };
 
+  const handleCpuMonitorIntervalChange = (value: string) => {
+    const interval = parseInt(value);
+    if (!isNaN(interval) && interval >= 500) {
+      updateConfig({ cpuMonitorInterval: interval });
+    }
+  };
+
+  const handleMonitorAutoStartChange = (checked: boolean) => {
+    updateConfig({ monitorAutoStart: checked });
+  };
+
+  const handleMonitorAutoCsvExportChange = (checked: boolean) => {
+    updateConfig({ monitorAutoCsvExport: checked });
+  };
+
 
 
   return (
@@ -147,6 +163,59 @@ const DeviceSettingsPanel: React.FC = () => {
               </Text>
             </Field>
 
+          </div>
+        </Card>
+
+        {/* 设备硬件监控设置 */}
+        <Card className={styles.card}>
+          <CardHeader
+            image={<Pulse24Regular />}
+            header={<Text weight="semibold">设备硬件监控</Text>}
+            description={<Text size={200}>CPU、频率、温度及电池监控设置</Text>}
+          />
+
+          <div className={styles.cardContent}>
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <Text weight="semibold">打开工具自动检测</Text>
+                <br />
+                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                  进入监控页面或连接设备时自动启动循环抓取
+                </Text>
+              </div>
+              <Switch
+                checked={config.monitorAutoStart}
+                onChange={(_, data) => handleMonitorAutoStartChange(data.checked === true)}
+              />
+            </div>
+
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <Text weight="semibold">实时输出CSV数据</Text>
+                <br />
+                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                  开启检测时同步在下载目录生成实时监控表格
+                </Text>
+              </div>
+              <Switch
+                checked={config.monitorAutoCsvExport}
+                onChange={(_, data) => handleMonitorAutoCsvExportChange(data.checked === true)}
+              />
+            </div>
+
+            <Field label="监控检测抓取频率 (毫秒):">
+              <Input
+                type="number"
+                value={config.cpuMonitorInterval.toString()}
+                onChange={(_, data) => handleCpuMonitorIntervalChange(data.value)}
+                min={500}
+                max={10000}
+                step={500}
+              />
+              <Text size={200} style={{ color: "var(--colorNeutralForeground2)", marginTop: "4px" }}>
+                建议值：500-2000毫秒（越小越精确但功耗越高）
+              </Text>
+            </Field>
           </div>
         </Card>
 

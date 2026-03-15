@@ -7,8 +7,8 @@
   ],
   "windows": [
     "main",
-    "command_panel",
-    "log_panel"
+    "command-line",
+    "logs"
   ],
   "permissions": [
     "autostart:default",

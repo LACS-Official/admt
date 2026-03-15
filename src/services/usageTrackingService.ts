@@ -80,6 +80,14 @@ export class UsageTrackingService {
    */
   public async trackMainPageEntry(): Promise<void> {
     try {
+      // 检查当前窗口是否为主窗口，避免二次上传
+      const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+      const label = getCurrentWebviewWindow().label;
+      if (label !== 'main') {
+        console.log(`🚫 非主窗口 (${label})，跳过数据统计上传`);
+        return;
+      }
+
       console.log('🚀 trackMainPageEntry 方法被调用');
 
       // 检查是否已初始化

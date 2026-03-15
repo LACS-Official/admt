@@ -18,7 +18,7 @@ import { useAppStore } from "../../stores/appStore";
 import DeviceOverviewCard from "../DeviceInfo/DeviceOverviewCard";
 import DeviceRebootCard from "./DeviceRebootCard";
 import MiscellaneousCard from "./MiscellaneousCard";
-
+import DeviceMonitorCard from "./DeviceMonitorCard";
 import NoDevicePrompt from "./NoDevicePrompt";
 
 const useStyles = makeStyles({
@@ -209,6 +209,11 @@ const HomePage: React.FC = () => {
                           }}
                         />
                       </div>
+                    </div>
+
+                    {/* 硬件实时监控区域 */}
+                    <div className="card-enter-delayed" style={{ flex: '0 0 auto' }}>
+                      <DeviceMonitorCard />
                     </div>
 
                     {/* 第二行：功能控制区域 - 占据40%高度 */}

@@ -26,6 +26,10 @@ import i18n from "./i18n/config";
 localStorage.removeItem("rom-download-storage");
 console.log("已清除 localStorage 中的 rom-download-storage");
 
+import CommandLineWindow from "./components/Console/CommandLineWindow";
+import LogsWindow from "./components/Console/LogsWindow";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+
 function AppWithTheme() {
   const {
     isDarkMode,
@@ -210,8 +214,48 @@ function AppWithTheme() {
   );
 }
 
+
+function CommandLineWindowWithTheme() {
+  const { isDarkMode } = useThemeStore();
+  return (
+    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+      <CommandLineWindow />
+    </FluentProvider>
+  );
+}
+
+function LogsWindowWithTheme() {
+  const { isDarkMode } = useThemeStore();
+  return (
+    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+      <LogsWindow />
+    </FluentProvider>
+  );
+}
+
+function Root() {
+  const [label, setLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLabel(getCurrentWebviewWindow().label);
+  }, []);
+
+  if (!label) return null;
+
+
+  if (label === "command-line") {
+    return <CommandLineWindowWithTheme />;
+  }
+
+  if (label === "logs") {
+    return <LogsWindowWithTheme />;
+  }
+
+  return <AppWithTheme />;
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AppWithTheme />
+    <Root />
   </React.StrictMode>,
 );

@@ -13,26 +13,7 @@ mod sys;
 mod system_features;
 mod utils;
 mod version;
-use crate::commands::{get_resource_path, read_resource_file};
-
-use activation::check_activation_expiry;
-use adb::app::app_management::*;
-use adb::command::adb_command_runer::{
-    execute_adb_command, execute_adb_command_direct, execute_batch_file, execute_batch_file_stream,
-    finish_adb_service,
-};
-use adb::command::adb_system_controler::{
-    fix_usb3_connection, restart_adb_service, unfix_usb3_connection,
-};
-use adb::device::device_reboot::reboot_device;
-use adb::file::file::{list_device_files, pull_file, push_file};
-use adb::scrcpy::screen_mirror::{
-    check_screen_mirror_support, diagnose_scrcpy, get_active_mirror_sessions, is_device_mirroring,
-    start_screen_mirror, stop_screen_mirror, MirrorManager,
-};
-use adb_commands::{get_adb_tools_info, verify_adb_tools_integrity};
-use cache::cache_cleanup_task;
-use commands::{
+use crate::commands::{
     activate_application, cancel_download, check_activation_status, check_adb_availability,
     check_device_connection, check_fastboot_availability, check_file_exists, check_process_alive,
     cleanup_downloads, clear_all_cache, delete_file, diagnose_adb_fastboot_paths,
@@ -41,11 +22,34 @@ use commands::{
     get_app_environment, get_cache_stats, get_default_download_directory,
     get_detailed_device_fingerprint, get_device_connection_info, get_device_fingerprint,
     get_device_memory_storage_info, get_device_performance_info, get_device_properties,
-    get_download_size, get_downloads_directory, get_file_hash, get_platform_info,
-    get_security_config, get_system_arch, get_window_always_on_top, invalidate_device_cache,
-    is_debug_mode, open_devtools, open_folder, read_json_file, save_app_config, scan_devices,
-    set_window_always_on_top, terminate_process, validate_activation_code_format,
-    validate_local_activation_data, validate_security_config, watch_config_file, write_json_file,
+    get_device_realtime_monitor_data, get_download_size, get_downloads_directory, get_file_hash,
+    get_platform_info, get_resource_path, get_security_config, get_system_arch,
+    get_window_always_on_top, invalidate_device_cache, is_debug_mode, open_devtools, open_folder,
+    read_json_file, read_resource_file, save_app_config, scan_devices, set_window_always_on_top,
+    terminate_process, validate_activation_code_format, validate_local_activation_data,
+    validate_security_config, watch_config_file, write_json_file,
+};
+
+use crate::adb::app::app_management::*;
+use crate::adb::command::adb_command_runer::{
+    execute_adb_command, execute_adb_command_direct, execute_batch_file, execute_batch_file_stream,
+    finish_adb_service,
+};
+use crate::adb::command::adb_system_controler::{
+    fix_usb3_connection, restart_adb_service, unfix_usb3_connection,
+};
+use crate::adb::device::device_reboot::reboot_device;
+use crate::adb::file::file::{list_device_files, pull_file, push_file};
+use crate::adb::scrcpy::screen_mirror::{
+    check_screen_mirror_support, diagnose_scrcpy, get_active_mirror_sessions, is_device_mirroring,
+    start_screen_mirror, stop_screen_mirror, MirrorManager,
+};
+use crate::adb_commands::{get_adb_tools_info, verify_adb_tools_integrity};
+use crate::cache::cache_cleanup_task;
+use crate::core::log::{
+    cleanup_expired_logs, clear_all_logs, clear_logs, get_log_file_info, get_log_statistics,
+    get_logs, get_tool_paths_status, initialize_log_directory, persist_log, persist_log_to_file,
+    verify_tools_integrity,
 };
 use core::log::*;
 use downloads::get_rom::{download_rom, fetch_rom_list};
@@ -130,6 +134,7 @@ pub fn run() {
             diagnose_adb_fastboot_paths,
             get_device_performance_info,
             get_device_memory_storage_info,
+            get_device_realtime_monitor_data,
             check_device_connection,
             get_device_connection_info,
             download_apk,
@@ -150,7 +155,7 @@ pub fn run() {
             activate_application,
             check_activation_status,
             validate_local_activation_data,
-            check_activation_expiry,
+            crate::activation::check_activation_expiry,
             get_device_fingerprint,
             get_app_config,
             save_app_config,
@@ -187,10 +192,10 @@ pub fn run() {
             cleanup_expired_logs,
             write_logs_to_file,
             clear_all_logs,
-            core::log::get_log_file_info,
+            get_log_file_info,
             // 工具路径监控命令
-            core::log::get_tool_paths_status,
-            core::log::verify_tools_integrity,
+            get_tool_paths_status,
+            verify_tools_integrity,
             // 杂项控制功能命令
             restart_adb_service,
             fix_usb3_connection,

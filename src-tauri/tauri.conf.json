@@ -29,6 +29,42 @@
         "skipTaskbar": false,
         "theme": "Light",
         "dragDropEnabled": false
+      },
+      {
+        "label": "command-line",
+        "title": "玩机管家 - 命令行",
+        "width": 900,
+        "height": 700,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "maximizable": true,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "theme": "Light",
+        "visible": false,
+        "dragDropEnabled": false
+      },
+      {
+        "label": "logs",
+        "title": "玩机管家 - 日志",
+        "width": 900,
+        "height": 700,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "maximizable": true,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "theme": "Light",
+        "visible": false,
+        "dragDropEnabled": false
       }
     ],
     "security": {

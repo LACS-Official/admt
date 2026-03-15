@@ -29,6 +29,7 @@ import {
   Play24Regular,
   ShieldTask24Regular,
   Dismiss24Regular,
+  Info24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
@@ -59,6 +60,18 @@ const useStyles = makeStyles({
     border: "1px solid var(--colorNeutralStroke2)",
     borderRadius: "8px",
     backgroundColor: "var(--colorNeutralBackground1)",
+  },
+  inputRow: {
+    display: "flex",
+    gap: "16px",
+    alignItems: "stretch",
+    width: "100%",
+    "& > div": {
+       flex: 1,
+       display: "flex",
+       flexDirection: "column",
+       gap: "8px",
+    }
   },
   fileSection: {
     display: "flex",
@@ -113,6 +126,16 @@ const useStyles = makeStyles({
   warningText: {
     color: "var(--colorPaletteRedForeground1)",
     fontSize: "13px",
+  },
+  bottomActions: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "16px",
+    borderTop: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    marginTop: "auto",
+    borderRadius: "0 0 8px 8px",
   },
 });
 
@@ -429,53 +452,56 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
             </div>
           </div>
 
-          {/* 文件选择 */}
+          {/* 文件选择与分区选择合并 */}
           <div className={styles.section}>
-            <Text weight="semibold">{t('flash.step1_title')}</Text>
-            <div className={styles.fileSection}>
-              <div className={styles.fileInput}>
-                <Button
-                  appearance="outline"
-                  icon={<Document24Regular />}
-                  onClick={handleFileSelect}
-                  disabled={isFlashing}
-                >
-                  {t('flash.select_file_btn')}
-                </Button>
-                <Text size={300}>{t('flash.supported_formats')}</Text>
-              </div>
-              
-              {selectedFilePath && (
-                <div className={styles.fileInfo}>
-                  <div><strong>{t('flash.file_name')}</strong> {selectedFileName}</div>
-                  <div><strong>{t('flash.file_path')}</strong> {selectedFilePath}</div>
-                  {/* 哈希暂时作为占位符 */}
-                  <div style={{ color: "var(--colorNeutralForeground3)" }}>
-                    <strong>{t('flash.hash_label')}</strong> {fileHash || "未计算"}
+            <div className={styles.inputRow}>
+              {/* Step 1: 文件选择 */}
+              <div>
+                <Text weight="semibold">{t('flash.step1_title')}</Text>
+                <div className={styles.fileSection}>
+                  <div className={styles.fileInput}>
+                    <Button
+                      appearance="outline"
+                      icon={<Document24Regular />}
+                      onClick={handleFileSelect}
+                      disabled={isFlashing}
+                      style={{ width: '100%' }}
+                    >
+                      {selectedFileName || t('flash.select_file_btn')}
+                    </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* 分区选择 */}
-          <div className={styles.section}>
-            <Text weight="semibold">{t('flash.step2_title')}</Text>
-            <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{t('flash.step2_desc')}</Text>
-            <Field>
-              <Dropdown
-                placeholder={t('flash.select_partition_placeholder')}
-                value={selectedPartition}
-                onOptionSelect={(_, data) => setSelectedPartition(data.optionValue || "")}
-                disabled={isFlashing}
-              >
-                {partitions.map((partition) => (
-                  <Option key={partition.value} value={partition.value}>
-                    {partition.label}
-                  </Option>
-                ))}
-              </Dropdown>
-            </Field>
+              {/* Step 2: 分区选择 */}
+              <div>
+                <Text weight="semibold">{t('flash.step2_title')}</Text>
+                <Field style={{ margin: 0 }}>
+                  <Dropdown
+                    placeholder={t('flash.select_partition_placeholder')}
+                    value={selectedPartition}
+                    onOptionSelect={(_, data) => setSelectedPartition(data.optionValue || "")}
+                    disabled={isFlashing}
+                    style={{ minWidth: 'auto' }}
+                  >
+                    {partitions.map((partition) => (
+                      <Option key={partition.value} value={partition.value}>
+                        {partition.label}
+                      </Option>
+                    ))}
+                  </Dropdown>
+                </Field>
+              </div>
+            </div>
+
+            {selectedFilePath && (
+              <div className={styles.fileInfo}>
+                <div><strong>{t('flash.file_path')}</strong> {selectedFilePath}</div>
+                <div style={{ color: "var(--colorNeutralForeground3)" }}>
+                  <strong>{t('flash.hash_label')}</strong> {fileHash || "未计算"}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 刷入模式 */}
@@ -518,11 +544,31 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
             </div>
           )}
 
-          {/* 操作按钮 */}
-          <div className={styles.actions}>
+        </div>
+
+        {/* 底部操作行 */}
+        <div className={styles.bottomActions}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Button
+              appearance="subtle"
+              icon={<Info24Regular />}
+              onClick={() => {
+                const { open: openUrl } = require('@tauri-apps/plugin-shell');
+                openUrl('https://admt.lacs.cc/guide/flash-image');
+              }}
+            >
+              刷机教程
+            </Button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {(!selectedFilePath || !selectedPartition) && (
+              <Text size={200} style={{ color: "var(--colorNeutralForegroundDisabled)" }}>
+                请先选择文件和分区
+              </Text>
+            )}
             <Button
               appearance="primary"
-              // 准备就绪时显示红色/橙色，否则默认
               style={(!selectedFilePath || !selectedPartition || isFlashing) ? {} : { 
                   backgroundColor: "var(--colorPaletteRedBackground3)",
                   color: "white",
@@ -531,6 +577,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
               icon={<Play24Regular />}
               onClick={handleFlashStart}
               disabled={!selectedFilePath || !selectedPartition || isFlashing}
+              size="large"
             >
               {isFlashing ? t('flash.flashing_btn') : t('flash.start_flash_btn')}
             </Button>

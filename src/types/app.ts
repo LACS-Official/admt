@@ -14,6 +14,9 @@ export interface AppConfig {
   soundEnabled: boolean;
   carouselInterval: number;
   globalSearchHotkey?: string;
+  monitorAutoStart: boolean;
+  monitorAutoCsvExport: boolean;
+  cpuMonitorInterval: number;
 }
 
 export interface AppState {
@@ -149,8 +152,8 @@ export interface Announcement {
   titleEn?: string;
   content: string;
   contentEn?: string;
-  type: 'general' | 'update' | 'security' | 'maintenance';
-  priority: 'low' | 'normal' | 'high' | 'urgent';
+  type: "general" | "update" | "security" | "maintenance";
+  priority: "low" | "normal" | "high" | "urgent";
   version?: string;
   isPublished: boolean;
   publishedAt: string;
@@ -230,7 +233,15 @@ export interface DownloadTask {
   fileName: string;
   downloadUrl: string;
   progress: number;
-  status: "pending" | "downloading" | "paused" | "downloaded" | "extracting" | "completed" | "failed" | "cancelled";
+  status:
+    | "pending"
+    | "downloading"
+    | "paused"
+    | "downloaded"
+    | "extracting"
+    | "completed"
+    | "failed"
+    | "cancelled";
   error?: string;
   startTime: Date;
   endTime?: Date;
@@ -253,7 +264,11 @@ export interface DownloadManagerState {
 }
 
 // 在线资源页面状态
-export type OnlineResourcesView = "list" | "detail" | "downloads" | "rom-download";
+export type OnlineResourcesView =
+  | "list"
+  | "detail"
+  | "downloads"
+  | "rom-download";
 
 export interface OnlineResourcesState {
   currentView: OnlineResourcesView;
@@ -283,4 +298,3 @@ export interface BannerResponse {
   data: Banner[];
   error?: string;
 }
-

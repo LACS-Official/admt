@@ -43,6 +43,9 @@ const defaultConfig: AppConfig = {
   soundEnabled: true,
   carouselInterval: 8000,
   globalSearchHotkey: 'Ctrl+K',
+  monitorAutoStart: false,
+  monitorAutoCsvExport: false,
+  cpuMonitorInterval: 1000,
 };
 
 export const useAppStore = create<AppStoreState>()(

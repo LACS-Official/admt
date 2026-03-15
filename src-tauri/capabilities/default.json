@@ -4,8 +4,8 @@
   "description": "enables the default permissions",
   "windows": [
     "main",
-    "command_panel",
-    "log_panel"
+    "command-line",
+    "logs"
   ],
   "permissions": [
     "autostart:allow-enable",
@@ -25,6 +25,7 @@
     "core:window:allow-hide",
     "core:window:allow-start-dragging",
     "core:window:allow-create",
+    "core:webview:allow-create-webview-window",
     "shell:allow-open",
     "shell:default",
     "shell:allow-spawn",
