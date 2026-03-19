@@ -87,9 +87,149 @@
       "description": "系统重启和引导相关命令",
       "id": "system_control",
       "name": "系统控制"
+    },
+    {
+      "commands": [
+        {
+          "command": "shell input keyevent 3",
+          "description": "模拟按下桌面键",
+          "id": "home",
+          "label": "主页"
+        },
+        {
+          "command": "shell input keyevent 4",
+          "description": "模拟按下返回键",
+          "id": "back",
+          "label": "返回"
+        },
+        {
+          "command": "shell input keyevent 187",
+          "description": "显示最近运行的应用列表",
+          "id": "recent_apps",
+          "label": "最近任务"
+        },
+        {
+          "command": "shell input keyevent 24",
+          "description": "增加系统音量",
+          "id": "volume_up",
+          "label": "音量+"
+        },
+        {
+          "command": "shell input keyevent 25",
+          "description": "降低系统音量",
+          "id": "volume_down",
+          "label": "音量-"
+        },
+        {
+          "command": "shell input keyevent 164",
+          "description": "切换系统静音状态",
+          "id": "volume_mute",
+          "label": "静音"
+        },
+        {
+          "command": "shell input keyevent 85",
+          "description": "播放或暂停媒体内容",
+          "id": "media_play_pause",
+          "label": "播放/暂停"
+        },
+        {
+          "command": "shell input keyevent 87",
+          "description": "切换到下一首媒体内容",
+          "id": "media_next",
+          "label": "下一曲"
+        },
+        {
+          "command": "shell input keyevent 88",
+          "description": "切换到上一首媒体内容",
+          "id": "media_previous",
+          "label": "上一曲"
+        },
+        {
+          "command": "shell screencap /sdcard/screenshot.png",
+          "description": "截取当前屏幕并保存",
+          "id": "screenshot",
+          "label": "截屏"
+        },
+        {
+          "command": "shell input keyevent 82",
+          "description": "显示当前应用的菜单",
+          "id": "menu",
+          "label": "菜单"
+        },
+        {
+          "command": "shell input keyevent 84",
+          "description": "启动系统搜索功能",
+          "id": "search",
+          "label": "搜索"
+        },
+        {
+          "command": "shell input keyevent 26",
+          "description": "模拟电源键点击",
+          "id": "power_button",
+          "label": "电源键"
+        },
+        {
+          "command": "shell input keyevent 286",
+          "description": "进入或退出系统的分屏模式",
+          "id": "split_screen",
+          "label": "分屏"
+        }
+      ],
+      "description": "常用按键和媒体控制模拟",
+      "id": "key_simulation",
+      "name": "按键模拟"
+    },
+    {
+      "commands": [
+        {
+          "command": "shell settings put system screen_brightness 255",
+          "description": "将屏幕亮度设置为最大值",
+          "id": "brightness_max",
+          "label": "亮度最大"
+        },
+        {
+          "command": "shell settings put system screen_brightness 50",
+          "description": "将屏幕亮度设置为较低值",
+          "id": "brightness_low",
+          "label": "亮度调低"
+        },
+        {
+          "command": "shell am start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS",
+          "description": "直接跳转到系统的开发者选项页面",
+          "id": "developer_options",
+          "label": "开发者选项"
+        },
+        {
+          "command": "shell svc wifi enable",
+          "description": "开启设备WiFi",
+          "id": "wifi_on",
+          "label": "开启WiFi"
+        },
+        {
+          "command": "shell svc wifi disable",
+          "description": "关闭设备WiFi",
+          "id": "wifi_off",
+          "label": "关闭WiFi"
+        },
+        {
+          "command": "shell svc data enable",
+          "description": "开启移动数据网络",
+          "id": "data_on",
+          "label": "开启数据"
+        },
+        {
+          "command": "shell svc data disable",
+          "description": "关闭移动数据网络",
+          "id": "data_off",
+          "label": "关闭数据"
+        }
+      ],
+      "description": "系统快速设置和开关状态控制",
+      "id": "quick_settings",
+      "name": "快捷设置"
     }
   ],
-  "lastUpdated": "2025-10-25",
+  "lastUpdated": "2026-03-18",
   "version": "1.0.0",
   "author": "LACS"
 }

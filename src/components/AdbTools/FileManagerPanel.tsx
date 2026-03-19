@@ -1011,7 +1011,9 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
             appearance="subtle"
             size="small"
             icon={<Home24Regular />}
-            onClick={() => handleNavigateToPath('/')}
+            onClick={() => {
+              if (checkMode()) handleNavigateToPath('/');
+            }}
           >
             {t('file_manager.root_dir')}
           </Button>
@@ -1027,7 +1029,9 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
                 <Button
                   appearance="subtle"
                   size="small"
-                  onClick={() => handleNavigateToPath(partPath)}
+                  onClick={() => {
+                    if (checkMode()) handleNavigateToPath(partPath);
+                  }}
                 >
                   {part}
                 </Button>
@@ -1039,16 +1043,16 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
     );
   };
 
-  if (!device) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.emptyState}>
-          <Storage24Regular style={{ fontSize: "48px" }} />
-          <Text>{t('file_manager.select_device_first')}</Text>
-        </div>
-      </div>
-    );
-  }
+//   if (!device) {
+//     return (
+//       <div className={styles.container}>
+//         <div className={styles.emptyState}>
+//           <Storage24Regular style={{ fontSize: "48px" }} />
+//           <Text>{t('file_manager.select_device_first')}</Text>
+//         </div>
+//       </div>
+//     );
+//   }
 
 
   return (
@@ -1060,8 +1064,10 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
            {quickPaths.map((item) => (
               <div 
                 key={item.path} 
-                className={`${styles.sidebarItem} ${currentPath.startsWith(item.path) && item.path !== '/' ? styles.sidebarItemActive : ''}`}
-                onClick={() => handleNavigateToPath(item.path)}
+                className={`${styles.sidebarItem} ${device && currentPath.startsWith(item.path) && item.path !== '/' ? styles.sidebarItemActive : ''}`}
+                onClick={() => {
+                  if (checkMode()) handleNavigateToPath(item.path);
+                }}
               >
                 {item.icon}
                 <Text>{item.label}</Text>
@@ -1130,7 +1136,9 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
               <Button
                 appearance="subtle"
                 icon={<ArrowUp24Regular />}
-                onClick={handleNavigateUp}
+                onClick={() => {
+                  if (checkMode()) handleNavigateUp();
+                }}
                 disabled={currentPath === '/'}
                 title={t('file_manager.nav_up_title')}
               />
@@ -1158,7 +1166,18 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
 
 
             {/* File List */}
-            {isLoading ? (
+            {!device ? (
+              <div className={styles.emptyState}>
+                <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
+                <Text size={400}>{t('file_manager.select_device_first')}</Text>
+                <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
+                  {t('unlock.select_device_hint')}
+                </Text>
+                <Button appearance="primary" style={{ marginTop: '12px' }} onClick={() => (window as any).openDeviceSelectionWindow?.()}>
+                  {t('common.select_device')}
+                </Button>
+              </div>
+            ) : isLoading ? (
               <div className={styles.loadingContainer}>
                 <Spinner size="large" label={t('file_manager.loading_files')} />
               </div>

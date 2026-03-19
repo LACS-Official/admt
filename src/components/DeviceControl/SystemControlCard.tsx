@@ -11,6 +11,7 @@ import {
   Tooltip,
   Switch,
   Divider,
+  tokens,
 } from "@fluentui/react-components";
 import {
   Desktop24Regular,
@@ -27,7 +28,10 @@ import {
   Checkmark24Regular,
   ErrorCircle24Regular,
   Info24Regular,
+  Star24Regular,
+  Star24Filled,
 } from "@fluentui/react-icons";
+import { useDeviceStore } from "../../stores/deviceStore";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from '@/stores/appStore';
@@ -153,6 +157,17 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground1)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
+  horizontalSection: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "0",
+    borderBottom: "1px solid var(--colorNeutralStroke2)",
+  },
+  verticalDivider: {
+      width: "1px",
+      backgroundColor: "var(--colorNeutralStroke2)",
+      height: "100%",
+  }
 });
 
 interface SystemControlCardProps {
@@ -166,6 +181,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device, onAdbRequ
   const { deviceService } = useDeviceService();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
   const { setStatusBarMessage } = useAppStore();
+  const { controlFavorites, toggleControlFavorite } = useDeviceStore();
   const [operationStatus, setOperationStatus] = useState<{ type: 'success' | 'error' | 'info' | null; message: string }>({ type: null, message: '' });
 
   // --- Display Settings State ---
@@ -462,109 +478,127 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({ device, onAdbRequ
      <Card className={styles.card}>
         <div className={styles.scrollableContent}>
        
-       {/* ================= DISPLAY SECTION ================= */}
-       <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-             <Desktop24Regular />
-             <Text weight="semibold" size={400}>{t('device_control.display_control')}</Text>
-          </div>
-          
-          {/* Resolution */}
-          <div className={styles.controlRow}>
-             <div className={styles.controlLabel}>
-                {t('device_control.resolution_settings')}
-                <Tooltip content={t('device_control.tooltip_resolution')} relationship="label">
-                   <Button size="small" appearance="subtle" icon={<QuestionCircle24Regular />} className={styles.helpButton} />
-                </Tooltip>
-             </div>
-             <div className={styles.controlInputGroup}>
-                <Input className={styles.inputSmall} type="number" placeholder={t('device_control.width')} value={customInputs.resolutionWidth} onChange={(e) => setCustomInputs(p=>({...p, resolutionWidth: e.target.value}))} disabled={!isDeviceAvailable} />
-                <Text>×</Text>
-                <Input className={styles.inputSmall} type="number" placeholder={t('device_control.height')} value={customInputs.resolutionHeight} onChange={(e) => setCustomInputs(p=>({...p, resolutionHeight: e.target.value}))} disabled={!isDeviceAvailable} />
-                <Text className={styles.unitLabel}>px</Text>
-             </div>
-             <Button appearance="subtle" icon={<Save24Regular />} onClick={handleApplyDisplay} disabled={!isDeviceAvailable || executingCommand !== null} />
-          </div>
+       <div className={styles.horizontalSection}>
+           {/* ================= DISPLAY SECTION ================= */}
+           <div className={styles.section} style={{ borderRight: "1px solid var(--colorNeutralStroke2)" }} id="control-display_control">
+              <div className={styles.sectionHeader}>
+                  <Desktop24Regular />
+                  <Text weight="semibold" size={400}>{t('device_control.display_control')}</Text>
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={controlFavorites?.includes('display_control') ? <Star24Filled style={{ color: tokens.colorPaletteYellowForeground1 }} /> : <Star24Regular />}
+                    onClick={() => toggleControlFavorite('display_control')}
+                    style={{ marginLeft: 'auto' }}
+                  />
+               </div>
+              
+              {/* Resolution */}
+              <div className={styles.controlRow}>
+                 <div className={styles.controlLabel}>
+                    {t('device_control.resolution_settings')}
+                    <Tooltip content={t('device_control.tooltip_resolution')} relationship="label">
+                       <Button size="small" appearance="subtle" icon={<QuestionCircle24Regular />} className={styles.helpButton} />
+                    </Tooltip>
+                 </div>
+                 <div className={styles.controlInputGroup}>
+                    <Input className={styles.inputSmall} type="number" placeholder={t('device_control.width')} value={customInputs.resolutionWidth} onChange={(e) => setCustomInputs(p=>({...p, resolutionWidth: e.target.value}))} disabled={!isDeviceAvailable} />
+                    <Text>×</Text>
+                    <Input className={styles.inputSmall} type="number" placeholder={t('device_control.height')} value={customInputs.resolutionHeight} onChange={(e) => setCustomInputs(p=>({...p, resolutionHeight: e.target.value}))} disabled={!isDeviceAvailable} />
+                    <Text className={styles.unitLabel}>px</Text>
+                 </div>
+                 <Button appearance="subtle" icon={<Save24Regular />} onClick={handleApplyDisplay} disabled={!isDeviceAvailable || executingCommand !== null} />
+              </div>
 
-           {/* Density */}
-          <div className={styles.controlRow}>
-             <div className={styles.controlLabel}>
-                {t('device_control.density_settings')}
-                  <Tooltip content={t('device_control.tooltip_density')} relationship="label">
-                   <Button size="small" appearance="subtle" icon={<QuestionCircle24Regular />} className={styles.helpButton} />
-                </Tooltip>
-             </div>
-             <div className={styles.controlInputGroup}>
-                <Input className={styles.inputSmall} type="number" placeholder="DPI" value={customInputs.density} onChange={(e) => setCustomInputs(p=>({...p, density: e.target.value}))} disabled={!isDeviceAvailable} />
-                <Text className={styles.unitLabel}>dpi</Text>
-             </div>
-              {/* Shared Apply Button for simplicty in UI, or individual? logic uses shared 'handleApplyDisplay' which applies all currently set inputs */}
-          </div>
+               {/* Density */}
+              <div className={styles.controlRow}>
+                 <div className={styles.controlLabel}>
+                    {t('device_control.density_settings')}
+                      <Tooltip content={t('device_control.tooltip_density')} relationship="label">
+                       <Button size="small" appearance="subtle" icon={<QuestionCircle24Regular />} className={styles.helpButton} />
+                    </Tooltip>
+                 </div>
+                 <div className={styles.controlInputGroup}>
+                    <Input className={styles.inputSmall} type="number" placeholder="DPI" value={customInputs.density} onChange={(e) => setCustomInputs(p=>({...p, density: e.target.value}))} disabled={!isDeviceAvailable} />
+                    <Text className={styles.unitLabel}>dpi</Text>
+                 </div>
+              </div>
 
-           {/* Font Scale */}
-          <div className={styles.controlRow}>
-             <div className={styles.controlLabel}>
-                {t('device_control.font_scale_settings')}
-                 <Tooltip content={t('device_control.tooltip_font_scale')} relationship="label">
-                   <Button size="small" appearance="subtle" icon={<QuestionCircle24Regular />} className={styles.helpButton} />
-                </Tooltip>
-             </div>
-             <div className={styles.controlInputGroup}>
-                <Input className={styles.inputSmall} type="number" placeholder="1.0" step="0.05" value={customInputs.fontScale} onChange={(e) => setCustomInputs(p=>({...p, fontScale: e.target.value}))} disabled={!isDeviceAvailable} />
-                <Text className={styles.unitLabel}>x</Text>
-             </div>
-          </div>
-          
-           <div style={{display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px'}}>
-               <Button size="small" appearance="secondary" icon={<ArrowClockwise24Regular />} onClick={handleRestoreDisplay} disabled={!isDeviceAvailable}>{t('device_control.restore_default')}</Button>
-               <Button size="small" appearance="primary" icon={<Save24Regular />} onClick={handleApplyDisplay} disabled={!isDeviceAvailable}>{t('device_control.apply')}</Button>
+               {/* Font Scale */}
+              <div className={styles.controlRow}>
+                 <div className={styles.controlLabel}>
+                    {t('device_control.font_scale_settings')}
+                     <Tooltip content={t('device_control.tooltip_font_scale')} relationship="label">
+                       <Button size="small" appearance="subtle" icon={<QuestionCircle24Regular />} className={styles.helpButton} />
+                    </Tooltip>
+                 </div>
+                 <div className={styles.controlInputGroup}>
+                    <Input className={styles.inputSmall} type="number" placeholder="1.0" step="0.05" value={customInputs.fontScale} onChange={(e) => setCustomInputs(p=>({...p, fontScale: e.target.value}))} disabled={!isDeviceAvailable} />
+                    <Text className={styles.unitLabel}>x</Text>
+                 </div>
+              </div>
+              
+               <div style={{display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: 'auto', paddingTop: '16px'}}>
+                   <Button size="small" appearance="secondary" icon={<ArrowClockwise24Regular />} onClick={handleRestoreDisplay} disabled={!isDeviceAvailable}>{t('device_control.restore_default')}</Button>
+                   <Button size="small" appearance="primary" icon={<Save24Regular />} onClick={handleApplyDisplay} disabled={!isDeviceAvailable}>{t('device_control.apply')}</Button>
+               </div>
+           </div>
+
+            {/* ================= ANIMATION SECTION ================= */}
+           <div className={styles.section} id="control-animation_speed">
+              <div className={styles.sectionHeader}>
+                  <Timer24Regular />
+                  <Text weight="semibold" size={400}>{t('device_control.animation_speed')}</Text>
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={controlFavorites?.includes('animation_speed') ? <Star24Filled style={{ color: tokens.colorPaletteYellowForeground1 }} /> : <Star24Regular />}
+                    onClick={() => toggleControlFavorite('animation_speed')}
+                    style={{ marginLeft: 'auto' }}
+                  />
+               </div>
+
+               {/* Window Animation */}
+               <div className={styles.controlRow}>
+                  <Text className={styles.controlLabel}>{t('device_control.window_animation')}</Text>
+                  <Dropdown className={styles.inputMedium} value={animationSettings.windowAnimationScale.toString()} onOptionSelect={(_,d) => applyAnimScale("window_animation_scale", parseFloat(d.optionValue||"1"), "windowAnimationScale")} disabled={!isDeviceAvailable}>
+                     {animationScaleOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+                  </Dropdown>
+                  <Button size="small" appearance="subtle" icon={<ArrowReset24Regular />} onClick={() => resetAnim("window_animation_scale", "windowAnimationScale")} disabled={!isDeviceAvailable} />
+               </div>
+
+                {/* Transition Animation */}
+               <div className={styles.controlRow}>
+                  <Text className={styles.controlLabel}>{t('device_control.transition_animation')}</Text>
+                   <Dropdown className={styles.inputMedium} value={animationSettings.transitionAnimationScale.toString()} onOptionSelect={(_,d) => applyAnimScale("transition_animation_scale", parseFloat(d.optionValue||"1"), "transitionAnimationScale")} disabled={!isDeviceAvailable}>
+                     {animationScaleOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+                  </Dropdown>
+                  <Button size="small" appearance="subtle" icon={<ArrowReset24Regular />} onClick={() => resetAnim("transition_animation_scale", "transitionAnimationScale")} disabled={!isDeviceAvailable} />
+               </div>
+
+                {/* Animator Duration */}
+               <div className={styles.controlRow}>
+                  <Text className={styles.controlLabel}>{t('device_control.animator_duration')}</Text>
+                   <Dropdown className={styles.inputMedium} value={animationSettings.animatorDurationScale.toString()} onOptionSelect={(_,d) => applyAnimScale("animator_duration_scale", parseFloat(d.optionValue||"1"), "animatorDurationScale")} disabled={!isDeviceAvailable}>
+                     {animationScaleOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+                  </Dropdown>
+                  <Button size="small" appearance="subtle" icon={<ArrowReset24Regular />} onClick={() => resetAnim("animator_duration_scale", "animatorDurationScale")} disabled={!isDeviceAvailable} />
+               </div>
            </div>
        </div>
-
-       <Divider className={styles.divider} />
-
-        {/* ================= ANIMATION SECTION ================= */}
-       <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-             <Timer24Regular />
-             <Text weight="semibold" size={400}>{t('device_control.animation_speed')}</Text>
-          </div>
-
-           {/* Window Animation */}
-           <div className={styles.controlRow}>
-              <Text className={styles.controlLabel}>{t('device_control.window_animation')}</Text>
-              <Dropdown className={styles.inputMedium} value={animationSettings.windowAnimationScale.toString()} onOptionSelect={(_,d) => applyAnimScale("window_animation_scale", parseFloat(d.optionValue||"1"), "windowAnimationScale")} disabled={!isDeviceAvailable}>
-                 {animationScaleOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-              </Dropdown>
-              <Button size="small" appearance="subtle" icon={<ArrowReset24Regular />} onClick={() => resetAnim("window_animation_scale", "windowAnimationScale")} disabled={!isDeviceAvailable} />
-           </div>
-
-            {/* Transition Animation */}
-           <div className={styles.controlRow}>
-              <Text className={styles.controlLabel}>{t('device_control.transition_animation')}</Text>
-               <Dropdown className={styles.inputMedium} value={animationSettings.transitionAnimationScale.toString()} onOptionSelect={(_,d) => applyAnimScale("transition_animation_scale", parseFloat(d.optionValue||"1"), "transitionAnimationScale")} disabled={!isDeviceAvailable}>
-                 {animationScaleOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-              </Dropdown>
-              <Button size="small" appearance="subtle" icon={<ArrowReset24Regular />} onClick={() => resetAnim("transition_animation_scale", "transitionAnimationScale")} disabled={!isDeviceAvailable} />
-           </div>
-
-            {/* Animator Duration */}
-           <div className={styles.controlRow}>
-              <Text className={styles.controlLabel}>{t('device_control.animator_duration')}</Text>
-               <Dropdown className={styles.inputMedium} value={animationSettings.animatorDurationScale.toString()} onOptionSelect={(_,d) => applyAnimScale("animator_duration_scale", parseFloat(d.optionValue||"1"), "animatorDurationScale")} disabled={!isDeviceAvailable}>
-                 {animationScaleOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
-              </Dropdown>
-              <Button size="small" appearance="subtle" icon={<ArrowReset24Regular />} onClick={() => resetAnim("animator_duration_scale", "animatorDurationScale")} disabled={!isDeviceAvailable} />
-           </div>
-       </div>
-
-       <Divider className={styles.divider} />
 
         {/* ================= POWER SECTION ================= */}
-       <div className={styles.section}>
+       <div className={styles.section} id="control-power_management">
           <div className={styles.sectionHeader}>
-             <Battery2Regular />
-             <Text weight="semibold" size={400}>{t('device_control.power_management')}</Text>
+              <Battery2Regular />
+              <Text weight="semibold" size={400}>{t('device_control.power_management')}</Text>
+              <Button
+                size="small"
+                appearance="subtle"
+                icon={controlFavorites?.includes('power_management') ? <Star24Filled style={{ color: tokens.colorPaletteYellowForeground1 }} /> : <Star24Regular />}
+                onClick={() => toggleControlFavorite('power_management')}
+                style={{ marginLeft: 'auto' }}
+              />
           </div>
 
           <div className={styles.controlRow}>

@@ -431,6 +431,104 @@ pub async fn execute_adb_command_with_path(
         .await
 }
 
+/// 获取设备分区列表
+#[tauri::command]
+pub async fn get_device_partitions(serial: String) -> Result<Vec<String>> {
+    log::info!("Getting partition list for device: {}", serial);
+
+    // 尝试通过 /dev/block/by-name/ 获取
+    let result = utils_execute_adb_command(
+        &["-s", &serial, "shell", "ls", "/dev/block/by-name/"],
+        Some(10),
+    )
+    .await?;
+
+    if result.success {
+        let partitions: Vec<String> = result
+            .output
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect();
+        return Ok(partitions);
+    }
+
+    // 回退方案：通过 /proc/partitions 获取
+    log::warn!("Failed to read /dev/block/by-name/, falling back to /proc/partitions");
+    let result = utils_execute_adb_command(
+        &["-s", &serial, "shell", "cat", "/proc/partitions"],
+        Some(10),
+    )
+    .await?;
+
+    if result.success {
+        let mut partitions = Vec::new();
+        for line in result.output.lines().skip(2) {
+            // 跳过前两行标题
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 4 {
+                partitions.push(parts[3].to_string());
+            }
+        }
+        return Ok(partitions);
+    }
+
+    Err(AdmtError::Command("无法获取分区列表".to_string()))
+}
+
+/// 备份分区
+#[tauri::command]
+pub async fn backup_partition(
+    serial: String,
+    partition: String,
+    output_path: String,
+) -> Result<CommandResult> {
+    log::info!(
+        "Backing up partition. serial={}, partition={}, output_path={}",
+        serial,
+        partition,
+        output_path
+    );
+
+    // 1. 在设备端执行 dd 备份到临时位置
+    // 注意：这需要设备有 root 权限，通常使用 'su -c dd ...'
+    let temp_device_path = format!("/data/local/tmp/{}.img", partition);
+    let dd_cmd = format!(
+        "su -c 'dd if=/dev/block/by-name/{} of={}'",
+        partition, temp_device_path
+    );
+
+    log::info!("Executing dd on device: {}", dd_cmd);
+    let result = utils_execute_adb_command(
+        &["-s", &serial, "shell", &dd_cmd],
+        Some(300), // 5分钟超时
+    )
+    .await?;
+
+    if !result.success {
+        return Ok(CommandResult {
+            success: false,
+            output: result.output,
+            error: Some(format!("备份到设备端失败: {:?}", result.error)),
+            exit_code: result.exit_code,
+        });
+    }
+
+    // 2. 将设备端的备份文件拉取到电脑
+    log::info!("Pulling backup from device to: {}", output_path);
+    let pull_result = utils_execute_adb_command(
+        &["-s", &serial, "pull", &temp_device_path, &output_path],
+        Some(600), // 10分钟超时
+    )
+    .await?;
+
+    // 3. 清理设备端临时文件
+    let _ = utils_execute_adb_command(&["-s", &serial, "shell", "rm", &temp_device_path], Some(10))
+        .await;
+
+    Ok(pull_result)
+}
+
 /// 获取设备性能信息
 #[tauri::command]
 pub async fn get_device_performance_info(serial: String) -> Result<serde_json::Value> {

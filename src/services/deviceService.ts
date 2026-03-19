@@ -466,6 +466,34 @@ export class DeviceService {
     }
   }
 
+  async getDevicePartitions(serial: string): Promise<string[]> {
+    try {
+      const partitions = await invoke<string[]>("get_device_partitions", { serial });
+      return partitions;
+    } catch (error) {
+      console.error("Failed to get device partitions:", error);
+      throw error;
+    }
+  }
+
+  async backupPartition(
+    serial: string,
+    partition: string,
+    outputPath: string
+  ): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("backup_partition", {
+        serial,
+        partition,
+        outputPath,
+      });
+      return result;
+    } catch (error) {
+      console.error("Failed to backup partition:", error);
+      throw error;
+    }
+  }
+
   // ADB管理相关功能
   async stopAdbServer(): Promise<CommandResult> {
     try {
@@ -980,10 +1008,7 @@ export const useDeviceService = () => {
       const properties = await deviceService.getDeviceProperties(serial);
       useDeviceStore.getState().updateDevice(serial, { properties });
       
-      setStatusBarMessage({
-        type: "success",
-        message: "设备信息已更新",
-      });
+      // 移除这里的成功提示，统一由 MainContent 的 useEffect 处理，避免重复弹出
     } catch (error) {
       setStatusBarMessage({
         type: "error",
@@ -1058,5 +1083,5 @@ class ExtendedDeviceService extends DeviceService {
   }
 }
 
-// 创建并导出扩展的服务实例（替代原有的DeviceService实例）
-export const deviceService = new ExtendedDeviceService();
+export const deviceService = new DeviceService();
+export default deviceService;

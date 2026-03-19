@@ -9,25 +9,27 @@ mod download_manager;
 mod downloads;
 mod error;
 mod fastboot;
+mod root;
 mod sys;
 mod system_features;
 mod utils;
 mod version;
 use crate::commands::{
-    activate_application, cancel_download, check_activation_status, check_adb_availability,
-    check_device_connection, check_fastboot_availability, check_file_exists, check_process_alive,
-    cleanup_downloads, clear_all_cache, delete_file, diagnose_adb_fastboot_paths,
-    download_and_extract_software, download_apk, download_file, execute_adb_command_with_path,
-    execute_script_in_new_window, exit_app, fastboot_flash_image, get_apk_files, get_app_config,
-    get_app_environment, get_cache_stats, get_default_download_directory,
-    get_detailed_device_fingerprint, get_device_connection_info, get_device_fingerprint,
-    get_device_memory_storage_info, get_device_performance_info, get_device_properties,
-    get_device_realtime_monitor_data, get_download_size, get_downloads_directory, get_file_hash,
-    get_platform_info, get_resource_path, get_security_config, get_system_arch,
-    get_window_always_on_top, invalidate_device_cache, is_debug_mode, open_devtools, open_folder,
-    read_json_file, read_resource_file, save_app_config, scan_devices, set_window_always_on_top,
-    terminate_process, validate_activation_code_format, validate_local_activation_data,
-    validate_security_config, watch_config_file, write_json_file,
+    activate_application, backup_partition, cancel_download, check_activation_status,
+    check_adb_availability, check_device_connection, check_fastboot_availability,
+    check_file_exists, check_process_alive, cleanup_downloads, clear_all_cache, delete_file,
+    diagnose_adb_fastboot_paths, download_and_extract_software, download_apk, download_file,
+    execute_adb_command_with_path, execute_script_in_new_window, exit_app, fastboot_flash_image,
+    get_apk_files, get_app_config, get_app_environment, get_cache_stats,
+    get_default_download_directory, get_detailed_device_fingerprint, get_device_connection_info,
+    get_device_fingerprint, get_device_memory_storage_info, get_device_partitions,
+    get_device_performance_info, get_device_properties, get_device_realtime_monitor_data,
+    get_download_size, get_downloads_directory, get_file_hash, get_platform_info,
+    get_resource_path, get_security_config, get_system_arch, get_window_always_on_top,
+    invalidate_device_cache, is_debug_mode, open_devtools, open_folder, read_json_file,
+    read_resource_file, save_app_config, scan_devices, set_window_always_on_top, terminate_process,
+    validate_activation_code_format, validate_local_activation_data, validate_security_config,
+    watch_config_file, write_json_file,
 };
 
 use crate::adb::app::app_management::*;
@@ -226,7 +228,10 @@ pub fn run() {
             system_features::validate_auto_start,
             exit_app,
             terminate_process,
-            check_process_alive
+            check_process_alive,
+            crate::root::patch::patch_boot_image_local,
+            get_device_partitions,
+            backup_partition,
         ])
         .setup(|_app| {
             // 初始化应用状态

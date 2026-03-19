@@ -269,14 +269,14 @@ const AdbDiagnosticPanel: React.FC = () => {
               {!diagnosticData.adb_exists && (
                 <div className={styles.errorContainer}>
                   <Text weight="semibold">❌ ADB 文件不存在</Text>
-                  <Text>请将 adb.exe 文件放置在 src-tauri/tools/adb/ 目录中。</Text>
+                  <Text>请将 ADB 可执行文件放置在 src-tauri/tools/adb/ 目录中。</Text>
                 </div>
               )}
 
               {!diagnosticData.fastboot_exists && (
                 <div className={styles.errorContainer}>
                   <Text weight="semibold">❌ Fastboot 文件不存在</Text>
-                  <Text>请将 fastboot.exe 文件放置在 src-tauri/tools/adb/ 目录中。</Text>
+                  <Text>请将 Fastboot 可执行文件放置在 src-tauri/tools/adb/ 目录中。</Text>
                 </div>
               )}
 
@@ -301,7 +301,22 @@ const AdbDiagnosticPanel: React.FC = () => {
                   <Text>
                     访问 <a href="https://developer.android.com/studio/releases/platform-tools" target="_blank" rel="noopener noreferrer">
                       Android 开发者网站
-                    </a> 下载 Platform Tools，解压后将 adb.exe 和 fastboot.exe 复制到 src-tauri/tools/adb/ 目录。
+                    </a> 下载 Platform Tools，解压后将可执行文件复制到 src-tauri/tools/adb/ 目录。
+                  </Text>
+                </div>
+              )}
+
+              {diagnosticData.adb_exists && !diagnosticData.adb_command_test.success && (
+                <div style={{ marginTop: tokens.spacingVerticalM, padding: tokens.spacingVerticalS, backgroundColor: tokens.colorPaletteYellowBackground1, borderRadius: tokens.borderRadiusMedium }}>
+                  <Text weight="semibold">🐧 Linux 提示: 权限问题</Text>
+                  <Text block>
+                    如果您在 Linux 下遇到 "no permissions" 错误，请尝试：
+                    <br />
+                    1. 检查 udev 规则是否正确配置 (例如 /etc/udev/rules.d/51-android.rules)。
+                    <br />
+                    2. 尝试执行 `adb kill-server` 并在终端手动运行 `sudo adb devices`。
+                    <br />
+                    3. 确保当前用户在 plugdev 或 adbusers 用户组中。
                   </Text>
                 </div>
               )}

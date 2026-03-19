@@ -17,13 +17,12 @@ import {
   Wifi124Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
-import SystemControlCard from "../DeviceControl/SystemControlCard";
-import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
+import ScreenMirrorPanel from './ScreenMirrorPanel';
 import AppManagerPanel from './AppManagerPanel';
 import AppInstallPanel from './AppInstallPanel';
 import FileManagerPanel from './FileManagerPanel';
 import WirelessDebuggingPanel from './WirelessDebuggingPanel';
-import KeySimulationCard from "../DeviceControl/KeySimulationCard";
+import DeviceControlPanel from './DeviceControlPanel';
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
@@ -70,7 +69,9 @@ const useStyles = makeStyles({
   },
   tabContent: {
     flex: 1,
-    overflow: "auto"
+    overflow: "hidden", // Change from auto to hidden to let children handle scroll
+    display: "flex",
+    flexDirection: "column",
   },
 
   noDevice: {
@@ -172,7 +173,7 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "device-control" | "screen-mirror" | "app_install" | "app-manager" | "file-manager" | "settings-center" | "wireless-debugging";
+type AdbZoneView = "device-control" | "screen-mirror" | "app_install" | "app-manager" | "file-manager" | "wireless-debugging";
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -218,46 +219,19 @@ const AdbZonePanel: React.FC = () => {
       label: t('wireless.title'),
       icon: <Wifi124Regular />,
     },
-
-  /* New Tab for Settings Center */
-    {
-      id: "settings-center" as AdbZoneView, 
-      label: t('guide.settings_center'), // Ensure this translation key exists
-      icon: <Settings24Regular />,
-    },
   ];
 
   /* Updated renderContent to handle new views */
   const renderContent = () => {
-    // 移除强制返回 null，允许显示专区内容
     const device = selectedDevice;
 
     switch (currentView) {
       case "device-control":
         return (
-          <div style={{
-            height: "100%",
-            overflow: "auto",
-            display: "grid",
-            gridTemplateColumns: "1fr", // Changed to single column
-            gap: "16px",
-            padding: "16px"
-          }}>
-             {/* Only Keep KeySimulationCard here as requested, others moved */}
-             <KeySimulationCard device={selectedDevice} onAdbRequired={triggerOverlay} />
+          <div style={{ height: "100%", overflow: "hidden" }}>
+             <DeviceControlPanel device={selectedDevice} onAdbRequired={triggerOverlay} />
           </div>
         );
-      case "settings-center": /* New Case for Settings Center */
-          return (
-            <div style={{
-                height: "100%",
-                overflow: "auto",
-                 // Use consistent styling or reuse existing
-                padding: "16px"
-            }}>
-                <SystemControlCard device={selectedDevice} onAdbRequired={triggerOverlay} />
-            </div>
-          );
       case "screen-mirror":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
@@ -270,7 +244,6 @@ const AdbZonePanel: React.FC = () => {
             <AppManagerPanel device={device} onAdbRequired={triggerOverlay} />
           </div>
         );
-
       case "app_install":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
@@ -292,7 +265,7 @@ const AdbZonePanel: React.FC = () => {
       default:
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-             <KeySimulationCard device={selectedDevice} onAdbRequired={triggerOverlay} />
+             <DeviceControlPanel device={selectedDevice} onAdbRequired={triggerOverlay} />
           </div>
         );
     }
@@ -300,24 +273,7 @@ const AdbZonePanel: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {false ? (
-        <div className={styles.noDevice}>
-          <Code24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>{t('main.no_device_title')}</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            {t('mirror.no_device_hint')}
-          </Text>
-        </div>
-      ) : false ? (
-        <div className={styles.noDevice}>
-          <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>{t('unlock.select_device_title')}</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            {t('unlock.select_device_hint')}
-          </Text>
-        </div>
-      ) : (
-        <div className={styles.content}>
+      <div className={styles.content}>
           <div className={styles.tabContainer}>
             <TabList
               selectedValue={currentView}
@@ -358,7 +314,6 @@ const AdbZonePanel: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 };
