@@ -404,25 +404,53 @@ const DisplaySettingsPanel: React.FC = () => {
             description={<Text size={200} className={styles.settingDescription}>{t('settings.animations_interaction_desc')}</Text>}
           />
           <div className={styles.cardContent}>
-            {/* 启用动画 */}
-            <div className={styles.settingTile}>
-                <div className={styles.settingRow}>
-                  <div className={styles.rowInfo}>
-                    <Text weight="semibold">{t('settings.enable_animations')}</Text>
-                    <Text className={styles.settingDescription}>{t('settings.enable_animations_desc')}</Text>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Button 
-                        size="small" 
-                        appearance="subtle" 
-                        icon={<Flash20Regular />} 
-                        onClick={handleTestAnimations}
-                    >测试</Button>
-                    <Switch
-                        checked={enableAnimations}
-                        onChange={(_, data) => setEnableAnimations(data.checked === true)}
-                    />
-                  </div>
+            {/* 动画设置行：合并启用动画和轮播速度 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* 启用动画 */}
+                <div className={styles.settingTile} style={{ height: '100%', justifyContent: 'center' }}>
+                    <div className={styles.settingRow}>
+                      <div className={styles.rowInfo}>
+                        <Text weight="semibold">{t('settings.enable_animations')}</Text>
+                        <Text className={styles.settingDescription}>{t('settings.enable_animations_desc')}</Text>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Button 
+                            size="small" 
+                            appearance="subtle" 
+                            icon={<Flash20Regular />} 
+                            onClick={handleTestAnimations}
+                        >测试</Button>
+                        <Switch
+                            checked={enableAnimations}
+                            onChange={(_, data) => setEnableAnimations(data.checked === true)}
+                        />
+                      </div>
+                    </div>
+                </div>
+
+                {/* 轮播速度 */}
+                <div className={styles.settingTile}>
+                    <div className={styles.settingRow}>
+                        <div className={styles.rowInfo}>
+                          <Text weight="semibold">{t('settings.carousel_speed')}</Text>
+                        </div>
+                        <Badge appearance="tint" color="brand">
+                            {config.carouselInterval ? (config.carouselInterval / 1000).toFixed(1) : "8.0"}s
+                        </Badge>
+                    </div>
+                    <div style={{ padding: '0 8px' }}>
+                        <Slider
+                            min={2000}
+                            max={15000}
+                            step={500}
+                            value={config.carouselInterval || 8000}
+                            onChange={handleCarouselIntervalChange}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: "var(--colorNeutralForeground4)", fontSize: "10px", marginTop: '4px' }}>
+                            <span>最快</span>
+                            <span>最慢</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -445,32 +473,6 @@ const DisplaySettingsPanel: React.FC = () => {
                         onChange={(_, data) => setShowConfetti(data.checked === true)}
                     />
                   </div>
-                </div>
-            </div>
-
-            {/* 轮播速度 */}
-            <div className={styles.settingTile}>
-                <div className={styles.settingRow}>
-                    <div className={styles.rowInfo}>
-                      <Text weight="semibold">{t('settings.carousel_speed')}</Text>
-                      <Text className={styles.settingDescription}>{t('settings.carousel_speed_desc')}</Text>
-                    </div>
-                    <Badge appearance="tint" color="brand">
-                        {config.carouselInterval ? (config.carouselInterval / 1000).toFixed(1) : "8.0"}s
-                    </Badge>
-                </div>
-                <div style={{ padding: '0 8px' }}>
-                    <Slider
-                        min={2000}
-                        max={15000}
-                        step={500}
-                        value={config.carouselInterval || 8000}
-                        onChange={handleCarouselIntervalChange}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: "var(--colorNeutralForeground4)", fontSize: "10px", marginTop: '4px' }}>
-                        <span>最快</span>
-                        <span>最慢</span>
-                    </div>
                 </div>
             </div>
           </div>

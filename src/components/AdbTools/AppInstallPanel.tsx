@@ -13,6 +13,7 @@ import {
   Radio,
   ProgressBar,
   Badge,
+  mergeClasses,
 } from "@fluentui/react-components";
 import {
   DocumentAdd24Regular,
@@ -41,39 +42,63 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     gap: "12px",
-    padding: "12px",
+    overflow: "hidden",
   },
-  threeColumnLayout: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "12px",
+  splitLayout: {
+    display: "flex",
+    gap: "16px",
     height: "100%",
+    minHeight: 0,
   },
-  card: {
-    width: "100%",
-    height: "fit-content",
-    borderRadius: "8px",
-    border: "1px solid var(--colorNeutralStroke2)",
+  leftPanel: {
+    width: "200px",
+    flexShrink: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    padding: "20px",
+    borderRadius: "12px",
+    overflowY: "auto",
   },
-  content: {
+  rightPanel: {
     flex: 1,
-    padding: "16px",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
+    minWidth: 0,
+    height: "100%",
   },
-  pathInput: {
+  sectionTitle: {
     display: "flex",
+    alignItems: "center",
     gap: "8px",
-    alignItems: "flex-end",
+    marginBottom: "12px",
   },
-  installSection: {
+  card: {
+    width: "100%",
+    borderRadius: "12px",
+    border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
   },
-  installButton: {
-    alignSelf: "flex-start",
+  scrollArea: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "4px",
+    "&::-webkit-scrollbar": { width: "6px" },
+    "&::-webkit-scrollbar-thumb": { 
+      backgroundColor: "var(--colorNeutralStroke2)",
+      borderRadius: "10px"
+    },
+  },
+  optionsSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    padding: "4px 0",
   },
   historySection: {
     display: "flex",
@@ -83,118 +108,97 @@ const useStyles = makeStyles({
   historyItem: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "8px",
+    gap: "12px",
+    padding: "12px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)",
+    }
   },
   historyItemContent: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
+    gap: "2px",
+    minWidth: 0,
   },
   historyItemName: {
     fontWeight: "600",
+    fontSize: "13px",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   historyItemMessage: {
-    fontSize: "12px",
-    color: "var(--colorNeutralForeground2)",
-  },
-  selectButton: {
-    marginLeft: "8px",
-  },
-  apkListSection: {
-    marginTop: "16px",
-  },
-  apkListHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: "12px",
-  },
-  apkListTitle: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground3)",
   },
   apkList: {
-    maxHeight: "400px",
-    overflowY: "auto",
-    border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
   },
   apkListItem: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "12px",
-    borderBottom: "1px solid var(--colorNeutralStroke2)",
-    "&:last-child": {
-      borderBottom: "none",
-    },
+    padding: "12px 16px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    transition: "all 0.2s ease",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
+      transform: "translateX(4px)",
     },
   },
   apkListItemInfo: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
-    overflow: "hidden",
+    gap: "2px",
+    minWidth: 0,
+    marginRight: "12px",
   },
   apkListItemName: {
     fontWeight: "600",
+    fontSize: "13px",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
   apkListItemPath: {
-    fontSize: "12px",
-    color: "var(--colorNeutralForeground2)",
-    wordBreak: "break-all",
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground3)",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-  },
-  apkListItemActions: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-  },
-  refreshButton: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    minWidth: "auto",
+    fontFamily: "monospace",
   },
   emptyState: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "24px",
+    padding: "40px 20px",
+    textAlign: "center",
     color: "var(--colorNeutralForeground3)",
+    gap: "12px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "8px",
+    border: "1px dashed var(--colorNeutralStroke2)",
   },
-  emptyStateText: {
-    marginTop: "8px",
-  },
-  modeSelection: {
+  modeRadio: {
     marginBottom: "8px",
   },
-  batchActions: {
+  fullHeightCard: {
+    flex: 1,
     display: "flex",
-    gap: "8px",
-    marginBottom: "8px",
-  },
-  statusBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-  folderInput: {
-      display: "none"
+    flexDirection: "column",
+    minHeight: 0,
   }
 });
 
@@ -353,8 +357,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
 
                   const newFiles: BatchFileItem[] = apkEntries.map(entry => {
                       // 构造完整路径需要注意系统分隔符，这里简单拼接，如果 readDir 返回的不包含 fullPath
-                      // 此处假设 entries 主要包含 name。需要结合 selectedDir 拼接。
-                      // Tauri v2 fs.readDir usually returns name.
+                      // 此处假设 entries 主要包含 name. Tauri v2 fs.readDir usually returns name.
                       const separator = navigator.userAgent.includes("Windows") ? "\\" : "/";
                       const fullPath = `${selectedDir}${separator}${entry.name}`;
                       
@@ -448,10 +451,6 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
   // 单个安装原有逻辑
   const handleSingleInstallClick = async () => {
     if (!checkMode()) return;
-    if (!device) {
-      setStatusBarMessage({ type: "warning", message: t('app_install.select_device_first') });
-      return;
-    }
     if (!apkPath) {
       setStatusBarMessage({ type: "warning", message: t('app_install.select_apk_first') });
       return;
@@ -475,7 +474,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
       setInstallHistory(prev => [newStatus, ...prev]);
 
       // 模拟一点进度，提升UX
-      const result = await deviceService.installApk(device.serial, apkPath, replaceExisting);
+      const result = await deviceService.installApk(device!.serial, apkPath, replaceExisting);
       
       if (result.success) {
         setInstallHistory(prev => prev.map((item, index) => 
@@ -502,10 +501,6 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
   // 批量安装逻辑
   const handleBatchInstallClick = async () => {
       if (!checkMode()) return;
-      if (!device) {
-          setStatusBarMessage({ type: "warning", message: t('app_install.select_device_first') });
-          return;
-      }
       
       const pendingFiles = batchFiles.filter(f => f.status === 'pending' || f.status === 'failed');
       if (pendingFiles.length === 0) {
@@ -525,7 +520,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
             setBatchProgress(prev => ({ ...prev, current: i + 1 }));
 
             try {
-                const result = await deviceService.installApk(device.serial, file.path, replaceExisting);
+                const result = await deviceService.installApk(device!.serial, file.path, replaceExisting);
                 
                 if (result.success) {
                     setBatchFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'success', message: t('app_install.install_success') } : f));
@@ -552,233 +547,180 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
       }
   };
 
-  const renderContent = () => {
-    return (
-      <div className={styles.threeColumnLayout}>
-        {/* APK安装卡片 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<DocumentAdd24Regular />}
-            header={<Text weight="semibold">{t('app_install.card_title')}</Text>}
-            description={
-                <div className={styles.modeSelection}>
-                     <RadioGroup 
-                        layout="horizontal" 
-                        value={installMode} 
-                        onChange={(_, data) => setInstallMode(data.value as 'single' | 'batch')}
-                        disabled={isInstalling}
-                     >
-                        <Radio value="single" label={t('app_install.mode_single', '单个安装')} />
-                        <Radio value="batch" label={t('app_install.mode_batch', '批量安装')} />
-                     </RadioGroup>
-                </div>
-            }
-          />
-          
-          <div className={styles.content}>
-            <div className={styles.installSection}>
-              
-              {installMode === 'single' ? (
-                  // 单个安装 UI
-                  <div className={styles.pathInput}>
-                    <Field label={t('app_install.path_label')} style={{ flex: 1 }}>
-                      <Input
-                        value={apkPath}
-                        onChange={(_, data) => setApkPath(data.value)}
-                        placeholder={t('app_install.path_placeholder')}
-                        disabled={isInstalling}
-                      />
-                    </Field>
-                    <Button
-                      appearance="secondary"
-                      onClick={handleFileSelect}
-                      disabled={isInstalling}
-                      className={styles.selectButton}
-                    >
-                      {t('app_install.select_file')}
-                    </Button>
-                  </div>
-              ) : (
-                  // 批量安装 UI - 按钮区
-                  <div className={styles.batchActions}>
-                      <Button 
-                        appearance="secondary" 
-                        icon={<DocumentAdd24Regular />} 
-                        onClick={handleFileSelect}
-                        disabled={isInstalling}
-                      >
-                          {t('app_install.add_files', '添加文件')}
-                      </Button>
-                      <Button 
-                        appearance="secondary" 
-                        icon={<Folder24Regular />} 
-                        onClick={handleFolderSelect}
-                        disabled={isInstalling}
-                      >
-                          {t('app_install.add_folder', '添加文件夹')}
-                      </Button>
-                      <Button 
-                        appearance="subtle" 
-                        icon={<Delete24Regular />} 
-                        onClick={clearBatchFiles}
-                        disabled={isInstalling || batchFiles.length === 0}
-                      >
-                          {t('app_install.clear_all', '清空')}
-                      </Button>
-                  </div>
-              )}
-
-              <Checkbox
-                label={t('app_install.replace_existing')}
-                checked={replaceExisting}
-                onChange={(_, data) => setReplaceExisting(data.checked === true)}
-                disabled={isInstalling}
-              />
-
-              {installMode === 'single' ? (
-                  <Button
-                    appearance="primary"
-                    icon={isInstalling ? <Spinner size="small" /> : <Apps24Regular />}
-                    onClick={handleSingleInstallClick}
-                    disabled={!device || !apkPath || isInstalling}
-                    className={styles.installButton}
-                  >
-                    {isInstalling ? t('app_install.installing') : t('app_install.start_install_single', '开始安装')}
-                  </Button>
-              ) : (
-                   <Button
-                    appearance="primary"
-                    icon={isInstalling ? <Spinner size="small" /> : <Play24Regular />}
-                    onClick={handleBatchInstallClick}
-                    disabled={!device || batchFiles.filter(f => f.status !== 'success').length === 0 || isInstalling}
-                    className={styles.installButton}
-                  >
-                    {isInstalling 
-                        ? t('app_install.installing_batch', { current: batchProgress.current, total: batchProgress.total, defaultValue: `正在安装 (${batchProgress.current}/${batchProgress.total})` }) 
-                        : t('app_install.start_batch_install', { count: batchFiles.filter(f => f.status !== 'success').length, defaultValue: `开始批量安装 (${batchFiles.filter(f => f.status !== 'success').length})` })}
-                  </Button>
-              )}
-            </div>
-
-            {/* 批量文件列表 */}
-            {installMode === 'batch' && (
-                <div className={styles.apkList} style={{ flex: 1, maxHeight: '300px' }}>
-                    {batchFiles.length === 0 ? (
-                        <div className={styles.emptyState}>
-                            <Text className={styles.emptyStateText}>{t('app_install.no_files_selected', '请选择APK文件或文件夹')}</Text>
-                        </div>
-                    ) : (
-                        batchFiles.map(file => (
-                            <div key={file.id} className={styles.apkListItem}>
-                                <div className={styles.apkListItemInfo}>
-                                    <Text className={styles.apkListItemName}>{file.name}</Text>
-                                    <Text className={styles.apkListItemPath}>{file.path}</Text>
-                                    {file.message && <Text size={100} style={{ color: file.status === 'failed' ? 'var(--colorPaletteRedForeground1)' : 'var(--colorNeutralForeground2)' }}>{file.message}</Text>}
-                                </div>
-                                <div className={styles.apkListItemActions}>
-                                    {renderStatusIcon(file.status)}
-                                    <Button
-                                        appearance="transparent"
-                                        icon={<Delete24Regular />}
-                                        onClick={() => removeBatchFile(file.id)}
-                                        disabled={isInstalling}
-                                        aria-label="Remove"
-                                    />
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            )}
-
-            {/* 单个模式的历史记录 */}
-            {installMode === 'single' && installHistory.length > 0 && (
-                 <div className={styles.historySection}>
-                    <Text weight="semibold">{t('app_install.history')}</Text>
-                    {installHistory.map((item, index) => (
-                        <div key={index} className={styles.historyItem}>
-                             <div className={styles.statusBadge}>
-                                {item.status === 'success' && <CheckmarkCircle24Regular color="var(--colorPaletteGreenForeground1)" />}
-                                {item.status === 'failed' && <DismissCircle24Regular color="var(--colorPaletteRedForeground1)" />}
-                                {item.status === 'installing' && <Spinner size="tiny" />}
-                             </div>
-                             <div className={styles.historyItemContent}>
-                                 <Text className={styles.historyItemName}>{item.fileName}</Text>
-                                 <Text className={styles.historyItemMessage}>{item.message || t(`app_install.status_${item.status}`)}</Text>
-                             </div>
-                        </div>
-                    ))}
-                 </div>
-            )}
-            
+  return (
+    <div className={styles.container}>
+      <div className={styles.splitLayout}>
+        {/* 左侧控制区 */}
+        <div className={styles.leftPanel}>
+          <div className={styles.sectionTitle}>
+            <Apps24Regular />
+            <Text weight="semibold" size={400}>{t('app_install.card_title')}</Text>
           </div>
-        </Card>
-        <Card className={styles.card}>
-                      {/* 本地APK文件列表 */}
-          <div className={styles.apkListSection}>
-            <div className={styles.apkListHeader}>
-              <div className={styles.apkListTitle}>
-                <Folder24Regular />
-                <Text weight="semibold">{t('app_install.local_apks')}</Text>
-              </div>
-              <Button
-                appearance="secondary"
-                size="small"
-                onClick={loadLocalApkFiles}
-                disabled={isLoadingLocalApks}
-                className={styles.refreshButton}
-              >
-                {isLoadingLocalApks ? <Spinner size="tiny" /> : null}
-                {t('app_install.refresh')}
-              </Button>
-            </div>
 
-            {isLoadingLocalApks ? (
-              <div className={styles.apkList}>
-                <div className={styles.emptyState}>
-                  <Spinner size="medium" />
-                  <Text className={styles.emptyStateText}>{t('app_install.loading')}</Text>
+          <div className={styles.optionsSection}>
+             <Field label={t('app_install.install_mode', '安装模式')}>
+                <RadioGroup 
+                  value={installMode} 
+                  onChange={(_, data) => setInstallMode(data.value as 'single' | 'batch')}
+                  disabled={isInstalling}
+                >
+                  <Radio value="single" label={t('app_install.mode_single', '单个安装')} />
+                  <Radio value="batch" label={t('app_install.mode_batch', '批量安装')} />
+                </RadioGroup>
+             </Field>
+
+             {installMode === 'single' && (
+                <Field label={t('app_install.path_label')}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Input
+                      style={{ flex: 1 }}
+                      value={apkPath}
+                      onChange={(_, data) => setApkPath(data.value)}
+                      placeholder={t('app_install.path_placeholder')}
+                      disabled={isInstalling}
+                    />
+                  </div>
+                  <Button
+                    appearance="secondary"
+                    onClick={handleFileSelect}
+                    disabled={isInstalling}
+                    icon={<DocumentAdd24Regular />}
+                  />
+                </Field>
+             )}
+
+             {installMode === 'batch' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <Button 
+                    appearance="secondary" 
+                    icon={<DocumentAdd24Regular />} 
+                    onClick={handleFileSelect}
+                    disabled={isInstalling}
+                  >
+                    {t('app_install.add_files', '添加文件')}
+                  </Button>
+                  <Button 
+                    appearance="secondary" 
+                    icon={<Folder24Regular />} 
+                    onClick={handleFolderSelect}
+                    disabled={isInstalling}
+                  >
+                    {t('app_install.add_folder', '添加文件夹')}
+                  </Button>
                 </div>
-              </div>
-            ) : localApkFiles.length === 0 ? (
-              <div className={styles.apkList}>
+             )}
+
+             <Checkbox
+               label={t('app_install.replace_existing')}
+               checked={replaceExisting}
+               onChange={(_, data) => setReplaceExisting(data.checked === true)}
+               disabled={isInstalling}
+             />
+
+             <Button
+               appearance="primary"
+               size="large"
+               icon={isInstalling ? <Spinner size="small" /> : (installMode === 'single' ? <Apps24Regular /> : <Play24Regular />)}
+               onClick={installMode === 'single' ? handleSingleInstallClick : handleBatchInstallClick}
+               disabled={!device || isInstalling || (installMode === 'single' && !apkPath) || (installMode === 'batch' && batchFiles.length === 0)}
+             >
+               {isInstalling ? t('app_install.installing') : (installMode === 'single' ? t('app_install.start_install_single') : t('app_install.start_batch_install'))}
+             </Button>
+          </div>
+        </div>
+
+        {/* 右侧列表区 */}
+        <div className={styles.rightPanel}>
+          {/* 队列/历史记录 */}
+          <div className={mergeClasses(styles.card, styles.fullHeightCard)} style={{ flex: 1.2 }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--colorNeutralStroke2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <Text weight="semibold">{installMode === 'batch' ? t('app_install.install_queue', '安装队列') : t('app_install.history')}</Text>
+               {installMode === 'batch' && batchFiles.length > 0 && (
+                 <Button appearance="subtle" size="small" icon={<Delete24Regular />} onClick={clearBatchFiles} disabled={isInstalling}>
+                   {t('app_install.clear_all')}
+                 </Button>
+               )}
+            </div>
+            
+            <div className={styles.scrollArea}>
+              {installMode === 'batch' ? (
+                batchFiles.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <Text>{t('app_install.no_files_selected')}</Text>
+                  </div>
+                ) : (
+                  <div className={styles.apkList} style={{ padding: '12px' }}>
+                    {batchFiles.map(file => (
+                      <div key={file.id} className={styles.apkListItem}>
+                        <div className={styles.apkListItemInfo}>
+                          <Text className={styles.apkListItemName}>{file.name}</Text>
+                          <Text className={styles.apkListItemPath}>{file.path}</Text>
+                          {file.message && <Text size={100} style={{ color: file.status === 'failed' ? 'var(--colorPaletteRedForeground1)' : 'var(--colorNeutralForeground2)' }}>{file.message}</Text>}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {renderStatusIcon(file.status)}
+                          <Button appearance="transparent" icon={<DismissCircle24Regular />} onClick={() => removeBatchFile(file.id)} disabled={isInstalling} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                installHistory.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <Text>{t('app_install.no_history', '暂无安装记录')}</Text>
+                  </div>
+                ) : (
+                  <div className={styles.historySection} style={{ padding: '12px' }}>
+                    {installHistory.map((item, index) => (
+                      <div key={index} className={styles.historyItem}>
+                        {renderStatusIcon(item.status)}
+                        <div className={styles.historyItemContent}>
+                          <Text className={styles.historyItemName}>{item.fileName}</Text>
+                          <Text className={styles.historyItemMessage}>{item.message || t(`app_install.status_${item.status}`)}</Text>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--colorNeutralStroke2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                 <Folder24Regular />
+                 <Text weight="semibold">{t('app_install.local_apks')}</Text>
+               </div>
+            </div>
+            
+            <div className={styles.scrollArea}>
+              {localApkFiles.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <Folder24Regular />
-                  <Text className={styles.emptyStateText}>{t('app_install.no_apks_found')}</Text>
+                  <Text>{t('app_install.no_apks_found')}</Text>
                 </div>
-              </div>
-            ) : (
-              <div className={styles.apkList}>
-                {localApkFiles.map((apk, index) => (
-                  <div key={index} className={styles.apkListItem}>
-                    <div className={styles.apkListItemInfo}>
-                      <Text className={styles.apkListItemName}>{apk.name}</Text>
-                      <Text className={styles.apkListItemPath}>{apk.path}</Text>
-                    </div>
-                    <div className={styles.apkListItemActions}>
+              ) : (
+                <div className={styles.apkList} style={{ padding: '12px' }}>
+                  {localApkFiles.map((apk, index) => (
+                    <div key={index} className={styles.apkListItem}>
+                      <div className={styles.apkListItemInfo}>
+                        <Text className={styles.apkListItemName}>{apk.name}</Text>
+                        <Text className={styles.apkListItemPath}>{apk.path}</Text>
+                      </div>
                       <Button
                         appearance="primary"
                         size="small"
                         onClick={() => handleInstallLocalApk(apk.path)}
-                        disabled={!device || isInstalling}
+                        disabled={isInstalling}
                       >
                         {installMode === 'single' ? t('app_install.select') : t('app_install.add')}
                       </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </Card>
-
+        </div>
       </div>
-    );
-  };
-
-  return (
-    <div className={styles.container}>
-      {renderContent()}
 
       <ErrorDialog
         open={errorDialogOpen}

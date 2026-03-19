@@ -106,14 +106,38 @@ const useStyles = makeStyles({
   fullLayout: {
     height: "100%",
   },
+  splitLayout: {
+    display: "flex",
+    gap: "16px",
+    height: "100%",
+    minHeight: 0,
+  },
+  leftPanel: {
+    width: "280px",
+    flexShrink: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    padding: "16px",
+    borderRadius: "8px",
+    overflowY: "auto",
+  },
+  rightPanel: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    minWidth: 0,
+    height: "100%",
+  },
   card: {
     width: "100%",
-    height: "fit-content",
+    height: "100%",
     borderRadius: "8px",
     border: "1px solid var(--colorNeutralStroke2)",
-    /* 支持下拉*/
-    "--scrollbarWidth": "8px",
-    "scrollbar-width": "8px",
+    display: "flex",
+    flexDirection: "column",
   },
   content: {
     flex: 1,
@@ -124,9 +148,9 @@ const useStyles = makeStyles({
   },
   toolbar: {
     display: "flex",
-    gap: "8px",
-    alignItems: "center",
-    flexWrap: "wrap",
+    flexDirection: "column",
+    gap: "12px",
+    alignItems: "stretch",
   },
   searchField: {
     flex: 1,
@@ -134,7 +158,6 @@ const useStyles = makeStyles({
   },
   tableContainer: {
     flex: 1,
-    maxHeight: "400px",
     overflow: "auto",
     border: "1px solid var(--colorNeutralStroke2)",
     borderRadius: "6px",
@@ -1536,344 +1559,288 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
 
   const renderContent = () => {
     return (
-      <div className={styles.threeColumnLayout}>
+      <div className={styles.splitLayout}>
+        {/* 左侧功能操作区 */}
+        <div className={styles.leftPanel}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <Apps24Regular />
+            <Text weight="semibold" size={400}>{t('app_manager.tab_apps')}</Text>
+          </div>
 
+          <div className={styles.toolbar}>
+             {/* 搜索框 */}
+             <Field>
+               <Input
+                 contentBefore={<Search24Regular />}
+                 placeholder={t('app_manager.search_placeholder')}
+                 value={searchQuery}
+                 onChange={(_, data) => setSearchQuery(data.value)}
+                 style={{ width: '100%' }}
+               />
+             </Field>
 
-        {/* 已安装应用卡片 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Apps24Regular />}
-            action={
-              <div className={styles.toolbar}>
-                {/* 进度条信息 - 移动到搜索框前 */}
-                {isLoadingApps && (
-                  <div style={{ display: 'flex', alignItems: 'center', marginRight: '16px' }}>
-                    <Spinner size="small" />
-                    <div style={{ marginLeft: '8px', minWidth: '120px' }}>
-                      <Text size={200}>{loadingProgress.current}/{loadingProgress.total}</Text>
-                      <progress 
-                        value={loadingProgress.current} 
-                        max={loadingProgress.total}
-                        style={{ width: '100%', height: '4px' }}
-                      />
-                    </div>
-                  </div>
-                )}
-                
-                <Field className={styles.searchField}>
-                  <Input
-                    contentBefore={<Search24Regular />}
-                    placeholder={t('app_manager.search_placeholder')}
-                    value={searchQuery}
-                    onChange={(_, data) => setSearchQuery(data.value)}
-                  />
-                </Field>
-                
-                {/* 添加多选单选选择框 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Text>{t('common.info')}:</Text>
-                  <div className={styles.buttonGroup}>
-                    <Button
-                      appearance={useBatchLoading ? "primary" : "secondary"}
-                      size="small"
-                      onClick={() => setUseBatchLoading(!useBatchLoading)}
-                      disabled={isLoadingApps}
-                      title={useBatchLoading ? t('app_manager.batch_loading_tip') : t('app_manager.traditional_loading_tip')}
-                    >
-                      {useBatchLoading ? t('app_manager.batch_loading') : t('app_manager.traditional_loading')}
-                    </Button>
-                    <Button
-                      appearance={viewSource === "apps" && !includeSystemApps ? "primary" : "secondary"}
-                      size="small"
-                      onClick={() => {
-                        setIncludeSystemApps(false);
-                        setViewSource("apps");
-                        if (useBatchLoading) {
-                          loadAppsBatch();
-                        } else {
-                          loadApps();
-                        }
-                      }}
-                      disabled={isLoadingApps}
-                    >
-                      {t('app_manager.tab_apps')}
-                    </Button>
-                    <Button
-                      appearance={viewSource === "apps" && includeSystemApps ? "primary" : "secondary"}
-                      size="small"
-                      onClick={() => {
-                        setIncludeSystemApps(true);
-                        setViewSource("apps");
-                        if (useBatchLoading) {
-                          loadAppsBatch();
-                        } else {
-                          loadApps();
-                        }
-                      }}
-                      disabled={isLoadingApps}
-                    >
-                      {t('app_manager.system_app')}
-                      {includeSystemApps && <span className={styles.filterBadge}>({filteredApps.filter(a => a.isSystemApp).length})</span>}
-                    </Button>
-                    <Button
-                      appearance={viewSource === "current" ? "primary" : "secondary"}
-                      size="small"
-                      onClick={loadCurrentApp}
-                      disabled={isLoadingApps}
-                    >
-                      {t('app_manager.tab_current')}
-                    </Button>
-                    <Button
-                      appearance={viewSource === "frozen" ? "primary" : "secondary"}
-                      size="small"
-                      onClick={loadFrozenApps}
-                      disabled={isLoadingApps}
-                    >
-                      {t('app_manager.tab_frozen')}
-                      {viewSource === "frozen" && <span className={styles.filterBadge}>({filteredApps.length})</span>}
-                    </Button>
-                  </div>
+             {/* 加载进度 */}
+             {isLoadingApps && (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                   <Spinner size="tiny" />
+                   <Text size={100}>{loadingProgress.current}/{loadingProgress.total}</Text>
+                 </div>
+                 <progress 
+                   value={loadingProgress.current} 
+                   max={loadingProgress.total}
+                   style={{ width: '100%', height: '4px' }}
+                 />
+               </div>
+             )}
+
+             {/* 视图切换按钮组 */}
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' }}>
+               <Text weight="semibold" size={200} style={{ color: 'var(--colorNeutralForeground3)', marginBottom: '4px' }}>
+                 {t('common.info')} / {t('app_manager.status')}
+               </Text>
+               <Button
+                 appearance={useBatchLoading ? "primary" : "secondary"}
+                 size="small"
+                 onClick={() => setUseBatchLoading(!useBatchLoading)}
+                 disabled={isLoadingApps}
+                 style={{ justifyContent: 'flex-start' }}
+               >
+                 {useBatchLoading ? t('app_manager.batch_loading') : t('app_manager.traditional_loading')}
+               </Button>
+               <Button
+                 appearance={viewSource === "apps" && !includeSystemApps ? "primary" : "secondary"}
+                 size="small"
+                 onClick={() => {
+                   setIncludeSystemApps(false);
+                   setViewSource("apps");
+                   if (useBatchLoading) loadAppsBatch(); else loadApps();
+                 }}
+                 disabled={isLoadingApps}
+                 style={{ justifyContent: 'flex-start' }}
+               >
+                 {t('app_manager.tab_apps')}
+               </Button>
+               <Button
+                 appearance={viewSource === "apps" && includeSystemApps ? "primary" : "secondary"}
+                 size="small"
+                 onClick={() => {
+                   setIncludeSystemApps(true);
+                   setViewSource("apps");
+                   if (useBatchLoading) loadAppsBatch(); else loadApps();
+                 }}
+                 disabled={isLoadingApps}
+                 style={{ justifyContent: 'flex-start' }}
+               >
+                 {t('app_manager.system_app')}
+                 {includeSystemApps && <Badge size="tiny" appearance="filled" style={{ marginLeft: 'auto' }}>{filteredApps.filter(a => a.isSystemApp).length}</Badge>}
+               </Button>
+               <Button
+                 appearance={viewSource === "current" ? "primary" : "secondary"}
+                 size="small"
+                 onClick={loadCurrentApp}
+                 disabled={isLoadingApps}
+                 style={{ justifyContent: 'flex-start' }}
+               >
+                 {t('app_manager.tab_current')}
+               </Button>
+               <Button
+                 appearance={viewSource === "frozen" ? "primary" : "secondary"}
+                 size="small"
+                 onClick={loadFrozenApps}
+                 disabled={isLoadingApps}
+                 style={{ justifyContent: 'flex-start' }}
+               >
+                 {t('app_manager.tab_frozen')}
+                 {viewSource === "frozen" && <Badge size="tiny" appearance="filled" style={{ marginLeft: 'auto' }}>{filteredApps.length}</Badge>}
+               </Button>
+             </div>
+
+             {/* 批量操作按钮组 */}
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' }}>
+               <Text weight="semibold" size={200} style={{ color: 'var(--colorNeutralForeground3)', marginBottom: '4px' }}>
+                 批量操作 {selectedApps.size > 0 && `(${selectedApps.size})`}
+               </Text>
+               <Button
+                 appearance="primary"
+                 icon={<Delete24Regular />}
+                 onClick={handleBatchUninstall}
+                 disabled={isLoadingApps || selectedApps.size === 0}
+                 style={selectedApps.size > 0 ? { backgroundColor: "var(--colorPaletteRedBackground3)", color: "white" } : {}}
+               >
+                 {t('app_manager.uninstall')}
+               </Button>
+               <Button
+                 appearance="secondary"
+                 icon={<LockClosed24Regular />}
+                 onClick={() => handleBatchFreezeToggle(true)}
+                 disabled={isLoadingApps || selectedApps.size === 0}
+               >
+                 {t('app_manager.freeze')}
+               </Button>
+               <Button
+                 appearance="secondary"
+                 icon={<LockOpen24Regular />}
+                 onClick={() => handleBatchFreezeToggle(false)}
+                 disabled={isLoadingApps || selectedApps.size === 0}
+               >
+                 {t('app_manager.unfreeze')}
+               </Button>
+               <Button
+                 appearance="secondary"
+                 icon={<ShieldLock24Regular />}
+                 onClick={handleBatchForceStop}
+                 disabled={isLoadingApps || selectedApps.size === 0}
+               >
+                 {t('app_manager.force_stop')}
+               </Button>
+               <Button
+                 appearance="secondary"
+                 icon={<Save24Regular />}
+                 onClick={handleBatchExportApk}
+                 disabled={isLoadingApps || selectedApps.size === 0}
+               >
+                 {t('app_manager.export_apk')}
+               </Button>
+               <Button
+                 appearance="secondary"
+                 icon={<Eraser24Regular />}
+                 onClick={handleBatchClearData}
+                 disabled={isLoadingApps || selectedApps.size === 0}
+               >
+                 {t('app_manager.clear_data')}
+               </Button>
+               <div style={{ display: 'flex', gap: '4px' }}>
+                 <Button
+                   appearance="subtle"
+                   icon={<ArrowDownload24Regular />}
+                   onClick={handleExportAppList}
+                   disabled={isLoadingApps || selectedApps.size === 0}
+                   style={{ flex: 1 }}
+                   size="small"
+                 >
+                   导出
+                 </Button>
+                 <Button
+                   appearance="subtle"
+                   icon={<ArrowUpload24Regular />}
+                   onClick={handleImportAppList}
+                   disabled={isLoadingApps}
+                   style={{ flex: 1 }}
+                   size="small"
+                 >
+                   导入
+                 </Button>
+               </div>
+             </div>
+          </div>
+        </div>
+
+        {/* 右侧应用列表区 */}
+        <div className={styles.rightPanel}>
+          <Card className={styles.card}>
+            <div className={styles.content} style={{ padding: '8px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {isLoadingApps && filteredApps.length === 0 ? (
+                <div className={styles.loadingContainer}>
+                  <Spinner size="large" label={t('app_manager.loading')} />
                 </div>
-              </div>
-            }
-          />
-          
-          {/* 批量操作按钮 - 移到CardHeader下方 */}
-          <div style={{ padding: '0 16px 16px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <Button
-              appearance="primary"
-              icon={<Delete24Regular />}
-              onClick={handleBatchUninstall}
-              disabled={isLoadingApps || selectedApps.size === 0}
-              style={selectedApps.size > 0 ? { backgroundColor: "var(--colorPaletteRedBackground3)", borderColor: "transparent", color: "var(--colorPaletteRedForeground3)" } : {}}
-            >
-            {t('app_manager.uninstall')} {selectedApps.size > 0 && `(${selectedApps.size})`}
-            </Button>
-            <Button
-              appearance="primary"
-              onClick={() => handleBatchFreezeToggle(true)}
-              disabled={isLoadingApps || selectedApps.size === 0}
-            >
-              {t('app_manager.freeze')} {selectedApps.size > 0 && `(${selectedApps.size})`}
-            </Button>
-            <Button
-              appearance="secondary"
-              onClick={() => handleBatchFreezeToggle(false)}
-              disabled={isLoadingApps || selectedApps.size === 0}
-            >
-              {t('app_manager.unfreeze')} {selectedApps.size > 0 && `(${selectedApps.size})`}
-            </Button>
-            <Button
-              appearance="secondary"
-              icon={<ShieldLock24Regular />}
-              onClick={handleBatchForceStop}
-              disabled={isLoadingApps || selectedApps.size === 0}
-            >
-              {t('app_manager.force_stop')} {selectedApps.size > 0 && `(${selectedApps.size})`}
-            </Button>
-            <Button
-              appearance="secondary"
-              icon={<Save24Regular />}
-              onClick={handleBatchExportApk}
-              disabled={isLoadingApps || selectedApps.size === 0}
-            >
-              {t('app_manager.export_apk')} {selectedApps.size > 0 && `(${selectedApps.size})`}
-            </Button>
-            <Button
-              appearance="secondary"
-              icon={<Eraser24Regular />}
-              onClick={handleBatchClearData}
-              disabled={isLoadingApps || selectedApps.size === 0}
-              style={selectedApps.size > 0 ? { color: "var(--colorPaletteRedForeground1)", borderColor: "var(--colorPaletteRedBorder1)" } : {}}
-            >
-              {t('app_manager.clear_data')} {selectedApps.size > 0 && `(${selectedApps.size})`}
-            </Button>
-            <Button
-              appearance="secondary"
-              icon={<ArrowDownload24Regular />}
-              onClick={handleExportAppList}
-              disabled={isLoadingApps || selectedApps.size === 0}
-            >
-              {t('app_manager.export_list')} {selectedApps.size > 0 && `(${selectedApps.size})`}
-            </Button>
-            <Button
-              appearance="primary"
-              icon={<ArrowUpload24Regular />}
-              onClick={handleImportAppList}
-              disabled={isLoadingApps}
-            >
-              {t('app_manager.import_list')}
-            </Button>
-          </div>
-          <div className={styles.content}>
-
-            {isLoadingApps ? (
-              <div className={styles.loadingContainer}>
-                <Spinner size="large" label={t('app_manager.loading')} />
-              </div>
-            ) : filteredApps.length === 0 ? (
-              <div className={styles.emptyState}>
-                <Apps24Regular style={{ fontSize: "48px" }} />
-                <Text>{t('app_manager.no_apps_found')}</Text>
-                <Text size={200}>{t('unlock.select_device_hint')}</Text>
-
-              </div>
-
-            ) : (
-              <div className={styles.tableContainer}>
-                <Table arial-label={t('app_manager.card_title')} style={{ tableLayout: 'fixed', width: '100%' }}>
-                  <colgroup>
-                    {/* 选择框列：固定较小宽度 */}
-                    <col style={{ width: 48 }} />
-                    {/* 应用列：双倍宽度，占余下空间的40% */}
-                    <col style={{ width: '40%' }} />
-                    {/* 其他列：各占20% */}
-                    <col style={{ width: '20%' }} />
-                    <col style={{ width: '20%' }} />
-                    <col style={{ width: '20%' }} />
-                  </colgroup>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>
-                        <Checkbox
-                          checked={selectedApps.size === filteredApps.length && filteredApps.length > 0}
-                          onChange={(_, data) => handleSelectAll(data.checked === true)}
-                        />
-                      </TableHeaderCell>
-                      {/* Merged Name & Package Column */}
-                      <TableHeaderCell>{t('app_manager.app_name_package')}</TableHeaderCell>
-                      <TableHeaderCell>{t('app_manager.version')}</TableHeaderCell>
-                      <TableHeaderCell>{t('app_manager.status')}</TableHeaderCell>
-                      <TableHeaderCell>{t('app_manager.actions')}</TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredApps.map((app) => (
-                      <TableRow 
-                        key={app.packageName} 
-                        className={styles.compactTableRow}
-                        onContextMenu={(e) => handleContextMenu(e, app)}
-                        style={{ cursor: 'context-menu' }}
-                      >
-                        <TableCell className={styles.compactCell}>
+              ) : filteredApps.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <Apps24Regular style={{ fontSize: "48px" }} />
+                  <Text>{t('app_manager.no_apps_found')}</Text>
+                  <Text size={200}>{t('unlock.select_device_hint')}</Text>
+                </div>
+              ) : (
+                <div className={styles.tableContainer}>
+                  <Table arial-label={t('app_manager.card_title')} style={{ tableLayout: 'fixed', width: '100%' }}>
+                    <colgroup>
+                      <col style={{ width: 44 }} />
+                      <col />
+                      <col style={{ width: '120px' }} />
+                      <col style={{ width: '100px' }} />
+                      <col style={{ width: '64px' }} />
+                    </colgroup>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell>
                           <Checkbox
-                            checked={selectedApps.has(app.packageName)}
-                            onChange={(_, data) => handleSelectApp(app.packageName, data.checked === true)}
+                            checked={selectedApps.size === filteredApps.length && filteredApps.length > 0}
+                            onChange={(_, data) => handleSelectAll(data.checked === true)}
                           />
-                        </TableCell>
-                        <TableCell className={styles.compactCell}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {/* App Icon (Visual Anchor) */}
-                            <div className={styles.appIconLarge}>
-                              {/* Use first char of package name or name as placeholder icon */}
-                              <Text weight="semibold" size={400} style={{ color: "var(--colorNeutralForeground3)" }}>
-                                {(app as any).label ? (app as any).label.charAt(0).toUpperCase() : app.packageName.split('.').pop()?.charAt(0).toUpperCase() || '?'}
-                              </Text>
-                            </div>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                              {/* Primary: App Name (or Package Name if no label) */}
-                              <Text 
-                                className={styles.appNamePrimary}
-                                title={(app as any).label || app.packageName}
-                                onClick={() => handleShowDetails(app)}
-                                style={{ cursor: 'pointer' }}
-                              >
-                                {(app as any).label || app.packageName}
-                              </Text>
-                              
-                              {/* Secondary: Package Name (if label exists) or just "Package" */}
-                              <Text 
-                                className={styles.appNameSecondary}
-                                title={app.packageName}
-                              >
-                                {app.packageName}
-                              </Text>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className={styles.compactCell}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <Text size={200} weight="semibold" title={app.versionName || t('app_manager.unknown_version')}>
-                              {app.versionName ? formatVersionName(app.versionName) : t('common.unknown')}
-                            </Text>
-                            {app.versionCode && (
-                              <Text size={100} style={{ color: "var(--colorNeutralForeground3)" }} title={t('app_manager.version_code_tip', { code: app.versionCode })}>
-                                v{app.versionCode}
-                              </Text>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className={styles.compactCell}>
-                          <Badge 
-                            appearance={app.isEnabled ? "filled" : "ghost"} 
-                            color={app.isEnabled ? "success" : "danger"} 
-                            size="small"
-                            icon={!app.isEnabled ? <LockClosed24Regular /> : undefined}
-                          >
-                            {app.isEnabled ? t('app_manager.enabled') : t('app_manager.disabled')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className={styles.compactCell}>
-                          <Menu>
-                            <MenuTrigger disableButtonEnhancement>
-                              <Button
-                                appearance="subtle"
-                                icon={<MoreHorizontal24Regular />}
-                                size="small"
-                              />
-                            </MenuTrigger>
-                            <MenuPopover>
-                              <MenuList>
-                                <MenuItem
-                                  icon={<Info24Regular />}
-                                  onClick={() => handleShowDetails(app)}
-                                >
-                                  {t('app_properties.detail_info')}
-                                </MenuItem>
-                                {!app.isSystemApp && [
-                                  <MenuItem
-                                    key={`uninstall-${app.packageName}`}
-                                    icon={<Delete24Regular />}
-                                    onClick={() => handleUninstallClick(app)}
-                                  >
-                                    {t('app_manager.uninstall')}
-                                  </MenuItem>,
-                                  <MenuItem
-                                    key={`freeze-${app.packageName}`}
-                                    icon={app.isEnabled ? <LockClosed24Regular /> : <LockOpen24Regular />}
-                                    onClick={() => handleFreezeToggle(app.packageName, app.isEnabled)}
-                                  >
-                                    {app.isEnabled ? t('app_manager.freeze') : t('app_manager.unfreeze')}
-                                  </MenuItem>,
-                                  <MenuItem
-                                    key={`clear-${app.packageName}`}
-                                    icon={<Eraser24Regular />}
-                                    onClick={() => handleClearData(app.packageName)}
-                                  >
-                                    {t('app_manager.clear_data')}
-                                  </MenuItem>,
-                                  <MenuItem
-                                    key={`export-${app.packageName}`}
-                                    icon={<Save24Regular />}
-                                    onClick={() => handleExportApk(app.packageName)}
-                                  >
-                                    {t('app_manager.export_apk')}
-                                  </MenuItem>
-                                ]}
-                              </MenuList>
-                            </MenuPopover>
-                          </Menu>
-                        </TableCell>
+                        </TableHeaderCell>
+                        <TableHeaderCell>{t('app_manager.app_name_package')}</TableHeaderCell>
+                        <TableHeaderCell>{t('app_manager.version')}</TableHeaderCell>
+                        <TableHeaderCell>{t('app_manager.status')}</TableHeaderCell>
+                        <TableHeaderCell>{t('app_manager.actions')}</TableHeaderCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
-        </Card>
-
+                    </TableHeader>
+                    <TableBody>
+                      {filteredApps.map((app) => (
+                        <TableRow 
+                          key={app.packageName} 
+                          className={styles.compactTableRow}
+                          onContextMenu={(e) => handleContextMenu(e, app)}
+                        >
+                          <TableCell className={styles.compactCell}>
+                            <Checkbox
+                              checked={selectedApps.has(app.packageName)}
+                              onChange={(_, data) => handleSelectApp(app.packageName, data.checked === true)}
+                            />
+                          </TableCell>
+                          <TableCell className={styles.compactCell}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                              <div className={styles.appIconLarge} style={{ width: '28px', height: '28px', fontSize: '14px' }}>
+                                <Text weight="semibold">{(app as any).label ? (app as any).label.charAt(0).toUpperCase() : app.packageName.split('.').pop()?.charAt(0).toUpperCase() || '?'}</Text>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                <Text className={styles.appNamePrimary} style={{ fontSize: '13px' }} title={(app as any).label || app.packageName}>
+                                  {(app as any).label || app.packageName}
+                                </Text>
+                                <Text className={styles.appNameSecondary} style={{ fontSize: '11px' }} title={app.packageName}>
+                                  {app.packageName}
+                                </Text>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className={styles.compactCell}>
+                             <Text size={200} title={app.versionName || ''}>{app.versionName ? formatVersionName(app.versionName) : '-'}</Text>
+                          </TableCell>
+                          <TableCell className={styles.compactCell}>
+                            <Badge appearance={app.isEnabled ? "filled" : "ghost"} color={app.isEnabled ? "success" : "danger"} size="small">
+                              {app.isEnabled ? t('app_manager.enabled') : t('app_manager.disabled')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className={styles.compactCell}>
+                            <Menu>
+                              <MenuTrigger disableButtonEnhancement>
+                                <Button appearance="subtle" icon={<MoreHorizontal24Regular />} size="small" />
+                              </MenuTrigger>
+                              <MenuPopover>
+                                <MenuList>
+                                  <MenuItem icon={<Info24Regular />} onClick={() => handleShowDetails(app)}>{t('app_properties.detail_info')}</MenuItem>
+                                  {!app.isSystemApp && (
+                                    <>
+                                      <MenuItem icon={<Delete24Regular />} onClick={() => handleUninstallClick(app)}>{t('app_manager.uninstall')}</MenuItem>
+                                      <MenuItem icon={app.isEnabled ? <LockClosed24Regular /> : <LockOpen24Regular />} onClick={() => handleFreezeToggle(app.packageName, app.isEnabled)}>
+                                        {app.isEnabled ? t('app_manager.freeze') : t('app_manager.unfreeze')}
+                                      </MenuItem>
+                                      <MenuItem icon={<Eraser24Regular />} onClick={() => handleClearData(app.packageName)}>{t('app_manager.clear_data')}</MenuItem>
+                                      <MenuItem icon={<Save24Regular />} onClick={() => handleExportApk(app.packageName)}>{t('app_manager.export_apk')}</MenuItem>
+                                    </>
+                                  )}
+                                </MenuList>
+                              </MenuPopover>
+                            </Menu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
       </div>
     );
   };

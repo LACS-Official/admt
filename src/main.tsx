@@ -28,7 +28,9 @@ console.log("已清除 localStorage 中的 rom-download-storage");
 
 import CommandLineWindow from "./components/Console/CommandLineWindow";
 import LogsWindow from "./components/Console/LogsWindow";
+import DeviceSelectionWindow from "./components/MainContent/DeviceSelectionWindow";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useDeviceStore } from "./stores/deviceStore";
 
 function AppWithTheme() {
   const {
@@ -37,6 +39,7 @@ function AppWithTheme() {
     updateThemeBasedOnSystem,
     subscribeToStorageChanges,
   } = useThemeStore();
+  const { subscribeToStorageChanges: subscribeToDeviceChanges } = useDeviceStore();
   const [isActivationValid, setIsActivationValid] = useState(true);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(true);
   const { setCurrentPhase } = useStartupFlowStore();
@@ -74,8 +77,12 @@ function AppWithTheme() {
   // 监听跨页面的主题变化
   useEffect(() => {
     const cleanup = subscribeToStorageChanges();
-    return cleanup;
-  }, [subscribeToStorageChanges]);
+    const deviceCleanup = subscribeToDeviceChanges();
+    return () => {
+      cleanup();
+      deviceCleanup();
+    };
+  }, [subscribeToStorageChanges, subscribeToDeviceChanges]);
 
   // 每隔1秒检测激活码是否过期
   useEffect(() => {
@@ -233,6 +240,15 @@ function LogsWindowWithTheme() {
   );
 }
 
+function DeviceSelectionWindowWithTheme() {
+  const { isDarkMode } = useThemeStore();
+  return (
+    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+      <DeviceSelectionWindow />
+    </FluentProvider>
+  );
+}
+
 function Root() {
   const [label, setLabel] = useState<string | null>(null);
 
@@ -249,6 +265,10 @@ function Root() {
 
   if (label === "logs") {
     return <LogsWindowWithTheme />;
+  }
+
+  if (label === "device-selection") {
+    return <DeviceSelectionWindowWithTheme />;
   }
 
   return <AppWithTheme />;

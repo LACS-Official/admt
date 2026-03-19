@@ -15,9 +15,9 @@ import {
   Folder24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
-import AdbToolsPanel from "../Others/CommandExecutePanel";
-import SystemControlCard from "../DeviceControl/SystemControlCard";
-import ScreenMirrorPanel from '../ScreenMirror/ScreenMirrorPanel';
+import PatchImagePanel from './PatchImagePanel';
+import ModulePanel from './ModulePanel';
+import AdvancedSettingsPanel from './AdvancedSettingsPanel';
 
 const useStyles = makeStyles({
   container: {
@@ -125,12 +125,12 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "adb-tools" | "device-control" | "app_install" | "file-manager" | "screen-mirror" | "app-manager" ;
+type AdbZoneView = "patch-image" | "module-management" | "advanced-settings";
 
 const RootPanel: React.FC = () => {
   const styles = useStyles();
   const { selectedDevice, devices } = useDeviceStore();
-  const [currentView, setCurrentView] = useState<AdbZoneView>("adb-tools");
+  const [currentView, setCurrentView] = useState<AdbZoneView>("patch-image");
   const triggerOverlay = () => {
     console.log('ADB mode required in RootPanel');
   };
@@ -140,74 +140,34 @@ const RootPanel: React.FC = () => {
 
   const tabs = [
     {
-      id: "adb-tools" as AdbZoneView,
-      label: "SU环境",
+      id: "patch-image" as AdbZoneView,
+      label: "修补镜像",
       icon: <Code24Regular />,
     },
     {
-      id: "device-control" as AdbZoneView,
-      label: "设备控制",
-      icon: <Play24Regular />,
-    },
-    {
-      id: "screen-mirror" as AdbZoneView,
-      label: "设备投屏",
-      icon: <Settings24Regular />,
-    },
-    {
-      id: "app_install" as AdbZoneView,
-      label: "应用安装",
+      id: "module-management" as AdbZoneView,
+      label: "模块管理",
       icon: <Apps24Regular />,
     },
     {
-      id: "app-manager" as AdbZoneView,
-      label: "应用管理",
+      id: "advanced-settings" as AdbZoneView,
+      label: "高级设置",
       icon: <Settings24Regular />,
     },
-    {
-      id: "file-manager" as AdbZoneView,
-      label: "文件管理",
-      icon: <Folder24Regular />,
-    },
-
   ];
 
   const renderContent = () => {
     if (!selectedDevice) return null;
 
     switch (currentView) {
-      case "adb-tools":
-        return (
-          <div style={{ height: "100%", overflow: "hidden" }}>
-            <AdbToolsPanel />
-          </div>
-        );
-      case "device-control":
-        return (
-          <div style={{
-            height: "100%",
-            overflow: "auto",
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "16px",
-            padding: "16px"
-          }}>
-            <SystemControlCard device={selectedDevice} onAdbRequired={triggerOverlay} />
-          </div>
-        );
-      case "screen-mirror":
-        return (
-          <div style={{ height: "100%", overflow: "hidden" }}>
-            <ScreenMirrorPanel device={selectedDevice} onAdbRequired={triggerOverlay} />
-          </div>
-        );
-    
+      case "patch-image":
+        return <PatchImagePanel device={selectedDevice} />;
+      case "module-management":
+        return <ModulePanel device={selectedDevice} />;
+      case "advanced-settings":
+        return <AdvancedSettingsPanel device={selectedDevice} />;
       default:
-        return (
-          <div style={{ height: "100%", overflow: "hidden" }}>
-            <AdbToolsPanel />
-          </div>
-        );
+        return <PatchImagePanel device={selectedDevice} />;
     }
   };
 

@@ -5,7 +5,8 @@
   "windows": [
     "main",
     "command-line",
-    "logs"
+    "logs",
+    "device-selection"
   ],
   "permissions": [
     "autostart:allow-enable",

@@ -26,10 +26,11 @@ import {
   Notepad24Regular,
   ChevronDown24Regular,
   Warning24Regular,
+  ShieldKeyhole24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
-import DeviceSelectionDialog from "./DeviceSelectionDialog";
+// import DeviceSelectionDialog from "./DeviceSelectionDialog";
 import { getDeviceIcon } from "../../assets/icons";
 import UnlinkIcon from "../../assets/icons/devices/Unlink.gif";
 import { useAppStore } from "../../stores/appStore";
@@ -665,6 +666,11 @@ const MainContent: React.FC = () => {
       icon: <CloudArrowDown24Regular />,
     },
     {
+      id: "root" as AppView,
+      label: t("sidebar.root_zone"),
+      icon: <ShieldKeyhole24Regular />,
+    },
+    {
       id: "settings" as AppView,
       label: t("sidebar.settings"),
       icon: <Settings24Regular />,
@@ -704,6 +710,9 @@ const MainContent: React.FC = () => {
     stopScanning,
   ]);
 
+  // 已提示获取成功的设备列表，避免重复提示
+  const notifiedSerialsRef = useRef<Set<string>>(new Set());
+
   // 监听设备状态变化，检测离线和未授权设备
   useEffect(() => {
     if (selectedDevice) {
@@ -720,13 +729,24 @@ const MainContent: React.FC = () => {
           message: t("status.device_unauthorized"),
         });
       }
+    } else {
+      // 如果没有选中的设备，清空已提示列表
+      notifiedSerialsRef.current.clear();
     }
-  }, [selectedDevice]);
+  }, [selectedDevice, t, setStatusBarMessage]);
 
   // 监听设备连接/断开，提示状态栏消息
   useEffect(() => {
     const connectedCount = devices.filter((d) => d.connected).length;
     const prev = prevConnectedCount.current;
+
+    // 清理由 devices 中移除的设备的提示状态
+    const currentSerials = new Set(devices.map(d => d.serial));
+    for (const serial of notifiedSerialsRef.current) {
+      if (!currentSerials.has(serial)) {
+        notifiedSerialsRef.current.delete(serial);
+      }
+    }
 
     if (prev === 0 && connectedCount > 0) {
       // 首次检测到设备
@@ -743,6 +763,7 @@ const MainContent: React.FC = () => {
         type: "warning",
         message: t("status.device_disconnected"),
       });
+      notifiedSerialsRef.current.clear();
     } else if (connectedCount < prev && connectedCount > 0) {
       // 有设备断开但仍有设备连接
       setStatusBarMessage({
@@ -758,14 +779,16 @@ const MainContent: React.FC = () => {
     }
 
     prevConnectedCount.current = connectedCount;
-  }, [devices]);
+  }, [devices, t, setStatusBarMessage]);
 
   // 当选择设备时自动获取设备属性
   useEffect(() => {
     if (
       selectedDevice &&
       selectedDevice.connected &&
-      !selectedDevice.properties
+      !selectedDevice.properties &&
+      selectedDevice.mode !== "offline" &&
+      selectedDevice.mode !== "unauthorized"
     ) {
       setStatusBarMessage({
         type: "info",
@@ -773,25 +796,28 @@ const MainContent: React.FC = () => {
       });
       refreshDeviceInfo(selectedDevice.serial);
     }
-  }, [selectedDevice, refreshDeviceInfo]);
+  }, [selectedDevice, refreshDeviceInfo, t, setStatusBarMessage]);
 
-  // 调试设备属性变化
+  // 监听设备属性变化，仅在首次获取成功时提示
   useEffect(() => {
-    if (selectedDevice?.properties) {
-      console.log("设备属性已更新:", {
-        marketName: selectedDevice.properties.marketName,
-        model: selectedDevice.properties.model,
-        brand: selectedDevice.properties.brand,
-        manufacturer: selectedDevice.properties.manufacturer,
-        deviceName: selectedDevice.properties.deviceName,
-        serial: selectedDevice.serial,
-      });
-      setStatusBarMessage({
-        type: "success",
-        message: t("status.device_info_fetched"),
-      });
+    if (selectedDevice?.properties && selectedDevice.serial) {
+      if (!notifiedSerialsRef.current.has(selectedDevice.serial)) {
+        console.log("设备属性已更新:", {
+          marketName: selectedDevice.properties.marketName,
+          model: selectedDevice.properties.model,
+          brand: selectedDevice.properties.brand,
+          manufacturer: selectedDevice.properties.manufacturer,
+          deviceName: selectedDevice.properties.deviceName,
+          serial: selectedDevice.serial,
+        });
+        setStatusBarMessage({
+          type: "success",
+          message: t("status.device_info_fetched"),
+        });
+        notifiedSerialsRef.current.add(selectedDevice.serial);
+      }
     }
-  }, [selectedDevice?.properties]);
+  }, [selectedDevice?.properties, selectedDevice?.serial, t, setStatusBarMessage]);
 
   // 用户行为追踪 - 在MainContent组件挂载时发送使用数据（备用方案）
   useEffect(() => {
@@ -918,6 +944,51 @@ const MainContent: React.FC = () => {
     [currentView, setCurrentView],
   );
 
+  const openDeviceSelectionWindow = useCallback(async () => {
+    try {
+      const label = 'device-selection';
+      const title = '玩机管家 - 设备选择';
+      
+      let targetWindow = await WebviewWindow.getByLabel(label);
+      
+      if (targetWindow) {
+        await targetWindow.show();
+        await targetWindow.unminimize();
+        await targetWindow.setFocus();
+      } else {
+        const url = `${window.location.origin}/index.html`;
+        
+        targetWindow = new WebviewWindow(label, {
+          url: url,
+          title: title,
+          width: 500,
+          height: 450,
+          minWidth: 400,
+          minHeight: 300,
+          resizable: true,
+          decorations: false,
+          center: true,
+          alwaysOnTop: true,
+        });
+
+        targetWindow.once('tauri://created', function () {
+          console.log(`${title} 窗口创建成功`);
+          targetWindow.show();
+        });
+
+        targetWindow.once('tauri://error', function (e) {
+          console.error(`${title} 窗口创建失败:`, e);
+        });
+      }
+    } catch (error) {
+      console.error("打开设备选择窗口失败:", error);
+      setStatusBarMessage({
+        type: 'error',
+        message: '打开设备选择窗口失败'
+      });
+    }
+  }, [setStatusBarMessage]);
+
   const openConsoleWindow = useCallback(async (tab: 'logs' | 'command-line') => {
     try {
       // 检查窗口是否已存在
@@ -927,7 +998,8 @@ const MainContent: React.FC = () => {
       let targetWindow = await WebviewWindow.getByLabel(label);
       
       if (targetWindow) {
-        // 如果已存在，将其置顶并聚焦
+        // 如果已存在，明确显示、将其置顶并聚焦
+        await targetWindow.show();
         await targetWindow.unminimize();
         await targetWindow.setFocus();
       } else {
@@ -947,6 +1019,8 @@ const MainContent: React.FC = () => {
 
         targetWindow.once('tauri://created', function () {
           console.log(`${title} 窗口创建成功`);
+          // 修改点：确保窗口创建后显示
+          targetWindow.show();
         });
 
         targetWindow.once('tauri://error', function (e) {
@@ -1009,15 +1083,15 @@ const MainContent: React.FC = () => {
     if (connectedDevices.length === 0) {
       return (
         <div className={styles.deviceInfo} id="tour-device-info">
-          <div
-            className={styles.deviceInfoOverlay}
-            onClick={() => setIsDeviceSelectionDialogOpen(true)}
-          >
-            <div className={styles.deviceInfoOverlayText}>
-              {/* <Swap24Regular /> */}
-              选择其他设备
-            </div>
+        <div
+          className={styles.deviceInfoOverlay}
+          onClick={openDeviceSelectionWindow}
+        >
+          <div className={styles.deviceInfoOverlayText}>
+            {/* <Swap24Regular /> */}
+            选择其他设备
           </div>
+        </div>
           <div className={styles.deviceInfoContainer}>
             {/* 上半部分：左侧背景图片 + 右侧无设备提示 */}
             <div className={styles.deviceInfoTop}>
@@ -1090,7 +1164,7 @@ const MainContent: React.FC = () => {
       <div className={styles.deviceInfo} id="tour-device-info">
         <div
           className={styles.deviceInfoOverlay}
-          onClick={() => setIsDeviceSelectionDialogOpen(true)}
+          onClick={openDeviceSelectionWindow}
         >
           <div className={styles.deviceInfoOverlayText}>
             {/* <Swap24Regular /> */}
@@ -1233,18 +1307,6 @@ const MainContent: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* 设备选择弹窗 */}
-      <DeviceSelectionDialog
-        open={isDeviceSelectionDialogOpen}
-        onOpenChange={(open) => setIsDeviceSelectionDialogOpen(open)}
-        devices={connectedDevices}
-        selectedDevice={selectedDevice}
-        onDeviceSelect={(device) => {
-          handleDeviceSelect(device);
-          setIsDeviceSelectionDialogOpen(false);
-        }}
-      />
 
       <div
         className={`${styles.content} main-content-enter`}

@@ -191,7 +191,6 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
             .stderr(Stdio::piped());
 
         // 在Windows端隐藏控制台窗口
-        #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
             const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -238,12 +237,60 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
         }
     }
 
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
+    {
+        // ... (Linux implementation stays same)
+        // 在 Linux 上使用 pkill 结束 adb 进程
+        let mut cmd = Command::new("pkill");
+        cmd.args(["-f", "adb"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let combined_output = if stderr.is_empty() {
+                    stdout.to_string()
+                } else {
+                    format!("{}\n{}", stdout, stderr)
+                };
+
+                log::info!(
+                    "ADB service termination (Linux) completed with exit code: {:?}",
+                    output.status.code()
+                );
+
+                Ok(CommandResult {
+                    success: output.status.success() || output.status.code() == Some(1),
+                    output: combined_output,
+                    error: if output.status.success() || output.status.code() == Some(1) {
+                        None
+                    } else {
+                        Some(stderr.to_string())
+                    },
+                    exit_code: output.status.code(),
+                })
+            }
+            Err(e) => {
+                let error_msg = format!("结束ADB服务失败 (Linux): {}", e);
+                log::error!("{}", error_msg);
+                Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(error_msg),
+                    exit_code: Some(1),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(any(windows, target_os = "linux")))]
     {
         Ok(CommandResult {
             success: false,
             output: String::new(),
-            error: Some("结束ADB服务功能仅在Windows系统上可用".to_string()),
+            error: Some("结束ADB服务功能目前仅支持 Windows 和 Linux".to_string()),
             exit_code: Some(1),
         })
     }
@@ -268,7 +315,6 @@ pub async fn finish_adb5037() -> Result<CommandResult> {
             .stderr(Stdio::piped());
 
         // 在Windows端隐藏控制台窗口
-        #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
             const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -315,12 +361,54 @@ pub async fn finish_adb5037() -> Result<CommandResult> {
         }
     }
 
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
+    {
+        // 在 Linux 上使用 fuser 结束占用 5037 端口的进程
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "fuser -k 5037/tcp"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+
+                log::info!(
+                    "ADB-5037 port termination (Linux) completed with exit code: {:?}",
+                    output.status.code()
+                );
+
+                Ok(CommandResult {
+                    success: output.status.success(),
+                    output: stdout.to_string(),
+                    error: if output.status.success() {
+                        None
+                    } else {
+                        Some(stderr.to_string())
+                    },
+                    exit_code: output.status.code(),
+                })
+            }
+            Err(e) => {
+                let error_msg = format!("结束ADB-5037端口失败 (Linux): {}", e);
+                log::error!("{}", error_msg);
+                Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(error_msg),
+                    exit_code: Some(1),
+                })
+            }
+        }
+    }
+
+    #[cfg(not(any(windows, target_os = "linux")))]
     {
         Ok(CommandResult {
             success: false,
             output: String::new(),
-            error: Some("结束ADB-5037端口功能仅在Windows系统上可用".to_string()),
+            error: Some("结束ADB-5037端口功能目前仅支持 Windows 和 Linux".to_string()),
             exit_code: Some(1),
         })
     }
@@ -339,11 +427,13 @@ pub async fn execute_batch_file_stream(
         working_directory
     );
 
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux"))]
     {
         use std::io::{BufRead, BufReader};
         use std::path::Path;
         use tokio::task;
+
+        let is_windows = cfg!(windows);
 
         // 验证工作目录存在
         let work_dir = Path::new(&working_directory);
@@ -356,38 +446,55 @@ pub async fn execute_batch_file_stream(
             });
         }
 
-        // 构建批处理文件的完整路径
-        let batch_path = work_dir.join(&batch_file_name);
-        if !batch_path.exists() {
+        // 构建脚本文件的完整路径
+        let script_path = work_dir.join(&batch_file_name);
+        if !script_path.exists() {
             return Ok(CommandResult {
                 success: false,
                 output: String::new(),
-                error: Some(format!("批处理文件不存在: {}", batch_path.display())),
+                error: Some(format!("脚本文件不存在: {}", script_path.display())),
                 exit_code: Some(1),
             });
         }
 
         log::info!(
-            "Executing batch file with streaming at: {}",
-            batch_path.display()
+            "Executing script with streaming at: {}",
+            script_path.display()
         );
 
-        // 使用cmd执行批处理文件，确保继承完整的环境变量
-        let system_root = std::env::var("SYSTEMROOT").unwrap_or("C:\\Windows".to_string());
-        let current_path = std::env::var("PATH").unwrap_or_default();
-        let enhanced_path = format!(
-            "{};{}\\System32;{}\\System32\\Wbem",
-            current_path, system_root, system_root
-        );
+        // 确保具有执行权限 (针对 Linux)
+        if !is_windows {
+            let _ = crate::utils::ensure_executable(&script_path);
+        }
 
-        let mut cmd = Command::new("cmd");
-        cmd.args(["/c", &batch_file_name])
-            .current_dir(&working_directory)
+        let mut cmd = if is_windows {
+            let system_root = std::env::var("SYSTEMROOT").unwrap_or("C:\\Windows".to_string());
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let enhanced_path = format!(
+                "{};{}\\System32;{}\\System32\\Wbem",
+                current_path, system_root, system_root
+            );
+
+            let mut c = Command::new("cmd");
+            c.args(["/c", &batch_file_name]);
+            c.env("PATH", enhanced_path);
+            c.env("SYSTEMROOT", &system_root);
+            c.env("WINDIR", &system_root);
+            c
+        } else {
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let mut c = Command::new("sh");
+            c.arg(&batch_file_name);
+            c.env(
+                "PATH",
+                format!("{}:/usr/local/bin:/usr/bin:/bin", current_path),
+            );
+            c
+        };
+
+        cmd.current_dir(&working_directory)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .env("PATH", enhanced_path)
-            .env("SYSTEMROOT", &system_root)
-            .env("WINDIR", &system_root)
             .envs(std::env::vars().filter(|(key, _)| key != "PATH")); // 继承除PATH外的所有环境变量
 
         // 在Windows端隐藏控制台窗口
@@ -396,7 +503,7 @@ pub async fn execute_batch_file_stream(
             use std::os::windows::process::CommandExt;
             const CREATE_NO_WINDOW: u32 = 0x08000000;
             cmd.creation_flags(CREATE_NO_WINDOW);
-            log::debug!("批处理文件流式执行设置隐藏窗口");
+            log::debug!("脚本文件流式执行设置隐藏窗口");
         }
 
         match cmd.spawn() {
@@ -479,7 +586,7 @@ pub async fn execute_batch_file_stream(
                         };
 
                         log::info!(
-                            "Batch file streaming execution completed with exit code: {:?}",
+                            "Script streaming execution completed with exit code: {:?}",
                             status.code()
                         );
 
@@ -495,7 +602,7 @@ pub async fn execute_batch_file_stream(
                         })
                     }
                     Err(e) => {
-                        let error_msg = format!("等待批处理文件完成失败: {}", e);
+                        let error_msg = format!("等待脚本文件完成失败: {}", e);
                         log::error!("{}", error_msg);
                         Ok(CommandResult {
                             success: false,
@@ -507,7 +614,7 @@ pub async fn execute_batch_file_stream(
                 }
             }
             Err(e) => {
-                let error_msg = format!("启动批处理文件失败: {}", e);
+                let error_msg = format!("启动脚本文件失败: {}", e);
                 log::error!("{}", error_msg);
                 Ok(CommandResult {
                     success: false,
@@ -519,12 +626,12 @@ pub async fn execute_batch_file_stream(
         }
     }
 
-    #[cfg(not(windows))]
+    #[cfg(not(any(windows, target_os = "linux")))]
     {
         Ok(CommandResult {
             success: false,
             output: String::new(),
-            error: Some("批处理文件执行功能仅在Windows系统上可用".to_string()),
+            error: Some("脚本文件执行功能目前仅支持 Windows 和 Linux".to_string()),
             exit_code: Some(1),
         })
     }
