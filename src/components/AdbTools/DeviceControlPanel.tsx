@@ -10,7 +10,7 @@ import {
   Badge,
   Spinner,
 } from "@fluentui/react-components";
-import {
+import { 
   Star24Regular,
   Star24Filled,
   Apps24Regular,
@@ -25,6 +25,7 @@ import {
   Power24Regular,
   LockClosed24Regular,
   ChevronRight24Regular,
+  ShieldCheckmark24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
@@ -32,9 +33,9 @@ import { DeviceInfo } from "../../types/device";
 import KeySimulationCard from "../DeviceControl/KeySimulationCard";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
 import SystemBackupCard from "../Tools/SystemBackupCard";
-import { controlService, CONTROL_COMMANDS } from "../../services/controlService";
+import { controlService } from "../../services/controlService";
 import { useAppStore } from "../../stores/appStore";
-import { TabDesktop24Regular, ShieldCheckmark24Regular } from "@fluentui/react-icons";
+import { useConfigStore } from "../../stores/configStore";
 
 const useStyles = makeStyles({
   container: {
@@ -123,16 +124,41 @@ const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({ device, onAdbRe
   const { setStatusBarMessage } = useAppStore();
 
   const navigationItems = [
-    { id: 'key-simulation', label: 'device_control.key_simulation', icon: <TabDesktop24Regular /> },
+    { id: 'key-simulation', label: 'device_control.key_simulation', icon: <Desktop24Regular /> },
     { id: 'system-control', label: 'device_control.system_control', icon: <Settings24Regular /> },
     { id: 'system-backup', label: 'device_control.partition_backup', icon: <ShieldCheckmark24Regular /> },
   ];
 
-  const handleFavoriteClick = async (id: string) => {
-    const cmd = CONTROL_COMMANDS[id];
+  const handleFavoriteClick = async (id: string | null) => {
+    if (!id) return;
+
+    const { adbCommands } = useConfigStore.getState();
+    let foundCommand = null;
     
+    if (adbCommands) {
+      for (const cat of adbCommands.categories) {
+        const cmd = cat.commands.find(c => c.id === id);
+        if (cmd) {
+          foundCommand = cmd;
+          break;
+        }
+      }
+    }
+
+    // Special cases for toggles (virtual IDs)
+    if (id.endsWith('_toggle')) {
+        scrollTo(id);
+        return;
+    }
+
+    // Special cases for cards/sections
+    if (id === 'display_control' || id === 'animation_speed' || id === 'power_management') {
+      scrollTo(id);
+      return;
+    }
+
     // 如果没有可执行命令，或者只是一个区段 ID，则滚动
-    if (!cmd || !cmd.command || cmd.command.length === 0) {
+    if (!foundCommand || !foundCommand.command || foundCommand.command.trim().length === 0) {
       scrollTo(id);
       return;
     }
@@ -145,7 +171,7 @@ const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({ device, onAdbRe
     try {
       const result = await controlService.executeCommand(device.serial, id);
       if (result.success) {
-        setStatusBarMessage({ type: 'success', message: t(cmd.description || 'common.success') });
+        setStatusBarMessage({ type: 'success', message: t(foundCommand.label || 'common.success') });
       } else {
         setStatusBarMessage({ type: 'error', message: result.error || t('common.error') });
       }
@@ -168,19 +194,23 @@ const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({ device, onAdbRe
 
   // 映射 ID 到名称
   const getFavoriteLabel = (id: string) => {
+    const { adbCommands } = useConfigStore.getState();
+    if (adbCommands) {
+      for (const cat of adbCommands.categories) {
+        const cmd = cat.commands.find(c => c.id === id);
+        if (cmd) return t(cmd.label || cmd.id);
+      }
+    }
+
     const labels: Record<string, string> = {
       'display_control': t('device_control.display_control', "显示控制"),
       'animation_speed': t('device_control.animation_speed', "动画速度"),
       'power_management': t('device_control.power_management', "电源管理"),
-      'screenshot': t('device_control.screenshot', "截屏"),
-      'home': t('device_control.home', "主页"),
-      'back': t('device_control.back', "返回"),
-      'recent_apps': t('device_control.recent_apps', "最近任务"),
-      'lock_screen': t('device_control.lock_screen', "锁屏"),
-      'wake_up': t('device_control.wake_up', "唤醒"),
       'wifi_toggle': t('device_control.wifi_toggle_on', "WiFi"),
       'mobile_data_toggle': t('device_control.mobile_data_on', "移动数据"),
-      'airplane_mode': t('device_control.airplane_mode_on', "飞行模式"),
+      'airplane_toggle': t('device_control.airplane_mode_on', "飞行模式"),
+      'flashlight_toggle': t('device_control.flashlight', "手电筒"),
+      'auto_rotate_toggle': t('device_control.auto_rotate', "自动旋转"),
     };
     return labels[id] || id;
   };

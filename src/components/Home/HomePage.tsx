@@ -5,10 +5,11 @@ import {
   Text,
 
   tokens,
+  Button,
 } from "@fluentui/react-components";
 import {
   Home24Regular,
-
+  Wifi124Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
@@ -20,6 +21,7 @@ import DeviceRebootCard from "./DeviceRebootCard";
 import MiscellaneousCard from "./MiscellaneousCard";
 import DeviceMonitorCard from "./DeviceMonitorCard";
 import NoDevicePrompt from "./NoDevicePrompt";
+// import WirelessDebuggingPanel from "../AdbTools/WirelessDebuggingPanel";
 
 const useStyles = makeStyles({
   container: {
@@ -149,7 +151,7 @@ const HomePage: React.FC = () => {
     isScanning
   } = useDeviceStore();
   const { t } = useTranslation();
-  const { setStatusBarMessage } = useAppStore();
+  const { setStatusBarMessage, setWirelessDebuggingDialogOpen } = useAppStore();
 
   // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
 
@@ -170,6 +172,20 @@ const HomePage: React.FC = () => {
       <div className={styles.backgroundDecoration} />
 
       {/* 页面头部 */}
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <Home24Regular />
+        </div>
+        <div className={styles.headerRight}>
+          <Button 
+            icon={<Wifi124Regular />} 
+            appearance="subtle" 
+            onClick={() => setWirelessDebuggingDialogOpen(true)}
+          >
+            {t('wireless.title')}
+          </Button>
+        </div>
+      </div>
 
       {/* 主要内容区域 - 动态布局切换 */}
       <div className={styles.mainContent}>
@@ -228,6 +244,7 @@ const HomePage: React.FC = () => {
                         <MiscellaneousCard />
                       </div>
                     </div>
+
                   </div>
                 </>
               ) : (

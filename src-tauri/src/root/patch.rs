@@ -102,7 +102,6 @@ async fn patch_magisk(
 
     #[cfg(windows)]
     {
-        use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x08000000);
     }
 
@@ -144,7 +143,6 @@ async fn patch_magisk(
 
     #[cfg(windows)]
     {
-        use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x08000000);
     }
 
@@ -153,11 +151,10 @@ async fn patch_magisk(
         .await
         .map_err(|e| AdmtError::Io(format!("Failed to repack: {}", e)))?;
 
-    let new_boot = work_dir.join("new-boot.img");
-    if new_boot.exists() {
+    let _new_boot = work_dir.join("new-boot.img");
+    if _new_boot.exists() {
         // Move to final location (next to original image)
-        let original_parent = Path::new(".").join("patched-boot.img"); // Default
-                                                                       // In real use, we'd save it properly
+        // In real use, we'd save it properly
     }
 
     Ok(CommandResult {
@@ -177,6 +174,9 @@ async fn patch_kernelsu(
         "patch-progress",
         json!({"status": "KernelSU 修补未实现", "progress": 0}),
     );
+    // 给前端一点时间显示状态
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
     Err(AdmtError::Io(
         "KernelSU patching not implemented yet".to_string(),
     ))
@@ -191,6 +191,9 @@ async fn patch_apatch(
         "patch-progress",
         json!({"status": "APatch 修补未实现", "progress": 0}),
     );
+    // 给前端一点时间显示状态
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
     Err(AdmtError::Io(
         "APatch patching not implemented yet".to_string(),
     ))
@@ -251,6 +254,10 @@ fn find_magiskboot_exe(app_handle: &tauri::AppHandle) -> Result<PathBuf> {
         .map_err(|e| AdmtError::Io(format!("无法解析工具路径: {}. 请确保应用安装完整。", e)))?;
 
     if !magiskboot_path.exists() {
+        log::error!(
+            "❌ Missing magiskboot.exe at: {}",
+            magiskboot_path.display()
+        );
         return Err(AdmtError::Io(
             "DEPENDENCY_MISSING:magiskboot.exe".to_string(),
         ));

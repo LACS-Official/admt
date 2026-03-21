@@ -28,6 +28,7 @@ console.log("已清除 localStorage 中的 rom-download-storage");
 
 import CommandLineWindow from "./components/Console/CommandLineWindow";
 import LogsWindow from "./components/Console/LogsWindow";
+import AIChatWindow from "./components/Console/AIChatWindow";
 import DeviceSelectionWindow from "./components/MainContent/DeviceSelectionWindow";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useDeviceStore } from "./stores/deviceStore";
@@ -240,6 +241,15 @@ function LogsWindowWithTheme() {
   );
 }
 
+function AIChatWindowWithTheme() {
+  const { isDarkMode } = useThemeStore();
+  return (
+    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+      <AIChatWindow />
+    </FluentProvider>
+  );
+}
+
 function DeviceSelectionWindowWithTheme() {
   const { isDarkMode } = useThemeStore();
   return (
@@ -265,6 +275,10 @@ function Root() {
 
   if (label === "logs") {
     return <LogsWindowWithTheme />;
+  }
+
+  if (label === "ai-chat") {
+    return <AIChatWindowWithTheme />;
   }
 
   if (label === "device-selection") {

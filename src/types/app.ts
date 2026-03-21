@@ -1,3 +1,12 @@
+export interface AIConfig {
+  enabled: boolean;
+  provider: "openai" | "anthropic" | "google" | "local";
+  model: string;
+  apiKey: string;
+  endpoint: string;
+  temperature: number;
+}
+
 export interface AppConfig {
   theme: "light" | "dark" | "auto";
   language: "zh-CN" | "zh-TW" | "en-US";
@@ -17,6 +26,8 @@ export interface AppConfig {
   monitorAutoStart: boolean;
   monitorAutoCsvExport: boolean;
   cpuMonitorInterval: number;
+  autoScreenMirror: boolean;
+  ai: AIConfig;
 }
 
 export interface AppState {
@@ -46,6 +57,7 @@ export type SettingsView =
   | "tool-settings"
   | "display-settings"
   | "other-settings"
+  | "ai-settings"
   | "privacy"
   | "usage-tracking"
   | "logs";

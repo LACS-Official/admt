@@ -24,31 +24,43 @@ export const useDeviceStore = create<DeviceState>()(
       lastUpdate: new Date(),
       controlFavorites: [],
 
-      setDevices: (devices: DeviceInfo[]) => {
-        const currentDevices = get().devices;
-        const currentSelected = get().selectedDevice;
-        
-        // 为新扫描到的设备补充已有的属性信息
-        const updatedDevices = devices.map(newDevice => {
-          const existingDevice = currentDevices.find(d => d.serial === newDevice.serial);
-          if (existingDevice && existingDevice.properties && !newDevice.properties) {
-            return { ...newDevice, properties: existingDevice.properties };
+      setDevices: (newDevices: DeviceInfo[]) => {
+        const currentDevices = get().devices || [];
+        const currentSelectedDeviceId = get().selectedDevice?.serial;
+
+        // 智能合并：保留现有设备的属性 (properties, boardSerialNumber等)
+        const mergedDevices = newDevices.map(newDevice => {
+          const existing = currentDevices.find(d => d.serial === newDevice.serial);
+          if (existing) {
+            // 保留旧设备的 transient 属性，覆盖新扫描的核心信息 (connected, mode)
+            return {
+              ...existing,
+              ...newDevice,
+              properties: newDevice.properties || existing.properties,
+              boardSerialNumber: newDevice.boardSerialNumber || existing.boardSerialNumber,
+              fastbootVariables: newDevice.fastbootVariables || existing.fastbootVariables,
+            };
           }
           return newDevice;
         });
 
-        // 同样为选中的设备补充属性信息（如果选中的设备在列表中）
-        let updatedSelected = currentSelected && 
-          updatedDevices.find(d => d.serial === currentSelected.serial);
-          
-        if (updatedSelected && currentSelected?.properties && !updatedSelected.properties) {
-          updatedSelected = { ...updatedSelected, properties: currentSelected.properties };
+        // 稳定保持选中设备的引用（如果它仍在列表中）
+        let nextSelectedDevice = get().selectedDevice;
+        if (nextSelectedDevice) {
+           const stillPresent = mergedDevices.find(d => d.serial === currentSelectedDeviceId);
+           if (stillPresent) {
+             // 只有当选中设备的连接状态或模式真正改变时，才考虑更新引用以触发 React 重绘，
+             // 这里我们由于想保住 properties 等属性，优先选 mergedDevices 里的（它已经合并过旧属性了）
+             nextSelectedDevice = stillPresent;
+           } else {
+             nextSelectedDevice = undefined;
+           }
         }
 
         set({ 
-          devices: updatedDevices, 
+          devices: mergedDevices, 
           lastUpdate: new Date(),
-          selectedDevice: updatedSelected
+          selectedDevice: nextSelectedDevice
         });
       },
 

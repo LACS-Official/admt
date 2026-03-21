@@ -86,10 +86,29 @@
         "theme": "Light",
         "visible": false,
         "dragDropEnabled": false
+      },
+      {
+        "label": "ai-chat",
+        "title": "玩机管家 - AI 助手",
+        "url": "index.html",
+        "width": 900,
+        "height": 700,
+        "minWidth": 600,
+        "minHeight": 500,
+        "resizable": true,
+        "fullscreen": false,
+        "maximizable": true,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "theme": "Light",
+        "visible": false,
+        "dragDropEnabled": false
       }
     ],
     "security": {
-      "csp": "default-src 'self' blob: tauri:; connect-src 'self' https://api-g.lacs.cc; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: asset:; font-src 'self' data: asset:; media-src 'self' blob: asset: data:"
+      "csp": "default-src 'self' blob: tauri:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: asset:; font-src 'self' data: asset:; media-src 'self' blob: asset: data:"
     }
   },
   "plugins": {

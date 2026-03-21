@@ -26,6 +26,8 @@ interface AppStoreState extends AppState {
   setStatusBarMessage: (message: Omit<StatusBarMessage, "id" | "timestamp"> | null) => void;
   clearStatusBarMessage: () => void;
   setNavigationParams: (params: Record<string, any> | undefined) => void;
+  isWirelessDebuggingDialogOpen: boolean;
+  setWirelessDebuggingDialogOpen: (open: boolean) => void;
   initialize: () => void;
 }
 
@@ -46,6 +48,15 @@ const defaultConfig: AppConfig = {
   monitorAutoStart: false,
   monitorAutoCsvExport: false,
   cpuMonitorInterval: 1000,
+  autoScreenMirror: false,
+  ai: {
+    enabled: false,
+    provider: "openai",
+    model: "gpt-3.5-turbo",
+    apiKey: "",
+    endpoint: "https://api.openai.com/v1",
+    temperature: 0.7,
+  },
 };
 
 export const useAppStore = create<AppStoreState>()(
@@ -59,6 +70,7 @@ export const useAppStore = create<AppStoreState>()(
       notifications: [],
       statusBarMessage: null,
       navigationParams: undefined,
+      isWirelessDebuggingDialogOpen: false,
 
       setCurrentView: (view: AppView, params?: Record<string, any>) => set({ currentView: view, navigationParams: params }),
       setNavigationParams: (params: Record<string, any> | undefined) => set({ navigationParams: params }),
@@ -149,6 +161,8 @@ export const useAppStore = create<AppStoreState>()(
 
       clearStatusBarMessage: () => set({ statusBarMessage: null }),
 
+      setWirelessDebuggingDialogOpen: (open: boolean) => set({ isWirelessDebuggingDialogOpen: open }),
+
       initialize: () => set({ isInitialized: true }),
     }),
     {
@@ -158,6 +172,23 @@ export const useAppStore = create<AppStoreState>()(
         config: state.config,
         currentView: state.currentView,
       }),
+      merge: (persistedState: any, currentState) => {
+        const mergedConfig = {
+          ...currentState.config,
+          ...(persistedState?.config || {}),
+          // 确保 AI 配置存在并合并
+          ai: {
+            ...currentState.config.ai,
+            ...(persistedState?.config?.ai || {}),
+          }
+        };
+        
+        return {
+          ...currentState,
+          ...persistedState,
+          config: mergedConfig,
+        };
+      },
     }
   )
 );

@@ -13,6 +13,7 @@ import {
   Shield24Regular,
   DeviceEq24Regular,
   Desktop24Regular,
+  Bot24Regular,
 } from "@fluentui/react-icons";
 import { SettingsView } from "../../types/app";
 import AboutPanel from "./AboutPanel";
@@ -20,6 +21,7 @@ import DeviceSettingsPanel from "./DeviceSettingsPanel";
 import DisplaySettingsPanel from "./DisplaySettingsPanel";
 import OtherSettingsPanel from "./OtherSettingsPanel";
 import PrivacyManagementPanel from "./PrivacyManagementPanel";
+import AISettingsPanel from "./AISettingsPanel";
 
 const useStyles = makeStyles({
   container: {
@@ -108,7 +110,7 @@ const useStyles = makeStyles({
 const tabs = [
   {
     id: "about" as SettingsView,
-    label: "关于",
+    label: "关于页面",
     icon: <Info24Regular />,
   },
   {
@@ -131,6 +133,11 @@ const tabs = [
     id: "privacy" as SettingsView,
     label: "隐私政策",
     icon: <Shield24Regular />,
+  },
+  {
+    id: "ai-settings" as SettingsView,
+    label: "AI 设置",
+    icon: <Bot24Regular />,
   }
 ];
 
@@ -154,6 +161,8 @@ const SettingsPanel: React.FC = () => {
         return <OtherSettingsPanel />;
       case "privacy":
         return <PrivacyManagementPanel />;
+      case "ai-settings":
+        return <AISettingsPanel />;
     }
   };
 

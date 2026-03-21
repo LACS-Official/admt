@@ -14,6 +14,7 @@ import {
   ProgressBar,
   Badge,
   mergeClasses,
+  Textarea,
 } from "@fluentui/react-components";
 import {
   DocumentAdd24Regular,
@@ -287,7 +288,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
       const selected = await open({
         multiple: installMode === 'batch',
         filters: [{
-          name: t('app_install.apk_files', 'APK Files'),
+          name: t('app_install.apk_files'),
           extensions: ['apk']
         }]
       });
@@ -340,7 +341,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
           });
 
           if (selectedDir && typeof selectedDir === 'string') {
-              setStatusBarMessage({ type: "info", message: t('app_install.scanning_folder', 'Scanning folder...') });
+              setStatusBarMessage({ type: "info", message: t('app_install.scanning_folder') });
               
               // 读取文件夹内容
               try {
@@ -351,7 +352,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
                   );
 
                   if (apkEntries.length === 0) {
-                      setStatusBarMessage({ type: "warning", message: t('app_install.no_apk_in_folder', 'No APK files found in selected folder.') });
+                      setStatusBarMessage({ type: "warning", message: t('app_install.no_apk_in_folder') });
                       return;
                   }
 
@@ -458,7 +459,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
 
     try {
       setIsInstalling(true);
-      const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
+      const fileName = apkPath.split(/[/\\]/).pop() || t('app_install.unknown_file');
       
       setStatusBarMessage({
         type: "info",
@@ -488,7 +489,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
         setStatusBarMessage({ type: "error", message: result.error || t('app_install.failed', { fileName, error: t('common.fail') }) });
       }
     } catch (error) {
-        const fileName = apkPath.split(/[/\\]/).pop() || "unknown.apk";
+        const fileName = apkPath.split(/[/\\]/).pop() || t('app_install.unknown_file');
         setInstallHistory(prev => prev.map((item, index) => 
             index === 0 ? { ...item, status: "failed", message: String(error) } : item
         ));
@@ -504,7 +505,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
       
       const pendingFiles = batchFiles.filter(f => f.status === 'pending' || f.status === 'failed');
       if (pendingFiles.length === 0) {
-           setStatusBarMessage({ type: "warning", message: t('app_install.no_pending_files', 'No pending files to install.') });
+           setStatusBarMessage({ type: "warning", message: t('app_install.no_pending_files') });
            return;
       }
 
@@ -535,7 +536,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
       }
 
       setIsInstalling(false);
-      setStatusBarMessage({ type: "success", message: t('app_install.batch_completed', 'Batch installation completed.') });
+      setStatusBarMessage({ type: "success", message: t('app_install.batch_completed') });
   };
 
   const renderStatusIcon = (status: string) => {
@@ -558,34 +559,37 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
           </div>
 
           <div className={styles.optionsSection}>
-             <Field label={t('app_install.install_mode', '安装模式')}>
+             <Field label={t('app_install.install_mode')}>
                 <RadioGroup 
                   value={installMode} 
                   onChange={(_, data) => setInstallMode(data.value as 'single' | 'batch')}
                   disabled={isInstalling}
+                  style={{ display: 'flex', gap: '4px',border: '1px solid var(--colorNeutralStroke2)',borderRadius: '8px' }}
                 >
-                  <Radio value="single" label={t('app_install.mode_single', '单个安装')} />
-                  <Radio value="batch" label={t('app_install.mode_batch', '批量安装')} />
+                  <Radio value="single" label={t('app_install.mode_single')} />
+                  <Radio value="batch" label={t('app_install.mode_batch')} />
                 </RadioGroup>
              </Field>
 
              {installMode === 'single' && (
-                <Field label={t('app_install.path_label')}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <Input
-                      style={{ flex: 1 }}
+                <Field label={t('app_install.path_label')} style={{marginTop:"4px"}}>
+                  <div style={{ display: 'flex', gap: '8px',border: '1px solid var(--colorNeutralStroke2)',borderRadius: '8px',width: '90%' }}>
+                    <Textarea
+                      style={{ flex: 1 ,width:'100%', minHeight: '60px' }}
                       value={apkPath}
                       onChange={(_, data) => setApkPath(data.value)}
                       placeholder={t('app_install.path_placeholder')}
                       disabled={isInstalling}
+                      resize="vertical"
                     />
                   </div>
                   <Button
-                    appearance="secondary"
+                    appearance="outline"
                     onClick={handleFileSelect}
                     disabled={isInstalling}
                     icon={<DocumentAdd24Regular />}
-                  />
+                    style={{width:'90%',gap:"4px",marginTop:"4px"}}
+                  >{t('app_install.select_package')}</Button>
                 </Field>
              )}
 
@@ -597,7 +601,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
                     onClick={handleFileSelect}
                     disabled={isInstalling}
                   >
-                    {t('app_install.add_files', '添加文件')}
+                    {t('app_install.add_files')}
                   </Button>
                   <Button 
                     appearance="secondary" 
@@ -605,7 +609,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
                     onClick={handleFolderSelect}
                     disabled={isInstalling}
                   >
-                    {t('app_install.add_folder', '添加文件夹')}
+                    {t('app_install.add_folder')}
                   </Button>
                 </div>
              )}
@@ -634,7 +638,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
           {/* 队列/历史记录 */}
           <div className={mergeClasses(styles.card, styles.fullHeightCard)} style={{ flex: 1.2 }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--colorNeutralStroke2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <Text weight="semibold">{installMode === 'batch' ? t('app_install.install_queue', '安装队列') : t('app_install.history')}</Text>
+               <Text weight="semibold">{installMode === 'batch' ? t('app_install.install_queue') : t('app_install.history')}</Text>
                {installMode === 'batch' && batchFiles.length > 0 && (
                  <Button appearance="subtle" size="small" icon={<Delete24Regular />} onClick={clearBatchFiles} disabled={isInstalling}>
                    {t('app_install.clear_all')}
@@ -668,7 +672,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
               ) : (
                 installHistory.length === 0 ? (
                   <div className={styles.emptyState}>
-                    <Text>{t('app_install.no_history', '暂无安装记录')}</Text>
+                    <Text>{t('app_install.no_history')}</Text>
                   </div>
                 ) : (
                   <div className={styles.historySection} style={{ padding: '12px' }}>
