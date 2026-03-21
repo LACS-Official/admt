@@ -1,4 +1,5 @@
 import { StructuredLogEntry, LogLevel, LogCategory, LogFilter as StructuredLogFilter } from "./logTypes";
+import { invoke } from "@tauri-apps/api/core";
 
 // 保持旧的接口定义用于兼容性，但在内部映射到新类型
 export type { LogLevel };
@@ -17,10 +18,40 @@ class LogService {
   private logs: StructuredLogEntry[] = [];
   private maxLogs: number = 1000;
   private listeners: ((logs: StructuredLogEntry[]) => void)[] = [];
+  private channel: BroadcastChannel | null = null;
 
   constructor() {
     // 初始化时添加启动日志
     this.log("info", "日志系统初始化完成", "LogService", { category: "system" });
+
+    // 初始化跨窗口同步通道
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        this.channel = new BroadcastChannel('admt_logs_channel');
+        this.channel.onmessage = (event) => {
+          if (event.data && event.data.type === 'LOG_ENTRY') {
+            this.handleRemoteLog(event.data.entry);
+          }
+        };
+      } catch (e) {
+        console.error('Failed to initialize BroadcastChannel:', e);
+      }
+    }
+  }
+
+  private handleRemoteLog(entry: StructuredLogEntry): void {
+    // 防止重复添加
+    if (this.logs.some(log => log.id === entry.id)) return;
+
+    this.logs.push(entry);
+    
+    // 限制日志数量
+    if (this.logs.length > this.maxLogs) {
+      this.logs = this.logs.slice(-this.maxLogs);
+    }
+
+    // 远程日志仅更新 UI，不重复输出到控制台（各窗口控制台独立）
+    this.notifyListeners();
   }
 
   log(level: LogLevel | string, message: string, source?: string, details?: any): void {
@@ -72,8 +103,37 @@ class LogService {
     // 通知监听器
     this.notifyListeners();
 
+    // 跨窗口同步
+    if (this.channel) {
+      this.channel.postMessage({ type: 'LOG_ENTRY', entry });
+    }
+
+    // 持久化到文件 (仅在产生日志的窗口执行，避免多窗口重复写入)
+    this.persistToFile(entry);
+
     // 同时输出到控制台
     this.logToConsole(entry);
+  }
+
+  private async persistToFile(entry: StructuredLogEntry): Promise<void> {
+    try {
+      // 检查是否在内容中，如果在 node 环境下可能无法使用 invoke
+      if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+        // 映射到 Rust 后端的 StructuredLogEntry 结构
+        const backendEntry = {
+          level: entry.level,
+          message: entry.message,
+          module: entry.source || "App",
+          timestamp: entry.timestamp,
+          data: entry.context || null
+        };
+        
+        await invoke('persist_log_to_file', { logEntry: backendEntry });
+      }
+    } catch (error) {
+      // 避免在此处使用 this.error 导致死循环
+      console.error('Failed to persist log to file:', error);
+    }
   }
 
   private logToConsole(entry: StructuredLogEntry): void {

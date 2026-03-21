@@ -14,6 +14,7 @@ import {
   Pulse24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles( {
   container: {
@@ -87,6 +88,7 @@ const useStyles = makeStyles( {
 
 const DeviceSettingsPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { config, updateConfig } = useAppStore();
   const handleAutoDetectChange = (checked: boolean) => {
     updateConfig({ autoDetectDevices: checked });
@@ -114,6 +116,10 @@ const DeviceSettingsPanel: React.FC = () => {
     updateConfig({ monitorAutoCsvExport: checked });
   };
 
+  const handleAutoScreenMirrorChange = (checked: boolean) => {
+    updateConfig({ autoScreenMirror: checked });
+  };
+
 
 
   return (
@@ -124,17 +130,17 @@ const DeviceSettingsPanel: React.FC = () => {
         <Card className={styles.card}>
           <CardHeader
             image={<Timer24Regular />}
-            header={<Text weight="semibold">设备连接</Text>}
-            description={<Text size={200}>设备检测和连接相关设置</Text>}
+            header={<Text weight="semibold">{t('device_settings.device_connection')}</Text>}
+            description={<Text size={200}>{t('device_settings.device_connection_desc')}</Text>}
           />
 
           <div className={styles.cardContent}>
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
-                <Text weight="semibold">自动检测设备</Text>
+                <Text weight="semibold">{t('device_settings.auto_detect')}</Text>
                 <br />
                 <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  自动扫描连接的Android设备 
+                  {t('device_settings.auto_detect_desc')}
                 </Text>
               </div>
               <Switch
@@ -143,7 +149,7 @@ const DeviceSettingsPanel: React.FC = () => {
               />
             </div>
 
-            <Field label="扫描间隔 (毫秒):">
+            <Field label={t('device_settings.scan_interval')}>
               <Input
                 type="number"
                 value={config.scanInterval.toString()}
@@ -159,10 +165,23 @@ const DeviceSettingsPanel: React.FC = () => {
                   : "var(--colorNeutralForeground3)",
                 marginTop: "4px"
               }}>
-                建议值：1000-5000毫秒 {!config.autoDetectDevices && "(需要启用自动检测)"}
+                {t('device_settings.scan_interval_hint')} {!config.autoDetectDevices && t('device_settings.need_auto_detect')}
               </Text>
             </Field>
 
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <Text weight="semibold">{t('device_settings.auto_mirror_title')}</Text>
+                <br />
+                <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                  {t('device_settings.auto_mirror_desc')}
+                </Text>
+              </div>
+              <Switch
+                checked={config.autoScreenMirror}
+                onChange={(_, data) => handleAutoScreenMirrorChange(data.checked === true)}
+              />
+            </div>
           </div>
         </Card>
 
@@ -170,17 +189,17 @@ const DeviceSettingsPanel: React.FC = () => {
         <Card className={styles.card}>
           <CardHeader
             image={<Pulse24Regular />}
-            header={<Text weight="semibold">设备硬件监控</Text>}
-            description={<Text size={200}>CPU、频率、温度及电池监控设置</Text>}
+            header={<Text weight="semibold">{t('device_settings.hardware_monitor')}</Text>}
+            description={<Text size={200}>{t('device_settings.hardware_monitor_desc')}</Text>}
           />
 
           <div className={styles.cardContent}>
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
-                <Text weight="semibold">打开工具自动检测</Text>
+                <Text weight="semibold">{t('device_settings.monitor_auto_detect')}</Text>
                 <br />
                 <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  进入监控页面或连接设备时自动启动循环抓取
+                  {t('device_settings.monitor_auto_detect_desc')}
                 </Text>
               </div>
               <Switch
@@ -191,10 +210,10 @@ const DeviceSettingsPanel: React.FC = () => {
 
             <div className={styles.settingRow}>
               <div className={styles.settingInfo}>
-                <Text weight="semibold">实时输出CSV数据</Text>
+                <Text weight="semibold">{t('device_settings.monitor_csv_output')}</Text>
                 <br />
                 <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  开启检测时同步在下载目录生成实时监控表格
+                  {t('device_settings.monitor_csv_output_desc')}
                 </Text>
               </div>
               <Switch
@@ -203,7 +222,7 @@ const DeviceSettingsPanel: React.FC = () => {
               />
             </div>
 
-            <Field label="监控检测抓取频率 (毫秒):">
+            <Field label={t('device_settings.monitor_frequency')}>
               <Input
                 type="number"
                 value={config.cpuMonitorInterval.toString()}
@@ -213,7 +232,7 @@ const DeviceSettingsPanel: React.FC = () => {
                 step={500}
               />
               <Text size={200} style={{ color: "var(--colorNeutralForeground2)", marginTop: "4px" }}>
-                建议值：500-2000毫秒（越小越精确但功耗越高）
+                {t('device_settings.monitor_frequency_hint')}
               </Text>
             </Field>
           </div>

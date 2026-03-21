@@ -27,6 +27,7 @@ import {
   ChevronDown24Regular,
   Warning24Regular,
   ShieldKeyhole24Regular,
+  Wifi124Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
@@ -47,9 +48,9 @@ import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
 import RootPanel from "../Root/RootPanel";
-// import CommandExecutePanel from "../Others/CommandExecutePanel";
-// import LogsPanel from "../Others/LogsPanel";
+import WirelessDebuggingPanel from "../AdbTools/WirelessDebuggingPanel";
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import AutoMirrorManager from "../Common/AutoMirrorManager";
 
 import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
@@ -637,6 +638,8 @@ const MainContent: React.FC = () => {
   const setCurrentView = useAppStore((state) => state.setCurrentView);
   const config = useAppStore((state) => state.config);
   const setStatusBarMessage = useAppStore((state) => state.setStatusBarMessage);
+  const isWirelessDebuggingDialogOpen = useAppStore((state) => state.isWirelessDebuggingDialogOpen);
+  const setWirelessDebuggingDialogOpen = useAppStore((state) => state.setWirelessDebuggingDialogOpen);
 
   const selectedDevice = useDeviceStore((state) => state.selectedDevice);
   const devices = useDeviceStore((state) => state.devices);
@@ -710,9 +713,6 @@ const MainContent: React.FC = () => {
     stopScanning,
   ]);
 
-  // 已提示获取成功的设备列表，避免重复提示
-  const notifiedSerialsRef = useRef<Set<string>>(new Set());
-
   // 监听设备状态变化，检测离线和未授权设备
   useEffect(() => {
     if (selectedDevice) {
@@ -729,24 +729,13 @@ const MainContent: React.FC = () => {
           message: t("status.device_unauthorized"),
         });
       }
-    } else {
-      // 如果没有选中的设备，清空已提示列表
-      notifiedSerialsRef.current.clear();
     }
-  }, [selectedDevice, t, setStatusBarMessage]);
+  }, [selectedDevice]);
 
   // 监听设备连接/断开，提示状态栏消息
   useEffect(() => {
     const connectedCount = devices.filter((d) => d.connected).length;
     const prev = prevConnectedCount.current;
-
-    // 清理由 devices 中移除的设备的提示状态
-    const currentSerials = new Set(devices.map(d => d.serial));
-    for (const serial of notifiedSerialsRef.current) {
-      if (!currentSerials.has(serial)) {
-        notifiedSerialsRef.current.delete(serial);
-      }
-    }
 
     if (prev === 0 && connectedCount > 0) {
       // 首次检测到设备
@@ -763,7 +752,6 @@ const MainContent: React.FC = () => {
         type: "warning",
         message: t("status.device_disconnected"),
       });
-      notifiedSerialsRef.current.clear();
     } else if (connectedCount < prev && connectedCount > 0) {
       // 有设备断开但仍有设备连接
       setStatusBarMessage({
@@ -779,16 +767,14 @@ const MainContent: React.FC = () => {
     }
 
     prevConnectedCount.current = connectedCount;
-  }, [devices, t, setStatusBarMessage]);
+  }, [devices]);
 
   // 当选择设备时自动获取设备属性
   useEffect(() => {
     if (
       selectedDevice &&
       selectedDevice.connected &&
-      !selectedDevice.properties &&
-      selectedDevice.mode !== "offline" &&
-      selectedDevice.mode !== "unauthorized"
+      !selectedDevice.properties
     ) {
       setStatusBarMessage({
         type: "info",
@@ -796,28 +782,8 @@ const MainContent: React.FC = () => {
       });
       refreshDeviceInfo(selectedDevice.serial);
     }
-  }, [selectedDevice, refreshDeviceInfo, t, setStatusBarMessage]);
+  }, [selectedDevice, refreshDeviceInfo]);
 
-  // 监听设备属性变化，仅在首次获取成功时提示
-  useEffect(() => {
-    if (selectedDevice?.properties && selectedDevice.serial) {
-      if (!notifiedSerialsRef.current.has(selectedDevice.serial)) {
-        console.log("设备属性已更新:", {
-          marketName: selectedDevice.properties.marketName,
-          model: selectedDevice.properties.model,
-          brand: selectedDevice.properties.brand,
-          manufacturer: selectedDevice.properties.manufacturer,
-          deviceName: selectedDevice.properties.deviceName,
-          serial: selectedDevice.serial,
-        });
-        setStatusBarMessage({
-          type: "success",
-          message: t("status.device_info_fetched"),
-        });
-        notifiedSerialsRef.current.add(selectedDevice.serial);
-      }
-    }
-  }, [selectedDevice?.properties, selectedDevice?.serial, t, setStatusBarMessage]);
 
   // 用户行为追踪 - 在MainContent组件挂载时发送使用数据（备用方案）
   useEffect(() => {
@@ -1222,6 +1188,18 @@ const MainContent: React.FC = () => {
                 >
                   {getDeviceConnectionType()}
                 </Badge>
+                {/* 无线调试快捷入口按钮 */}
+                <Button 
+                  icon={<Wifi124Regular />} 
+                  size="small" 
+                  appearance="subtle"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setWirelessDebuggingDialogOpen(true);
+                  }}
+                  title={t('wireless.title')}
+                  style={{ minWidth: "auto", padding: "0 4px" }}
+                />
               </div>
             </div>
           </div>
@@ -1396,6 +1374,33 @@ const MainContent: React.FC = () => {
           </DialogBody>
         </DialogSurface>
       </Dialog>
+      {/* 全局随机无线调试弹窗 */}
+      <Dialog 
+        open={isWirelessDebuggingDialogOpen} 
+        onOpenChange={(event, data) => setWirelessDebuggingDialogOpen(data.open)}
+        modalType="modal"
+      >
+        <DialogSurface style={{ maxWidth: '800px', width: '90vw' }}>
+          <DialogBody>
+            <DialogTitle action={<Button appearance="subtle" icon={<Icons24Regular />} onClick={() => setWirelessDebuggingDialogOpen(false)} />}>
+              {t('wireless.title')}
+            </DialogTitle>
+            <DialogContent>
+              <WirelessDebuggingPanel 
+                device={selectedDevice} 
+                onAdbRequired={() => {
+                  setWirelessDebuggingDialogOpen(false);
+                  setStatusBarMessage({
+                    type: "warning",
+                    message: t('adb.adb_mode_required_desc'),
+                  });
+                }} 
+              />
+            </DialogContent>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+      <AutoMirrorManager />
     </div>
   );
 };

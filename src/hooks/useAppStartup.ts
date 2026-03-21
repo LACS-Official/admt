@@ -11,6 +11,7 @@ import { unifiedVersionService } from "../services/unifiedVersionService";
 import { activationService } from "../services/activationService";
 import { usageTrackingService } from "../services/usageTrackingService";
 import { deviceService } from "../services/deviceService";
+import { useConfigStore } from "../stores/configStore";
 
 export const useAppStartup = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -191,6 +192,11 @@ export const useAppStartup = () => {
             await adbToolsManager.initialize();
             adbInitRef.current = true;
             console.log('✅ ADB工具初始化完成');
+            
+            // 加载ADB命令配置
+            console.log('📜 加载ADB命令配置...');
+            await useConfigStore.getState().loadAdbCommands();
+            console.log('✅ ADB命令配置加载完成');
           } catch (error) {
             console.error('❌ ADB工具初始化失败:', error);
           }
@@ -269,12 +275,16 @@ export const useAppStartup = () => {
       });
       
       // 启动流程彻底完成后，再开启设备扫描，并给予一定的缓冲时间
-      console.log('🔍 启动流程彻底完成，延迟开启设备扫描...');
-      deviceService.startScanning(config.scanInterval, 2000); 
+      if (config.autoDetectDevices) {
+        console.log('🔍 启动流程彻底完成，开启设备扫描...');
+        deviceService.startScanning(config.scanInterval, 2000); 
+      } else {
+        console.log('🔍 自动检测设备已禁用，跳过开启扫描');
+      }
     }, 1000);
 
     setShowTransition(true);
-  }, [getPerformanceMetrics, config.scanInterval]);
+  }, [getPerformanceMetrics, config.scanInterval, config.autoDetectDevices]);
 
   const handleStartupFlowError = useCallback(async (error: string) => {
     logService.error('启动流程失败', 'App', error);

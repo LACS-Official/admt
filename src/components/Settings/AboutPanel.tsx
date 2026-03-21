@@ -353,7 +353,7 @@ const AboutPanel: React.FC = () => {
   const links = {
     checkUpdate: "https://admt.lacs.cc/download",
     userManual: "https://admt.lacs.cc/docs",
-    feedback: "https://www.lacs.cc/contact",
+    feedback: "https://admt.lacs.cc/feedback",
     otherapps:"https://www.lacs.cc/#projects",
     officialWebsite: "https://www.lacs.cc",
     officialADMTWeb: "https://admt.lacs.cc",

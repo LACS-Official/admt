@@ -48,7 +48,7 @@ const useStyles = makeStyles({
         display: "grid",
         gridTemplateColumns: "300px 1fr",
         gap: "16px",
-        height: "calc(100% - 80px)",
+        height: "calc(100% - 20px)",
     },
     fullWidth: {
         gridColumn: "1 / -1",
@@ -80,24 +80,25 @@ const useStyles = makeStyles({
         flexDirection: "column",
         gap: "12px",
         backgroundColor: "var(--colorNeutralBackground2)",
-        width: "300px",
     },
     rightPane: {
         padding: "16px",
         overflowY: "auto",
         display: "flex",
         flexDirection: "column",
-        gap: "16px",
+        gap: "8px",
         backgroundColor: "var(--colorNeutralBackground1)",
         borderRadius: "8px",
         border: "1px solid var(--colorNeutralStroke2)",
+        height: "100%",
     },
     sectionHeader: {
         display: "flex",
         alignItems: "center",
         gap: "8px",
         marginBottom: "8px",
-        color: "var(--colorBrandForeground1)",
+        color: "var(--colorNeutralForeground1)",
+        fontWeight: "600",
     },
     deviceList: {
         display: "flex",
@@ -329,6 +330,7 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
     }));
 
     return (
+        /**  投屏设置**/
         <div className={styles.mainLayout}>
             <div className={styles.leftPane}>
                 <div className={styles.sectionHeader}>

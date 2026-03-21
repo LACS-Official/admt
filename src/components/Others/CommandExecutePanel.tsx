@@ -301,20 +301,10 @@ const CommandExecutePanel : React.FC = () => {
   const { t } = useTranslation();
   const { devices, selectedDevice, selectDevice } = useDeviceStore();
   const { deviceService, startScanning } = useDeviceService();
-  const { setStatusBarMessage } = useAppStore();
-  const isInitializedRef = useRef(false);
-  const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState(false);
-
-  // 确保设备服务和扫描功能正确初始化
-  useEffect(() => {
-    if (!isInitializedRef.current) {
-      startScanning();
-      isInitializedRef.current = true;
-      console.log('CommandExecutePanel: 设备扫描已启动');
-    }
-  }, [startScanning]);
+  const { setStatusBarMessage, config } = useAppStore();
 
   // 获取设备显示名称
+  const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState(false);
   const getDeviceDisplayName = (device: DeviceInfo) => {
     if (!device) return t('command_panel.device_unknown');
      
@@ -467,28 +457,6 @@ const CommandExecutePanel : React.FC = () => {
       loadAdbCommandsConfig();
     }, []);
 
-    // 启动设备扫描
-    useEffect(() => {
-      // 启动设备扫描
-      const startDeviceScan = async () => {
-        try {
-          console.log('CommandExecutePanel: 启动设备扫描');
-          await startScanning();
-          setStatusBarMessage({
-            type: 'info',
-            message: t('command_panel.scanning')
-          });
-        } catch (error) {
-          console.error('CommandExecutePanel: 启动设备扫描失败', error);
-          setStatusBarMessage({
-            type: 'error',
-            message: t('command_panel.scan_failed')
-          });
-        }
-      };
-
-      startDeviceScan();
-    }, [startScanning]);
 
   // 监听设备状态变化，确保设备列表为空时清除选中设备
   useEffect(() => {

@@ -297,7 +297,14 @@ const useStyles = makeStyles({
     fontWeight: "500",
   },
   
-  // 动画关键帧 - Removed CSS keyframes in favor of Framer Motion
+  wirelessSection: {
+    width: "100%",
+    maxWidth: "1200px",
+    marginTop: "32px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
 });
 
 interface NoDevicePromptProps {

@@ -339,6 +339,42 @@ function getDefaultAdbCommandsConfig(): AdbCommandsConfig {
             label: "关闭数据",
             command: "shell svc data disable",
             description: "关闭移动数据网络"
+          },
+          {
+            id: "airplane_mode_on",
+            label: "开启飞行模式",
+            command: "shell settings put global airplane_mode_on 1 && am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true",
+            description: "开启飞行模式"
+          },
+          {
+            id: "airplane_mode_off",
+            label: "关闭飞行模式",
+            command: "shell settings put global airplane_mode_on 0 && am broadcast -a android.intent.action.AIRPLANE_MODE --ez state false",
+            description: "关闭飞行模式"
+          },
+          {
+            id: "flashlight_on",
+            label: "开启手电筒",
+            command: "shell cmd flashlight set-on true",
+            description: "开启核心手电筒"
+          },
+          {
+            id: "flashlight_off",
+            label: "关闭手电筒",
+            command: "shell cmd flashlight set-on false",
+            description: "关闭核心手电筒"
+          },
+          {
+            id: "auto_rotate_on",
+            label: "开启自动旋转",
+            command: "shell settings put system accelerometer_rotation 1",
+            description: "开启屏幕自动旋转"
+          },
+          {
+            id: "auto_rotate_off",
+            label: "关闭自动旋转",
+            command: "shell settings put system accelerometer_rotation 0",
+            description: "关闭屏幕自动旋转"
           }
         ]
       }

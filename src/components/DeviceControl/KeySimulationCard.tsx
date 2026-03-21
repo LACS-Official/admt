@@ -44,6 +44,7 @@ import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from '@/stores/appStore';
 import { useTranslation } from "react-i18next";
 import { controlService } from "../../services/controlService";
+import { useConfigStore } from "../../stores/configStore";
 
 const useStyles = makeStyles({
   card: {
@@ -81,13 +82,13 @@ const useStyles = makeStyles({
   },
   commandGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)", // Denser grid
+    gridTemplateColumns: "repeat(5, 1fr)",
     gap: "8px",
   },
   pinnedButton: {
     height: "42px",
     display: "flex",
-    flexDirection: "row", // Horizontal for pinned to save space
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
     gap: "10px",
@@ -143,6 +144,37 @@ const useStyles = makeStyles({
   }
 });
 
+// Icon mapping for command IDs
+const ICON_MAP: Record<string, React.ReactNode> = {
+  screenshot: <Screenshot24Regular />,
+  home: <Home24Regular />,
+  back: <ArrowLeft24Regular />,
+  recent_apps: <Apps24Regular />,
+  volume_up: <Speaker224Regular />,
+  volume_down: <Speaker124Regular />,
+  volume_mute: <SpeakerMute24Regular />,
+  media_play_pause: <Play24Regular />,
+  media_next: <Next24Regular />,
+  media_previous: <Previous24Regular />,
+  menu: <LineHorizontal324Regular />,
+  search: <Search24Regular />,
+  power_button: <Power24Regular />,
+  split_screen: <PanelLeft24Regular />,
+  brightness_max: <WeatherSunny24Regular />,
+  brightness_low: <WeatherSunny24Regular />,
+  developer_options: <WrenchScrewdriver24Regular />,
+  wifi_on: <Wifi124Regular />,
+  wifi_off: <Wifi124Regular />,
+  data_on: <Cellular4GRegular />,
+  data_off: <Cellular4GRegular />,
+  airplane_mode_on: <Airplane24Regular />,
+  airplane_mode_off: <Airplane24Regular />,
+  flashlight_on: <Flashlight24Regular />,
+  flashlight_off: <Flashlight24Regular />,
+  auto_rotate_on: <ArrowCounterclockwise24Regular />,
+  auto_rotate_off: <ArrowCounterclockwise24Regular />,
+};
+
 interface KeySimulationCardProps {
   device: DeviceInfo | null;
   onAdbRequired: () => void;
@@ -152,6 +184,7 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
   const styles = useStyles();
   const { t } = useTranslation();
   const { deviceService } = useDeviceService();
+  const { adbCommands } = useConfigStore();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
   const [wifiEnabled, setWifiEnabled] = useState<boolean>(false);
   const [wifiSsid, setWifiSsid] = useState<string | null>(null);
@@ -174,8 +207,6 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
           setMobileDataEnabled(status.mobileDataEnabled);
           setAirplaneModeEnabled(status.airplaneModeEnabled);
           
-          // These might need custom logic in deviceService if not already there
-          // For now, let's assume they might be added or we'll fetch them manually
           const flashlightRes = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "get", "system", "flashlight_enabled"]);
           setFlashlightEnabled(flashlightRes.output.trim() === "1" || flashlightRes.output.includes("1"));
           
@@ -188,23 +219,17 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
     };
 
     fetchStatus();
-    timer = setInterval(fetchStatus, 5000); // Poll every 5 seconds
+    timer = setInterval(fetchStatus, 5000); 
     return () => clearInterval(timer);
   }, [device, deviceService]);
 
-  const executeCommand = async (commandId: string, command: string[], description: string) => {
+  const executeCommand = async (commandId: string, description: string) => {
     if (!device) {
-      setStatusBarMessage({
-        type: "warning",
-        message: t('unlock.select_device_first'),
-      });
+      setStatusBarMessage({ type: "warning", message: t('unlock.select_device_first') });
       return;
     }
     if (!device.connected) {
-      setStatusBarMessage({
-        type: "error",
-        message: t('device_control.msg_check_connection'),
-      });
+      setStatusBarMessage({ type: "error", message: t('device_control.msg_check_connection') });
       return;
     }
 
@@ -213,44 +238,21 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
       return;
     }
 
+    // Handle Toggles
+    let finalCommandId = commandId;
+    if (commandId === "wifi_toggle") finalCommandId = wifiEnabled ? "wifi_off" : "wifi_on";
+    else if (commandId === "mobile_data_toggle") finalCommandId = mobileDataEnabled ? "data_off" : "data_on";
+    else if (commandId === "airplane_toggle") finalCommandId = airplaneModeEnabled ? "airplane_mode_off" : "airplane_mode_on";
+    else if (commandId === "flashlight_toggle") finalCommandId = flashlightEnabled ? "flashlight_off" : "flashlight_on";
+    else if (commandId === "auto_rotate_toggle") finalCommandId = autoRotateEnabled ? "auto_rotate_off" : "auto_rotate_on";
+
     setExecutingCommand(commandId);
     try {
-      let result;
-      
-      // Handle special toggles first
-      if (commandId === "wifi_toggle") {
-        const wifiState = wifiEnabled ? "disable" : "enable";
-        result = await deviceService.executeAdbCommand(device.serial, "shell", ["svc", "wifi", wifiState]);
-      } else if (commandId === "mobile_data_toggle") {
-        const dataState = mobileDataEnabled ? "disable" : "enable";
-        result = await deviceService.executeAdbCommand(device.serial, "shell", ["svc", "data", dataState]);
-      } else if (commandId === "airplane_mode") {
-        const airplaneState = airplaneModeEnabled ? "0" : "1";
-        result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "global", "airplane_mode_on", airplaneState]);
-      } else if (commandId === "flashlight") {
-        const flashState = flashlightEnabled ? "0" : "1";
-        // Try multiple methods for flashlight
-        result = await deviceService.executeAdbCommand(device.serial, "shell", ["cmd", "flashlight", "set-on", flashState === "1" ? "true" : "false"]);
-        if (!result.success) {
-           // Fallback for some devices
-           result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "system", "flashlight_enabled", flashState]);
-        }
-      } else if (commandId === "auto_rotate") {
-        const rotateState = autoRotateEnabled ? "0" : "1";
-        result = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "put", "system", "accelerometer_rotation", rotateState]);
-      } else {
-        // Use controlService for standard commands
-        result = await controlService.executeCommand(device.serial, commandId);
-      }
+      const result = await controlService.executeCommand(device.serial, finalCommandId);
       
       if (result.success) {
         setStatusBarMessage({ type: "success", message: description });
-        // Optimistic UI update
-        if (commandId === "wifi_toggle") setWifiEnabled(!wifiEnabled);
-        else if (commandId === "mobile_data_toggle") setMobileDataEnabled(!mobileDataEnabled);
-        else if (commandId === "airplane_mode") setAirplaneModeEnabled(!airplaneModeEnabled);
-        else if (commandId === "flashlight") setFlashlightEnabled(!flashlightEnabled);
-        else if (commandId === "auto_rotate") setAutoRotateEnabled(!autoRotateEnabled);
+        // Optimistic UI updates are handled by polling, but we can do them here too for snappiness
       } else {
         setStatusBarMessage({ type: "error", message: (result as any).error || t('device_control.msg_unknown_error') });
       }
@@ -261,67 +263,49 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
     }
   };
 
-  const allCommands = [
-    { id: "screenshot", label: t('device_control.screenshot'), icon: <Screenshot24Regular />, command: [], description: t('device_control.desc_screenshot'), pinned: true },
-    { id: "home", label: t('device_control.home'), icon: <Home24Regular />, command: [], description: t('device_control.desc_home'), pinned: true },
-    { id: "back", label: t('device_control.back'), icon: <ArrowLeft24Regular />, command: [], description: t('device_control.desc_back'), pinned: true },
-    { id: "recent_apps", label: t('device_control.recent_apps'), icon: <Apps24Regular />, command: [], description: t('device_control.desc_recent_apps'), pinned: true },
-    { id: "lock_screen", label: t('device_control.lock_screen'), icon: <LockClosed24Regular />, command: [], description: t('device_control.desc_lock_screen') },
-    { id: "wake_up", label: t('device_control.wake_up'), icon: <Power24Regular />, command: [], description: t('device_control.desc_wake_up') },
-    { id: "volume_up", label: t('device_control.volume_up'), icon: <Speaker224Regular />, command: [], description: t('device_control.desc_volume_up') },
-    { id: "volume_down", label: t('device_control.volume_down'), icon: <Speaker124Regular />, command: [], description: t('device_control.desc_volume_down') },
-    { id: "volume_mute", label: t('device_control.volume_mute'), icon: <SpeakerMute24Regular />, command: [], description: t('device_control.desc_volume_mute') },
-    { id: "media_play_pause", label: t('device_control.media_play_pause'), icon: <Play24Regular />, command: [], description: t('device_control.desc_media_play_pause') },
-    { id: "media_next", label: t('device_control.media_next'), icon: <Next24Regular />, command: [], description: t('device_control.desc_media_next') },
-    { id: "media_previous", label: t('device_control.media_previous'), icon: <Previous24Regular />, command: [], description: t('device_control.desc_media_previous') },
-    { id: "brightness_up", label: t('device_control.brightness_up'), icon: <WeatherSunny24Regular />, command: ["shell", "settings", "put", "system", "screen_brightness", "255"], description: t('device_control.desc_brightness_up') },
-    { id: "brightness_down", label: t('device_control.brightness_down'), icon: <WeatherSunny24Regular />, command: ["shell", "settings", "put", "system", "screen_brightness", "50"], description: t('device_control.desc_brightness_down') },
-    { id: "wifi_toggle", label: t('device_control.wifi_toggle_on'), icon: <Wifi124Regular />, command: [], description: t('device_control.desc_wifi_on'), status: wifiEnabled, ssid: wifiSsid },
-    { id: "mobile_data_toggle", label: t('device_control.mobile_data_on'), icon: <Cellular4GRegular />, command: [], description: t('device_control.desc_mobile_data_on'), status: mobileDataEnabled },
-    { id: "airplane_mode", label: t('device_control.airplane_mode_on'), icon: <Airplane24Regular />, command: [], description: t('device_control.desc_airplane_mode_on'), status: airplaneModeEnabled },
-    { id: "flashlight", label: t('device_control.flashlight'), icon: <Flashlight24Regular />, command: [], description: t('device_control.desc_flashlight'), status: flashlightEnabled },
-    { id: "auto_rotate", label: t('device_control.auto_rotate'), icon: <ArrowCounterclockwise24Regular />, command: [], description: t('device_control.desc_auto_rotate'), status: autoRotateEnabled },
-    { id: "menu_key", label: t('device_control.menu_key'), icon: <LineHorizontal324Regular />, command: [], description: t('device_control.desc_menu_key') },
-    { id: "search_key", label: t('device_control.search_key'), icon: <Search24Regular />, command: [], description: t('device_control.desc_search_key') },
-    { id: "power_button", label: t('device_control.power_button'), icon: <Power24Regular />, command: [], description: t('device_control.desc_power_button') },
-    { id: "split_screen", label: t('device_control.split_screen'), icon: <PanelLeft24Regular />, command: [], description: t('device_control.desc_split_screen') },
-    { id: "developer_options", label: t('device_control.developer_options'), icon: <WrenchScrewdriver24Regular />, command: ["shell", "am", "start", "-a", "android.settings.APPLICATION_DEVELOPMENT_SETTINGS"], description: t('device_control.desc_developer_options') },
-  ];
+  const allCommands = useMemo(() => {
+    if (!adbCommands) return [];
 
-  const pinnedItems = useMemo(() => allCommands.filter(c => c.pinned), [allCommands]);
-  const otherItems = useMemo(() => allCommands.filter(c => !c.pinned), [allCommands]);
+    // Derive commands from key_simulation and quick_settings categories
+    const categories = adbCommands.categories.filter(c => 
+      c.id === "key_simulation" || c.id === "quick_settings"
+    );
+
+    const commands = categories.flatMap(cat => cat.commands.map(cmd => ({
+      ...cmd,
+      icon: ICON_MAP[cmd.id] || <Settings24Regular />,
+      description: cmd.description || "",
+      pinned: ["screenshot", "home", "back", "recent_apps"].includes(cmd.id),
+      // Map status for toggles
+      status: cmd.id.startsWith("wifi") ? wifiEnabled :
+              cmd.id.startsWith("data_") ? mobileDataEnabled :
+              cmd.id.startsWith("airplane") ? airplaneModeEnabled :
+              cmd.id.startsWith("flashlight") ? flashlightEnabled :
+              cmd.id.startsWith("auto_rotate") ? autoRotateEnabled : undefined,
+      ssid: cmd.id.startsWith("wifi") ? wifiSsid : undefined
+    })));
+
+    // For the UI, we still want the "Toggle" entries which are virtual
+    const toggles = [
+      { id: "wifi_toggle", label: t('device_control.wifi_toggle_on'), icon: <Wifi124Regular />, description: t('device_control.desc_wifi_on'), status: wifiEnabled, ssid: wifiSsid },
+      { id: "mobile_data_toggle", label: t('device_control.mobile_data_on'), icon: <Cellular4GRegular />, description: t('device_control.desc_mobile_data_on'), status: mobileDataEnabled },
+      { id: "airplane_toggle", label: t('device_control.airplane_mode_on'), icon: <Airplane24Regular />, description: t('device_control.desc_airplane_mode_on'), status: airplaneModeEnabled },
+      { id: "flashlight_toggle", label: t('device_control.flashlight'), icon: <Flashlight24Regular />, description: t('device_control.desc_flashlight'), status: flashlightEnabled },
+      { id: "auto_rotate_toggle", label: t('device_control.auto_rotate'), icon: <ArrowCounterclockwise24Regular />, description: t('device_control.desc_auto_rotate'), status: autoRotateEnabled },
+    ];
+
+    // Remove the individual on/off commands from the main grid if we use toggles
+    const filteredCommands = commands.filter(c => 
+      !["wifi_on", "wifi_off", "data_on", "data_off", "airplane_mode_on", "airplane_mode_off", "flashlight_on", "flashlight_off", "auto_rotate_on", "auto_rotate_off"].includes(c.id)
+    );
+
+    return [...filteredCommands, ...toggles];
+  }, [adbCommands, wifiEnabled, wifiSsid, mobileDataEnabled, airplaneModeEnabled, flashlightEnabled, autoRotateEnabled, t]);
+
+  const pinnedItems = useMemo(() => allCommands.filter(c => (c as any).pinned), [allCommands]);
+  const otherItems = useMemo(() => allCommands.filter(c => !(c as any).pinned), [allCommands]);
 
   const isDeviceAvailable = device?.connected && device?.mode === "sys";
-
-  const renderButton = (cmd: any, isPinned = false) => (
-    <Button
-      key={cmd.id}
-      appearance={isPinned ? "subtle" : "outline"}
-      className={mergeClasses(
-        isPinned ? styles.pinnedButton : styles.commandButton,
-        cmd.status && styles.activeButton
-      )}
-      disabled={executingCommand === cmd.id}
-      onClick={() => executeCommand(cmd.id, cmd.command, cmd.description)}
-    >
-      {executingCommand === cmd.id ? (
-        <Spinner size="tiny" />
-      ) : (
-        <div className={styles.commandIcon}>{cmd.icon}</div>
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: isPinned ? 'flex-start' : 'center', minWidth: 0, flex: 1 }}>
-        <Text className={styles.commandLabel} title={cmd.label}>{cmd.label}</Text>
-        {cmd.ssid && <Text className={styles.ssidLabel} title={cmd.ssid}>{cmd.ssid}</Text>}
-      </div>
-      {cmd.status !== undefined && (
-        <Badge 
-          className={styles.statusBadge} 
-          appearance="filled" 
-          color={cmd.status ? "success" : "subtle"}
-        />
-      )}
-    </Button>
-  );
 
   const renderButtonWithFavorite = (cmd: any, isPinned = false) => {
     const isFavorited = controlFavorites?.includes(cmd.id);
@@ -336,7 +320,7 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
           )}
           style={{ width: '100%' }}
           disabled={executingCommand === cmd.id}
-          onClick={() => executeCommand(cmd.id, cmd.command, cmd.description)}
+          onClick={() => executeCommand(cmd.id, cmd.description)}
         >
           {executingCommand === cmd.id ? (
             <Spinner size="tiny" />

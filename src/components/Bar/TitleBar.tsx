@@ -15,11 +15,12 @@ import {
   SquareMultiple24Regular,
   Pin24Regular,
   PinOff24Regular,
+  Bot24Regular,
 } from "@fluentui/react-icons";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
 import { useAppConfigStore } from "../../stores/welcomeStore";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWebviewWindow as getCurrentWindow, WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke } from "@tauri-apps/api/core";
 import { admtLogo64 } from "../../assets/icons";
 import AnnouncementBar from "./AnnouncementBar";
@@ -281,6 +282,43 @@ const TitleBar: React.FC = () => {
     setCurrentView("settings");
   };
 
+  const openAIChatWindow = async () => {
+    console.log("尝试打开 AI 聊天窗口...");
+    try {
+      const label = "ai-chat";
+      let aiWindow = await WebviewWindow.getByLabel(label);
+      
+      if (aiWindow) {
+        console.log("找到存量 AI 窗口，正在显示并置于焦点...");
+        await aiWindow.show();
+        await aiWindow.unminimize();
+        await aiWindow.setFocus();
+      } else {
+        console.log("正在创建新 AI 窗口...");
+        const win = new WebviewWindow(label, {
+          url: "index.html",
+          title: "AI 助手",
+          width: 900,
+          height: 700,
+          minWidth: 600,
+          minHeight: 500,
+          decorations: false,
+          transparent: true,
+          theme: isDarkMode ? 'dark' : 'light',
+        });
+        
+        win.once('tauri://created', function () {
+          console.log("AI 窗口创建成功");
+        });
+        win.once('tauri://error', function (e) {
+          console.error("AI 窗口创建失败:", e);
+        });
+      }
+    } catch (error) {
+      console.error("打开AI聊天窗口异常:", error);
+    }
+  };
+
   return (
     <>
       <div 
@@ -299,6 +337,18 @@ const TitleBar: React.FC = () => {
 
         {/* 右侧区域 - 控制按钮 - 不支持拖拽 */}
         <div className={styles.rightSection} data-tauri-drag-region="false">
+          <Tooltip
+            content="AI 助手"
+            relationship="label"
+          >
+            <Button
+              appearance="subtle"
+              icon={<Bot24Regular />}
+              className={styles.titleBarButton}
+              onClick={openAIChatWindow}
+            />
+          </Tooltip>
+
           <Tooltip
             content={`搜索功能 (${searchHotkey})`}
             relationship="label"

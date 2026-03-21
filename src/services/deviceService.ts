@@ -15,6 +15,7 @@ export class DeviceService {
   private connectedDevices = new Map<string, { connectedAt: Date; properties?: DeviceProperties }>();
   private adbInitialized = false;
   private initialScanDone = false; // 确保启动前连接提示只出现一次
+  private pendingScanTimeout: ReturnType<typeof setTimeout> | null = null;
   
   public isScanningNow(): boolean {
     return this.isScanning;
@@ -559,13 +560,26 @@ export class DeviceService {
   }
 
   startScanning(interval = 2000, delay = 0): void {
-    if (this.isScanning) {
+    // 检查全局开关，如果关闭则根本不启动扫描
+    const isAutoDetectEnabled = useAppStore.getState().config.autoDetectDevices;
+    if (!isAutoDetectEnabled) {
+      logService.info("自动检测已关闭，跳过启动扫描任务", "DeviceService");
+      this.stopScanning();
       return;
     }
 
+    // 无论是否延迟，由于这是明确的开启操作，我们先清理任何存量的扫描任务
+    this.stopScanning();
+
     if (delay > 0) {
       logService.info(`设备动态监控将延迟 ${delay}ms 开启`, "DeviceService");
-      setTimeout(() => this.startScanning(interval, 0), delay);
+      this.pendingScanTimeout = setTimeout(() => {
+        this.pendingScanTimeout = null;
+        // 延迟触发后再次检查开关状态（防止延迟期间开关被关闭）
+        if (useAppStore.getState().config.autoDetectDevices) {
+          this.startScanning(interval, 0);
+        }
+      }, delay);
       return;
     }
 
@@ -575,6 +589,13 @@ export class DeviceService {
 
     const scanDevicesInternal = async () => {
       try {
+        // 在循环内部也进行校验，作为最后的自我防御
+        const isAutoDetectEnabled = useAppStore.getState().config.autoDetectDevices;
+        if (!isAutoDetectEnabled) {
+          this.stopScanning();
+          return;
+        }
+
         const isFlashing = useDeviceStore.getState().isFlashing;
         if (isFlashing) {
           return;
@@ -602,6 +623,11 @@ export class DeviceService {
    * 确保在软件启动前连接的设备也能发送连接统计数据
    */
   private async initialDeviceScan(): Promise<void> {
+    // 初始扫描也检查开关
+    if (!useAppStore.getState().config.autoDetectDevices) {
+      return;
+    }
+
     try {
       console.log('🔍 执行初始设备扫描，检查启动前已连接的设备...');
       logService.info('开始初始设备扫描', 'DeviceService');
@@ -652,11 +678,20 @@ export class DeviceService {
   }
 
   stopScanning(): void {
-    if (!this.isScanning) {
+    // 只要有正在运行的或挂起的任务，就执行清理
+    if (!this.isScanning && !this.pendingScanTimeout) {
       return;
     }
 
     logService.info("停止设备动态监控", "DeviceService");
+    
+    // 清除延迟启动任务
+    if (this.pendingScanTimeout) {
+      clearTimeout(this.pendingScanTimeout);
+      this.pendingScanTimeout = null;
+    }
+
+    // 清除循环扫描任务
     this.isScanning = false;
     useDeviceStore.getState().setScanning(false);
 
@@ -1008,7 +1043,10 @@ export const useDeviceService = () => {
       const properties = await deviceService.getDeviceProperties(serial);
       useDeviceStore.getState().updateDevice(serial, { properties });
       
-      // 移除这里的成功提示，统一由 MainContent 的 useEffect 处理，避免重复弹出
+      setStatusBarMessage({
+        type: "success",
+        message: "设备信息已更新",
+      });
     } catch (error) {
       setStatusBarMessage({
         type: "error",

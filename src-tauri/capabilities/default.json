@@ -6,7 +6,8 @@
     "main",
     "command-line",
     "logs",
-    "device-selection"
+    "device-selection",
+    "ai-chat"
   ],
   "permissions": [
     "autostart:allow-enable",
@@ -71,7 +72,13 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://api-g.lacs.cc/**" }
+        { "url": "https://api-g.lacs.cc/**" },
+        { "url": "https://api.openai.com/**" },
+        { "url": "https://api.anthropic.com/**" },
+        { "url": "https://generativelanguage.googleapis.com/**" },
+        { "url": "https://integrate.api.nvidia.com/**" },
+        { "url": "http://localhost:**" },
+        { "url": "http://127.0.0.1:**" }
       ]
     }
   ]

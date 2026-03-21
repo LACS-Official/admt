@@ -424,15 +424,18 @@ export class SystemTrayService {
       }
 
       if (enabled) {
-        // 设置窗口关闭事件监听
-        const { listen } = await import('@tauri-apps/api/event');
-        this.closeEventUnlisten = await listen('tauri://close-requested', async (event) => {
-          if (this.closeToTrayEnabled && this.isInitialized) {
-            // 阻止默认关闭行为
-            // 在 Tauri 中，需要通过 API 来阻止窗口关闭
-            await this.minimizeToTray();
-          }
-        });
+        // 设置窗口特定关闭事件监听，只影响调用此服务的窗口（通常是主窗口）
+        await this.ensureWindowInitialized();
+        if (this.currentWindow) {
+          this.closeEventUnlisten = await this.currentWindow.onCloseRequested(async (event) => {
+            if (this.closeToTrayEnabled && this.isInitialized) {
+              // 阻止默认关闭行为
+              event.preventDefault();
+              // 执行最小化到托盘
+              await this.minimizeToTray();
+            }
+          });
+        }
       }
 
       // 通知后端更新关闭行为

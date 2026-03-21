@@ -1,5 +1,4 @@
-
-import React, { useState }  from 'react';
+import React, { useState } from "react";
 
 import {
   makeStyles,
@@ -17,12 +16,11 @@ import {
   Wifi124Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
-import ScreenMirrorPanel from './ScreenMirrorPanel';
-import AppManagerPanel from './AppManagerPanel';
-import AppInstallPanel from './AppInstallPanel';
-import FileManagerPanel from './FileManagerPanel';
-import WirelessDebuggingPanel from './WirelessDebuggingPanel';
-import DeviceControlPanel from './DeviceControlPanel';
+import ScreenMirrorPanel from "./ScreenMirrorPanel";
+import AppManagerPanel from "./AppManagerPanel";
+import AppInstallPanel from "./AppInstallPanel";
+import FileManagerPanel from "./FileManagerPanel";
+import DeviceControlPanel from "./DeviceControlPanel";
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
@@ -108,23 +106,22 @@ const useStyles = makeStyles({
       color: "var(--colorNeutralForeground2)",
       margin: "0 4px",
 
-      
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground2)",
         color: "var(--colorNeutralForeground1)",
         transform: "translateY(-1px)",
         boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
-      
+
       "&[aria-selected='true']": {
         backgroundColor: "var(--colorBrandBackground2)",
         color: "var(--colorBrandForeground1)",
         border: "1px solid var(--colorBrandStroke2)",
         fontWeight: 600,
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
-    
+
     "@media (max-width: 768px)": {
       "& .fui-Tab": {
         fontSize: "11px",
@@ -173,7 +170,12 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "device-control" | "screen-mirror" | "app_install" | "app-manager" | "file-manager" | "wireless-debugging";
+type AdbZoneView =
+  | "device-control"
+  | "screen-mirror"
+  | "app_install"
+  | "app-manager"
+  | "file-manager";
 
 const AdbZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -182,8 +184,8 @@ const AdbZonePanel: React.FC = () => {
   const [currentView, setCurrentView] = useState<AdbZoneView>("device-control");
   const [showOverlay, setShowOverlay] = useState(false);
 
-  const connectedDevices = devices.filter(d => d.connected);
-  
+  const connectedDevices = devices.filter((d) => d.connected);
+
   const triggerOverlay = () => {
     setShowOverlay(true);
   };
@@ -191,33 +193,28 @@ const AdbZonePanel: React.FC = () => {
   const tabs = [
     {
       id: "device-control" as AdbZoneView,
-      label: t('adb.device_control'),
+      label: t("adb.device_control"),
       icon: <Play24Regular />,
     },
     {
       id: "screen-mirror" as AdbZoneView,
-      label: t('adb.screen_mirror'),
+      label: t("adb.screen_mirror"),
       icon: <Settings24Regular />,
     },
     {
       id: "app_install" as AdbZoneView,
-      label: t('adb.app_install'),
+      label: t("adb.app_install"),
       icon: <Apps24Regular />,
     },
     {
       id: "app-manager" as AdbZoneView,
-      label: t('adb.app_manager'),
+      label: t("adb.app_manager"),
       icon: <Settings24Regular />,
     },
     {
       id: "file-manager" as AdbZoneView,
-      label: t('adb.file_manager'),
+      label: t("adb.file_manager"),
       icon: <Folder24Regular />,
-    },
-    {
-      id: "wireless-debugging" as AdbZoneView,
-      label: t('wireless.title'),
-      icon: <Wifi124Regular />,
     },
   ];
 
@@ -229,7 +226,10 @@ const AdbZonePanel: React.FC = () => {
       case "device-control":
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-             <DeviceControlPanel device={selectedDevice} onAdbRequired={triggerOverlay} />
+            <DeviceControlPanel
+              device={selectedDevice}
+              onAdbRequired={triggerOverlay}
+            />
           </div>
         );
       case "screen-mirror":
@@ -256,16 +256,13 @@ const AdbZonePanel: React.FC = () => {
             <FileManagerPanel device={device} onAdbRequired={triggerOverlay} />
           </div>
         );
-      case "wireless-debugging":
-        return (
-          <div style={{ height: "100%", overflow: "hidden" }}>
-            <WirelessDebuggingPanel device={device} onAdbRequired={triggerOverlay} />
-          </div>
-        );
       default:
         return (
           <div style={{ height: "100%", overflow: "hidden" }}>
-             <DeviceControlPanel device={selectedDevice} onAdbRequired={triggerOverlay} />
+            <DeviceControlPanel
+              device={selectedDevice}
+              onAdbRequired={triggerOverlay}
+            />
           </div>
         );
     }
@@ -274,46 +271,52 @@ const AdbZonePanel: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-          <div className={styles.tabContainer}>
-            <TabList
-              selectedValue={currentView}
-              onTabSelect={(_, data) => setCurrentView(data.value as AdbZoneView)}
-              className={styles.headerTabList}
-            >
-              {tabs.map((tab) => (
-                <Tab
-                  key={tab.id}
-                  value={tab.id}
-                  icon={tab.icon}
-                  className={styles.tab}
-                >
-                  {tab.label}
-                </Tab>
-              ))}
-            </TabList>
+        <div className={styles.tabContainer}>
+          <TabList
+            selectedValue={currentView}
+            onTabSelect={(_, data) => setCurrentView(data.value as AdbZoneView)}
+            className={styles.headerTabList}
+          >
+            {tabs.map((tab) => (
+              <Tab
+                key={tab.id}
+                value={tab.id}
+                icon={tab.icon}
+                className={styles.tab}
+              >
+                {tab.label}
+              </Tab>
+            ))}
+          </TabList>
 
-            <div className={styles.tabContent}>
-              {renderContent()}
-              {showOverlay && (
-                <div className={styles.overlay}>
-                  <div className={styles.overlayText}>
-                    <Text size={600} weight="bold">
-                      {t('adb.adb_mode_required_title')}
-                    </Text>
-                    <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-                      {t('adb.adb_mode_required_desc')}
-                    </Text>
-                    <div className={styles.overlayActions}>
-                      <Button appearance="primary" onClick={() => setShowOverlay(false)}>
-                        {t('common.close')}
-                      </Button>
-                    </div>
+          <div className={styles.tabContent}>
+            {renderContent()}
+            {showOverlay && (
+              <div className={styles.overlay}>
+                <div className={styles.overlayText}>
+                  <Text size={600} weight="bold">
+                    {t("adb.adb_mode_required_title")}
+                  </Text>
+                  <Text
+                    size={300}
+                    style={{ color: "var(--colorNeutralForeground2)" }}
+                  >
+                    {t("adb.adb_mode_required_desc")}
+                  </Text>
+                  <div className={styles.overlayActions}>
+                    <Button
+                      appearance="primary"
+                      onClick={() => setShowOverlay(false)}
+                    >
+                      {t("common.close")}
+                    </Button>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
+      </div>
     </div>
   );
 };
