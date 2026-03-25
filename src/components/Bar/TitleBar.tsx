@@ -28,6 +28,13 @@ import { SearchModal } from "../Common/SearchModal";
 import { Search24Regular } from "@fluentui/react-icons";
 
 const useStyles = makeStyles({
+  titleText:{
+    fontSize: "18px",
+    color: "var(--colorNeutralForeground1)",
+    userSelect: "none",
+    cursor: "default",
+    fontWeight: "600",
+  },
   IconImage: {
     width: "100%",
     height: "100%",
@@ -283,40 +290,8 @@ const TitleBar: React.FC = () => {
   };
 
   const openAIChatWindow = async () => {
-    console.log("尝试打开 AI 聊天窗口...");
-    try {
-      const label = "ai-chat";
-      let aiWindow = await WebviewWindow.getByLabel(label);
-      
-      if (aiWindow) {
-        console.log("找到存量 AI 窗口，正在显示并置于焦点...");
-        await aiWindow.show();
-        await aiWindow.unminimize();
-        await aiWindow.setFocus();
-      } else {
-        console.log("正在创建新 AI 窗口...");
-        const win = new WebviewWindow(label, {
-          url: "index.html",
-          title: "AI 助手",
-          width: 900,
-          height: 700,
-          minWidth: 600,
-          minHeight: 500,
-          decorations: false,
-          transparent: true,
-          theme: isDarkMode ? 'dark' : 'light',
-        });
-        
-        win.once('tauri://created', function () {
-          console.log("AI 窗口创建成功");
-        });
-        win.once('tauri://error', function (e) {
-          console.error("AI 窗口创建失败:", e);
-        });
-      }
-    } catch (error) {
-      console.error("打开AI聊天窗口异常:", error);
-    }
+    const { windowService } = await import("../../services/windowService");
+    await windowService.openAIChatWindow(isDarkMode);
   };
 
   return (
@@ -325,9 +300,10 @@ const TitleBar: React.FC = () => {
         className={mergeClasses(styles.titleBar)} 
         data-tauri-drag-region
       >
-        {/* 左侧区域 - Logo和应用名称 - 支持拖拽 */}
-        <div className={styles.leftSection} data-tauri-drag-region>
+        {/* 左侧区域 - Logo和应用名称 - 不支持拖拽 */}
+        <div className={styles.leftSection} data-tauri-drag-region="false">
           <img src={admtLogo64} alt="Logo" className={styles.logo} />
+          <span className={styles.titleText}>玩机管家</span>
         </div>
 
         {/* 中间区域 - 公告展示条 - 支持拖拽 */}

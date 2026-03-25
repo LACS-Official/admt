@@ -16,7 +16,6 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
 import ImageFlashCard from "../Tools/ImageFlashCard";
 import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
-import SystemBackupCard from "../Tools/SystemBackupCard";
 import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
@@ -178,8 +177,7 @@ const useStyles = makeStyles({
 type FlashZoneView =
   | "unlock-tools"
   | "image-flash"
-  | "xiaomi-flash"
-  | "system-backup";
+  | "xiaomi-flash";
 
 const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -224,11 +222,6 @@ const FlashZonePanel: React.FC = () => {
       label: t("flash.tab_rom"),
       icon: <Flash24Regular />,
     },
-    {
-      id: "system-backup" as FlashZoneView,
-      label: t("flash.goto_backup").replace('👉 ', '').replace(' >', ''),
-      icon: <Settings24Regular />,
-    },
   ];
 
   const renderContent = () => {
@@ -254,8 +247,6 @@ const FlashZonePanel: React.FC = () => {
         ) : (
           <XiaomiFlashCard device={null as any} onFastbootRequired={triggerOverlay} />
         );
-      case "system-backup":
-        return <SystemBackupCard device={deviceToUse} />;
       default:
         return deviceToUse ? (
           <XiaomiUnlockCard device={deviceToUse} />

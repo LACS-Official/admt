@@ -58,6 +58,8 @@ import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import { InstalledApp, BatchOperation, DeviceInfo } from "../../types/device";
 import ErrorDialog from "../Common/ErrorDialog";
+import APKAuditorPanel from "./APKAuditorPanel";
+import { aiService } from "../../services/aiService";
 
 import { ErrorInfo } from "../../utils/errorHandler";
 // 移除Node.js path模块导入，避免浏览器环境中的兼容性问题
@@ -396,6 +398,10 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
 
   // State for Drawer
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // State for AI Auditor
+  const [isAuditorOpen, setIsAuditorOpen] = useState(false);
+  const [appToAudit, setAppToAudit] = useState<InstalledApp | null>(null);
   
   // 规范化版本信息，处理各种格式问题
   const normalizeVersionInfo = useCallback((versionInfo: string): string => {
@@ -1555,6 +1561,12 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
     }
   }, [device, deviceService, setStatusBarMessage, t]);
 
+  // 打开 AI 审计
+  const handleOpenAuditor = useCallback((app: InstalledApp) => {
+    setAppToAudit(app);
+    setIsAuditorOpen(true);
+  }, []);
+
 
 
   const renderContent = () => {
@@ -1828,6 +1840,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
                                       <MenuItem icon={<Save24Regular />} onClick={() => handleExportApk(app.packageName)}>{t('app_manager.export_apk')}</MenuItem>
                                     </>
                                   )}
+                                  <MenuItem icon={<ShieldLock24Regular />} onClick={() => handleOpenAuditor(app)}>AI 安全审计</MenuItem>
                                 </MenuList>
                               </MenuPopover>
                             </Menu>
@@ -1969,6 +1982,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
             <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <Button icon={<Open24Regular />}>{t('common.open_in_settings') || "Open Settings"}</Button>
                 <Button icon={<Play24Regular />} appearance="primary">{t('common.launch') || "Launch App"}</Button>
+                <Button icon={<ShieldLock24Regular />} onClick={() => selectedAppForDetails && handleOpenAuditor(selectedAppForDetails)}>AI 安全审计</Button>
                 <Button icon={<Copy24Regular />} onClick={() => {
                   if (selectedAppForDetails?.packageName) {
                     navigator.clipboard.writeText(selectedAppForDetails.packageName);
@@ -2016,14 +2030,51 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({ device, onAdbRequired
                     if (contextMenuApp) handleFreezeToggle(contextMenuApp.packageName, contextMenuApp.isEnabled);
                     setContextMenuLocation(null);
                   }}>
-                    {appToUninstall?.isEnabled ? t('app_manager.freeze') : t('app_manager.unfreeze')}
+                    {contextMenuApp.isEnabled ? t('app_manager.freeze') : t('app_manager.unfreeze')}
                   </MenuItem>
                 </>
               )}
+              <MenuItem icon={<ShieldLock24Regular />} onClick={() => {
+                if (contextMenuApp) handleOpenAuditor(contextMenuApp);
+                setContextMenuLocation(null);
+              }}>
+                AI 安全审计
+              </MenuItem>
             </MenuList>
           </MenuPopover>
         </Menu>
       )}
+
+      {/* AI Auditor Drawer */}
+      <OverlayDrawer
+        position="end"
+        open={isAuditorOpen}
+        onOpenChange={(_, { open }) => setIsAuditorOpen(open)}
+        style={{ width: '450px' }}
+      >
+        <DrawerHeader>
+          <DrawerHeaderTitle
+            action={
+              <Button
+                appearance="subtle"
+                aria-label="Close"
+                icon={<Delete24Regular />}
+                onClick={() => setIsAuditorOpen(false)}
+              />
+            }
+          >
+            AI 安全审计
+          </DrawerHeaderTitle>
+        </DrawerHeader>
+        <DrawerBody>
+          {appToAudit && (
+            <APKAuditorPanel 
+              app={appToAudit} 
+              onClose={() => setIsAuditorOpen(false)} 
+            />
+          )}
+        </DrawerBody>
+      </OverlayDrawer>
     </div>
   );
 };

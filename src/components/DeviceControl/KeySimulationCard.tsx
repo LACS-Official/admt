@@ -362,23 +362,8 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
       />
       
       <div className={styles.content}>
-        {/* Pinned section */}
-        <div>
-          <div className={styles.sectionTitle}>
-            <Star24Regular fontSize={14} />
-            <Text size={200} weight="semibold">{t('common.frequent', "常用项目")}</Text>
-          </div>
-          <div className={styles.pinnedGrid}>
-            {pinnedItems.map(cmd => renderButtonWithFavorite(cmd, true))}
-          </div>
-        </div>
-
         {/* All Commands grid */}
         <div>
-          <div className={styles.sectionTitle}>
-            <Apps24Regular fontSize={14} />
-            <Text size={200} weight="semibold">{t('common.all_functions', "所有功能")}</Text>
-          </div>
           <div className={styles.commandGrid}>
             {otherItems.map(cmd => renderButtonWithFavorite(cmd))}
           </div>

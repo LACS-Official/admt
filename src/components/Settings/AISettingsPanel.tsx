@@ -270,7 +270,6 @@ const AISettingsPanel: React.FC = () => {
             {/* Endpoint */}
             <Field 
               label={t("settings.ai_endpoint")}
-              hint="例如: https://api.openai.com/v1 或 https://integrate.api.nvidia.com/v1"
             >
               <Input
                 className={styles.input}
