@@ -21,7 +21,12 @@ import {
   ErrorCircle24Regular,
   Info24Regular,
   Bug24Regular,
+  Sparkle24Regular,
 } from "@fluentui/react-icons";
+import { useTranslation } from "react-i18next";
+import { emit } from "@tauri-apps/api/event";
+import { windowService } from "../../services/windowService";
+import { useAppStore } from "../../stores/appStore";
 import { StructuredLogEntry, LogLevel, LogCategory, LogFilter } from "../../services/logTypes";
 
 import logService from "../../services/logService";
@@ -130,6 +135,8 @@ const LogsPanel: React.FC = () => {
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const logContentRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
+  const { config } = useAppStore();
 
   // 订阅日志服务
   useEffect(() => {
@@ -241,11 +248,25 @@ const LogsPanel: React.FC = () => {
       logService.error("导出日志失败", "LogsPanel", { error: String(error) });
     }
   };
-
   const handleRefreshLogs = async () => {
-     // 内存日志是实时的，这个按钮现在主要用于强制重渲染或调试
-     // 我们可以手动触发一次过滤
      logService.info("手动刷新日志视图", "LogsPanel", { category: 'user' });
+  };
+
+  const handleAIExplainLogs = async () => {
+    if (filteredLogs.length === 0) return;
+
+    // 格式化最近的日志条目
+    const recentLogs = filteredLogs.slice(-20).map(log => {
+      return `[${new Date(log.timestamp).toLocaleTimeString()}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}`;
+    }).join('\n');
+
+    const prompt = `请分析并解释以下系统日志：\n\n\`\`\`\n${recentLogs}\n\`\`\``;
+    
+    // 发送同步事件
+    await emit("ai-prompt-sync", { prompt });
+    
+    // 打开并聚焦 AI 窗口
+    await windowService.openAIChatWindow(config.theme === 'dark');
   };
 
 
@@ -302,8 +323,17 @@ const LogsPanel: React.FC = () => {
     <div className={styles.container}>
       {/* 头部控制栏 */}
       <div className={styles.header}>
-        <Text size={400} weight="semibold">日志查看器</Text>
+        <Text size={400} weight="semibold">{t('logs_panel.title')}</Text>
         <div className={styles.controls}>
+          <Button
+            appearance="subtle"
+            icon={<Sparkle24Regular />}
+            onClick={handleAIExplainLogs}
+            disabled={filteredLogs.length === 0}
+            title={t('logs_panel.ai_explain_tooltip')}
+          >
+            {t('logs_panel.ai_explain')}
+          </Button>
           <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
             显示 {filteredLogs.length} / {logs.length} 条日志
           </Text>

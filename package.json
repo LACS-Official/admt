@@ -60,7 +60,10 @@
     "react-color": "^2.19.3",
     "react-dom": "^18.3.1",
     "react-i18next": "^16.5.4",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
     "zustand": "^5.0.2"
   },
   "devDependencies": {

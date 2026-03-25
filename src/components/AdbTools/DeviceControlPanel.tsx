@@ -32,7 +32,6 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import { DeviceInfo } from "../../types/device";
 import KeySimulationCard from "../DeviceControl/KeySimulationCard";
 import SystemControlCard from "../DeviceControl/SystemControlCard";
-import SystemBackupCard from "../Tools/SystemBackupCard";
 import { controlService } from "../../services/controlService";
 import { useAppStore } from "../../stores/appStore";
 import { useConfigStore } from "../../stores/configStore";
@@ -126,7 +125,6 @@ const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({ device, onAdbRe
   const navigationItems = [
     { id: 'key-simulation', label: 'device_control.key_simulation', icon: <Desktop24Regular /> },
     { id: 'system-control', label: 'device_control.system_control', icon: <Settings24Regular /> },
-    { id: 'system-backup', label: 'device_control.partition_backup', icon: <ShieldCheckmark24Regular /> },
   ];
 
   const handleFavoriteClick = async (id: string | null) => {
@@ -279,9 +277,6 @@ const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({ device, onAdbRe
           </div>
           <div id="section-system-control">
             <SystemControlCard device={device} onAdbRequired={onAdbRequired} />
-          </div>
-          <div id="section-system-backup">
-            <SystemBackupCard device={device} />
           </div>
         </div>
       </div>

@@ -70,15 +70,15 @@ const useStyles = makeStyles({
   dialogContent: {
     minWidth: '600px',
     maxWidth: '800px',
-    minHeight: '400px',
-    maxHeight: '600px',
+    maxHeight: '80vh',
+    display: 'flex',
+    flexDirection: 'column',
   },
   announcementList: {
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
-    maxHeight: '400px',
-    overflowY: 'auto',
+    padding: '4px',
   },
   announcementCard: {
     padding: '16px',
@@ -136,6 +136,9 @@ const useStyles = makeStyles({
   detailDialog: {
     minWidth: '500px',
     maxWidth: '700px',
+    maxHeight: '80vh',
+    display: 'flex',
+    flexDirection: 'column',
   },
   detailContent: {
     lineHeight: '1.6',
@@ -273,9 +276,9 @@ const AnnouncementBar: React.FC<AnnouncementBarProps> = ({ className }) => {
         </DialogTrigger>
 
         <DialogSurface className={styles.dialogContent}>
-          <DialogBody>
+          <DialogBody style={{ overflow: 'hidden' }}>
             <DialogTitle>系统公告</DialogTitle>
-            <DialogContent>
+            <DialogContent style={{ overflowY: 'auto' }}>
               {isLoading ? (
                 <div className={styles.loadingContainer}>
                   <Spinner size="medium" />
@@ -357,14 +360,14 @@ const AnnouncementBar: React.FC<AnnouncementBarProps> = ({ className }) => {
           onOpenChange={(_, data) => setIsDetailDialogOpen(data.open)}
         >
           <DialogSurface className={styles.detailDialog}>
-            <DialogBody>
+            <DialogBody style={{ overflow: 'hidden' }}>
               <DialogTitle>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {getAnnouncementIcon(selectedAnnouncement.type, selectedAnnouncement.priority)}
                   {announcementService.formatAnnouncement(selectedAnnouncement).title}
                 </div>
               </DialogTitle>
-              <DialogContent>
+              <DialogContent style={{ overflowY: 'auto' }}>
                 <div className={styles.detailContent}>
                   {announcementService.formatAnnouncement(selectedAnnouncement).content}
                 </div>

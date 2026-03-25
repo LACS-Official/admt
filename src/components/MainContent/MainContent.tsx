@@ -1188,18 +1188,6 @@ const MainContent: React.FC = () => {
                 >
                   {getDeviceConnectionType()}
                 </Badge>
-                {/* 无线调试快捷入口按钮 */}
-                <Button 
-                  icon={<Wifi124Regular />} 
-                  size="small" 
-                  appearance="subtle"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setWirelessDebuggingDialogOpen(true);
-                  }}
-                  title={t('wireless.title')}
-                  style={{ minWidth: "auto", padding: "0 4px" }}
-                />
               </div>
             </div>
           </div>
@@ -1224,10 +1212,6 @@ const MainContent: React.FC = () => {
         return <OnlineZonePanel />;
       case "settings":
         return <SettingsPanel />;
-      // case "command-line":
-      //   return <CommandExecutePanel />;
-      // case "logs":
-      //   return <LogsPanel />;
       default:
         return <HomePage />;
     }

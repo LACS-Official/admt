@@ -357,5 +357,14 @@
     "monitor_frequency_hint": "Suggested: 500-2000ms (Smaller = more accurate but higher power usage)",
     "auto_mirror_title": "Auto Mirror Screen on System Mode Connection",
     "auto_mirror_desc": "Automatically open the screen mirror window when a new device is detected in system mode"
+  },
+  "command_panel": {
+    "ai_explain": "AI Explain",
+    "ai_explain_tooltip": "Click to let AI explain the current terminal output"
+  },
+  "logs_panel": {
+    "title": "Logs Viewer",
+    "ai_explain": "AI Explain Logs",
+    "ai_explain_tooltip": "Click to let AI analyze current logs"
   }
 }

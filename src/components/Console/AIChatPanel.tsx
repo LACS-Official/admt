@@ -5,6 +5,7 @@ import {
   tokens,
   Button,
   Input,
+  Textarea,
   Text,
   Avatar,
   Divider,
@@ -22,28 +23,40 @@ import {
   Person24Regular,
   ArrowSync24Regular,
   MoreHorizontal24Regular,
+  Copy24Regular,
+  PanelLeft24Regular,
+  PanelRight24Regular,
 } from "@fluentui/react-icons";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAIChatStore, Message } from "../../stores/aiChatStore";
 import { useAppStore } from "../../stores/appStore";
 import { fetch } from "@tauri-apps/plugin-http";
 import { logService } from "../../services/logService";
+import { aiService } from "../../services/aiService";
+import { listen } from "@tauri-apps/api/event";
 
 const useStyles = makeStyles({
   container: {
     display: "flex",
-    height: "100%",
+    height: "100vh",
+    width: "100vw",
     backgroundColor: "var(--colorNeutralBackground1)",
     overflow: "hidden",
   },
   sidebar: {
     width: "260px",
+    transition: "width 0.3s ease",
     display: "flex",
     flexDirection: "column",
     borderRight: `1px solid ${tokens.colorNeutralStroke1}`,
     backgroundColor: "var(--colorNeutralBackground2)",
-    "@media (max-width: 600px)": {
+    "@media (max-width: 480px)": {
       display: "none",
     },
+  },
+  sidebarCollapsed: {
+    width: "64px",
   },
   sidebarHeader: {
     padding: "16px",
@@ -97,20 +110,45 @@ const useStyles = makeStyles({
     flexDirection: "column",
     height: "100%",
     position: "relative",
+    overflow: "hidden",
   },
   messageList: {
     flex: 1,
     overflowY: "auto",
-    padding: "20px",
+    overflowX: "hidden",
+    padding: "16px",
     display: "flex",
     flexDirection: "column",
     gap: "20px",
     scrollBehavior: "smooth",
+    minHeight: 0,
   },
   messageGroup: {
     display: "flex",
     gap: "12px",
-    maxWidth: "85%",
+    maxWidth: "70%",
+    position: "relative",
+    width: "fit-content",
+    ":hover .message-actions": {
+      opacity: 1,
+    },
+  },
+  messageActions: {
+    position: "absolute",
+    display: "flex",
+    gap: "4px",
+    opacity: 0,
+    transition: "opacity 0.2s",
+    padding: "4px",
+    zIndex: 1,
+  },
+  userActions: {
+    right: "calc(100% + 4px)",
+    top: 0,
+  },
+  botActions: {
+    left: "calc(100% + 4px)",
+    top: 0,
   },
   userMessage: {
     alignSelf: "flex-end",
@@ -124,8 +162,12 @@ const useStyles = makeStyles({
     borderRadius: "12px",
     fontSize: "14px",
     lineHeight: "1.5",
-    whiteSpace: "pre-wrap",
+    whiteSpace: "normal",
     wordBreak: "break-word",
+    maxWidth: "100%",
+    maxHeight: "60vh",
+    overflowY: "auto",
+    overflowX: "hidden",
   },
   userContent: {
     backgroundColor: tokens.colorBrandBackground,
@@ -137,9 +179,10 @@ const useStyles = makeStyles({
     border: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   inputArea: {
-    padding: "16px 20px",
+    padding: "12px 20px",
     borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
     backgroundColor: "var(--colorNeutralBackground1)",
+    flexShrink: 0,
   },
   inputWrapper: {
     display: "flex",
@@ -150,6 +193,8 @@ const useStyles = makeStyles({
   },
   input: {
     flex: 1,
+    minHeight: "40px",
+    maxHeight: "150px",
   },
   emptyState: {
     flex: 1,
@@ -161,11 +206,63 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground4,
   },
   footer: {
-    padding: "8px",
-    display: "flex",
-    justifyContent: "center",
     fontSize: "11px",
     color: tokens.colorNeutralForeground4,
+  },
+  markdownWrapper: {
+    "& table": {
+      display: "block",
+      width: "100%",
+      borderCollapse: "collapse",
+      marginBottom: "16px",
+      fontSize: "13px",
+      overflowX: "auto",
+    },
+    "& th, & td": {
+      border: `1px solid ${tokens.colorNeutralStroke2}`,
+      padding: "6px 8px",
+      textAlign: "left",
+      minWidth: "80px",
+      fontSize: "12px",
+    },
+    "& th": {
+      backgroundColor: tokens.colorNeutralBackground2,
+      fontWeight: "bold",
+    },
+    "& h1, & h2, & h3, & h4": {
+      margin: "16px 0 8px 0",
+      lineHeight: "1.3",
+    },
+    "& p": {
+      margin: "0 0 8px 0",
+    },
+    "& ul, & ol": {
+      margin: "8px 0",
+      paddingLeft: "24px",
+    },
+    "& code": {
+      backgroundColor: tokens.colorNeutralBackground4,
+      padding: "2px 4px",
+      borderRadius: "4px",
+      fontFamily: "var(--fontFamilyMonospace)",
+    },
+    "& pre": {
+      backgroundColor: tokens.colorNeutralBackground4,
+      padding: "12px",
+      borderRadius: "8px",
+      overflowX: "auto",
+      margin: "12px 0",
+      "& code": {
+        padding: 0,
+        backgroundColor: "transparent",
+      }
+    },
+    "& blockquote": {
+      borderLeft: `4px solid ${tokens.colorBrandForeground1}`,
+      margin: "12px 0",
+      paddingLeft: "16px",
+      color: tokens.colorNeutralForeground2,
+    }
   }
 });
 
@@ -174,13 +271,15 @@ const AIChatPanel: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const { 
     conversations, 
     currentConversationId, 
-    createNewConversation, 
     addMessage, 
     setCurrentConversation,
+    createNewConversation,
     deleteConversation,
     clearHistory
   } = useAIChatStore();
@@ -195,6 +294,25 @@ const AIChatPanel: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const unlisten = listen<{ prompt: string }>("ai-prompt-sync", (event) => {
+      console.log("收到内容同步:", event.payload);
+      setInputValue(event.payload.prompt);
+    });
+    
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "40px";
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(Math.max(scrollHeight, 40), 150)}px`;
+    }
+  }, [inputValue]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -211,92 +329,18 @@ const AIChatPanel: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const { config } = useAppStore.getState();
-      const aiConfig = config.ai;
-      
-      console.log("当前 AI 配置:", aiConfig);
-      
-      if (!aiConfig?.enabled) {
-        throw new Error("AI服务未启用，请前往设置开启。");
-      }
-
-      const provider = aiConfig.provider;
-      const endpoint = aiConfig.endpoint;
-      const apiKey = aiConfig.apiKey;
-      const model = aiConfig.model;
-
-      if (!apiKey) {
-        throw new Error(`请先在设置中配置 ${provider.toUpperCase()} 的 API Key。`);
-      }
-
-      logService.info(`正在发送 AI 请求 (${provider})`, "AIChat", { model, endpoint });
-
-      // Prepare payload based on provider
-      let body: any;
-      let headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
       const chatHistory = messages.map(msg => ({
-        role: msg.role,
+        role: msg.role as "user" | "assistant" | "system",
         content: msg.content
       }));
 
-      if (provider === "openai" || provider === "local") {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-        body = {
-          model: model || "gpt-3.5-turbo",
-          messages: [...chatHistory, { role: "user", content: userContent }],
-          temperature: 0.7,
-        };
-      } else if (provider === "anthropic") {
-        headers["x-api-key"] = apiKey;
-        headers["anthropic-version"] = "2023-06-01";
-        body = {
-          model: model || "claude-3-haiku-20240307",
-          messages: [...chatHistory, { role: "user", content: userContent }],
-          max_tokens: 1024,
-        };
-        // Anthropic requires specific structure, this is simplified
-      } else if (provider === "google") {
-        // Google Gemini uses a different endpoint structure
-        // This is a simplified fallback
-        body = { contents: [{ parts: [{ text: userContent }] }] };
-      }
+      const response = await aiService.chat([...chatHistory, { role: "user", content: userContent }]);
 
-      const startTime = Date.now();
-      const baseUrl = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
-      const fullUrl = baseUrl + (provider === "openai" || provider === "local" ? "/chat/completions" : "");
+      if (response.error) {
+        throw new Error(response.error);
+      }
       
-      console.log("即将在发送请求:", { url: fullUrl, provider, model });
-
-      const response = await fetch(fullUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-        connectTimeout: 30000,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText || "请求失败"}`);
-      }
-
-      const result = await response.json();
-      let responseText = "";
-
-      if (provider === "openai" || provider === "local") {
-        responseText = result.choices?.[0]?.message?.content || "无回复内容";
-      } else if (provider === "anthropic") {
-        responseText = result.content?.[0]?.text || "无回复内容";
-      } else if (provider === "google") {
-        responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "无回复内容";
-      }
-
-      const duration = Date.now() - startTime;
-      logService.info("AI 请求成功", "AIChat", { duration: `${duration}ms` });
-      
-      addMessage(convId, { role: "assistant", content: responseText });
+      addMessage(convId, { role: "assistant", content: response.content });
 
     } catch (error: any) {
       logService.error("AI 请求失败", "AIChat", { error: error.message });
@@ -319,18 +363,25 @@ const AIChatPanel: React.FC = () => {
   return (
     <div className={styles.container}>
       {/* Sidebar - History */}
-      <div className={styles.sidebar}>
+      <div className={mergeClasses(styles.sidebar, isSidebarCollapsed && styles.sidebarCollapsed)}>
         <div className={styles.sidebarHeader}>
           <div className={styles.sidebarTitle}>
-            <History24Regular />
-            <Text>对话历史</Text>
+            <Tooltip content={isSidebarCollapsed ? "展开侧边栏" : "收起侧边栏"} relationship="label">
+              <Button 
+                icon={isSidebarCollapsed ? <PanelRight24Regular /> : <PanelLeft24Regular />} 
+                appearance="subtle"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              />
+            </Tooltip>
+            {!isSidebarCollapsed && <Text>对话历史</Text>}
           </div>
           <Button 
             icon={<Add24Regular />} 
             appearance="primary"
             onClick={() => createNewConversation()}
+            style={{ minWidth: isSidebarCollapsed ? "40px" : "auto" }}
           >
-            新对话
+            {!isSidebarCollapsed && "新对话"}
           </Button>
         </div>
         <Divider />
@@ -343,19 +394,28 @@ const AIChatPanel: React.FC = () => {
                 currentConversationId === conv.id && styles.historyItemActive
               )}
               onClick={() => setCurrentConversation(conv.id)}
+              style={{ justifyContent: isSidebarCollapsed ? "center" : "space-between" }}
             >
-              <div className={styles.historyItemTitle}>{conv.title}</div>
-              <Tooltip content="删除" relationship="label">
-                <Button 
-                  size="small" 
-                  appearance="subtle" 
-                  icon={<Delete24Regular />} 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteConversation(conv.id);
-                  }}
-                />
-              </Tooltip>
+              {isSidebarCollapsed ? (
+                <Tooltip content={conv.title} relationship="label">
+                   <Chat24Regular />
+                </Tooltip>
+              ) : (
+                <>
+                  <div className={styles.historyItemTitle}>{conv.title}</div>
+                  <Tooltip content="删除" relationship="label">
+                    <Button 
+                      size="small" 
+                      appearance="subtle" 
+                      icon={<Delete24Regular />} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteConversation(conv.id);
+                      }}
+                    />
+                  </Tooltip>
+                </>
+              )}
             </div>
           ))}
           {conversations.length === 0 && (
@@ -366,14 +426,16 @@ const AIChatPanel: React.FC = () => {
         </div>
         <Divider />
         <div style={{ padding: '8px' }}>
-          <Button 
-            icon={<Delete24Regular />} 
-            appearance="subtle" 
-            style={{ width: '100%' }}
-            onClick={clearHistory}
-          >
-            清除所有记录
-          </Button>
+          <Tooltip content={isSidebarCollapsed ? "清除对话历史" : ""} relationship="label">
+            <Button 
+              icon={<Delete24Regular />} 
+              appearance="subtle" 
+              style={{ width: '100%', minWidth: isSidebarCollapsed ? "40px" : "auto" }}
+              onClick={clearHistory}
+            >
+              {!isSidebarCollapsed && "清除所有记录"}
+            </Button>
+          </Tooltip>
         </div>
       </div>
 
@@ -404,10 +466,29 @@ const AIChatPanel: React.FC = () => {
                     <div 
                       className={mergeClasses(
                         styles.messageContent,
-                        msg.role === "user" ? styles.userContent : styles.botContent
+                        msg.role === "user" ? styles.userContent : styles.botContent,
+                        styles.markdownWrapper
                       )}
                     >
-                      {msg.content}
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                    
+                    {/* Copy Button */}
+                    <div className={mergeClasses(
+                      "message-actions",
+                      styles.messageActions,
+                      msg.role === "user" ? styles.userActions : styles.botActions
+                    )}>
+                      <Tooltip content="复制内容" relationship="label">
+                        <Button 
+                          size="small" 
+                          appearance="subtle" 
+                          icon={<Copy24Regular />} 
+                          onClick={() => navigator.clipboard.writeText(msg.content)}
+                        />
+                      </Tooltip>
                     </div>
                   </div>
                 ))
@@ -425,13 +506,16 @@ const AIChatPanel: React.FC = () => {
 
             <div className={styles.inputArea}>
               <div className={styles.inputWrapper}>
-                <Input
+                <Textarea
+                  ref={textareaRef}
                   className={styles.input}
-                  placeholder="输入消息，Shift+Enter 换行"
+                  placeholder="输入消息，Enter 发送，Shift+Enter 换行"
                   value={inputValue}
                   onChange={(e, data) => setInputValue(data.value)}
                   onKeyDown={handleKeyPress}
                   size="large"
+                  resize="none"
+                  style={{ minHeight: '40px', overflowY: 'auto' }}
                 />
                 <Button 
                   icon={<Send24Regular />} 

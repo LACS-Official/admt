@@ -67,12 +67,12 @@
     "ai_test_failed": "连接失败: {{error}}"
   },
   "sidebar": {
-    "home": "主页",
+    "home": "主页中心",
     "system_zone": "系统专区",
     "flash_zone": "刷机专区",
     "online_resources": "在线资源",
-    "root_zone": "Root 专区",
-    "settings": "设置"
+    "root_zone": "Root专区",
+    "settings": "软件设置"
   },
   "status": {
     "device_detected_single": "已检测到 1 台设备",
@@ -302,7 +302,6 @@
     "hash_error": "哈希计算失败",
     "hash_calculation_placeholder": "点击计算哈希 (仅限小文件)",
     "hash_calc_not_supported": "暂不支持前端计算 (建议在后端实现)",
-    "goto_backup": "👉 前往备份分区数据 (Backup)",
     "ab_not_supported_hint": "* 当前设备不支持 A/B 分区，已自动禁用相关选项。",
     "confirm_backup_checkbox": "我已备份重要数据，并知晓刷机风险",
     "hash_label": "文件哈希 (MD5/SHA1): "
@@ -499,16 +498,7 @@
     "msg_transition_anim_success": "过渡动画速度已设置为 {{scale}}",
     "msg_transition_anim_failed": "设置过渡动画速度失败",
     "msg_animator_duration_success": "程序动画速度已设置为 {{scale}}",
-    "msg_animator_duration_failed": "设置程序动画速度失败",
-    "partition_backup": "分区备份",
-    "backup_desc": "备份关键分区（如 boot, recovery, persist 等）到电脑上，以防操作失误导致无法开机。",
-    "select_partition": "选择分区",
-    "output_file": "保存位置",
-    "start_backup": "开始备份",
-    "backup_success": "分区 {{partition}} 备份成功",
-    "backup_failed": "分区 {{partition}} 备份失败: {{error}}",
-    "root_required": "备份分区需要设备具有 Root 权限 (su)",
-    "loading_partitions": "正在获取分区列表..."
+    "msg_animator_duration_failed": "设置程序动画速度失败"
   },
   "command_panel": {
     "device_unknown": "未知设备",
@@ -533,6 +523,8 @@
     "exec_failed": "命令执行失败",
     "copy_output": "复制输出",
     "clear_output": "清空输出",
+    "ai_explain": "AI 解释",
+    "ai_explain_tooltip": "点击让 AI 解释当前的终端输出内容",
     "output_placeholder": "命令输出将显示在这里...",
     "quick_commands": "快捷命令",
     "search_commands": "搜索命令...",
@@ -1211,5 +1203,10 @@
     "monitor_frequency_hint": "建议值：500-2000毫秒（越小越精确但功耗越高）",
     "auto_mirror_title": "连接系统模式设备自动开启屏幕投屏",
     "auto_mirror_desc": "检测到处于系统模式的新设备连接时，自动启动屏幕投屏窗口"
+  },
+  "logs_panel": {
+    "title": "日志查看器",
+    "ai_explain": "AI 解释日志",
+    "ai_explain_tooltip": "点击让 AI 分析当前的日志内容"
   }
 }
