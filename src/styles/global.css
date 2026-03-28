@@ -286,7 +286,18 @@ body::after {
   opacity: 0.5;
 }
 
-/* 全局组件圆角覆盖 */
+/* 全局组件圆角与透明度覆盖 - 现已对接主题系统 */
+.fui-Card {
+  border-radius: var(--borderRadiusLarge) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  background-color: rgba(255, 255, 255, 0.72) !important; /* 浅色模式透明底 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fui-FluentProvider--dark .fui-Card {
+  background-color: rgba(30, 30, 30, 0.72) !important; /* 深色模式透明底 */
+}
+
 .fui-Dropdown,
 .fui-Dropdown > button,
 .fui-Listbox,
@@ -294,13 +305,34 @@ body::after {
 .fui-Input,
 .fui-Input > input,
 .fui-Textarea,
-.fui-Textarea > textarea,
-.fui-Card {
-  border-radius: 8px !important;
+.fui-Textarea > textarea {
+  border-radius: var(--borderRadiusMedium) !important;
 }
 
-/* 特殊处理：Input 和 Dropdown 的外层容器通常也需要圆角 */
-.fui-Input,
-.fui-Dropdown {
-  overflow: hidden;
+/* 紧凑模式下的全局微调 */
+.fui-FluentProvider--compact {
+  /* 重写 Fluent UI 令牌 */
+  --spacingHorizontalXS: 2px;
+  --spacingHorizontalS: 4px;
+  --spacingHorizontalSNudge: 6px;
+  --spacingHorizontalM: 8px;
+  --spacingHorizontalL: 12px;
+  --spacingHorizontalXL: 16px;
+  --spacingHorizontalXXL: 24px;
+
+  --spacingVerticalXS: 2px;
+  --spacingVerticalS: 4px;
+  --spacingVerticalSNudge: 6px;
+  --spacingVerticalM: 8px;
+  --spacingVerticalL: 12px;
+  --spacingVerticalXL: 16px;
+  --spacingVerticalXXL: 24px;
+  --spacingVerticalXXXL: 32px;
+
+  /* 自定义全局变量，供非 Fluent 组件使用 */
+  --spacing-xs: 2px;
+  --spacing-sm: 4px;
+  --spacing-md: 8px;
+  --spacing-lg: 12px;
+  --spacing-xl: 16px;
 }
