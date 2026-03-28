@@ -30,12 +30,12 @@ import NoDevicePrompt from "./NoDevicePrompt";
 
 const useStyles = makeStyles({
   container: {
-    padding: "16px",
+    padding: tokens.spacingHorizontalL,
     height: "100%",
     overflow: "hidden", // 改为 hidden，内部滚动
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: tokens.spacingHorizontalM,
     position: "relative",
     backgroundColor: "var(--colorNeutralBackground2)",
   },
@@ -56,29 +56,29 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    gap: "12px",
+    gap: tokens.spacingHorizontalM,
     minHeight: "40px",
     zIndex: 1,
   },
   headerLeft: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: tokens.spacingHorizontalS,
   },
   headerRight: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: tokens.spacingHorizontalS,
   },
   tabArea: {
     flex: "0 0 auto",
     maxHeight: "45px",
     backgroundColor: "var(--colorNeutralBackground1)",
     borderRadius: "8px",
-    padding: "4px 8px",
+    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
     display: "flex",
     alignItems: "center",
-    marginBottom: "16px",
+    marginBottom: tokens.spacingVerticalL,
     zIndex: 1,
     "& .fui-TabList": {
       minHeight: "32px",
@@ -86,14 +86,14 @@ const useStyles = makeStyles({
     },
     "& .fui-Tab": {
       fontSize: "12px",
-      padding: "6px 12px",
+      padding: `${tokens.spacingVerticalSNudge} ${tokens.spacingHorizontalM}`,
       minHeight: "28px",
       borderRadius: "8px",
       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
       border: "1px solid var(--colorNeutralStroke2)",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
-      margin: "0 4px",
+      margin: `0 ${tokens.spacingHorizontalXS}`,
 
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground2)",
@@ -137,7 +137,7 @@ const useStyles = makeStyles({
     width: "100%",
     overflowX: "hidden",
     overflowY: "auto",
-    paddingRight: "4px",
+    paddingRight: tokens.spacingHorizontalXS,
     // 自定义滚动条
     "&::-webkit-scrollbar": {
       width: "4px",
@@ -152,13 +152,13 @@ const useStyles = makeStyles({
   deviceSection: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: tokens.spacingHorizontalL,
   },
   // 主要内容区域：上下两行布局
   mainContentGrid: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: tokens.spacingHorizontalL,
     flex: 1,
     height: "100%",
   },
@@ -175,7 +175,7 @@ const useStyles = makeStyles({
   deviceActionsSection: {
     display: "flex",
     flexDirection: "row", // 水平排列两个卡片
-    gap: "16px",
+    gap: tokens.spacingHorizontalL,
     flexWrap: "wrap",
     "@media (min-width: 800px)": {
       flexWrap: "nowrap",
@@ -194,8 +194,8 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: "16px",
-    padding: "48px 24px",
+    gap: tokens.spacingHorizontalL,
+    padding: `${tokens.spacingVerticalXXXL} ${tokens.spacingHorizontalXL}`,
     textAlign: "center",
     backgroundColor: "var(--colorNeutralBackground2)",
     borderRadius: "12px",
@@ -206,18 +206,18 @@ const useStyles = makeStyles({
   demoInfoBar: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    padding: "10px 16px",
+    gap: tokens.spacingHorizontalM,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalL}`,
     backgroundColor: "var(--colorBrandBackground2)",
     borderRadius: "8px",
     border: "1px solid var(--colorBrandStroke2)",
-    marginBottom: "12px",
+    marginBottom: tokens.spacingVerticalM,
     color: "var(--colorBrandForeground2)",
   },
   demoBadge: {
     backgroundColor: "var(--colorBrandBackgroundStatic)",
     color: "white",
-    padding: "2px 8px",
+    padding: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalS}`,
     borderRadius: "4px",
     fontSize: "12px",
     fontWeight: "bold",

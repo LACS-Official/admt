@@ -47,7 +47,7 @@ const defaultConfig: AppConfig = {
   soundEnabled: true,
   carouselInterval: 8000,
   globalSearchHotkey: 'Ctrl+K',
-  monitorAutoStart: false,
+  monitorAutoStart: true,
   monitorAutoCsvExport: false,
   cpuMonitorInterval: 1000,
   autoScreenMirror: false,

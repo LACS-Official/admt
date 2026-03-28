@@ -41,11 +41,11 @@ import { useDeviceStore } from '../../stores/deviceStore';
 
 const useStyles = makeStyles({
   card: {
-    padding: '24px',
+    padding: tokens.spacingHorizontalXL,
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: tokens.spacingHorizontalL,
     overflow: 'hidden',
     backgroundColor: 'var(--colorNeutralBackground1)',
     borderRadius: '12px',
@@ -60,15 +60,15 @@ const useStyles = makeStyles({
   titleSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: tokens.spacingHorizontalM,
   },
   tabsContainer: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: '12px',
+    gap: tokens.spacingHorizontalM,
     borderBottom: '1px solid var(--colorNeutralStroke2)',
-    paddingBottom: '8px',
+    paddingBottom: tokens.spacingVerticalS,
   },
   chartContainer: {
     height: '400px',
@@ -81,17 +81,17 @@ const useStyles = makeStyles({
   },
   controls: {
     display: 'flex',
-    gap: '8px',
+    gap: tokens.spacingHorizontalS,
   },
   legendItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    marginRight: '16px',
+    gap: tokens.spacingHorizontalSNudge,
+    marginRight: tokens.spacingHorizontalL,
     fontSize: '12px',
     fontWeight: '500',
     cursor: 'pointer',
-    padding: '4px 8px',
+    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
     borderRadius: '6px',
     transition: 'background 0.2s',
     '&:hover': {
@@ -103,12 +103,31 @@ const useStyles = makeStyles({
     backdropFilter: 'blur(12px)',
     border: '1px solid var(--colorNeutralStroke1)',
     borderRadius: '8px',
-    padding: '12px',
+    padding: tokens.spacingHorizontalM,
     boxShadow: 'var(--shadow16)',
     '@media (prefers-color-scheme: dark)': {
       backgroundColor: 'rgba(28, 28, 28, 0.9)',
     }
   },
+  processList: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: tokens.spacingHorizontalM,
+    marginTop: tokens.spacingVerticalL,
+    padding: tokens.spacingHorizontalM,
+    backgroundColor: 'var(--colorNeutralBackground2)',
+    borderRadius: '8px',
+    border: '1px solid var(--colorNeutralStroke2)',
+  },
+  processItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+    padding: tokens.spacingHorizontalS,
+    backgroundColor: 'var(--colorNeutralBackground1)',
+    borderRadius: '6px',
+    border: '1px dotted var(--colorNeutralStroke3)',
+  }
 });
 
 const COLORS = [
@@ -132,11 +151,19 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
   const { selectedDevice: storeDevice } = useDeviceStore();
   const selectedDevice = propDevice || storeDevice;
   
-  const [isMonitoring, setIsMonitoring] = useState(config.monitorAutoStart);
+  const [isMonitoring, setIsMonitoring] = useState(config.monitorAutoStart || !!selectedDevice);
   const [dataPoints, setDataPoints] = useState<MonitorDataPoint[]>([]);
-  const [activeTab, setActiveTab] = useState<'cpu' | 'memory' | 'temperature' | 'power'>('cpu');
+
+  // 监听设备切换，只要有设备选中且当前未监控，则自动启动 (实现真正意义上的“自动开启”)
+  useEffect(() => {
+    if (selectedDevice && !isMonitoring) {
+      setIsMonitoring(true);
+    }
+  }, [selectedDevice?.serial]);
+  const [activeTab, setActiveTab] = useState<'cpu' | 'memory' | 'temperature' | 'power' | 'network' | 'gpu'>('cpu');
   const [cpuDisplayMode, setCpuDisplayMode] = useState<'utilization' | 'frequency'>('utilization');
   const [memDisplayMode, setMemDisplayMode] = useState<'percent' | 'space'>('percent');
+  const [topProcesses, setTopProcesses] = useState<any[]>([]);
   const [hiddenLines, setHiddenLines] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -172,6 +199,10 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
       currentKeys = ['cpuTemp', 'battTemp'];
     } else if (activeTab === 'power') {
       currentKeys = ['battCap', 'battPower'];
+    } else if (activeTab === 'network') {
+      currentKeys = ['rxSpeed', 'txSpeed'];
+    } else if (activeTab === 'gpu') {
+      currentKeys = ['gpuLoad', 'gpuFreq'];
     }
 
     const allHidden = currentKeys.every(k => hiddenLines.includes(k));
@@ -211,8 +242,23 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
               battery: {
                 level: 85,
                 current: -250000 + Math.random() * 50000,
-                voltage: 4000000 + Math.random() * 100000
-              }
+                voltage: 4000000 + Math.random() * 100000,
+                health: "Good",
+                power: 1.5 + Math.random()
+              },
+              network: {
+                rx_speed: Math.random() * 1024 * 1024,
+                tx_speed: Math.random() * 512 * 1024
+              },
+              gpu: {
+                load: 5 + Math.random() * 20,
+                freq: 585
+              },
+              processes: [
+                { name: "com.android.systemui", cpu: 5.2, mem: 150.5 },
+                { name: "com.lacs.admt", cpu: 2.1, mem: 85.2 },
+                { name: "com.google.android.gms", cpu: 1.5, mem: 120.1 }
+              ]
             };
           } else {
             res = await invoke('get_device_realtime_monitor_data', { serial: selectedDevice.serial });
@@ -238,8 +284,14 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
             cpuTemp: res.temperature.cpu,
             battTemp: res.temperature.battery,
             battCap: res.battery.level,
-            battPower: (Math.abs(res.battery.current) / 1000000) * (res.battery.voltage / 1000000), // W
+            battPower: res.battery.power,
+            rxSpeed: res.network.rx_speed / 1024, // KB/s
+            txSpeed: res.network.tx_speed / 1024, // KB/s
+            gpuLoad: res.gpu.load,
+            gpuFreq: res.gpu.freq,
           };
+
+          setTopProcesses(res.processes || []);
 
           setDataPoints(prev => {
             const next = [...prev, newDataPoint];
@@ -397,6 +449,8 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
           <Tab value="memory">运行内存</Tab>
           <Tab value="temperature">实时温度</Tab>
           <Tab value="power">电量与功率</Tab>
+          <Tab value="network">网络流量</Tab>
+          <Tab value="gpu">GPU状态</Tab>
         </TabList>
 
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -512,7 +566,19 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
               {activeTab === 'power' && (
                 <>
                   <Line hide={hiddenLines.includes('battCap')} type="monotone" dataKey="battCap" name="电量" stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('battPower')} type="monotone" dataKey="battPower" name="功率" stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('battPower')} type="monotone" dataKey="battPower" name="功率(W)" stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
+                </>
+              )}
+              {activeTab === 'network' && (
+                <>
+                  <Line hide={hiddenLines.includes('rxSpeed')} type="monotone" dataKey="rxSpeed" name="下载(KB/s)" stroke="#0078d4" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('txSpeed')} type="monotone" dataKey="txSpeed" name="上传(KB/s)" stroke="#d13438" strokeWidth={2} dot={false} isAnimationActive={false} />
+                </>
+              )}
+              {activeTab === 'gpu' && (
+                <>
+                  <Line hide={hiddenLines.includes('gpuLoad')} type="monotone" dataKey="gpuLoad" name="GPU负载(%)" stroke="#00b7c3" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('gpuFreq')} type="monotone" dataKey="gpuFreq" name="GPU频率(MHz)" stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
             </LineChart>
@@ -526,6 +592,20 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
               {error && <Text size={200} style={{ color: 'var(--colorStatusDangerForeground1)', marginTop: '8px' }}>错误: {error}</Text>}
             </>
           ) : <Text>点击“启动监控”开始记录硬件指标</Text>}
+        </div>
+      )}
+
+      {isMonitoring && topProcesses.length > 0 && (
+        <div className={styles.processList}>
+          {topProcesses.map((p, i) => (
+            <div key={i} className={styles.processItem}>
+              <Text weight="bold" truncate size={200} title={p.name}>{p.name.split('.').pop()}</Text>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <Badge appearance="tint" color="brand" size="small">CPU: {p.cpu}%</Badge>
+                <Badge appearance="tint" color="important" size="small">MEM: {p.mem}%</Badge>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </Card>

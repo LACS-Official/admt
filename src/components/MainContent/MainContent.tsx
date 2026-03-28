@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  tokens,
 } from "@fluentui/react-components";
 import {
   Code24Regular,
@@ -82,14 +83,14 @@ const useStyles = makeStyles({
       "linear-gradient(180deg, var(--colorNeutralBackground2) 0%, var(--colorNeutralBackground1) 100%)",
   },
   deviceInfo: {
-    padding: "5px", // 增加内边距
+    padding: tokens.spacingHorizontalXS, // 增加内边距
     borderBottom: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
     backdropFilter: "blur(10px)", // 毛玻璃效果
     overflow: "hidden",
     minHeight: "auto",
     position: "relative",
     boxSizing: "border-box",
-    margin: "8px", // 添加外边距
+    margin: tokens.spacingHorizontalS, // 添加外边距
     borderRadius: "8px", // 添加圆角
   },
   deviceInfoOverlay: {
@@ -117,7 +118,7 @@ const useStyles = makeStyles({
     color: "white",
     fontSize: "13px",
     fontWeight: "600",
-    padding: "6px 12px",
+    padding: `${tokens.spacingVerticalSNudge} ${tokens.spacingHorizontalM}`,
     backgroundColor: "rgba(255, 255, 255, 0.15)",
     borderRadius: "20px",
     border: "1px solid rgba(255, 255, 255, 0.3)",
@@ -125,7 +126,7 @@ const useStyles = makeStyles({
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: tokens.spacingHorizontalS,
   },
   deviceInfoContainer: {
     display: "flex",
@@ -141,9 +142,9 @@ const useStyles = makeStyles({
     gap: "2px", // 进一步减少间距
     width: "100%",
     overflow: "hidden",
-    marginBottom: "4px", // 减少底部间距
+    marginBottom: tokens.spacingVerticalXS, // 减少底部间距
     borderRadius: "8px", // 添加圆角
-    padding: "4px", // 添加内边距
+    padding: tokens.spacingHorizontalXS, // 添加内边距
   },
   deviceSelectorArea: {
     width: "100%",
@@ -151,7 +152,7 @@ const useStyles = makeStyles({
   },
   deviceSelectCard: {
     width: "100%",
-    padding: "8px",
+    padding: tokens.spacingHorizontalS,
     border: "1px solid var(--colorNeutralStroke2)",
     borderRadius: "8px",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -168,7 +169,7 @@ const useStyles = makeStyles({
   deviceSelectCardContent: {
     display: "flex",
     alignItems: "center",
-    gap: "4px",
+    gap: tokens.spacingHorizontalXS,
     flex: 1,
   },
   deviceSelectCardText: {
@@ -187,14 +188,14 @@ const useStyles = makeStyles({
   },
   noDeviceCard: {
     width: "100%",
-    padding: "12px",
+    padding: tokens.spacingHorizontalM,
     border: "1px solid var(--colorNeutralStroke3)",
     borderRadius: "8px",
     backgroundColor: "var(--colorNeutralBackground3)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "8px",
+    gap: tokens.spacingHorizontalS,
     cursor: "not-allowed",
   },
   noDeviceCardText: {
@@ -214,7 +215,7 @@ const useStyles = makeStyles({
     position: "relative",
     overflow: "hidden",
     boxSizing: "border-box",
-    marginLeft: "4px", // 添加外边距
+    marginLeft: tokens.spacingHorizontalXS, // 添加外边距
   },
   deviceSerialSection: {
     display: "flex",
@@ -243,10 +244,10 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "flex-start",
     justifyContent: "flex-start",
-    gap: "4px",
+    gap: tokens.spacingHorizontalXS,
     minHeight: "20px",
     textAlign: "center",
-    padding: "4px",
+    padding: tokens.spacingHorizontalXS,
     boxSizing: "border-box",
     borderRadius: "8px",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -254,8 +255,8 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
   },
   deviceTextInfo: {
-    marginTop: "8px",
-    marginLeft: "12px",
+    marginTop: tokens.spacingVerticalS,
+    marginLeft: tokens.spacingHorizontalM,
     flex: 1,
     display: "flex",
     flexDirection: "column",

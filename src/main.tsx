@@ -4,6 +4,10 @@ import {
   FluentProvider,
   webLightTheme,
   webDarkTheme,
+  createLightTheme,
+  createDarkTheme,
+  BrandVariants,
+  Theme,
 } from "@fluentui/react-components";
 import App from "./App";
 import { useAppStore } from "./stores/appStore";
@@ -33,9 +37,128 @@ import DeviceSelectionWindow from "./components/MainContent/DeviceSelectionWindo
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useDeviceStore } from "./stores/deviceStore";
 
-function AppWithTheme() {
+// 辅助函数：根据十六进制颜色生成品牌色阶 (BrandVariants)
+const generateBrandVariants = (hex: string): BrandVariants => {
+  // 十六进制转 HSL
+  const hexToHsl = (hexStr: string) => {
+    let r = parseInt(hexStr.slice(1, 3), 16) / 255;
+    let g = parseInt(hexStr.slice(3, 5), 16) / 255;
+    let b = parseInt(hexStr.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+      else if (max === g) h = (b - r) / d + 2;
+      else if (max === b) h = (r - g) / d + 4;
+      h /= 6;
+    }
+    return [h * 360, s * 100, l * 100];
+  };
+
+  // HSL 转 十六进制
+  const hslToHex = (h: number, s: number, l: number) => {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  };
+
+  const [h, s, bl] = hexToHsl(hex);
+  
+  // 修正后的 Fluent UI v9 标准：10 是最深，160 是最浅
+  const lightnessLevels = {
+    10: 10, 20: 15, 30: 23, 40: 29, 50: 35, 60: 41, 70: 47, 80: 53, 
+    90: 62, 100: bl, // 100 为主色
+    110: 75, 120: 82, 130: 88, 140: 92, 150: 96, 160: 98.5
+  };
+
+  const variants: any = {};
+  Object.entries(lightnessLevels).forEach(([key, l]) => {
+    const k = parseInt(key);
+    let targetS = s;
+    
+    // 极浅或极深时适当降低饱和度
+    if (l > 85 || l < 20) {
+      targetS = s * 0.7;
+    }
+
+    variants[key] = hslToHex(h, targetS, l);
+  });
+
+  return variants as BrandVariants;
+};
+
+// 统一的主题包装组件，确保所有窗口共享相同的主题逻辑
+const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
     isDarkMode,
+    accentColor,
+    contentDensity,
+    cornerRadius,
+  } = useThemeStore();
+
+  const theme = React.useMemo(() => {
+    const brand = generateBrandVariants(accentColor || "#0078d4");
+    const baseTheme = isDarkMode ? createDarkTheme(brand) : createLightTheme(brand);
+    
+    // 应用圆角设置
+    const radiusMap = {
+      small: "2px",
+      medium: "4px",
+      large: "8px"
+    };
+    const borderRadius = radiusMap[cornerRadius] || "4px";
+
+    const finalTheme: Theme = {
+      ...baseTheme,
+      borderRadiusNone: "0",
+      borderRadiusSmall: cornerRadius === 'small' ? "1px" : "2px",
+      borderRadiusMedium: borderRadius,
+      borderRadiusLarge: cornerRadius === 'large' ? "12px" : "8px",
+      borderRadiusXLarge: cornerRadius === 'large' ? "16px" : "12px",
+      borderRadiusCircular: "10000px",
+    };
+
+    // 应用内容密度 (间距) 设置
+    if (contentDensity === 'compact') {
+      finalTheme.spacingHorizontalXS = "2px";
+      finalTheme.spacingHorizontalS = "4px";
+      finalTheme.spacingHorizontalM = "8px";
+      finalTheme.spacingHorizontalL = "12px";
+      finalTheme.spacingHorizontalXL = "16px";
+      
+      finalTheme.spacingVerticalXS = "2px";
+      finalTheme.spacingVerticalS = "4px";
+      finalTheme.spacingVerticalM = "8px";
+      finalTheme.spacingVerticalL = "12px";
+      finalTheme.spacingVerticalXL = "16px";
+
+      // 额外对一些组件常用的间距进行微调
+      (finalTheme as any).spacingHorizontalXXL = "24px";
+      (finalTheme as any).spacingVerticalXXL = "24px";
+    }
+
+    return finalTheme;
+  }, [isDarkMode, accentColor, cornerRadius, contentDensity]);
+
+  const densityClassName = contentDensity === 'compact' ? 'fui-FluentProvider--compact' : '';
+  const themeClassName = `${densityClassName} ${isDarkMode ? 'fui-FluentProvider--dark' : 'fui-FluentProvider--light'}`;
+
+  return (
+    <FluentProvider theme={theme} className={themeClassName}>
+      {children}
+    </FluentProvider>
+  );
+};
+
+function AppWithTheme() {
+  const {
     followSystemTheme,
     updateThemeBasedOnSystem,
     subscribeToStorageChanges,
@@ -54,28 +177,20 @@ function AppWithTheme() {
   // 监听系统主题变化
   useEffect(() => {
     if (followSystemTheme) {
-      // 初始化时根据系统主题设置
       updateThemeBasedOnSystem();
-
-      // 监听系统主题变化
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
       const handler = () => updateThemeBasedOnSystem();
-
       mediaQuery.addEventListener("change", handler);
-
       return () => mediaQuery.removeEventListener("change", handler);
     }
   }, [followSystemTheme, updateThemeBasedOnSystem]);
   
-  // 监听并同步语言设置
   useEffect(() => {
     if (config.language && i18n.language !== config.language) {
-      console.log(`🌐 正在同步应用语言为: ${config.language}`);
       i18n.changeLanguage(config.language);
     }
   }, [config.language]);
 
-  // 监听跨页面的主题变化
   useEffect(() => {
     const cleanup = subscribeToStorageChanges();
     const deviceCleanup = subscribeToDeviceChanges();
@@ -85,24 +200,13 @@ function AppWithTheme() {
     };
   }, [subscribeToStorageChanges, subscribeToDeviceChanges]);
 
-  // 每隔1秒检测激活码是否过期
   useEffect(() => {
     const checkActivationStatus = () => {
       try {
         const activationStatus = activationService.checkActivationStatus();
-
-        // 如果激活码过期或需要激活，则跳转到激活页面
         if (activationStatus.isExpired || activationStatus.needsActivation) {
-          console.log(
-            "检测到激活码过期或需要激活:",
-            activationStatus.expiredReason || "需要激活",
-          );
           setIsActivationValid(false);
-
-          // 设置启动流程状态为激活验证阶段
           setCurrentPhase("activation-verification");
-
-          // 如果是过期状态，清除过期数据
           if (activationStatus.isExpired) {
             activationService.handleExpiredActivation();
           }
@@ -110,153 +214,55 @@ function AppWithTheme() {
           setIsActivationValid(true);
         }
       } catch (error) {
-        console.error("检查激活状态失败:", error);
-        // 如果检查失败，默认认为激活无效
         setIsActivationValid(false);
         setCurrentPhase("activation-verification");
       }
     };
-
-    // 立即执行一次检查
     checkActivationStatus();
-
-    // 设置定时器，每隔1秒检查一次
-    const intervalId = setInterval(checkActivationStatus, 1000);
-
-    // 组件卸载时清除定时器
+    const intervalId = setInterval(checkActivationStatus, 5000); // 降低频率以优化性能
     return () => clearInterval(intervalId);
   }, [setCurrentPhase]);
 
-  // 检查用户是否同意政策条款
   useEffect(() => {
     const checkTermsAcceptance = () => {
       try {
-        // 检查是否需要显示隐私政策同意界面
         const needsToShowConsent = shouldShowPrivacyConsent();
-
-        // 或者直接检查是否已完成隐私设置且已同意所有必要条款
-        const hasAcceptedAllTerms =
-          hasCompletedPrivacySetup &&
-          hasAcceptedPrivacyPolicy &&
-          hasAcceptedUserAgreement;
-
-        console.log("检查政策条款同意状态:", {
-          needsToShowConsent,
-          hasCompletedPrivacySetup,
-          hasAcceptedPrivacyPolicy,
-          hasAcceptedUserAgreement,
-          hasAcceptedAllTerms,
-        });
-
+        const hasAcceptedAllTerms = hasCompletedPrivacySetup && hasAcceptedPrivacyPolicy && hasAcceptedUserAgreement;
         if (needsToShowConsent || !hasAcceptedAllTerms) {
-          if (hasAcceptedTerms !== false) {
-            // 只有状态发生变化时才更新并记录日志
-            console.log("状态更新: 用户未同意政策条款，显示政策条款页面");
-            setHasAcceptedTerms(false);
-          }
-          // 设置启动流程状态为隐私政策同意阶段
+          setHasAcceptedTerms(false);
           setCurrentPhase("privacy-consent");
         } else {
-          if (hasAcceptedTerms !== true) {
-            // 只有状态发生变化时才更新并记录日志
-            console.log("状态更新: 用户已同意政策条款，显示主应用界面");
-            setHasAcceptedTerms(true);
-          }
+          setHasAcceptedTerms(true);
         }
       } catch (error) {
-        console.error("检查政策条款同意状态失败:", error);
-        // 如果检查失败，默认认为用户未同意
-        if (hasAcceptedTerms !== false) {
-          console.log("状态更新: 检查失败，默认用户未同意政策条款");
-          setHasAcceptedTerms(false);
-        }
+        setHasAcceptedTerms(false);
         setCurrentPhase("privacy-consent");
       }
     };
-
-    // 立即执行一次检查
     checkTermsAcceptance();
-
-    // 由于隐私政策同意状态通常在用户交互后才会改变，这里不设置定时器
-    // 但会依赖相关状态的变化来重新检查
-  }, [
-    setCurrentPhase,
-    hasCompletedPrivacySetup,
-    hasAcceptedPrivacyPolicy,
-    hasAcceptedUserAgreement,
-    hasAcceptedTerms,
-  ]);
-
-  // 添加一个额外的useEffect来监听hasAcceptedTerms状态的变化
-  useEffect(() => {
-    console.log("监听状态变化: hasAcceptedTerms =", hasAcceptedTerms);
-    // 这里可以添加其他响应状态变化的逻辑
-  }, [hasAcceptedTerms]);
-
-  // 如果激活码无效，显示激活页面
-  if (!isActivationValid) {
-    // 通过修改全局状态来控制显示激活页面
-    // 这里我们仍然渲染App组件，但通过useStartupFlowStore来控制显示激活页面
-    return (
-      <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
-        <App />
-      </FluentProvider>
-    );
-  }
-
-  // 如果用户未同意政策条款，则显示政策条款页面
-  if (!hasAcceptedTerms) {
-    // 通过修改全局状态来控制显示政策条款页面
-    // 这里我们仍然渲染App组件，但通过useStartupFlowStore来控制显示政策条款页面
-    return (
-      <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
-        <App />
-      </FluentProvider>
-    );
-  }
+  }, [setCurrentPhase, hasCompletedPrivacySetup, hasAcceptedPrivacyPolicy, hasAcceptedUserAgreement]);
 
   return (
-    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+    <ThemeProvider>
       <App />
-    </FluentProvider>
+    </ThemeProvider>
   );
 }
 
-
 function CommandLineWindowWithTheme() {
-  const { isDarkMode } = useThemeStore();
-  return (
-    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
-      <CommandLineWindow />
-    </FluentProvider>
-  );
+  return <ThemeProvider><CommandLineWindow /></ThemeProvider>;
 }
 
 function LogsWindowWithTheme() {
-  const { isDarkMode } = useThemeStore();
-  return (
-    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
-      <LogsWindow />
-    </FluentProvider>
-  );
+  return <ThemeProvider><LogsWindow /></ThemeProvider>;
 }
 
 function AIChatWindowWithTheme() {
-  const { isDarkMode } = useThemeStore();
-  return (
-    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
-      <AIChatWindow />
-    </FluentProvider>
-  );
+  return <ThemeProvider><AIChatWindow /></ThemeProvider>;
 }
 
 function DeviceSelectionWindowWithTheme() {
-  const { isDarkMode } = useThemeStore();
-  return (
-    <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
-      <DeviceSelectionWindow />
-    </FluentProvider>
-  );
+  return <ThemeProvider><DeviceSelectionWindow /></ThemeProvider>;
 }
 
 function Root() {
@@ -268,22 +274,10 @@ function Root() {
 
   if (!label) return null;
 
-
-  if (label === "command-line") {
-    return <CommandLineWindowWithTheme />;
-  }
-
-  if (label === "logs") {
-    return <LogsWindowWithTheme />;
-  }
-
-  if (label === "ai-chat") {
-    return <AIChatWindowWithTheme />;
-  }
-
-  if (label === "device-selection") {
-    return <DeviceSelectionWindowWithTheme />;
-  }
+  if (label === "command-line") return <CommandLineWindowWithTheme />;
+  if (label === "logs") return <LogsWindowWithTheme />;
+  if (label === "ai-chat") return <AIChatWindowWithTheme />;
+  if (label === "device-selection") return <DeviceSelectionWindowWithTheme />;
 
   return <AppWithTheme />;
 }

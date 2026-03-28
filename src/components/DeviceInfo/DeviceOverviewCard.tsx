@@ -11,6 +11,7 @@ import {
   Spinner,
   Tab,
   TabList,
+  tokens,
 } from "@fluentui/react-components";
 import {
   Battery024Regular,
@@ -98,34 +99,34 @@ const useStyles = makeStyles({
   header: {
     display: "flex",
     alignItems: "flex-start", // 顶部对齐
-    padding: "12px 16px",
+    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
     borderBottom: "1px solid var(--colorNeutralStroke2)",
-    gap: "16px", // 左右两部分的间距
+    gap: tokens.spacingHorizontalL, // 左右两部分的间距
     "@media (max-width: 768px)": {
       flexDirection: "column", // 移动端垂直排列
-      gap: "12px",
+      gap: tokens.spacingHorizontalM,
     },
   },
   // 左半部分：设备信息、标签页、刷新按钮
   headerLeft: {
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
-    flex: "1 1 65%", // 占据65%的宽度
+    gap: tokens.spacingVerticalS,
+    flex: "1 1 65%", // 占据65% the width
     minWidth: 0,
   },
   // 左半部分第一行：设备基本信息
   deviceInfoRow: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: tokens.spacingHorizontalS,
     minWidth: 0,
   },
   // fastboot 模式下的设备信息行，确保标题、刷新按钮和标签页在同一行
   fastbootDeviceInfoRow: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: tokens.spacingHorizontalS,
     minWidth: 0,
     flexWrap: "nowrap", // 防止换行
     justifyContent: "space-between", // 元素之间均匀分布
@@ -134,12 +135,12 @@ const useStyles = makeStyles({
   controlsRow: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
+    gap: tokens.spacingHorizontalM,
     justifyContent: "space-between",
     "@media (max-width: 768px)": {
       flexDirection: "column", // 移动端垂直排列
       alignItems: "flex-start",
-      gap: "8px",
+      gap: tokens.spacingVerticalS,
     },
   },
   // 右半部分：进度条区域
@@ -147,7 +148,7 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    flex: "0 0 35%", // 占据35%的宽度，不伸缩
+    flex: "0 0 35%", // 占据35% the width，不伸缩
     minWidth: "240px", // 最小宽度确保进度条正常显示
     borderLeft: "1px solid var(--colorNeutralStroke2)",
     
@@ -158,8 +159,8 @@ const useStyles = makeStyles({
     },
   },
   deviceName: {
-    fontSize: "18px",
-    fontWeight: "600",
+    fontSize: tokens.fontSizeBase400,
+    fontWeight: tokens.fontWeightSemibold,
     color: "var(--colorNeutralForeground1)",
     lineHeight: "1.2",
     whiteSpace: "nowrap",
@@ -169,11 +170,11 @@ const useStyles = makeStyles({
     flexShrink: 1,
   },
   deviceSubtitle: {
-    fontSize: "10px",
+    fontSize: tokens.fontSizeBase100,
     color: "var(--colorNeutralForeground2)",
-    fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace",
+    fontFamily: tokens.fontFamilyMonospace,
     backgroundColor: "var(--colorNeutralBackground3)",
-    padding: "3px 6px",
+    padding: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalSNudge}`,
     borderRadius: "4px",
     border: "1px solid var(--colorNeutralStroke3)",
     whiteSpace: "nowrap",
@@ -188,10 +189,10 @@ const useStyles = makeStyles({
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gridTemplateRows: "1fr 1fr",
-    gap: "8px",
+    gap: tokens.spacingHorizontalS,
     minWidth: "240px",
     maxWidth: "280px",
-    padding: "10px",
+    padding: tokens.spacingHorizontalS,
     
   },
   progressItem: {
@@ -205,23 +206,23 @@ const useStyles = makeStyles({
     alignItems: "center",
   },
   progressLabel: {
-    fontSize: "10px",
-    fontWeight: "500",
+    fontSize: tokens.fontSizeBase100,
+    fontWeight: tokens.fontWeightMedium,
     color: "var(--colorNeutralForeground2)",
     display: "flex",
     alignItems: "center",
-    gap: "3px",
+    gap: tokens.spacingHorizontalXS,
     lineHeight: "1.2",
   },
   progressValue: {
-    fontSize: "10px",
-    fontWeight: "600",
+    fontSize: tokens.fontSizeBase100,
+    fontWeight: tokens.fontWeightSemibold,
     color: "var(--colorNeutralForeground1)",
     letterSpacing: "0.02em",
     lineHeight: "1.2",
   },
   content: {
-    padding: "12px",
+    padding: tokens.spacingHorizontalM,
     paddingTop: "0", // 移除顶部内边距，因为标签页已移到头部
     flex: 1,
     display: "flex",
@@ -236,14 +237,14 @@ const useStyles = makeStyles({
     },
     "& .fui-Tab": {
       fontSize: "12px",
-      padding: "6px 12px",
+      padding: `${tokens.spacingVerticalSNudge} ${tokens.spacingHorizontalM}`,
       minHeight: "28px",
       borderRadius: "6px",
       transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
       border: "1px solid var(--colorNeutralStroke2)",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
-      margin: "0 4px",
+      margin: `0 ${tokens.spacingHorizontalXS}`,
       
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground2)",
@@ -279,18 +280,18 @@ const useStyles = makeStyles({
   },
   // 内容区域的标签页样式（已移除，但保留以防需要）
   tabList: {
-    marginBottom: "12px",
+    marginBottom: tokens.spacingVerticalM,
     display: "none", // 隐藏内容区域的标签页
   },
   tabPanel: {
     flex: 1,
     overflow: "auto",
-    paddingTop: "12px", // 添加顶部内边距以与头部分离
+    paddingTop: tokens.spacingVerticalM, // 添加顶部内边距以与头部分离
   },
   infoGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr 1fr",
-    gap: "8px",
+    gap: tokens.spacingHorizontalS,
     "@media (max-width: 768px)": {
       gridTemplateColumns: "1fr 1fr",
     },
@@ -301,8 +302,8 @@ const useStyles = makeStyles({
   infoItem: {
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
-    padding: "8px",
+    gap: tokens.spacingVerticalXXS,
+    padding: tokens.spacingHorizontalS,
     borderRadius: "6px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke3)",
