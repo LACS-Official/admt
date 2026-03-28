@@ -7,11 +7,11 @@
 export const isDevelopment = (): boolean => {
   // 检查多个开发环境标识
   return (
-    (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') ||
-    (typeof process !== 'undefined' && process.env?.TAURI_ENV === 'dev') ||
+    import.meta.env.DEV ||
+    import.meta.env.MODE === 'development' ||
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1' ||
-    window.location.protocol === 'tauri:' && (window as any).__TAURI_INTERNALS__?.metadata?.debug === true
+    (window.location.protocol === 'tauri:' && (window as any).__TAURI_INTERNALS__?.metadata?.debug === true)
   );
 };
 

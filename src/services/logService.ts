@@ -66,7 +66,7 @@ class LogService {
     let context: any = {};
     
     if (details) {
-        if (details.category && ["device", "firmware", "system", "user", "network", "security"].includes(details.category)) {
+        if (details.category && ["device", "firmware", "system", "user", "network", "security", "ai"].includes(details.category)) {
             category = details.category;
             // 从 details 中移除 category，剩余的作为 context
             const { category: _, ...rest } = details;

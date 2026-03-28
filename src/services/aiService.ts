@@ -92,10 +92,15 @@ class AIService {
       } else if (provider === "google") {
         responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "无回复内容";
       }
-
+      if (responseText === "无回复内容") {
+        logService.warning("AI 返回了空内容", "AIService", { category: "ai", provider, model });
+      } else {
+        logService.info("AI 请求成功", "AIService", { category: "ai", provider, model, responseLength: responseText.length });
+      }
+      
       return { content: responseText };
     } catch (error: any) {
-      logService.error("AI 请求失败", "AIService", { error: error.message });
+      logService.error("AI 请求失败", "AIService", { error: error.message, category: "ai" });
       return { 
         content: "", 
         error: error.message 

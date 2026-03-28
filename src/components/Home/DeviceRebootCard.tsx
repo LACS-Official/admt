@@ -137,10 +137,15 @@ interface RebootOption {
   warning?: boolean;
 }
 
-const DeviceRebootCard: React.FC = () => {
+interface DeviceRebootCardProps {
+  device?: any;
+}
+
+const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice }) => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { selectedDevice } = useDeviceStore();
+  const { selectedDevice: storeDevice } = useDeviceStore();
+  const selectedDevice = propDevice || storeDevice;
   const { setStatusBarMessage } = useAppStore();
   const [isRebooting, setIsRebooting] = useState(false);
   const [pendingRebootOption, setPendingRebootOption] = useState<RebootOption | null>(null);
@@ -230,6 +235,15 @@ const DeviceRebootCard: React.FC = () => {
       setStatusBarMessage({
         type: "error",
         message: t('error.no_device'),
+        duration: 3000,
+      });
+      return;
+    }
+
+    if (selectedDevice?.serial === "DEMO-ADB-001") {
+      setStatusBarMessage({
+        type: "warning",
+        message: "演示模式下无法执行重启操作",
         duration: 3000,
       });
       return;

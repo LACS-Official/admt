@@ -6,7 +6,7 @@ use log;
 /// 获取设备信息
 pub async fn get_device_info(serial: String) -> Result<DeviceInfo, AdmtError> {
     // 首先验证设备是否存在
-    let devices = crate::commands::scan_devices().await?;
+    let devices: Vec<DeviceInfo> = crate::commands::scan_devices().await?;
     let mut device = devices
         .into_iter()
         .find(|d| d.serial == serial)

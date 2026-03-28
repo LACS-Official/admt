@@ -417,7 +417,7 @@ export const useAppStartup = () => {
         }
 
         // 2. 初始化应用状态
-        initialize();
+        await initialize();
 
         // 3. 记录设备检测配置状态
         logService.info(`设备检测配置 - 自动检测: ${config.autoDetectDevices}, 扫描间隔: ${config.scanInterval}ms`, 'App');

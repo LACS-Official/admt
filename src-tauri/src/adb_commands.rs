@@ -338,15 +338,6 @@ pub async fn execute_fastboot_command_with_path(
         );
     }
 
-    // 非Windows平台的处理
-    #[cfg(not(windows))]
-    {
-        log::debug!(
-            "Fastboot命令在非Windows平台执行: {}",
-            fastboot_path.display()
-        );
-    }
-
     // 设置超时
     let timeout_duration = std::time::Duration::from_secs(timeout.unwrap_or(30));
 

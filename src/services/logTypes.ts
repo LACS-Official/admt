@@ -1,5 +1,5 @@
 export type LogLevel = "fatal" | "error" | "warning" | "info" | "debug";
-export type LogCategory = "device" | "firmware" | "system" | "user" | "network" | "security";
+export type LogCategory = "device" | "firmware" | "system" | "user" | "network" | "security" | "ai";
 
 export interface StructuredLogEntry {
   id: string;

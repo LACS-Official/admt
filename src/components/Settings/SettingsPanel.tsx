@@ -14,6 +14,7 @@ import {
   DeviceEq24Regular,
   Desktop24Regular,
   Bot24Regular,
+  Heart24Regular,
 } from "@fluentui/react-icons";
 import { SettingsView } from "../../types/app";
 import AboutPanel from "./AboutPanel";
@@ -173,6 +174,7 @@ const SettingsPanel: React.FC = () => {
 
       <div className={styles.tabContainer}>
         <TabList
+          id="tour-settings-tabs"
           selectedValue={currentView}
           onTabSelect={handleTabSelect}
           className={styles.headerTabList}

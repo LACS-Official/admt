@@ -10,11 +10,18 @@ pub async fn execute_fastboot_command_with_path(
     args: Vec<String>,
     timeout: Option<u64>,
 ) -> Result<CommandResult> {
-    crate::adb_commands::execute_fastboot_command_with_path(
-        &fastboot_path,
-        &serial,
-        &command,
-        &args,
+    log::info!(
+        "Executing Fastboot command with custom path: {}",
+        fastboot_path
+    );
+    let mut full_args = vec!["-s", &serial, &command];
+    for arg in &args {
+        full_args.push(arg);
+    }
+
+    crate::utils::execute_command(
+        &std::path::PathBuf::from(&fastboot_path),
+        &full_args,
         timeout,
     )
     .await

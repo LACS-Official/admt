@@ -19,6 +19,7 @@ import {
   Wand24Regular,
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
+  Save24Regular,
 } from "@fluentui/react-icons";
 import { fetch } from "@tauri-apps/plugin-http";
 import { useAppStore } from "../../stores/appStore";
@@ -85,7 +86,7 @@ const useStyles = makeStyles({
 const AISettingsPanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { config, updateConfig } = useAppStore();
+  const { config, updateConfig, saveToDisk, setStatusBarMessage } = useAppStore();
   const [testStatus, setTestStatus] = useState<{
     type: "idle" | "loading" | "success" | "error";
     message?: string;
@@ -99,6 +100,32 @@ const AISettingsPanel: React.FC = () => {
         ...(updates as any),
       },
     });
+  };
+
+  const [isSaving, setIsSaving] = useState(false);
+  const handleSaveConfig = async () => {
+    setIsSaving(true);
+    try {
+      const success = await saveToDisk();
+      if (success) {
+        setStatusBarMessage({
+          type: "success",
+          message: t("settings.ai_save_success"),
+        });
+      } else {
+        setStatusBarMessage({
+          type: "error",
+          message: t("settings.ai_save_failed", { error: "Unknown error" }),
+        });
+      }
+    } catch (error: any) {
+      setStatusBarMessage({
+        type: "error",
+        message: t("settings.ai_save_failed", { error: error.message || error }),
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleTestConnection = async () => {
@@ -302,6 +329,15 @@ const AISettingsPanel: React.FC = () => {
                 icon={testStatus.type === "loading" ? <Spinner size="tiny" /> : undefined}
               >
                 {testStatus.type === "loading" ? t("settings.ai_testing") : t("settings.ai_test_connection")}
+              </Button>
+
+              <Button
+                appearance="primary"
+                onClick={handleSaveConfig}
+                disabled={isSaving || testStatus.type === "loading"}
+                icon={isSaving ? <Spinner size="tiny" /> : <Save24Regular />}
+              >
+                {isSaving ? t("settings.ai_saving") : t("settings.ai_save_config")}
               </Button>
 
               {testStatus.type === "success" && (

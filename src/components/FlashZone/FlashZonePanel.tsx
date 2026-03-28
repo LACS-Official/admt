@@ -288,6 +288,7 @@ const FlashZonePanel: React.FC = () => {
         <div className={styles.content}>
           <div className={styles.tabContainer}>
             <TabList
+              id="tour-flash-tabs"
               selectedValue={currentView}
               onTabSelect={(_, data) =>
                 setCurrentView(data.value as FlashZoneView)

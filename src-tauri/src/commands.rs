@@ -1447,24 +1447,81 @@ pub async fn get_device_fingerprint() -> Result<String> {
     Ok(fingerprint)
 }
 
+fn get_config_path(app: &tauri::AppHandle) -> Result<PathBuf> {
+    let mut path = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| AdmtError::PathResolution(e.to_string()))?;
+
+    if !path.exists() {
+        let _ = std::fs::create_dir_all(&path);
+    }
+
+    path.push("config");
+    if !path.exists() {
+        let _ = std::fs::create_dir_all(&path);
+    }
+
+    path.push("app_config.json");
+    Ok(path)
+}
+
 /// 获取应用配置
 #[tauri::command]
-pub async fn get_app_config() -> Result<Option<AppConfig>> {
-    // 这里应该从本地存储读取配置
-    // 暂时返回None
-    Ok(None)
+pub async fn get_app_config(app: tauri::AppHandle) -> Result<Option<AppConfig>> {
+    let path = get_config_path(&app)?;
+    if !path.exists() {
+        log::info!("Config file not found at: {}", path.display());
+        return Ok(None);
+    }
+
+    match std::fs::read_to_string(&path) {
+        Ok(content) => match serde_json::from_str::<AppConfig>(&content) {
+            Ok(config) => {
+                log::info!("Successfully loaded app config from: {}", path.display());
+                Ok(Some(config))
+            }
+            Err(e) => {
+                log::error!("Failed to parse app config: {}", e);
+                Err(AdmtError::ParseError {
+                    message: e.to_string(),
+                })
+            }
+        },
+        Err(e) => {
+            log::error!("Failed to read app config file: {}", e);
+            Err(AdmtError::Io(e.to_string()))
+        }
+    }
 }
 
 /// 保存应用配置
 #[tauri::command]
-pub async fn save_app_config(config: AppConfig) -> Result<bool> {
+pub async fn save_app_config(app: tauri::AppHandle, config: AppConfig) -> Result<bool> {
     log::info!(
         "Saving app config for user: {}",
         config.user_config.username
     );
-    // 这里应该将配置保存到本地存储
-    // 暂时返回true表示保存成功
-    Ok(true)
+
+    let path = get_config_path(&app)?;
+    match serde_json::to_string_pretty(&config) {
+        Ok(content) => match std::fs::write(&path, content) {
+            Ok(_) => {
+                log::info!("Successfully saved app config to: {}", path.display());
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("Failed to write app config file: {}", e);
+                Err(AdmtError::Io(e.to_string()))
+            }
+        },
+        Err(e) => {
+            log::error!("Failed to serialize app config: {}", e);
+            Err(AdmtError::ParseError {
+                message: e.to_string(),
+            })
+        }
+    }
 }
 
 // ==================== 安全配置相关命令 ====================
@@ -2331,105 +2388,212 @@ pub struct MonitorDataPoint {
     pub battery: MonitorBatteryData,
 }
 
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
+
+#[derive(Debug, Clone)]
+struct CpuCounters {
+    total: f64,
+    non_idle: f64,
+}
+
+static CPU_CACHE: Lazy<Mutex<HashMap<String, HashMap<String, CpuCounters>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
 /// 获取实时监控数据
 #[tauri::command]
 pub async fn get_device_realtime_monitor_data(serial: String) -> Result<MonitorDataPoint> {
-    // 1. 获取 CPU 数据
-    let cpu_stat =
-        utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/proc/stat"], Some(5)).await?;
-    let (total_usage, core_usages) = parse_proc_stat(&cpu_stat.output);
+    // 准备并行任务
+    let cpu_serial = serial.clone();
+    let mem_serial = serial.clone();
+    let temp_serial = serial.clone();
+    let batt_serial = serial.clone();
 
-    let mut frequencies = HashMap::new();
-    let freq_res = utils_execute_adb_command(
-        &[
-            "-s",
-            &serial,
-            "shell",
-            "cat",
-            "/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
-        ],
-        Some(5),
-    )
-    .await?;
-    for (i, line) in freq_res.output.lines().enumerate() {
-        if let Ok(f) = line.trim().parse::<u64>() {
-            frequencies.insert(format!("cpu{}", i), f / 1000);
-        }
-    }
-
-    // 2. 获取内存数据
-    let mem_info =
-        utils_execute_adb_command(&["-s", &serial, "shell", "cat", "/proc/meminfo"], Some(5))
-            .await?;
-    let (mem_total, mem_free, mem_avail) = parse_meminfo(&mem_info.output);
-
-    // 3. 获取温度数据
-    let mut cpu_temp = 0.0;
-    let temp_paths = [
-        "/sys/class/thermal/thermal_zone0/temp",
-        "/sys/class/thermal/thermal_zone1/temp",
-        "/sys/devices/virtual/thermal/thermal_zone0/temp",
-        "/sys/class/thermal/cooling_device0/cur_state",
-    ];
-    for path in temp_paths {
-        if let Ok(res) =
-            utils_execute_adb_command(&["-s", &serial, "shell", "cat", path], Some(2)).await
+    // 1. CPU 采集
+    let cpu_task = tokio::spawn(async move {
+        if let Ok(cpu_stat) =
+            utils_execute_adb_command(&["-s", &cpu_serial, "shell", "cat", "/proc/stat"], Some(3))
+                .await
         {
-            if res.success {
-                if let Ok(t) = res.output.trim().parse::<f64>() {
-                    cpu_temp = if t > 1000.0 { t / 1000.0 } else { t };
-                    if cpu_temp > 1.0 && cpu_temp < 150.0 {
+            if cpu_stat.success {
+                return calculate_realtime_cpu_usage(&cpu_serial, &cpu_stat.output);
+            }
+        }
+        (0.0, Vec::new())
+    });
+
+    // 2. CPU 频率采集
+    let freq_task = tokio::spawn(async move {
+        let mut frequencies = HashMap::new();
+        if let Ok(freq_res) = utils_execute_adb_command(
+            &[
+                "-s",
+                &serial,
+                "shell",
+                "cat",
+                "/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
+            ],
+            Some(3),
+        )
+        .await
+        {
+            if freq_res.success {
+                for (i, line) in freq_res.output.lines().enumerate() {
+                    if let Ok(f) = line.trim().parse::<u64>() {
+                        frequencies.insert(format!("cpu{}", i), f / 1000);
+                    }
+                }
+            }
+        }
+        frequencies
+    });
+
+    // 3. 内存采集
+    let mem_task = tokio::spawn(async move {
+        if let Ok(mem_info) = utils_execute_adb_command(
+            &["-s", &mem_serial, "shell", "cat", "/proc/meminfo"],
+            Some(3),
+        )
+        .await
+        {
+            if mem_info.success {
+                return parse_meminfo(&mem_info.output);
+            }
+        }
+        (0, 0, 0)
+    });
+
+    // 4. 温度采集
+    let temp_task = tokio::spawn(async move {
+        let mut cpu_temp = 0.0;
+        let mut batt_temp = 0.0;
+
+        // 尝试快速读取 sysfs 温度
+        let temp_paths = [
+            "/sys/class/thermal/thermal_zone0/temp",
+            "/sys/devices/virtual/thermal/thermal_zone0/temp",
+            "/sys/class/thermal/cooling_device0/cur_state",
+        ];
+        for path in temp_paths {
+            if let Ok(res) =
+                utils_execute_adb_command(&["-s", &temp_serial, "shell", "cat", path], Some(1))
+                    .await
+            {
+                if res.success {
+                    if let Ok(t) = res.output.trim().parse::<f64>() {
+                        let val = if t > 1000.0 { t / 1000.0 } else { t };
+                        if val > 1.0 && val < 150.0 {
+                            cpu_temp = val;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 快速读取电池温度
+        let b_temp_paths = [
+            "/sys/class/power_supply/battery/temp",
+            "/sys/class/power_supply/battery/batt_temp",
+        ];
+        for path in b_temp_paths {
+            if let Ok(res) =
+                utils_execute_adb_command(&["-s", &temp_serial, "shell", "cat", path], Some(1))
+                    .await
+            {
+                if res.success {
+                    if let Ok(t) = res.output.trim().parse::<f64>() {
+                        batt_temp = t / 10.0;
                         break;
                     }
                 }
             }
         }
-    }
 
-    let battery_info =
-        utils_execute_adb_command(&["-s", &serial, "shell", "dumpsys", "battery"], Some(5)).await?;
-    let batt_temp = parse_battery_temp(&battery_info.output);
-    let batt_level = parse_battery_level(&battery_info.output);
+        (cpu_temp, batt_temp)
+    });
 
-    // 4. 获取电池功率数据
-    let mut current = 0.0;
-    let curr_paths = [
-        "/sys/class/power_supply/battery/current_now",
-        "/sys/class/power_supply/main/current_now",
-        "/sys/class/power_supply/battery/batt_current_now",
-        "/sys/class/power_supply/battery/current_avg",
-    ];
-    for path in curr_paths {
-        if let Ok(res) =
-            utils_execute_adb_command(&["-s", &serial, "shell", "cat", path], Some(2)).await
+    // 5. 电池与功率采集
+    let batt_task = tokio::spawn(async move {
+        let (mut level, mut current, mut voltage) = (0, 0.0, 0.0);
+
+        // 尝试快速读取电量
+        if let Ok(res) = utils_execute_adb_command(
+            &[
+                "-s",
+                &batt_serial,
+                "shell",
+                "cat",
+                "/sys/class/power_supply/battery/capacity",
+            ],
+            Some(1),
+        )
+        .await
         {
             if res.success {
-                if let Ok(c) = res.output.trim().parse::<f64>() {
-                    current = c;
+                level = res.output.trim().parse().unwrap_or(0);
+            }
+        }
+
+        // 尝试快速读取电流电压
+        let curr_paths = [
+            "/sys/class/power_supply/battery/current_now",
+            "/sys/class/power_supply/main/current_now",
+        ];
+        for path in curr_paths {
+            if let Ok(res) =
+                utils_execute_adb_command(&["-s", &batt_serial, "shell", "cat", path], Some(1))
+                    .await
+            {
+                if res.success {
+                    current = res.output.trim().parse().unwrap_or(0.0);
                     break;
                 }
             }
         }
-    }
 
-    let mut voltage = 0.0;
-    let volt_paths = [
-        "/sys/class/power_supply/battery/voltage_now",
-        "/sys/class/power_supply/main/voltage_now",
-        "/sys/class/power_supply/battery/batt_voltage_now",
-    ];
-    for path in volt_paths {
-        if let Ok(res) =
-            utils_execute_adb_command(&["-s", &serial, "shell", "cat", path], Some(2)).await
-        {
-            if res.success {
-                if let Ok(v) = res.output.trim().parse::<f64>() {
-                    voltage = v;
+        let volt_paths = [
+            "/sys/class/power_supply/battery/voltage_now",
+            "/sys/class/power_supply/main/voltage_now",
+        ];
+        for path in volt_paths {
+            if let Ok(res) =
+                utils_execute_adb_command(&["-s", &batt_serial, "shell", "cat", path], Some(1))
+                    .await
+            {
+                if res.success {
+                    voltage = res.output.trim().parse().unwrap_or(0.0);
                     break;
                 }
             }
         }
-    }
+
+        // 兜底使用 dumpsys battery
+        if level == 0 {
+            if let Ok(battery_info) = utils_execute_adb_command(
+                &["-s", &batt_serial, "shell", "dumpsys", "battery"],
+                Some(3),
+            )
+            .await
+            {
+                if battery_info.success {
+                    level = parse_battery_level(&battery_info.output);
+                }
+            }
+        }
+
+        (level, current, voltage)
+    });
+
+    // 等待所有并行任务完成
+    let (cpu_res, freq_res, mem_res, temp_res, batt_res) =
+        tokio::join!(cpu_task, freq_task, mem_task, temp_task, batt_task);
+
+    let (total_usage, core_usages) = cpu_res.unwrap_or_else(|_| (0.0, Vec::new()));
+    let frequencies = freq_res.unwrap_or_default();
+    let (mem_total, mem_free, mem_avail) = mem_res.unwrap_or_else(|_| (0, 0, 0));
+    let (cpu_temp, batt_temp) = temp_res.unwrap_or_else(|_| (0.0, 0.0));
+    let (batt_level, current, voltage) = batt_res.unwrap_or_else(|_| (0, 0.0, 0.0));
 
     Ok(MonitorDataPoint {
         timestamp: chrono::Local::now().timestamp_millis(),
@@ -2455,41 +2619,75 @@ pub async fn get_device_realtime_monitor_data(serial: String) -> Result<MonitorD
     })
 }
 
-// 辅助解析函数
-fn parse_proc_stat(output: &str) -> (f64, Vec<f64>) {
-    let mut total_usage = 0.0;
-    let mut core_usages = Vec::new();
+fn calculate_realtime_cpu_usage(serial: &str, output: &str) -> (f64, Vec<f64>) {
+    let mut current_counters = HashMap::new();
 
     for line in output.lines() {
-        if line.starts_with("cpu ") {
+        if line.starts_with("cpu") {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() >= 5 {
+                let id = parts[0].to_string();
                 let user: f64 = parts[1].parse().unwrap_or(0.0);
                 let nice: f64 = parts[2].parse().unwrap_or(0.0);
                 let system: f64 = parts[3].parse().unwrap_or(0.0);
                 let idle: f64 = parts[4].parse().unwrap_or(0.0);
-                let total = user + nice + system + idle;
-                if total > 0.0 {
-                    total_usage = (user + nice + system) / total * 100.0;
-                }
-            }
-        } else if line.starts_with("cpu") {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 5 {
-                let user: f64 = parts[1].parse().unwrap_or(0.0);
-                let nice: f64 = parts[2].parse().unwrap_or(0.0);
-                let system: f64 = parts[3].parse().unwrap_or(0.0);
-                let idle: f64 = parts[4].parse().unwrap_or(0.0);
-                let total = user + nice + system + idle;
-                if total > 0.0 {
-                    core_usages.push((user + nice + system) / total * 100.0);
-                }
+                let iowait: f64 = parts.get(5).and_then(|&s| s.parse().ok()).unwrap_or(0.0);
+                let irq: f64 = parts.get(6).and_then(|&s| s.parse().ok()).unwrap_or(0.0);
+                let softirq: f64 = parts.get(7).and_then(|&s| s.parse().ok()).unwrap_or(0.0);
+
+                let non_idle = user + nice + system + irq + softirq;
+                let total = non_idle + idle + iowait;
+
+                current_counters.insert(id, CpuCounters { total, non_idle });
             }
         }
     }
 
+    let mut cache = CPU_CACHE.lock().unwrap();
+    let device_cache = cache.entry(serial.to_string()).or_insert_with(HashMap::new);
+
+    let mut total_usage = 0.0;
+    let mut core_usages = Vec::new();
+
+    // 计算总使用率
+    if let Some(curr) = current_counters.get("cpu") {
+        if let Some(prev) = device_cache.get("cpu") {
+            let total_delta = curr.total - prev.total;
+            let non_idle_delta = curr.non_idle - prev.non_idle;
+            if total_delta > 0.0 {
+                total_usage = (non_idle_delta / total_delta * 100.0).clamp(0.0, 100.0);
+            }
+        }
+    }
+
+    // 计算各核心使用率
+    let mut i = 0;
+    while let Some(id) = Some(format!("cpu{}", i)) {
+        if let Some(curr) = current_counters.get(&id) {
+            if let Some(prev) = device_cache.get(&id) {
+                let total_delta = curr.total - prev.total;
+                let non_idle_delta = curr.non_idle - prev.non_idle;
+                if total_delta > 0.0 {
+                    core_usages.push((non_idle_delta / total_delta * 100.0).clamp(0.0, 100.0));
+                } else {
+                    core_usages.push(0.0);
+                }
+            } else {
+                core_usages.push(0.0);
+            }
+            i += 1;
+        } else {
+            break;
+        }
+    }
+
+    // 更新缓存
+    *device_cache = current_counters;
+
     (total_usage, core_usages)
 }
+
+// 辅助解析函数
 
 fn parse_meminfo(output: &str) -> (u64, u64, u64) {
     let mut total = 0;

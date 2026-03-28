@@ -313,11 +313,17 @@ const openUrl = (url: string) => {
   });
 };
 
-const AboutPanel: React.FC = () => {
+import DonationPanel from "./DonationPanel";
+
+interface AboutPanelProps {
+}
+
+const AboutPanel: React.FC<AboutPanelProps> = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const [isOpenSourceDialogOpen, setIsOpenSourceDialogOpen] = useState(false);
   const [isThanksDialogOpen, setIsThanksDialogOpen] = useState(false);
+  const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
   const { versionInfo, loading: versionLoading } = useVersionInfo();
   const [fullVersionString, setFullVersionString] = useState('玩机管家 v1.0.0');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
@@ -377,7 +383,7 @@ const AboutPanel: React.FC = () => {
   };
 
   const handleDonate = () => {
-    openUrl(links.donate);
+    setIsDonationDialogOpen(true);
   };
 
   const handleThanksInfo = () => {
@@ -612,6 +618,22 @@ const AboutPanel: React.FC = () => {
               </DialogContent>
               <DialogActions>
                 <Button appearance="secondary" onClick={() => setIsThanksDialogOpen(false)}>
+                  {t('settings.close')}
+                </Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
+
+        <Dialog open={isDonationDialogOpen} onOpenChange={(_e, data) => setIsDonationDialogOpen(data.open)}>
+          <DialogSurface>
+            <DialogBody>
+              <DialogTitle>扫码捐赠</DialogTitle>
+              <DialogContent style={{ padding: 0 }}>
+                <DonationPanel />
+              </DialogContent>
+              <DialogActions>
+                <Button appearance="secondary" onClick={() => setIsDonationDialogOpen(false)}>
                   {t('settings.close')}
                 </Button>
               </DialogActions>

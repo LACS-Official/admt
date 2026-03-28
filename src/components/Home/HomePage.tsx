@@ -1,17 +1,23 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   makeStyles,
   mergeClasses,
   Text,
-
   tokens,
   Button,
+  TabList,
+  Tab,
+  SelectTabEvent,
+  SelectTabData,
 } from "@fluentui/react-components";
 import {
-  Home24Regular,
-  Wifi124Regular,
+  DeviceEq24Regular,
+  Link24Regular,
+  Info24Regular,
+  ArrowClockwise24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 
@@ -21,18 +27,17 @@ import DeviceRebootCard from "./DeviceRebootCard";
 import MiscellaneousCard from "./MiscellaneousCard";
 import DeviceMonitorCard from "./DeviceMonitorCard";
 import NoDevicePrompt from "./NoDevicePrompt";
-// import WirelessDebuggingPanel from "../AdbTools/WirelessDebuggingPanel";
 
 const useStyles = makeStyles({
   container: {
     padding: "16px",
     height: "100%",
-    overflow: "auto",
+    overflow: "hidden", // 改为 hidden，内部滚动
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
     position: "relative",
-    backgroundColor: "var(--colorNeutralBackground1)",
+    backgroundColor: "var(--colorNeutralBackground2)",
   },
   backgroundDecoration: {
     position: "absolute",
@@ -53,6 +58,7 @@ const useStyles = makeStyles({
     flexWrap: "wrap",
     gap: "12px",
     minHeight: "40px",
+    zIndex: 1,
   },
   headerLeft: {
     display: "flex",
@@ -64,24 +70,84 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "8px",
   },
-  deviceSelector: {
-    minWidth: "180px",
-  },
-  mainContent: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-    flex: 1,
-    height: "100%",
-  },
-  // 无设备状态下的全屏显示
-  noDeviceFullScreen: {
-    height: "100%",
-    width: "100%",
+  tabArea: {
+    flex: "0 0 auto",
+    maxHeight: "45px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    borderRadius: "8px",
+    padding: "4px 8px",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
+    marginBottom: "16px",
+    zIndex: 1,
+    "& .fui-TabList": {
+      minHeight: "32px",
+      backgroundColor: "transparent",
+    },
+    "& .fui-Tab": {
+      fontSize: "12px",
+      padding: "6px 12px",
+      minHeight: "28px",
+      borderRadius: "8px",
+      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      border: "1px solid var(--colorNeutralStroke2)",
+      fontWeight: 500,
+      color: "var(--colorNeutralForeground2)",
+      margin: "0 4px",
+
+      "&:hover": {
+        backgroundColor: "var(--colorNeutralBackground2)",
+        color: "var(--colorNeutralForeground1)",
+        transform: "translateY(-1px)",
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+      },
+
+      "&[aria-selected='true']": {
+        backgroundColor: "var(--colorBrandBackground2)",
+        color: "var(--colorBrandForeground1)",
+        border: "1px solid var(--colorBrandStroke2)",
+        fontWeight: 600,
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+      },
+    },
+
+    "@media (max-width: 768px)": {
+      "& .fui-Tab": {
+        fontSize: "11px",
+        padding: "4px 8px",
+      },
+    },
   },
+  tab: {
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2)",
+      color: "var(--colorNeutralForeground1)",
+      transform: "translateY(-1px)",
+      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    },
+  },
+  mainContent: {
+    flex: 1,
+    height: "100%",
+    overflow: "hidden", // 内部动画容器处理滚动
+    position: "relative",
+  },
+  tabPanel: {
+    height: "100%",
+    width: "100%",
+    overflowX: "hidden",
+    overflowY: "auto",
+    paddingRight: "4px",
+    // 自定义滚动条
+    "&::-webkit-scrollbar": {
+      width: "4px",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: "var(--colorNeutralStroke1)",
+      borderRadius: "10px",
+    },
+  },
+  
   // 设备功能区域 - 新的上下两行布局结构
   deviceSection: {
     display: "flex",
@@ -96,38 +162,32 @@ const useStyles = makeStyles({
     flex: 1,
     height: "100%",
   },
-  // 第一行：设备概览信息区域 - 占据60%高度
+  // 第一行：设备概览信息区域
   deviceOverviewSection: {
-    flex: "0 0 50%", // 固定占据60%的高度
+    flex: "0 0 auto",
     display: "flex",
     flexDirection: "column",
-
   },
   deviceInfoCard: {
     height: "100%",
-    overflow: "auto",
   },
-  // 第二行：功能控制区域 - 占据40%高度
+  // 第二行：功能控制区域
   deviceActionsSection: {
-    flex: "1 1 50%", // 占据剩余高度（40%）
     display: "flex",
     flexDirection: "row", // 水平排列两个卡片
-    gap: "26px",
-    minHeight: "260px", // 增加最小高度以适应40%的空间
+    gap: "16px",
+    flexWrap: "wrap",
+    "@media (min-width: 800px)": {
+      flexWrap: "nowrap",
+    }
   },
-  // 重启卡片 - 调整宽度
   rebootCard: {
-    flex: "0 0 48%", // 稍微减少宽度
-    minHeight: "100%",
-    display: "flex",
-    flexDirection: "column",
+    flex: "1 1 300px",
+    minHeight: "260px",
   },
-  // 杂项功能卡片 - 调整宽度
   miscCard: {
-    flex: "0 0 48%", // 稍微减少宽度
-    minHeight: "100%",
-    display: "flex",
-    flexDirection: "column",
+    flex: "1 1 300px",
+    minHeight: "260px",
   },
   noDevice: {
     display: "flex",
@@ -138,10 +198,55 @@ const useStyles = makeStyles({
     padding: "48px 24px",
     textAlign: "center",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "8px",
+    borderRadius: "12px",
     border: "2px dashed var(--colorNeutralStroke2)",
+    height: "100%",
+    boxSizing: 'border-box',
   },
+  demoInfoBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "10px 16px",
+    backgroundColor: "var(--colorBrandBackground2)",
+    borderRadius: "8px",
+    border: "1px solid var(--colorBrandStroke2)",
+    marginBottom: "12px",
+    color: "var(--colorBrandForeground2)",
+  },
+  demoBadge: {
+    backgroundColor: "var(--colorBrandBackgroundStatic)",
+    color: "white",
+    padding: "2px 8px",
+    borderRadius: "4px",
+    fontSize: "12px",
+    fontWeight: "bold",
+    textTransform: "uppercase",
+  }
 });
+
+// 模拟设备数据
+const mockDevice: any = {
+  serial: "DEMO-ADB-001",
+  mode: "sys",
+  connected: true,
+  properties: {
+    marketName: "Xiaomi 14 Ultra (Demo)",
+    brand: "Xiaomi",
+    model: "24030PN60C",
+    androidVersion: "14",
+    sdkVersion: "34",
+    cpuAbi: "arm64-v8a",
+    batteryLevel: 85,
+    screenResolution: "1440 x 3200",
+    totalMemory: "16 GB",
+    availableStorage: "256 GB / 512 GB",
+    securityPatchLevel: "2024-03-01",
+    manufacturer: "Xiaomi",
+    productName: "aurora",
+    deviceName: "aurora",
+  }
+};
 
 const HomePage: React.FC = () => {
   const styles = useStyles();
@@ -153,17 +258,99 @@ const HomePage: React.FC = () => {
   const { t } = useTranslation();
   const { setStatusBarMessage, setWirelessDebuggingDialogOpen } = useAppStore();
 
-  // 注意：设备扫描现在在MainContent中全局启动，这里不再需要重复启动
-
   const connectedDevices = devices.filter(d => d.connected);
+  
+  // 标签页状态
+  const [activeTab, setActiveTab] = useState<string>("connect");
+
+  // 监听设备连接状态，自动切换标签页
+  useEffect(() => {
+    if (connectedDevices.length === 0) {
+      setActiveTab("connect");
+    } else {
+      setActiveTab("info");
+    }
+  }, [connectedDevices.length]);
+
+  const onTabSelect = (event: SelectTabEvent, data: SelectTabData) => {
+    setActiveTab(data.value as string);
+  };
 
   // 手动刷新设备扫描
   const handleManualRefresh = () => {
-    // 触发设备扫描刷新
     setStatusBarMessage({
       type: "info",
       message: t('status.refreshing_device_list'),
     });
+  };
+
+  const renderConnectTab = () => (
+    <div className={styles.tabPanel}>
+      <div className="card-enter">
+        <NoDevicePrompt
+          isScanning={isScanning}
+          onRefresh={handleManualRefresh}
+        />
+      </div>
+    </div>
+  );
+
+  const renderInfoTab = () => {
+    const isDemo = !selectedDevice;
+    const displayDevice = selectedDevice || mockDevice;
+
+    return (
+      <div className={styles.tabPanel}>
+        <div className={mergeClasses(styles.deviceSection)}>
+          {/* 演示模式提示横幅 */}
+          {isDemo && (
+            <motion.div 
+              className={styles.demoInfoBar}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className={styles.demoBadge}>{t('home.demo_mode_title')}</div>
+              <Text size={300}>{t('home.demo_mode_desc')}</Text>
+            </motion.div>
+          )}
+
+          <div className={mergeClasses(styles.mainContentGrid)}>
+            {/* 第一行：详细设备概览信息 */}
+            <div className={mergeClasses(styles.deviceOverviewSection, "card-enter")} id="tour-home-overview">
+              <div className={styles.deviceInfoCard}>
+                <DeviceOverviewCard
+                  device={displayDevice}
+                  onShowDetails={() => {}}
+                  onCopyInfo={() => {
+                    setStatusBarMessage({
+                      type: "success",
+                      message: t('status.info_copied'),
+                    });
+                  }}
+                  onCustomize={() => {}}
+                />
+              </div>
+            </div>
+
+            {/* 硬件实时监控区域 */}
+            <div className="card-enter-delayed" style={{ flex: '0 0 auto' }} id="tour-home-monitor">
+              <DeviceMonitorCard device={displayDevice} />
+            </div>
+
+            {/* 第二行：功能控制区域 */}
+            <div className={mergeClasses(styles.deviceActionsSection)}>
+              <div className={mergeClasses(styles.rebootCard, "card-enter-delayed")} id="tour-home-reboot">
+                <DeviceRebootCard device={displayDevice} />
+              </div>
+
+              <div className={mergeClasses(styles.miscCard, "card-enter-delayed")}>
+                <MiscellaneousCard  device={displayDevice} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -171,95 +358,47 @@ const HomePage: React.FC = () => {
       {/* 背景装饰 */}
       <div className={styles.backgroundDecoration} />
 
-      {/* 页面头部 */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Home24Regular />
-        </div>
-        <div className={styles.headerRight}>
-          <Button 
-            icon={<Wifi124Regular />} 
-            appearance="subtle" 
-            onClick={() => setWirelessDebuggingDialogOpen(true)}
+
+
+      {/* 标签页导航 */}
+      <div className={styles.tabArea}>
+        <TabList 
+          selectedValue={activeTab} 
+          onTabSelect={onTabSelect} 
+          appearance="subtle"
+        >
+          <Tab 
+            value="connect" 
+            icon={<Link24Regular />}
+            className={styles.tab}
           >
-            {t('wireless.title')}
-          </Button>
-        </div>
+            {t('home.tab_connect')}
+          </Tab>
+          <Tab 
+            value="info" 
+            icon={<DeviceEq24Regular />}
+            className={styles.tab}
+          >
+            {t('home.tab_info')}
+          </Tab>
+        </TabList>
       </div>
 
-      {/* 主要内容区域 - 动态布局切换 */}
+      {/* 主要内容区域 - 带有动画效果 */}
       <div className={styles.mainContent}>
-        {connectedDevices.length === 0 ? (
-          /* 无设备连接时：显示全屏设备提示界面 */
-          <div className="card-enter">
-            <NoDevicePrompt
-              isScanning={isScanning}
-              onRefresh={handleManualRefresh}
-            />
-          </div>
-        ) : (
-          /* 有设备连接时：显示主页布局 */
-          <div className={mergeClasses(styles.deviceSection)}>
-              {selectedDevice ? (
-                <>
-
-                  {/* 新的布局：上下两行布局 */}
-                  <div className={mergeClasses(styles.mainContentGrid)}>
-                    {/* 第一行：设备概览信息区域 - 占据60%高度 */}
-                    <div className={mergeClasses(styles.deviceOverviewSection, "card-enter")}>
-                      <div className={styles.deviceInfoCard}>
-                        <DeviceOverviewCard
-                          device={selectedDevice}
-                          onShowDetails={() => {
-                            // 处理显示详情的逻辑
-                          }}
-                          onCopyInfo={() => {
-                            // 处理复制信息的逻辑
-                            setStatusBarMessage({
-                              type: "success",
-                              message: t('status.info_copied'),
-                            });
-                          }}
-                          onCustomize={() => {
-                            // 处理自定义设置的逻辑
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* 硬件实时监控区域 */}
-                    <div className="card-enter-delayed" style={{ flex: '0 0 auto' }}>
-                      <DeviceMonitorCard />
-                    </div>
-
-                    {/* 第二行：功能控制区域 - 占据40%高度 */}
-                    <div className={mergeClasses(styles.deviceActionsSection)}>
-                      {/* 左侧：设备重启卡片 */}
-                      <div className={mergeClasses(styles.rebootCard, "card-enter-delayed")}>
-                        <DeviceRebootCard />
-                      </div>
-
-                      {/* 右侧：杂项功能卡片 */}
-                      <div className={mergeClasses(styles.miscCard, "card-enter-delayed")}>
-                        <MiscellaneousCard />
-                      </div>
-                    </div>
-
-                  </div>
-                </>
-              ) : (
-                <div className={`${styles.noDevice} card-enter`}>
-                  <Home24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-                  <Text size={400}>{t('home.select_device_title')}</Text>
-                  <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-                    {t('home.select_device_desc')}
-                  </Text>
-                </div>
-              )}
-            </div>
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            style={{ height: '100%', width: '100%' }}
+          >
+            {activeTab === "connect" ? renderConnectTab() : renderInfoTab()}
+          </motion.div>
+        </AnimatePresence>
       </div>
-
     </div>
   );
 };

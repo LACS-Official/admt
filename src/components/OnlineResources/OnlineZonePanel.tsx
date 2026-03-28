@@ -13,7 +13,6 @@ import {
 } from "@fluentui/react-icons";
 import { DownloadManagerPanel } from "./DownloadManagerPanel";
 import OnlineResourcesPanel from "./OnlineResourcesPanel";
-import RomDownloadPanel from './RomDownloadPanel';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 
 
@@ -176,11 +175,6 @@ const OnlineZonePanel: React.FC = () => {
       icon: <CloudArrowUp24Regular />,
     },
     {
-      id: "rom-download" as FlashZoneView,
-      label: "ROM商店",
-      icon: <CloudArrowUp24Regular />,
-    },
-    {
       id: "download-manager" as FlashZoneView,
       label: "下载管理",
       icon: <CloudArrowUp24Regular />,
@@ -194,8 +188,6 @@ const OnlineZonePanel: React.FC = () => {
         return <OnlineResourcesPanel />;
       case "download-manager":
         return <DownloadManagerPanel onBack={() => {}}/>;
-      case "rom-download":
-        return <RomDownloadPanel/>;
       default:
        return <OnlineResourcesPanel />;
     }
@@ -206,6 +198,7 @@ const OnlineZonePanel: React.FC = () => {
       <div className={styles.content}>
         <div className={styles.tabContainer}>
           <TabList
+            id="tour-online-tabs"
             selectedValue={currentView}
             onTabSelect={(_, data) => setCurrentView(data.value as FlashZoneView)}
             className={styles.headerTabList}

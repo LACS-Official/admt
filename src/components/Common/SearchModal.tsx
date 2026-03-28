@@ -137,14 +137,14 @@ const features: FeatureItem[] = [
     view: "device-management",
     icon: <PhoneDesktop24Regular />,
   },
-  {
-    id: "extended-features",
-    title: "扩展功能 (Extended Features)",
-    description: "更多高级功能和插件",
-    keywords: ["extended", "扩展", "kuozhan", "kz", "插件", "chajian", "cj"],
-    view: "extended-features",
-    icon: <AppsList24Regular />,
-  },
+  // {
+  //   id: "extended-features",
+  //   title: "扩展功能 (Extended Features)",
+  //   description: "更多高级功能和插件",
+  //   keywords: ["extended", "扩展", "kuozhan", "kz", "插件", "chajian", "cj"],
+  //   view: "extended-features",
+  //   icon: <AppsList24Regular />,
+  // },
   {
     id: "online-resources",
     title: "在线资源 (Online Resources)",
@@ -220,6 +220,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const { setCurrentView } = useAppStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const isOpeningWindowRef = useRef(false);
 
   const filteredFeatures = React.useMemo(() => {
     if (!query.trim()) return features;
@@ -252,6 +253,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   const handleSelect = async (feature: FeatureItem) => {
     if (feature.view === ('command-line' as AppView) || feature.view === ('logs' as AppView)) {
+      if (isOpeningWindowRef.current) return;
+      isOpeningWindowRef.current = true;
+
       // 如果是命令行或日志，打开独立窗口
       try {
         const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
@@ -260,9 +264,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         
         let targetWindow = await WebviewWindow.getByLabel(label);
         if (targetWindow) {
-          await targetWindow.show();
-          await targetWindow.unminimize();
-          await targetWindow.setFocus();
+          try {
+            await targetWindow.unminimize();
+            await targetWindow.show();
+            await targetWindow.setFocus();
+          } catch (e) {
+            console.warn("从搜索聚焦已有窗口失败(非关键):", e);
+          }
         } else {
           const url = `${window.location.origin}/index.html`;
           targetWindow = new WebviewWindow(label, {
@@ -280,7 +288,16 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           });
         }
       } catch (error) {
-        console.error("从搜索打开控制台窗口失败:", error);
+        const errorStr = String(error);
+        if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
+          console.warn("从搜索打开窗口冲突(非关键):", error);
+        } else {
+          console.error("从搜索打开控制台窗口失败:", error);
+        }
+      } finally {
+        setTimeout(() => {
+          isOpeningWindowRef.current = false;
+        }, 500);
       }
     } else {
       setCurrentView(feature.view);

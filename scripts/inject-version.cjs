@@ -5,23 +5,23 @@
  * 在构建前将版本信息注入到前端代码中
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 class VersionInjector {
   constructor() {
-    this.projectRoot = path.resolve(__dirname, '..');
-    this.configPath = path.join(this.projectRoot, 'version.config.json');
-    this.srcPath = path.join(this.projectRoot, 'src');
+    this.projectRoot = path.resolve(__dirname, "..");
+    this.configPath = path.join(this.projectRoot, "version.config.json");
+    this.srcPath = path.join(this.projectRoot, "src");
   }
 
   // 读取版本配置
   readConfig() {
     try {
-      const configData = fs.readFileSync(this.configPath, 'utf8');
+      const configData = fs.readFileSync(this.configPath, "utf8");
       return JSON.parse(configData);
     } catch (error) {
-      console.error('❌ 读取版本配置失败:', error.message);
+      console.error("❌ 读取版本配置失败:", error.message);
       process.exit(1);
     }
   }
@@ -38,7 +38,7 @@ export const VERSION_INFO = {
   versionName: '${config.versionName}',
   releaseDate: '${config.releaseDate}',
   buildDate: '${now}',
-  environment: process.env.NODE_ENV === 'production' ? 'production' : 'development'
+  environment: '${process.env.NODE_ENV === "production" ? "production" : "development"}'
 };
 
 export const APP_CONFIG = {
@@ -51,22 +51,22 @@ export const APP_CONFIG = {
 
   // 注入版本信息
   injectVersion() {
-    console.log('🔄 注入版本信息...');
-    
+    console.log("🔄 注入版本信息...");
+
     const config = this.readConfig();
     const constantsContent = this.generateVersionConstants(config);
-    
+
     // 确保目录存在
-    const outputDir = path.join(this.srcPath, 'generated');
+    const outputDir = path.join(this.srcPath, "generated");
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
-    
+
     // 写入版本常量文件
-    const outputPath = path.join(outputDir, 'version.ts');
-    fs.writeFileSync(outputPath, constantsContent, 'utf8');
-    
-    console.log('✅ 版本信息已注入到:', outputPath);
+    const outputPath = path.join(outputDir, "version.ts");
+    fs.writeFileSync(outputPath, constantsContent, "utf8");
+
+    console.log("✅ 版本信息已注入到:", outputPath);
   }
 }
 

@@ -26,15 +26,19 @@ import {
   Copy24Regular,
   PanelLeft24Regular,
   PanelRight24Regular,
+  ArrowDownload24Regular,
 } from "@fluentui/react-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useTranslation } from "react-i18next";
 import { useAIChatStore, Message } from "../../stores/aiChatStore";
 import { useAppStore } from "../../stores/appStore";
 import { fetch } from "@tauri-apps/plugin-http";
 import { logService } from "../../services/logService";
 import { aiService } from "../../services/aiService";
 import { listen } from "@tauri-apps/api/event";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 
 const useStyles = makeStyles({
   container: {
@@ -111,6 +115,16 @@ const useStyles = makeStyles({
     height: "100%",
     position: "relative",
     overflow: "hidden",
+  },
+  chatHeader: {
+    padding: "8px 20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: "var(--colorNeutralBackground1)",
+    height: "50px",
+    flexShrink: 0,
   },
   messageList: {
     flex: 1,
@@ -268,6 +282,7 @@ const useStyles = makeStyles({
 
 const AIChatPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -283,6 +298,7 @@ const AIChatPanel: React.FC = () => {
     deleteConversation,
     clearHistory
   } = useAIChatStore();
+  const { setStatusBarMessage } = useAppStore();
   
   const currentConversation = conversations.find(c => c.id === currentConversationId);
   const messages = currentConversation?.messages || [];
@@ -343,13 +359,45 @@ const AIChatPanel: React.FC = () => {
       addMessage(convId, { role: "assistant", content: response.content });
 
     } catch (error: any) {
-      logService.error("AI 请求失败", "AIChat", { error: error.message });
+      logService.error("AI 请求失败", "AIChat", { error: error.message, category: "ai" });
       addMessage(convId || "", { 
         role: "assistant", 
         content: `❌ 请求失败: ${error.message}\n\n建议检查：\n1. 网络连接是否正常\n2. API Key 及 Endpoint 是否正确\n3. 如果是本地模型，确保服务已开启` 
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleExportMarkdown = async () => {
+    if (!currentConversation || messages.length === 0) return;
+
+    try {
+      const markdown = messages.map(msg => {
+        const role = msg.role === "user" ? "用户" : "AI 助手";
+        const time = new Date(msg.timestamp).toLocaleString();
+        return `### ${role} (${time})\n\n${msg.content}\n\n---\n`;
+      }).join("\n");
+
+      const title = currentConversation.title.replace(/[\\/:*?"<>|]/g, "_");
+      const filePath = await save({
+        filters: [{ name: "Markdown", extensions: ["md"] }],
+        defaultPath: `${title}.md`,
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, `# ${currentConversation.title}\n\n导出时间: ${new Date().toLocaleString()}\n\n${markdown}`);
+        setStatusBarMessage({
+          type: "success",
+          message: t("settings.ai_export_success"),
+        });
+      }
+    } catch (error: any) {
+      logService.error("导出对话失败", "AIChat", { error: error.message, category: "ai" });
+      setStatusBarMessage({
+        type: "error",
+        message: t("settings.ai_export_failed", { error: error.message }),
+      });
     }
   };
 
@@ -440,9 +488,22 @@ const AIChatPanel: React.FC = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className={styles.chatArea}>
+    <div className={styles.chatArea}>
         {currentConversationId ? (
           <>
+            <div className={styles.chatHeader}>
+              <Text weight="semibold" className={styles.historyItemTitle}>
+                {currentConversation?.title}
+              </Text>
+              <Tooltip content={t("settings.ai_export_conversation")} relationship="label">
+                <Button 
+                  icon={<ArrowDownload24Regular />} 
+                  appearance="subtle"
+                  onClick={handleExportMarkdown}
+                  disabled={messages.length === 0}
+                />
+              </Tooltip>
+            </div>
             <div className={styles.messageList}>
               {messages.length === 0 ? (
                 <div className={styles.emptyState}>

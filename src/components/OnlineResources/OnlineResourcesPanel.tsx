@@ -26,7 +26,6 @@ import { onlineResourcesService, SearchParams } from '../../services/onlineResou
 
 import { DownloadManagerPanel } from './DownloadManagerPanel';
 import { ResourceDetailModal } from './ResourceDetailModalSimple';
-import RomDownloadPanel from '../OnlineResources/RomDownloadPanel';
 import SoftwareCard from './SoftwareCard';
 
 const useStyles = makeStyles({
@@ -338,13 +337,6 @@ const OnlineResourcesPanel: React.FC = () => {
     );
   }
 
-  if (state.currentView === 'rom-download') {
-    return (
-      <div className={styles.container}>
-        <RomDownloadPanel />
-      </div>
-    );
-  }
 
   const categories = [
     { value: 'ADMT', label: '全部' },

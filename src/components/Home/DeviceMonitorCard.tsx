@@ -71,12 +71,13 @@ const useStyles = makeStyles({
     paddingBottom: '8px',
   },
   chartContainer: {
-    flex: 1,
-    minHeight: '380px',
+    height: '400px',
+    minHeight: '400px',
     position: 'relative',
     backgroundColor: 'var(--colorNeutralBackground1)',
     borderRadius: '8px',
     padding: '10px',
+    overflow: 'hidden',
   },
   controls: {
     display: 'flex',
@@ -121,10 +122,15 @@ interface MonitorDataPoint {
   [key: string]: any;
 }
 
-const DeviceMonitorCard: React.FC = () => {
+interface DeviceMonitorCardProps {
+  device?: any;
+}
+
+const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevice }) => {
   const styles = useStyles();
   const { config } = useAppStore();
-  const { selectedDevice } = useDeviceStore();
+  const { selectedDevice: storeDevice } = useDeviceStore();
+  const selectedDevice = propDevice || storeDevice;
   
   const [isMonitoring, setIsMonitoring] = useState(config.monitorAutoStart);
   const [dataPoints, setDataPoints] = useState<MonitorDataPoint[]>([]);
@@ -132,9 +138,10 @@ const DeviceMonitorCard: React.FC = () => {
   const [cpuDisplayMode, setCpuDisplayMode] = useState<'utilization' | 'frequency'>('utilization');
   const [memDisplayMode, setMemDisplayMode] = useState<'percent' | 'space'>('percent');
   const [hiddenLines, setHiddenLines] = useState<string[]>([]);
-  
+  const [error, setError] = useState<string | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const csvFileRef = useRef<string | null>(null);
+  const lastFetchTime = useRef<number>(0);
   
   // 维护 CPU 核心名称列表以动态生成 Line
   const cpuCoreNames = useMemo(() => {
@@ -179,9 +186,42 @@ const DeviceMonitorCard: React.FC = () => {
   useEffect(() => {
     let timer: any;
     if (isMonitoring && selectedDevice) {
+      console.log(`[Monitor] Starting monitoring for device: ${selectedDevice.serial}`);
       const fetchData = async () => {
+        const startTime = Date.now();
         try {
-          const res: any = await invoke('get_device_realtime_monitor_data', { serial: selectedDevice.serial });
+          let res: any;
+          if (selectedDevice?.serial === "DEMO-ADB-001") {
+            // 生成模拟数据
+            res = {
+              timestamp: startTime,
+              cpu: {
+                total_usage: 15 + Math.random() * 20,
+                core_usages: Array.from({ length: 8 }, () => 10 + Math.random() * 30),
+                frequencies: { cpu0: 1800 + Math.random() * 400, cpu4: 2400 + Math.random() * 600 }
+              },
+              memory: {
+                total: 16 * 1024 * 1024,
+                available: (8 + Math.random() * 2) * 1024 * 1024
+              },
+              temperature: {
+                cpu: 35 + Math.random() * 10,
+                battery: 30 + Math.random() * 5
+              },
+              battery: {
+                level: 85,
+                current: -250000 + Math.random() * 50000,
+                voltage: 4000000 + Math.random() * 100000
+              }
+            };
+          } else {
+            res = await invoke('get_device_realtime_monitor_data', { serial: selectedDevice.serial });
+          }
+          
+          if (!res || !res.cpu) {
+            throw new Error("Invalid data received from backend");
+          }
+
           const now = new Date();
           const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
           
@@ -189,10 +229,10 @@ const DeviceMonitorCard: React.FC = () => {
             time: timeStr,
             timestamp: res.timestamp,
             totalCpuUsage: res.cpu.total_usage,
-            ...res.cpu.core_usages.reduce((acc: any, val: number, i: number) => ({ ...acc, [`cpu${i}`]: val }), {}),
+            ...res.cpu.core_usages.reduce((acc: any, val: number, j: number) => ({ ...acc, [`cpu${j}`]: val }), {}),
             ...Object.entries(res.cpu.frequencies).reduce((acc: any, [key, val]: [string, any]) => ({ ...acc, [`freq_${key}`]: val }), {}),
-            memUsedPercent: ((res.memory.total - res.memory.available) / res.memory.total) * 100,
-            memFreePercent: (res.memory.available / res.memory.total) * 100,
+            memUsedPercent: res.memory.total > 0 ? ((res.memory.total - res.memory.available) / res.memory.total) * 100 : 0,
+            memFreePercent: res.memory.total > 0 ? (res.memory.available / res.memory.total) * 100 : 0,
             memUsedGb: (res.memory.total - res.memory.available) / 1024 / 1024,
             memFreeGb: res.memory.available / 1024 / 1024,
             cpuTemp: res.temperature.cpu,
@@ -203,16 +243,24 @@ const DeviceMonitorCard: React.FC = () => {
 
           setDataPoints(prev => {
             const next = [...prev, newDataPoint];
-            return next.length > 50 ? next.slice(next.length - 50) : next;
+            return next.length > 60 ? next.slice(next.length - 60) : next;
           });
+          setError(null);
 
           // 自动导出 CSV
           if (config.monitorAutoCsvExport) {
             handleAutoCsvWrite(newDataPoint);
           }
-        } catch (e) {
-          console.error("Monitor failed:", e);
+          
+          const duration = Date.now() - startTime;
+          if (duration > 1000) {
+            console.warn(`[Monitor] Fetch data took too long: ${duration}ms`);
+          }
+        } catch (e: any) {
+          console.error("[Monitor] Fetch failed:", e);
+          setError(e.message || String(e));
         }
+        lastFetchTime.current = Date.now();
         timer = setTimeout(fetchData, config.cpuMonitorInterval);
       };
       fetchData();
@@ -369,12 +417,17 @@ const DeviceMonitorCard: React.FC = () => {
 
       {dataPoints.length > 0 ? (
         <div className={styles.chartContainer} ref={chartRef}>
+          {error && (
+            <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 100, backgroundColor: 'rgba(209, 52, 56, 0.1)', color: 'var(--colorStatusDangerForeground1)', padding: '2px 12px', borderRadius: '4px', fontSize: '11px', border: '1px solid var(--colorStatusDangerBorder1)' }}>
+              监控采集异常: {error}
+            </div>
+          )}
           <div style={{ position: 'absolute', right: 16, top: 8, zIndex: 10 }}>
              <Button size="small" appearance="subtle" onClick={toggleCurrentTabLines}>
                切换全部
              </Button>
           </div>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" debounce={50}>
             <LineChart data={dataPoints} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--colorNeutralStroke2)" opacity={0.3} />
               <XAxis 
@@ -427,7 +480,7 @@ const DeviceMonitorCard: React.FC = () => {
               
               {activeTab === 'cpu' && cpuDisplayMode === 'utilization' && (
                 <>
-                  <Line hide={hiddenLines.includes('totalCpuUsage')} type="monotone" dataKey="totalCpuUsage" name="总线" stroke="#3a7bd5" strokeWidth={3} dot={false} isAnimationActive={false} />
+                  <Line aria-label="总CPU使用率" hide={hiddenLines.includes('totalCpuUsage')} type="monotone" dataKey="totalCpuUsage" name="总线" stroke="#3a7bd5" strokeWidth={3} dot={false} isAnimationActive={false} />
                   {cpuCoreNames.map((name, i) => (
                     <Line key={name} hide={hiddenLines.includes(name)} type="monotone" dataKey={name} name={name} stroke={COLORS[i % COLORS.length]} strokeWidth={1} dot={false} isAnimationActive={false} />
                   ))}
@@ -467,7 +520,12 @@ const DeviceMonitorCard: React.FC = () => {
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
-          {isMonitoring ? <Spinner label="正在抓取设备状态..." /> : <Text>点击“启动监控”开始记录硬件指标</Text>}
+          {isMonitoring ? (
+            <>
+              <Spinner label="正在抓取设备状态..." />
+              {error && <Text size={200} style={{ color: 'var(--colorStatusDangerForeground1)', marginTop: '8px' }}>错误: {error}</Text>}
+            </>
+          ) : <Text>点击“启动监控”开始记录硬件指标</Text>}
         </div>
       )}
     </Card>
