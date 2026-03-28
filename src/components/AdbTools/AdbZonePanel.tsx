@@ -273,6 +273,7 @@ const AdbZonePanel: React.FC = () => {
       <div className={styles.content}>
         <div className={styles.tabContainer}>
           <TabList
+            id="tour-adb-tabs"
             selectedValue={currentView}
             onTabSelect={(_, data) => setCurrentView(data.value as AdbZoneView)}
             className={styles.headerTabList}

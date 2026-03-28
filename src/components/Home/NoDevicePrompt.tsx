@@ -30,6 +30,7 @@ import { useTranslation } from "react-i18next";
 const useStyles = makeStyles({
   container: {
     display: "flex",
+    borderRadius: "12px",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
@@ -57,16 +58,18 @@ const useStyles = makeStyles({
 
   // 上部分容器样式
   upperSection: {
-    width: "90%",
+    width: "100%",
     maxWidth: "1200px",
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: "24px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "8px",
-    padding: "24px",
+    borderRadius: "12px",
+    padding: "16px 24px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    boxSizing: 'border-box',
   },
 
   // 下部分容器样式
@@ -89,9 +92,6 @@ const useStyles = makeStyles({
     borderRadius: "8px",
     backgroundColor: "var(--colorNeutralBackground1)",
     transition: "box-shadow 0.2s ease",
-    ":hover": {
-      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
-    },
     width: "60%",
     maxHeight: "200px",
   },
@@ -167,11 +167,6 @@ const useStyles = makeStyles({
     position: "relative",
     textDecoration: "none",
     color: tokens.colorNeutralForeground1,
-    ":hover": {
-      backgroundColor: "var(--colorNeutralBackground2Hover)",
-      transform: "translateY(-1px)",
-      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-    },
   },
 
   // 链接文本样式
@@ -223,13 +218,13 @@ const useStyles = makeStyles({
   // 图标容器样式
   iconContainer: {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: "16px",
-    padding: "24px",
-    borderRadius: "12px",
+    gap: "20px",
+    padding: "0",
     width: "100%",
+    flexWrap: "wrap",
   },
   
   // 主图标样式
@@ -241,9 +236,9 @@ const useStyles = makeStyles({
   
   // 连接图标样式
   connectionIcon: {
-    fontSize: "48px",
+    fontSize: "32px",
     color: tokens.colorNeutralForeground3,
-    marginBottom: "16px",
+    marginBottom: "0",
   },
   
   // 标题样式
@@ -256,7 +251,7 @@ const useStyles = makeStyles({
   
   // 副标题样式
   subtitle: {
-    fontSize: "16px",
+    fontSize: "14px",
     color: tokens.colorNeutralForeground2,
     lineHeight: "1.5",
   },
@@ -272,7 +267,7 @@ const useStyles = makeStyles({
     borderRadius: "20px",
     border: `1px solid ${tokens.colorBrandStroke1}`,
     boxShadow: tokens.shadow4,
-    marginTop: "16px",
+    marginTop: "0",
     width: "fit-content",
   },
   
@@ -285,7 +280,7 @@ const useStyles = makeStyles({
   
   // 刷新按钮样式
   refreshButton: {
-    marginTop: "16px",
+    marginTop: "0",
     display: "flex",
     alignItems: "center",
     gap: "8px",
@@ -351,10 +346,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
                   <PlugDisconnected24Regular className={styles.connectionIcon} />
               </motion.div>
               <Text className={styles.title}>
-                {t('main.no_device_title')}
-              </Text>
-              <Text className={styles.subtitle}>
-                {t('main.no_device_desc')}
+                {t('main.no_device_title')}， {t('main.no_device_desc')}
               </Text>
               
               {/* 扫描状态指示器 */}

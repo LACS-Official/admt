@@ -89,7 +89,11 @@
     "scanning": "Scanning devices..."
   },
   "home": {
-    "select_device_title": "Please select a device",
+    "tab_connect": "Connect Device",
+    "tab_info": "Device Info",
+    "demo_mode_title": "Demo Mode",
+    "demo_mode_desc": "Showing simulated data. Real data will appear once a device is connected.",
+    "select_device_title": "No Device Selected",
     "select_device_desc": "Select a device to view from the dropdown menu above"
   },
   "reboot": {
@@ -141,6 +145,7 @@
     "next": "Next",
     "finish": "Finish"
   },
+
   "app_install": {
     "select_package": "Select Package",
     "card_title": "App Install",
@@ -365,6 +370,14 @@
   "logs_panel": {
     "title": "Logs Viewer",
     "ai_explain": "AI Explain Logs",
-    "ai_explain_tooltip": "Click to let AI analyze current logs"
+    "ai_explain_tooltip": "Click to let AI analyze current logs",
+    "category_all": "All Categories",
+    "category_device": "Device",
+    "category_firmware": "Firmware",
+    "category_system": "System",
+    "category_user": "User",
+    "category_network": "Network",
+    "category_security": "Security",
+    "category_ai": "AI Assistant"
   }
 }

@@ -194,6 +194,7 @@ const ExtendedFeaturesPanel: React.FC = () => {
       ) : (
         <div className={styles.tabContainer}>
           <TabList
+            id="tour-extended-tabs"
             selectedValue={currentView}
             onTabSelect={(_, data) => setCurrentView(data.value as ExtendedFeaturesView)}
           >

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { AppState, AppView, AppConfig, NotificationMessage } from "../types/app";
+import { invoke } from "@tauri-apps/api/core";
 
 // 状态栏消息类型
 export interface StatusBarMessage {
@@ -28,7 +29,8 @@ interface AppStoreState extends AppState {
   setNavigationParams: (params: Record<string, any> | undefined) => void;
   isWirelessDebuggingDialogOpen: boolean;
   setWirelessDebuggingDialogOpen: (open: boolean) => void;
-  initialize: () => void;
+  saveToDisk: () => Promise<boolean>;
+  initialize: () => Promise<void>;
 }
 
 const defaultConfig: AppConfig = {
@@ -163,7 +165,66 @@ export const useAppStore = create<AppStoreState>()(
 
       setWirelessDebuggingDialogOpen: (open: boolean) => set({ isWirelessDebuggingDialogOpen: open }),
 
-      initialize: () => set({ isInitialized: true }),
+      saveToDisk: async () => {
+        const state = get();
+        try {
+          // 转换格式以匹配后端 AppConfig
+          const backendConfig = {
+            isActivated: false,
+            activationStatus: "not_activated",
+            userConfig: {
+              username: "User",
+              language: state.config.language,
+              theme: state.config.theme,
+              autoStart: state.config.autoStartEnabled,
+              autoScreenMirror: state.config.autoScreenMirror,
+              checkUpdates: true,
+              enableTelemetry: true,
+              ai: {
+                enabled: state.config.ai.enabled,
+                provider: state.config.ai.provider,
+                model: state.config.ai.model,
+                apiKey: state.config.ai.apiKey,
+                endpoint: state.config.ai.endpoint,
+                temperature: state.config.ai.temperature,
+              }
+            },
+            version: "1.0.0",
+            features: []
+          };
+          
+          return await invoke<boolean>("save_app_config", { config: backendConfig });
+        } catch (error) {
+          console.error("Failed to save config to disk:", error);
+          return false;
+        }
+      },
+
+      initialize: async () => {
+        try {
+          // 从后端加载配置
+          const savedConfig = await invoke<any>("get_app_config");
+          if (savedConfig && savedConfig.userConfig) {
+            const userConfig = savedConfig.userConfig;
+            set((state) => ({
+              config: {
+                ...state.config,
+                language: userConfig.language || state.config.language,
+                theme: userConfig.theme || state.config.theme,
+                autoStartEnabled: userConfig.autoStart ?? state.config.autoStartEnabled,
+                autoScreenMirror: userConfig.autoScreenMirror ?? state.config.autoScreenMirror,
+                ai: userConfig.ai ? {
+                  ...state.config.ai,
+                  ...userConfig.ai
+                } : state.config.ai
+              }
+            }));
+          }
+        } catch (error) {
+          console.error("Failed to load config from disk:", error);
+        }
+        set({ isInitialized: true });
+      },
     }),
     {
       name: "hout-app-storage",

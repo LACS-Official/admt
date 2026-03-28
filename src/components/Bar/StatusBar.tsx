@@ -6,6 +6,11 @@ import {
   Text,
   Spinner,
   tokens,
+  Menu,
+  MenuTrigger,
+  MenuList,
+  MenuItem,
+  MenuPopover,
 } from "@fluentui/react-components";
 import {
   Checkmark24Regular,
@@ -167,8 +172,10 @@ const StatusBar: React.FC = () => {
   
   // 引导状态
   const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
+  const [tourMode, setTourMode] = useState<'concise' | 'detailed'>('detailed');
 
-  const handleTourStart = () => {
+  const handleTourStart = (mode: 'concise' | 'detailed') => {
+      setTourMode(mode);
       setRunTour(true);
   };
 
@@ -474,34 +481,50 @@ const StatusBar: React.FC = () => {
         {/* 右侧状态信息 */}
         <div className={styles.rightSection}>
           {/* 引导按钮 */}
-          <button
-            onClick={handleTourStart}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              borderRadius: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: 0.7,
-              transition: "opacity 0.2s ease",
-              color: "inherit",
-              marginRight: "8px"
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
-            title={t('tour.start_tour', '应用操作引导')}
-          >
-            <QuestionCircle24Regular style={{ fontSize: "16px" }} />
-          </button>
+          <Menu>
+            <MenuTrigger disableButtonEnhancement>
+              <button
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px",
+                  borderRadius: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: 0.7,
+                  transition: "opacity 0.2s ease",
+                  color: "inherit",
+                  marginRight: "8px"
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+                title={t('tour.start_tour', '应用操作引导')}
+              >
+                <QuestionCircle24Regular style={{ fontSize: "16px" }} />
+              </button>
+            </MenuTrigger>
+            <MenuPopover>
+              <MenuList>
+                <div style={{ padding: '8px 12px', fontWeight: 600, fontSize: '12px', color: 'var(--colorNeutralForeground2)' }}>
+                  {t('tour.mode_choice_title')}
+                </div>
+                <MenuItem onClick={() => handleTourStart('concise')}>
+                  {t('tour.mode_concise')}
+                </MenuItem>
+                <MenuItem onClick={() => handleTourStart('detailed')}>
+                  {t('tour.mode_detailed')}
+                </MenuItem>
+              </MenuList>
+            </MenuPopover>
+          </Menu>
           
           {/* 可以添加其他状态信息 */}
         </div>
       </div>
 
-      <AppTour runTour={runTour} onTourEnd={handleTourEnd} />
+      <AppTour runTour={runTour} mode={tourMode} onTourEnd={handleTourEnd} />
 
       {/* 状态栏消息 - 优先级高于通知 */}
       {statusBarMessage && (

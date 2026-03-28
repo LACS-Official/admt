@@ -361,13 +361,14 @@ const LogsPanel: React.FC = () => {
             value={categoryFilter}
             onChange={(_, data) => setCategoryFilter(data.value)}
           >
-            <option value="all">全部分类</option>
-            <option value="device">设备</option>
-            <option value="firmware">固件</option>
-            <option value="system">系统</option>
-            <option value="user">用户</option>
-            <option value="network">网络</option>
-            <option value="security">安全</option>
+            <option value="all">{t('logs_panel.category_all')}</option>
+            <option value="device">{t('logs_panel.category_device')}</option>
+            <option value="firmware">{t('logs_panel.category_firmware')}</option>
+            <option value="system">{t('logs_panel.category_system')}</option>
+            <option value="user">{t('logs_panel.category_user')}</option>
+            <option value="network">{t('logs_panel.category_network')}</option>
+            <option value="security">{t('logs_panel.category_security')}</option>
+            <option value="ai">{t('logs_panel.category_ai')}</option>
           </Select>
         </Field>
 

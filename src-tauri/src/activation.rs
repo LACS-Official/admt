@@ -17,6 +17,18 @@ pub enum ActivationStatus {
     Expired,
 }
 
+/// AI 配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiConfiguration {
+    pub enabled: bool,
+    pub provider: String,
+    pub model: String,
+    #[serde(rename = "apiKey")]
+    pub api_key: String,
+    pub endpoint: String,
+    pub temperature: f64,
+}
+
 /// 用户配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserConfiguration {
@@ -29,6 +41,7 @@ pub struct UserConfiguration {
     pub check_updates: bool,
     #[serde(rename = "enableTelemetry")]
     pub enable_telemetry: bool,
+    pub ai: Option<AiConfiguration>,
 }
 
 /// 激活码信息（根据API文档更新）

@@ -28,6 +28,7 @@ import {
   Warning24Regular,
   ShieldKeyhole24Regular,
   Wifi124Regular,
+  Wrench24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
@@ -681,6 +682,7 @@ const MainContent: React.FC = () => {
   ];
   const { startScanning, stopScanning, refreshDeviceInfo } = useDeviceService();
   const prevConnectedCount = useRef<number>(0);
+  const isOpeningWindowRef = useRef(false);
 
   // 版本检查相关状态
   const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
@@ -911,6 +913,9 @@ const MainContent: React.FC = () => {
   );
 
   const openDeviceSelectionWindow = useCallback(async () => {
+    if (isOpeningWindowRef.current) return;
+    isOpeningWindowRef.current = true;
+
     try {
       const label = 'device-selection';
       const title = '玩机管家 - 设备选择';
@@ -918,9 +923,14 @@ const MainContent: React.FC = () => {
       let targetWindow = await WebviewWindow.getByLabel(label);
       
       if (targetWindow) {
-        await targetWindow.show();
-        await targetWindow.unminimize();
-        await targetWindow.setFocus();
+        // 如果已存在，先尝试聚焦，忽略可能的琐碎错误
+        try {
+          await targetWindow.unminimize();
+          await targetWindow.show();
+          await targetWindow.setFocus();
+        } catch (e) {
+          console.warn("主应用聚焦已有设备选择窗口失败(非关键):", e);
+        }
       } else {
         const url = `${window.location.origin}/index.html`;
         
@@ -944,18 +954,37 @@ const MainContent: React.FC = () => {
 
         targetWindow.once('tauri://error', function (e) {
           console.error(`${title} 窗口创建失败:`, e);
+          // 仅在创建失败时设置状态消息
+          setStatusBarMessage({
+            type: 'error',
+            message: '设备选择窗口创建失败'
+          });
         });
       }
     } catch (error) {
-      console.error("打开设备选择窗口失败:", error);
-      setStatusBarMessage({
-        type: 'error',
-        message: '打开设备选择窗口失败'
-      });
+      // 检查是否是由于并发导致的标签冲突，这种情况下不需要报错提示
+      const errorStr = String(error);
+      if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
+        console.warn("设备选择窗口已在创建或显示过程中:", error);
+      } else {
+        console.error("打开设备选择窗口过程中发生异常:", error);
+        setStatusBarMessage({
+          type: 'error',
+          message: '打开设备选择窗口失败'
+        });
+      }
+    } finally {
+      // 这里的延迟是为了防止瞬时的多次点击
+      setTimeout(() => {
+        isOpeningWindowRef.current = false;
+      }, 500);
     }
   }, [setStatusBarMessage]);
 
   const openConsoleWindow = useCallback(async (tab: 'logs' | 'command-line') => {
+    if (isOpeningWindowRef.current) return;
+    isOpeningWindowRef.current = true;
+
     try {
       // 检查窗口是否已存在
       const label = tab; // 使用 'logs' 或 'command-line' 作为直接 label
@@ -965,9 +994,13 @@ const MainContent: React.FC = () => {
       
       if (targetWindow) {
         // 如果已存在，明确显示、将其置顶并聚焦
-        await targetWindow.show();
-        await targetWindow.unminimize();
-        await targetWindow.setFocus();
+        try {
+          await targetWindow.unminimize();
+          await targetWindow.show();
+          await targetWindow.setFocus();
+        } catch (e) {
+          console.warn("主应用聚焦已有窗口失败(非关键):", e);
+        }
       } else {
         // 如果不存在，创建新窗口
         const url = `${window.location.origin}/index.html`; // 路由逻辑现在由 main.tsx 中的 label 处理
@@ -985,20 +1018,32 @@ const MainContent: React.FC = () => {
 
         targetWindow.once('tauri://created', function () {
           console.log(`${title} 窗口创建成功`);
-          // 修改点：确保窗口创建后显示
           targetWindow.show();
         });
 
         targetWindow.once('tauri://error', function (e) {
           console.error(`${title} 窗口创建失败:`, e);
+          setStatusBarMessage({
+            type: 'error',
+            message: `${title}窗口创建失败`
+          });
         });
       }
     } catch (error) {
-      console.error("打开控制台子窗口失败:", error);
-      setStatusBarMessage({
-        type: 'error',
-        message: '打开控制台窗口失败'
-      });
+      const errorStr = String(error);
+      if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
+        console.warn("窗口已在创建或显示过程中:", error);
+      } else {
+        console.error("打开控制台子窗口失败:", error);
+        setStatusBarMessage({
+          type: 'error',
+          message: '打开控制台窗口失败'
+        });
+      }
+    } finally {
+      setTimeout(() => {
+        isOpeningWindowRef.current = false;
+      }, 500);
     }
   }, [setStatusBarMessage]);
 
@@ -1254,6 +1299,7 @@ const MainContent: React.FC = () => {
             className={styles.actionButton}
             onClick={() => openConsoleWindow("command-line")}
             title={t("main.command_line")}
+            id="tour-command-line"
           >
             <Icons24Regular />
             <Text>{t("main.command_line")}</Text>
@@ -1263,6 +1309,7 @@ const MainContent: React.FC = () => {
             className={styles.actionButton}
             onClick={() => openConsoleWindow("logs")}
             title={t("main.logs")}
+            id="tour-logs"
           >
             <Notepad24Regular />
             <Text>{t("main.logs")}</Text>

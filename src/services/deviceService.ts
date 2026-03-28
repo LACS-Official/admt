@@ -477,23 +477,7 @@ export class DeviceService {
     }
   }
 
-  async backupPartition(
-    serial: string,
-    partition: string,
-    outputPath: string
-  ): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("backup_partition", {
-        serial,
-        partition,
-        outputPath,
-      });
-      return result;
-    } catch (error) {
-      console.error("Failed to backup partition:", error);
-      throw error;
-    }
-  }
+
 
   // ADB管理相关功能
   async stopAdbServer(): Promise<CommandResult> {
@@ -1102,14 +1086,7 @@ class ExtendedDeviceService extends DeviceService {
     }
   }
 
-  async backupApps(serial: string): Promise<void> {
-    try {
-      await invoke('backup_apps', { serial });
-    } catch (error) {
-      console.error('应用备份失败:', error);
-      throw error;
-    }
-  }
+
 
   async installApp(serial: string): Promise<void> {
     try {

@@ -64,7 +64,14 @@
     "ai_test_connection": "测试连接",
     "ai_testing": "正在测试...",
     "ai_test_success": "连接成功！",
-    "ai_test_failed": "连接失败: {{error}}"
+    "ai_test_failed": "连接失败: {{error}}",
+    "ai_save_config": "保存配置",
+    "ai_saving": "正在保存...",
+    "ai_save_success": "AI 配置已成功保存到磁盘",
+    "ai_save_failed": "AI 配置保存失败: {{error}}",
+    "ai_export_conversation": "导出对话 (Markdown)",
+    "ai_export_success": "对话导出成功",
+    "ai_export_failed": "对话导出失败: {{error}}"
   },
   "sidebar": {
     "home": "主页中心",
@@ -72,6 +79,7 @@
     "flash_zone": "刷机专区",
     "online_resources": "在线资源",
     "root_zone": "Root专区",
+    "extended_features": "扩展功能",
     "settings": "软件设置"
   },
   "status": {
@@ -89,7 +97,11 @@
     "scanning": "正在扫描设备..."
   },
   "home": {
-    "select_device_title": "请选择一个设备",
+    "tab_connect": "连接设备",
+    "tab_info": "设备信息",
+    "demo_mode_title": "演示模式",
+    "demo_mode_desc": "当前显示的是模拟数据。连接真实设备后将自动切换为真实数据。",
+    "select_device_title": "未选择设备",
     "select_device_desc": "从上方下拉菜单中选择要查看的设备"
   },
   "reboot": {
@@ -149,14 +161,53 @@
     "device_info_desc": "这里显示当前连接设备的详细信息（机型、电量等），点击此处可快速切换不同设备。",
     "tab_home_title": "主页概览",
     "tab_home_desc": "应用的主界面，展示最重要的设备状态和快捷入口。",
+    "home_overview_title": "设备详情概览",
+    "home_overview_desc": "在此您可以直观查看机型代号、安卓版本、CPU架构以及精准的内存和存储占用情况。",
+    "home_reboot_title": "电源管理中心",
+    "home_reboot_desc": "集成一键重启至系统、Recovery 或 Fastboot 模式，助您快速进入特定的开发或调试环境。",
     "tab_adb_title": "系统专区 & ADB工具",
     "tab_adb_desc": "提供强大的ADB命令工具集，包括应用管理、文件管理、投屏控制等。",
+    "adb_tabs_title": "ADB 工具面板",
+    "adb_tabs_desc": "包含设备控制、屏幕投屏、应用安装、应用管理和文件管理五大版块，满足您全方位的 ADB 调试需求。",
     "tab_flash_title": "刷机专区",
     "tab_flash_desc": "集成了Fastboot刷机、镜像刷入、分区管理等高级功能。",
+    "flash_tabs_title": "高级刷机工具",
+    "flash_tabs_desc": "提供小米解锁、分区镜像刷入及 Fastboot 线刷功能，所有底层操作均经过安全优化。",
+    "tab_root_title": "Root 专区",
+    "tab_root_desc": "为已获取 Root 权限的设备提供高级功能，如镜像修补和模块管理。",
+    "root_tabs_title": "Root 功能面板",
+    "root_tabs_desc": "包含 Magisk 镜像修补、系统模块管理以及底层高级参数调整。",
+    "tab_extended_title": "扩展功能",
+    "tab_extended_desc": "提供更多实验性工具、插件管理以及各类玩机实用小工具。",
+    "extended_tabs_title": "扩展工具集",
+    "extended_tabs_desc": "在这里您可以探索更多由社区或官方提供的增强插件和实用辅助程序。",
     "tab_online_title": "在线资源",
     "tab_online_desc": "浏览和下载最新的官方ROM、工具软件和驱动程序。",
+    "online_tabs_title": "软件 & ROM 商店",
+    "online_tabs_desc": "在线获取最新的玩机工具、官方固件包，并在此统一管理所有下载进度。",
     "tab_settings_title": "应用设置",
     "tab_settings_desc": "自定义应用的主题、语言、通知和其他偏好设置。",
+    "settings_tabs_title": "全局配置",
+    "settings_tabs_desc": "在此您可以配置应用显示风格、设备检测逻辑，以及设置 AI 助手的 API 参数。",
+    "ai_button_title": "AI 智能助手",
+    "ai_button_desc": "集成最先进的 AI 模型，助您一键执行复杂命令、分析日志或解答技术疑问。",
+    "header_settings_title": "快捷设置",
+    "header_settings_desc": "在任何界面都可通过此图标快速进入设置中心，调整应用配置。",
+    "search_button_title": "全局搜索",
+    "search_button_desc": "通过快捷键 (Ctrl+K) 快速查找功能设置、下载镜像或搜索技术文档。",
+    "pin_button_title": "窗口置顶",
+    "pin_button_desc": "将应用窗口固定在最前端，方便在操作其他软件时参考参数。",
+    "theme_button_title": "主题切换",
+    "theme_button_desc": "一键切换深色/浅色模式，为您提供更舒适的视觉体验。",
+    "announcement_title": "系统公告",
+    "announcement_desc": "获取最新的版本动态、功能说明及官方重要通知。",
+    "command_line_title": "快捷命令行",
+    "command_line_desc": "快速呼出终端窗口，支持直接执行 ADB 命令和快捷脚本。",
+    "logs_title": "实时日志",
+    "logs_desc": "查看应用程序和连接设备的运行日志，方便排查问题。",
+    "mode_choice_title": "选择引导模式",
+    "mode_concise": "精简概览 (推荐初次预览)",
+    "mode_detailed": "详细指南 (深入了解各功能)",
     "main_content_title": "准备就绪",
     "main_content_desc": "您已了解所有核心板块。现在，开始探索吧！"
   },
@@ -500,6 +551,7 @@
     "msg_animator_duration_success": "程序动画速度已设置为 {{scale}}",
     "msg_animator_duration_failed": "设置程序动画速度失败"
   },
+
   "command_panel": {
     "device_unknown": "未知设备",
     "mode_sys": "系统",
@@ -1207,6 +1259,14 @@
   "logs_panel": {
     "title": "日志查看器",
     "ai_explain": "AI 解释日志",
-    "ai_explain_tooltip": "点击让 AI 分析当前的日志内容"
+    "ai_explain_tooltip": "点击让 AI 分析当前的日志内容",
+    "category_all": "全部分类",
+    "category_device": "设备",
+    "category_firmware": "固件",
+    "category_system": "系统",
+    "category_user": "用户",
+    "category_network": "网络",
+    "category_security": "安全",
+    "category_ai": "AI 助手"
   }
 }

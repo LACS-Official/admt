@@ -21,6 +21,7 @@ import {
 
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
+import { useDeviceStore } from "../../stores/deviceStore";
 import { invoke } from "@tauri-apps/api/core";
 import { useBatchExecutor } from "../Common/BatchExecutorDialog";
 
@@ -80,11 +81,6 @@ const useStyles = makeStyles({
     textAlign: "center",
     minWidth: 0,
     position: "relative",
-    ":hover": {
-      backgroundColor: "var(--colorNeutralBackground2Hover)",
-      transform: "translateY(-1px)",
-      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-    },
   },
   functionInfo: {
     display: "flex",
@@ -163,13 +159,16 @@ interface MiscFunction {
 
 interface MiscellaneousCardProps {
   className?: string;
+  device?: any;
 }
 
-const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
+const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device: propDevice }) => {
   const styles = useStyles();
   const { t } = useTranslation();
+  const { selectedDevice: storeDevice } = useDeviceStore();
+  const selectedDevice = propDevice || storeDevice;
   const { setStatusBarMessage } = useAppStore();
-  const {BatchExecutorDialog } = useBatchExecutor();
+  const { BatchExecutorDialog } = useBatchExecutor();
 
   const [executingFunction, setExecutingFunction] = useState<string | null>(null);
 
@@ -185,6 +184,15 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     description: string,
     isRisky: boolean = false
   ) => {
+    if (selectedDevice?.serial === "DEMO-ADB-001") {
+      setStatusBarMessage({
+        type: "warning",
+        message: "演示模式下无法执行该操作",
+        duration: 3000,
+      });
+      return;
+    }
+
     if (isRisky) {
       setStatusBarMessage({
         type: "warning",
@@ -228,14 +236,14 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   };
 
 
-  
+
 
 
   const handleRestartAdb = async () => {
     setStatusBarMessage({
       type: "info",
       message: t('misc.usb_fix_running'),
-      });
+    });
     await executeCommand(
       "restart-adb",
       () => invoke("restart_adb_service"),
@@ -244,10 +252,10 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   };
 
   const handleInstallDriver = async () => {
-      setStatusBarMessage({
+    setStatusBarMessage({
       type: "info",
       message: t('misc.driver_tip'),
-      });
+    });
   };
 
 
@@ -260,11 +268,11 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     setShowUsbFixDialog(false);
     setUsbFixStatus('running');
     setUsbFixOutput(t('misc.usb_fix_running') + '\n');
-    
+
     try {
       const result = await invoke("fix_usb3_connection") as any;
       setUsbFixOutput(prev => prev + t('misc.usb_fix_result', { output: result.output }) + '\n');
-      
+
       if (result.success) {
         setUsbFixStatus('success');
         setStatusBarMessage({
@@ -287,7 +295,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
         message: t('misc.usb_fix_error') + `: ${error}`,
       });
     }
-    
+
     // 重新打开对话框以显示结果
     setShowUsbFixDialog(true);
   };
@@ -296,11 +304,11 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     setShowUsbFixDialog(false);
     setUsbFixStatus('running');
     setUsbFixOutput(t('misc.usb_unfix_running') + '\n');
-    
+
     try {
       const result = await invoke("unfix_usb3_connection") as any;
       setUsbFixOutput(prev => prev + t('misc.usb_fix_result', { output: result.output }) + '\n');
-      
+
       if (result.success) {
         setUsbFixStatus('success');
         setStatusBarMessage({
@@ -323,7 +331,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
         message: t('misc.usb_unfix_error') + `: ${error}`,
       });
     }
-    
+
     // 重新打开对话框以显示结果
     setShowUsbFixDialog(true);
   };
@@ -341,7 +349,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     setStatusBarMessage({
       type: "info",
       message: t('misc.finish_adb') + "...",
-      });
+    });
     await executeCommand(
       "finish-adb",
       () => invoke("finish_adb_service"),
@@ -366,7 +374,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
       action: handleRestartAdb,
     },
     {
-      id:"finish-adb",
+      id: "finish-adb",
       title: t('misc.finish_adb'),
       isRisky: false,
       action: handleFinishAdb,
@@ -394,13 +402,13 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
       title: t('misc.open_device_manager'),
       isRisky: false,
       action: handleOpenDeviceManager,
-    },{
+    }, {
       id: "open-task-manager",
       title: t('misc.open_task_manager'),
       isRisky: true,
       action: handleOpenTaskManager,
     }
-    
+
   ];
 
   const handleFunctionClick = async (func: MiscFunction) => {
@@ -447,8 +455,8 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
       </Card>
 
       {/* USB修复对话框 */}
-      <Dialog 
-        open={showUsbFixDialog} 
+      <Dialog
+        open={showUsbFixDialog}
         onOpenChange={(event, data) => {
           if (!data.open && usbFixStatus !== 'running') {
             handleUsbFixClose();
@@ -463,10 +471,10 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
               <div style={{ marginBottom: '16px' }}>
                 <Text>{t('misc.usb_fix_desc')}</Text>
               </div>
-              
+
               {usbFixStatus === 'idle' && (
-                <div style={{ 
-                  padding: '16px', 
+                <div style={{
+                  padding: '16px',
                   backgroundColor: 'var(--colorNeutralBackground2)',
                   borderRadius: '8px',
                   marginBottom: '16px'
@@ -481,7 +489,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                   </ul>
                 </div>
               )}
-              
+
               {(usbFixStatus === 'running' || usbFixStatus === 'success' || usbFixStatus === 'error') && (
                 <div style={{
                   backgroundColor: 'var(--colorNeutralBackground6)',
@@ -509,21 +517,21 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
           <DialogActions>
             {usbFixStatus === 'idle' && (
               <>
-                <Button 
-                  appearance="secondary" 
+                <Button
+                  appearance="secondary"
                   onClick={handleUsbFixClose}
                 >
                   {t('misc.cancel')}
                 </Button>
-                <Button 
-                  appearance="primary" 
+                <Button
+                  appearance="primary"
                   onClick={handleUsbFixStart}
                   icon={<Wrench24Regular />}
                 >
                   {t('misc.start_fix')}
                 </Button>
-                <Button 
-                  appearance="primary" 
+                <Button
+                  appearance="primary"
                   onClick={handleUsbUnFixStart}
                   icon={<Wrench24Regular />}
                 >
@@ -531,21 +539,21 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                 </Button>
               </>
             )}
-            
+
             {usbFixStatus === 'running' && (
-              <Button 
-                appearance="secondary" 
+              <Button
+                appearance="secondary"
                 disabled
                 icon={<Spinner size="tiny" />}
               >
                 {t('misc.executing')}
               </Button>
             )}
-            
+
             {(usbFixStatus === 'success' || usbFixStatus === 'error') && (
               <>
-                <Button 
-                  appearance="secondary" 
+                <Button
+                  appearance="secondary"
                   onClick={handleUsbFixClose}
                 >
                   {t('misc.close')}

@@ -23,54 +23,75 @@ const AutoMirrorManager: React.FC = () => {
 
     useEffect(() => {
         if (!config.autoScreenMirror) {
-            // 如果设置关闭，清空尝试记录，以便下次开启时能生效
-            attemptedSerials.current.clear();
+            if (attemptedSerials.current.size > 0) {
+                console.log('[AutoMirror] Feature disabled, clearing attempted records.');
+                attemptedSerials.current.clear();
+            }
             return;
         }
 
-        // 找出当前连接且处于系统模式的新设备
-        devices.forEach(async (device) => {
-            if (
-                device.connected && 
-                device.mode === 'sys' && 
-                !attemptedSerials.current.has(device.serial)
-            ) {
-                // 检查是否已经在投屏中（可能手动开启了）
-                const isStreaming = isDeviceStreaming(device.serial);
-                
-                if (!isStreaming) {
-                    console.log(`[AutoMirror] Detecting new device for auto-mirror: ${device.serial}`);
-                    attemptedSerials.current.add(device.serial);
-                    
-                    try {
-                        const mirrorConfig = useScreenMirrorStore.getState().config;
-                        const session = await ScreenMirrorService.startMirror(
-                            device.serial, 
-                            mirrorConfig, 
-                            (sessionId) => {
-                                handleProcessTerminated(sessionId);
-                                ScreenMirrorService.stopMirror(device.serial).catch(console.error);
-                            }
-                        );
-                        addActiveSession(session);
-                        console.log(`[AutoMirror] Successfully auto-mirrored: ${device.serial}`);
-                    } catch (error) {
-                        console.error(`[AutoMirror] Failed to auto-mirror device ${device.serial}:`, error);
-                        // 失败后不移除记录，防止下个扫描周期再次弹窗报错，除非设备重新连接
-                    }
-                } else {
-                    // 如果已经在投屏，也将其标记为已尝试，避免冗余检查
-                    attemptedSerials.current.add(device.serial);
-                }
+        // 分析所有连接的设备
+        devices.forEach(device => {
+            if (device.connected && device.mode !== 'sys') {
+                console.log(`[AutoMirror] Device ${device.serial} connected but in mode: ${device.mode}. Skipping.`);
             }
         });
 
-        // 清理已断开设备的尝试记录，以便下次连接能再次触发
+        // 找出符合条件的设备
+        const eligibleDevices = devices.filter(d => d.connected && d.mode === 'sys');
+        
+        if (eligibleDevices.length > 0) {
+            eligibleDevices.forEach(async (device) => {
+                const serial = device.serial;
+                
+                // 检查是否已经尝试过或正在投屏中
+                if (attemptedSerials.current.has(serial)) {
+                    // console.debug(`[AutoMirror] Device ${serial} already attempted in this cycle.`);
+                    return;
+                }
+
+                const isStreaming = isDeviceStreaming(serial);
+                if (isStreaming) {
+                    console.log(`[AutoMirror] Device ${serial} is already streaming. Marking as attempted.`);
+                    attemptedSerials.current.add(serial);
+                    return;
+                }
+
+                // 开始尝试自动投屏
+                console.log(`[AutoMirror] Triggering auto-mirror for: ${serial}`);
+                attemptedSerials.current.add(serial);
+
+                try {
+                    const mirrorConfig = useScreenMirrorStore.getState().config;
+                    const session = await ScreenMirrorService.startMirror(
+                        serial, 
+                        mirrorConfig, 
+                        (sessionId) => {
+                            console.log(`[AutoMirror] Session terminated: ${sessionId} (${serial})`);
+                            handleProcessTerminated(sessionId);
+                            ScreenMirrorService.stopMirror(serial).catch(err => 
+                                console.warn(`[AutoMirror] Error stopping mirror after termination:`, err)
+                            );
+                        }
+                    );
+                    addActiveSession(session);
+                    console.log(`[AutoMirror] Successfully started auto-mirror for: ${serial}`);
+                } catch (error) {
+                    console.error(`[AutoMirror] Failed to start auto-mirror for ${serial}:`, error);
+                    // 标记为尝试过，防止失败后在同一连接周期内反复重试导致弹窗或性能问题
+                }
+            });
+        }
+
+        // 清理逻辑：仅移除那些真正彻底消失或断开的设备记录
+        const currentSerials = new Set(devices.map(d => d.serial));
         const connectedSerials = new Set(devices.filter(d => d.connected).map(d => d.serial));
+        
         attemptedSerials.current.forEach(serial => {
-            if (!connectedSerials.has(serial)) {
+            // 如果设备连列表都没了，或者明确断开了，则移除尝试记录，以便下次连接能重试
+            if (!currentSerials.has(serial) || !connectedSerials.has(serial)) {
                 attemptedSerials.current.delete(serial);
-                console.log(`[AutoMirror] Device removed, clearing auto-mirror record: ${serial}`);
+                console.log(`[AutoMirror] Device disconnected, cleared auto-mirror record: ${serial}`);
             }
         });
 

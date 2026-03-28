@@ -442,14 +442,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
             <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
               {t('flash.risk_warning_desc')}
             </Text>
-            {/* 备份链接 */}
-            <div style={{ marginTop: "8px" }}>
-                <Link onClick={() => { 
-                    setCurrentView('flash-zone', { flashTab: 'system-backup' });
-                }}>
-                    {t('flash.goto_backup')}
-                </Link>
-            </div>
+
           </div>
 
           {/* 文件选择与分区选择合并 */}

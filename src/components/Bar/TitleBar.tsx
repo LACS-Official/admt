@@ -16,6 +16,7 @@ import {
   Pin24Regular,
   PinOff24Regular,
   Bot24Regular,
+  Settings24Regular,
 } from "@fluentui/react-icons";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
@@ -109,6 +110,14 @@ const useStyles = makeStyles({
       backgroundColor: "#E81123 !important",
       color: "white !important",
     },
+  },
+  divider: {
+    width: "1px",
+    height: "16px",
+    backgroundColor: "var(--colorNeutralStroke2)",
+    margin: "0 4px",
+    alignSelf: "center",
+    opacity: 0.6,
   },
 });
 
@@ -307,7 +316,7 @@ const TitleBar: React.FC = () => {
         </div>
 
         {/* 中间区域 - 公告展示条 - 支持拖拽 */}
-        <div className={styles.centerSection} data-tauri-drag-region>
+        <div className={styles.centerSection} data-tauri-drag-region id="tour-announcement-bar">
           <AnnouncementBar />
         </div>
 
@@ -322,6 +331,21 @@ const TitleBar: React.FC = () => {
               icon={<Bot24Regular />}
               className={styles.titleBarButton}
               onClick={openAIChatWindow}
+              id="tour-ai-button"
+            />
+          </Tooltip>
+
+          <Tooltip
+            content="系统设置"
+            relationship="label"
+          >
+            <Button
+              appearance="subtle"
+              icon={<Settings24Regular />}
+              className={styles.titleBarButton}
+              onClick={handleSettingsClick}
+              id="tour-header-settings"
+              title="设置"
             />
           </Tooltip>
 
@@ -334,6 +358,7 @@ const TitleBar: React.FC = () => {
               icon={<Search24Regular />}
               className={styles.titleBarButton}
               onClick={() => setIsSearchModalOpen(true)}
+              id="tour-search-button"
             />
           </Tooltip>
 
@@ -353,8 +378,11 @@ const TitleBar: React.FC = () => {
               }
               className={styles.titleBarButton}
               onClick={toggleTheme}
+              id="tour-theme-button"
             />
           </Tooltip>
+
+          <div className={styles.divider} />
 
           <Tooltip
             content={isAlwaysOnTop ? "取消置顶" : "窗口置顶"}
@@ -368,6 +396,7 @@ const TitleBar: React.FC = () => {
               className={styles.titleBarButton}
               onClick={handleToggleAlwaysOnTop}
               disabled={isUpdating}
+              id="tour-pin-button"
             />
           </Tooltip>
 

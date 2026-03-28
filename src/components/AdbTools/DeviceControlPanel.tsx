@@ -26,6 +26,7 @@ import {
   LockClosed24Regular,
   ChevronRight24Regular,
   ShieldCheckmark24Regular,
+  Save24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
@@ -225,9 +226,6 @@ const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({ device, onAdbRe
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <Text size={200} color="var(--colorNeutralForeground3)" style={{ padding: '0 8px', marginBottom: '4px' }}>
-          {t('common.favorited_actions', "已收藏的操作")}
-        </Text>
         {controlFavorites.map(id => (
           <div key={id} className={styles.sidebarItem} onClick={() => handleFavoriteClick(id)}>
              <Text>{getFavoriteLabel(id)}</Text>
