@@ -17,7 +17,7 @@
     "build:all": "npm run build && npm run tauri:build",
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
-    "verify:tools": "node scripts/verify-tools.cjs",
+    "verify:tools": "node scripts/prepare-platform-tools.cjs && node scripts/verify-tools.cjs",
     "prestart": "npm run verify:tools",
     "validate-env": "node scripts/validate-env.cjs",
     "test-version": "node scripts/test-version-detection.cjs",

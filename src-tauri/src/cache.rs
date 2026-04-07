@@ -355,6 +355,12 @@ fn find_adb_path() -> PathBuf {
         if let Some(parent) = exe_dir.parent() {
             // 生产环境的多个可能路径
             let production_paths = [
+                parent.join("tools").join("adb-bin").join(&adb_filename),
+                parent
+                    .join("resources")
+                    .join("tools")
+                    .join("adb-bin")
+                    .join(&adb_filename),
                 parent
                     .join("tools")
                     .join("adb")
@@ -428,6 +434,12 @@ fn find_fastboot_path() -> PathBuf {
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
             let production_paths = [
+                parent.join("tools").join("adb-bin").join(&fb_filename),
+                parent
+                    .join("resources")
+                    .join("tools")
+                    .join("adb-bin")
+                    .join(&fb_filename),
                 parent
                     .join("tools")
                     .join("adb")
