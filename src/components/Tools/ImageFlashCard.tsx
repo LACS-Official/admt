@@ -7,7 +7,7 @@ import {
   Text,
   Button,
   Field,
-  Dropdown,
+  Combobox,
   Option,
   ProgressBar,
   Dialog,
@@ -470,10 +470,12 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
               <div>
                 <Text weight="semibold">{t('flash.step2_title')}</Text>
                 <Field style={{ margin: 0 }}>
-                  <Dropdown
+                  <Combobox
+                    freeform
                     placeholder={t('flash.select_partition_placeholder')}
                     value={selectedPartition}
                     onOptionSelect={(_, data) => setSelectedPartition(data.optionValue || "")}
+                    onChange={(e) => setSelectedPartition(e.target.value)}
                     disabled={isFlashing}
                     style={{ minWidth: 'auto' }}
                   >
@@ -482,7 +484,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
                         {partition.label}
                       </Option>
                     ))}
-                  </Dropdown>
+                  </Combobox>
                 </Field>
               </div>
             </div>

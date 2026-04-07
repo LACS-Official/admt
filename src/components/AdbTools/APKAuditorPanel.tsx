@@ -138,7 +138,7 @@ const APKAuditorPanel: React.FC<APKAuditorPanelProps> = ({ app, onClose }) => {
     <div className={styles.container}>
       <div className={styles.header}>
         <ShieldLock24Regular style={{ color: tokens.colorBrandForeground1 }} />
-        <Text size={500} weight="bold">AI 安全审计</Text>
+        <Text size={500} weight="bold">AI 安全审计(Beta)</Text>
       </div>
 
       <Card appearance="subtle" style={{ padding: '12px', backgroundColor: tokens.colorNeutralBackground2 }}>

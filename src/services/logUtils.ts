@@ -52,7 +52,8 @@ export class LogUtils {
         system: 0,
         user: 0,
         network: 0,
-        security: 0
+        security: 0,
+        ai: 0
       },
       recentErrors: 0
     };
@@ -99,7 +100,8 @@ export class LogUtils {
       system: '⚙️',
       user: '👤',
       network: '🌐',
-      security: '🔒'
+      security: '🔒',
+      ai: '🤖'
     };
     return icons[category] || '📝';
   }

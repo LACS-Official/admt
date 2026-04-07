@@ -222,7 +222,7 @@ const useStyles = makeStyles({
 const OPEN_SOURCE_PROJECTS = [
   {
     name: "Tauri",
-    description: "跨平台桌面应用框架，使用Rust和Web技术",
+    description: "Multi-platform desktop framework using Rust and Web technologies",
     license: "MIT"
   },
   {
@@ -277,16 +277,15 @@ const OPEN_SOURCE_PROJECTS = [
 // 格式：{ name: "项目名称", description: "项目描述", url: "项目链接", category: "分类名称" }
 const THANKS_PROJECTS = [
   {
-    name: "Xiaomi-HyperOS-BootLoader-Bypass",
-    description: "小米HyperOS BootLoader绕过工具",
+    description: "Xiaomi HyperOS BootLoader Bypass tool",
     url: "https://github.com/MlgmXyysd/Xiaomi-HyperOS-BootLoader-Bypass",
-    category: "Android工具"
+    category: "Android Tools"
   },
-    {
+  {
     name: "雪糕小豪,酷安@24524599",
-    description: "感谢大佬提供的部分思路，在此致敬",
+    description: "Thanks to the master for some ideas, respect here",
     url: "https://b23.tv/ka645O6",
-    category: "思路"
+    category: "Ideas"
   },
 ];
 
@@ -325,7 +324,7 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
   const [isThanksDialogOpen, setIsThanksDialogOpen] = useState(false);
   const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
   const { versionInfo, loading: versionLoading } = useVersionInfo();
-  const [fullVersionString, setFullVersionString] = useState('玩机管家 v1.0.0');
+  const [fullVersionString, setFullVersionString] = useState('ADMT v1.0.0');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
 
@@ -510,7 +509,7 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
         <div className={styles.communitySection}>
           <div className={styles.sectionHeader}>
             <Text size={400} weight="semibold" style={{ color: "var(--colorNeutralForeground3)" }}>
-              {t('common.community_social', "社区与社交")}
+              {t('common.community_social', "Community & Social")}
             </Text>
             <div className={styles.headerLine} />
           </div>
@@ -628,7 +627,7 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
         <Dialog open={isDonationDialogOpen} onOpenChange={(_e, data) => setIsDonationDialogOpen(data.open)}>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>扫码捐赠</DialogTitle>
+              <DialogTitle>{t('donation.qr_title')}</DialogTitle>
               <DialogContent style={{ padding: 0 }}>
                 <DonationPanel />
               </DialogContent>

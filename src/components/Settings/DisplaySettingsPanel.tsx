@@ -225,14 +225,14 @@ const DisplaySettingsPanel: React.FC = () => {
 
   // 预设颜色
   const colorPresets = [
-    { name: '商务蓝', hex: '#0078d4' },
-    { name: '极客绿', hex: '#107c10' },
-    { name: '活力橙', hex: '#d83b01' },
-    { name: '皇家紫', hex: '#5c2d91' },
-    { name: '磨砂黑', hex: '#323130' },
-    { name: '薄荷绿', hex: '#008272' },
-    { name: '宝石红', hex: '#a4262c' },
-    { name: '深海蓝', hex: '#004578' },
+    { name: t('settings.preset_blue', '商务蓝'), hex: '#0078d4' },
+    { name: t('settings.preset_green', '极客绿'), hex: '#107c10' },
+    { name: t('settings.preset_orange', '活力橙'), hex: '#d83b01' },
+    { name: t('settings.preset_purple', '皇家紫'), hex: '#5c2d91' },
+    { name: t('settings.preset_black', '磨砂黑'), hex: '#323130' },
+    { name: t('settings.preset_mint', '薄荷绿'), hex: '#008272' },
+    { name: t('settings.preset_red', '宝石红'), hex: '#a4262c' },
+    { name: t('settings.preset_navy', '深海蓝'), hex: '#004578' },
   ];
 
   const handleTestAnimations = () => {
@@ -262,24 +262,24 @@ const DisplaySettingsPanel: React.FC = () => {
         <Card className={styles.card}>
             <CardHeader
                 image={<Color24Regular />}
-                header={<Text weight="semibold">{t('settings.personalization', '个性化')}</Text>}
-                description={<Text size={200} className={styles.settingDescription}>{t('settings.personalization_desc', '自定义应用的主题颜色和背景')}</Text>}
+                header={<Text weight="semibold">{t('settings.personalization')}</Text>}
+                description={<Text size={200} className={styles.settingDescription}>{t('settings.personalization_desc')}</Text>}
             />
             <div className={styles.cardContent}>
                 {/* 主题选择 */}
                 <div className={styles.settingTile}>
                   <div className={styles.settingRow}>
                     <div className={styles.rowInfo}>
-                        <Text weight="semibold">{t('settings.theme', '主题')}</Text>
+                        <Text weight="semibold">{t('settings.theme')}</Text>
                     </div>
                     <RadioGroup
                         layout="horizontal"
                         value={currentThemeValue}
                         onChange={handleThemeRadioChange as any}
                     >
-                        <Radio value="light" label={t('settings.theme_light', '浅色')} />
-                        <Radio value="dark" label={t('settings.theme_dark', '深色')} />
-                        <Radio value="system" label={t('settings.theme_system', '系统')} />
+                        <Radio value="light" label={t('settings.theme_light')} />
+                        <Radio value="dark" label={t('settings.theme_dark')} />
+                        <Radio value="system" label={t('settings.theme_system')} />
                     </RadioGroup>
                   </div>
                 </div>
@@ -288,8 +288,8 @@ const DisplaySettingsPanel: React.FC = () => {
                 <div className={styles.settingTile}>
                     <div className={styles.settingRow}>
                         <div className={styles.rowInfo}>
-                            <Text weight="semibold">{t('settings.accent_color', '强调色')}</Text>
-                            <Text className={styles.settingDescription}>{t('settings.accent_color_desc', '选择应用的主要强调颜色')}</Text>
+                            <Text weight="semibold">{t('settings.accent_color')}</Text>
+                            <Text className={styles.settingDescription}>{t('settings.accent_color_desc')}</Text>
                         </div>
                         <div style={{ position: 'relative', display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <div 
@@ -309,7 +309,7 @@ const DisplaySettingsPanel: React.FC = () => {
                                 size="small"
                                 icon={<ArrowReset24Regular />}
                                 onClick={() => setAccentColor("#0078d4")}
-                                title={t('settings.reset_color', '恢复默认')}
+                                title={t('settings.reset_color')}
                             />
                             {showColorPicker && (
                                 <div style={{ position: 'absolute', right: 0, top: '40px', zIndex: 100 }}>
@@ -345,8 +345,8 @@ const DisplaySettingsPanel: React.FC = () => {
                 {/* 内容密度 */}
                 <div className={styles.settingTile}>
                     <div className={styles.rowInfo}>
-                        <Text weight="semibold">{t('settings.content_density', '内容密度')}</Text>
-                        <Text className={styles.settingDescription}>{t('settings.content_density_desc', '调整界面元素的间距')}</Text>
+                        <Text weight="semibold">{t('settings.content_density')}</Text>
+                        <Text className={styles.settingDescription}>{t('settings.content_density_desc')}</Text>
                     </div>
                     <div className={styles.densityGrid}>
                         <div 
@@ -358,7 +358,7 @@ const DisplaySettingsPanel: React.FC = () => {
                                 <div className={styles.densityLine} style={{ backgroundColor: accentColor, marginTop: '4px' }} />
                                 <div className={styles.densityLine} style={{ width: '60%', marginTop: '4px' }} />
                             </div>
-                            <Text size={100} weight={contentDensity === 'comfortable' ? 'semibold' : 'regular'}>舒适</Text>
+                            <Text size={100} weight={contentDensity === 'comfortable' ? 'semibold' : 'regular'}>{t('settings.comfortable')}</Text>
                         </div>
                         <div 
                             className={mergeClasses(styles.densityTile, contentDensity === 'compact' && styles.densityTileActive)}
@@ -369,7 +369,7 @@ const DisplaySettingsPanel: React.FC = () => {
                                 <div className={styles.densityLine} style={{ backgroundColor: accentColor }} />
                                 <div className={styles.densityLine} style={{ width: '60%' }} />
                             </div>
-                            <Text size={100} weight={contentDensity === 'compact' ? 'semibold' : 'regular'}>紧凑</Text>
+                            <Text size={100} weight={contentDensity === 'compact' ? 'semibold' : 'regular'}>{t('settings.compact')}</Text>
                         </div>
                     </div>
                 </div>
@@ -378,16 +378,16 @@ const DisplaySettingsPanel: React.FC = () => {
                 <div className={styles.settingTile}>
                     <div className={styles.settingRow}>
                         <div className={styles.rowInfo}>
-                            <Text weight="semibold">{t('settings.corner_radius', '圆角大小')}</Text>
+                            <Text weight="semibold">{t('settings.corner_radius')}</Text>
                         </div>
                         <RadioGroup 
                             layout="horizontal" 
                             value={cornerRadius} 
                             onChange={(_, data) => setCornerRadius(data.value as 'small' | 'medium' | 'large')}
                         >
-                            <Radio value="small" label={t('settings.radius_small', '较小')} />
-                            <Radio value="medium" label={t('settings.radius_medium', '适中')} />
-                            <Radio value="large" label={t('settings.radius_large', '较大')} />
+                            <Radio value="small" label={t('settings.radius_small')} />
+                            <Radio value="medium" label={t('settings.radius_medium')} />
+                            <Radio value="large" label={t('settings.radius_large')} />
                         </RadioGroup>
                     </div>
                 </div>
@@ -423,8 +423,8 @@ const DisplaySettingsPanel: React.FC = () => {
                           onChange={handleCarouselIntervalChange}
                       />
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: "var(--colorNeutralForeground4)", fontSize: "10px", marginTop: '4px' }}>
-                          <span>最快</span>
-                          <span>最慢</span>
+                          <span>{t('settings.fastest')}</span>
+                          <span>{t('settings.slowest')}</span>
                       </div>
                   </div>
               </div>
@@ -441,7 +441,9 @@ const DisplaySettingsPanel: React.FC = () => {
                         appearance="subtle" 
                         icon={<Sparkle20Regular />} 
                         onClick={handleTestConfetti}
-                    >测试</Button>
+                    >
+                      {t('settings.test')}
+                    </Button>
                     <Switch
                         checked={showConfetti}
                         onChange={(_, data) => setShowConfetti(data.checked === true)}

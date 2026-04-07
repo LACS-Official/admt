@@ -49,6 +49,7 @@ interface SystemFeatureStatus {
 }
 
 const StatusIndicator: React.FC<{ status: SystemFeatureStatus | null }> = ({ status }) => {
+  const { t } = useTranslation();
   if (!status) return null;
   
   const getIcon = () => {
@@ -74,7 +75,7 @@ const StatusIndicator: React.FC<{ status: SystemFeatureStatus | null }> = ({ sta
       <Text size={100}>{status.message}</Text>
       {status.action && (
         <Button size="small" onClick={status.action}>
-          重试
+          {t('settings.retry')}
         </Button>
       )}
     </div>
@@ -284,7 +285,7 @@ const OtherSettingsPanel: React.FC = () => {
       setMinimizeToTray(!checked);
       setStatusBarMessage({
         type: 'error',
-        message: '系统托盘设置失败，请检查系统权限'
+        message: t('settings.tray_fix_failed')
       });
     } finally {
       setLoading(false);
@@ -301,7 +302,7 @@ function handleStartWithSystemChange(checked: boolean): void {
     if (!autoStartSupported) {
       setAutoStartStatus({
         type: 'error',
-        message: '当前系统不支持自启动功能'
+        message: t('settings.auto_start_not_supported_err')
       });
       return;
     }
@@ -315,7 +316,7 @@ function handleStartWithSystemChange(checked: boolean): void {
           const success = await autoStartService.enableAutoStart();
           if (success) {
           } else {
-            throw new Error('启用自启动失败');
+            throw new Error(t('settings.auto_start_enable_failed'));
           }
         } else {
           const success = await autoStartService.disableAutoStart();
@@ -323,7 +324,7 @@ function handleStartWithSystemChange(checked: boolean): void {
           } else {
             setStatusBarMessage({
               type: 'error',
-              message: '禁用自启动失败'
+              message: t('settings.auto_start_disable_failed')
             });
           
           }
@@ -337,7 +338,7 @@ function handleStartWithSystemChange(checked: boolean): void {
         console.error('自启动设置失败:', error);
         setAutoStartStatus({
           type: 'error',
-          message: '自启动设置失败，请重试',
+          message: t('settings.auto_start_fix_failed'),
           action: () => handleStartWithSystemChange(checked)
         });
       } finally {
@@ -358,7 +359,7 @@ function handleStartWithSystemChange(checked: boolean): void {
     updateConfig(defaultSettings);
     setStatusBarMessage({
       type: 'success',
-      message: '设置已恢复默认'
+      message: t('settings.settings_restored')
     });
   };
 
@@ -403,7 +404,7 @@ function handleStartWithSystemChange(checked: boolean): void {
               <div className={styles.rowContent}>
                 <div className={styles.titleWithIcon}>
                   <CalendarLtr20Regular />
-                  <Text weight="semibold">日期格式</Text>
+                  <Text weight="semibold">{t('settings.date_format')}</Text>
                 </div>
                 <div className={styles.segmentedContainer}>
                   <TabList size="small" selectedValue="ymd" appearance="subtle">
@@ -412,7 +413,7 @@ function handleStartWithSystemChange(checked: boolean): void {
                   </TabList>
                 </div>
               </div>
-              <Text className={styles.previewText}>当前预览：{datePreview}</Text>
+              <Text className={styles.previewText}>{t('settings.current_preview')}{datePreview}</Text>
             </div>
 
             {/* 时间格式 - 分段选择器预览 */}
@@ -420,16 +421,16 @@ function handleStartWithSystemChange(checked: boolean): void {
               <div className={styles.rowContent}>
                 <div className={styles.titleWithIcon}>
                   <Clock20Regular />
-                  <Text weight="semibold">时间格式</Text>
+                  <Text weight="semibold">{t('settings.time_format')}</Text>
                 </div>
                 <div className={styles.segmentedContainer}>
                   <TabList size="small" selectedValue="24h" appearance="subtle">
-                    <Tab value="24h">24 小时制</Tab>
-                    <Tab value="12h" disabled>12 小时制</Tab>
+                    <Tab value="24h">{t('settings.hour_24')}</Tab>
+                    <Tab value="12h" disabled>{t('settings.hour_12')}</Tab>
                   </TabList>
                 </div>
               </div>
-              <Text className={styles.previewText}>当前预览：{timePreview}</Text>
+              <Text className={styles.previewText}>{t('settings.current_preview')}{timePreview}</Text>
             </div>
           </div>
         </Card>
@@ -438,8 +439,8 @@ function handleStartWithSystemChange(checked: boolean): void {
         <Card className={styles.card}>
           <CardHeader
             image={<Settings24Regular />}
-            header={<Text weight="semibold">常规设置</Text>}
-            description={<Text size={200} className={styles.description}>应用行为和系统启动选项</Text>}
+            header={<Text weight="semibold">{t('settings.general_settings')}</Text>}
+            description={<Text size={200} className={styles.description}>{t('settings.general_settings_desc')}</Text>}
           />
 
           <div className={styles.cardContent}>
@@ -447,7 +448,7 @@ function handleStartWithSystemChange(checked: boolean): void {
             {loading && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <Spinner size="tiny" />
-                <Text size={200} className={styles.description}>正在同步系统状态...</Text>
+                <Text size={200} className={styles.description}>{t('settings.syncing_status')}</Text>
               </div>
             )}
 
@@ -456,7 +457,7 @@ function handleStartWithSystemChange(checked: boolean): void {
               <div className={styles.rowContent}>
                 <div className={styles.titleWithIcon}>
                   <ArrowMinimize20Regular />
-                  <Text weight="semibold">启用系统托盘</Text>
+                  <Text weight="semibold">{t('settings.enable_tray')}</Text>
                 </div>
                 <Switch
                   checked={minimizeToTray}
@@ -466,8 +467,8 @@ function handleStartWithSystemChange(checked: boolean): void {
               </div>
               <Text className={styles.description}>
                 {traySupported 
-                  ? "程序运行在系统托盘，关闭窗口将最小化到托盘" 
-                  : "当前环境不支持托盘。"}
+                  ? t('settings.tray_desc') 
+                  : t('settings.tray_not_supported')}
               </Text>
               <StatusIndicator status={trayStatus} />
             </div>
@@ -477,7 +478,7 @@ function handleStartWithSystemChange(checked: boolean): void {
               <div className={styles.rowContent}>
                 <div className={styles.titleWithIcon}>
                   <Play20Regular />
-                  <Text weight="semibold">开机自启动</Text>
+                  <Text weight="semibold">{t('settings.auto_start')}</Text>
                 </div>
                 <Switch
                   checked={startWithSystem}
@@ -487,8 +488,8 @@ function handleStartWithSystemChange(checked: boolean): void {
               </div>
               <Text className={styles.description}>
                 {autoStartSupported 
-                  ? "设备开机后自动拉起玩机管家" 
-                  : "当前系统不支持自启动设置。"}
+                  ? t('settings.auto_start_desc') 
+                  : t('settings.auto_start_not_supported')}
               </Text>
               <StatusIndicator status={autoStartStatus} />
             </div>
@@ -498,7 +499,7 @@ function handleStartWithSystemChange(checked: boolean): void {
               <div className={styles.rowContent}>
                 <div className={styles.titleWithIcon}>
                   <Speaker220Regular />
-                  <Text weight="semibold">通知音效</Text>
+                  <Text weight="semibold">{t('settings.notification_sound')}</Text>
                 </div>
                 <Switch
                   checked={soundEnabled}
@@ -511,7 +512,7 @@ function handleStartWithSystemChange(checked: boolean): void {
                 />
               </div>
               <Text className={styles.description}>
-                在执行任务完成或收到重要消息时播放提示音
+                {t('settings.notification_sound_desc')}
               </Text>
             </div>
 
@@ -520,7 +521,7 @@ function handleStartWithSystemChange(checked: boolean): void {
               <div className={styles.rowContent}>
                 <div className={styles.titleWithIcon}>
                   <Keyboard20Regular />
-                  <Text weight="semibold">搜索快捷键</Text>
+                  <Text weight="semibold">{t('settings.search_hotkey')}</Text>
                 </div>
                 <Select
                   value={globalSearchHotkey}
@@ -537,7 +538,7 @@ function handleStartWithSystemChange(checked: boolean): void {
                 </Select>
               </div>
               <Text className={styles.description}>
-                自定义全局功能搜索的组合快捷键
+                {t('settings.search_hotkey_desc')}
               </Text>
             </div>
           </div>
@@ -550,7 +551,7 @@ function handleStartWithSystemChange(checked: boolean): void {
             icon={<ArrowCounterclockwise24Regular />}
             onClick={handleRestoreDefaults}
           >
-            恢复所有设置到默认状态
+            {t('settings.restore_defaults')}
           </Button>
         </div>
       </div>

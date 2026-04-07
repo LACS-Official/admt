@@ -25,6 +25,7 @@ import BatchExecutorDialog from "../Common/BatchExecutorDialog";
 import { useTranslation } from "react-i18next";
 
 import { readDir } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 
 
 const useStyles = makeStyles({
@@ -239,8 +240,8 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
       setFlashStatus("idle");
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error("读取目录失败", e);
-      setMissingFiles(["读取目录失败"]);
+      console.error(t('flash.read_dir_fail'), e);
+      setMissingFiles([t('flash.read_dir_fail')]);
     }
   };
 
@@ -257,7 +258,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
         );
         
         if (!hasFlashScript) {
-          alert("未找到线刷脚本文件 (flash_all.bat/flash_all.sh)");
+          alert(t('flash.script_missing') + " (flash_all.bat/flash_all.sh)");
           return;
         }
 
@@ -275,7 +276,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
         setFlashStatus("idle");
         
       } catch (error) {
-        console.error("解析线刷包失败:", error);
+        console.error(t('flash.package_incomplete'), error);
         alert(t('flash.package_incomplete') + " " + (error instanceof Error ? error.message : String(error)));
       }
     }
@@ -403,21 +404,21 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                       color={missingFiles.includes('flash_all.bat') ? "danger" : "brand"}
                       icon={missingFiles.includes('flash_all.bat') ? <ErrorCircle24Regular /> : <CheckmarkCircle24Regular />}
                     >
-                      flash_all.bat (Clean)
+                      flash_all.bat ({t('common.clear')})
                     </Badge>
                     <Badge 
                       appearance={missingFiles.includes('flash_all_except_storage.bat') ? "ghost" : "filled"}
                       color={missingFiles.includes('flash_all_except_storage.bat') ? "danger" : "success"}
                       icon={missingFiles.includes('flash_all_except_storage.bat') ? <ErrorCircle24Regular /> : <CheckmarkCircle24Regular />}
                     >
-                      flash_all_except_storage.bat (Keep)
+                      flash_all_except_storage.bat ({t('common.keep')})
                     </Badge>
                     <Badge 
                       appearance={missingFiles.includes('flash_all_lock.bat') ? "ghost" : "filled"}
                       color={missingFiles.includes('flash_all_lock.bat') ? "danger" : "danger"}
                       icon={missingFiles.includes('flash_all_lock.bat') ? <ErrorCircle24Regular /> : <LockClosed24Regular />}
                     >
-                      flash_all_lock.bat (Lock)
+                      flash_all_lock.bat ({t('common.lock')})
                     </Badge>
                   </div>
                 </div>
@@ -425,7 +426,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
             </div>
           </div>
 
-              {/* 刷入进度 */}
+          {/* 刷入进度 */}
               {flashStatus !== "idle" && (
                 <div className={styles.section}>
                   <Text weight="semibold">{t('flash.xiaomi_progress')}</Text>
@@ -446,16 +447,15 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                 </div>
               )}
 
-              {/* 操作按钮（仅当三个脚本都存在时显示） */}
-              {selectedFolderPath && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginTop: 'auto' }}>
+              {/* 操作按钮 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginTop: 'auto' }}>
                   {/* Clean Data */}
                   <div className={styles.actionButtonContainer}>
                     <Button 
                       className={styles.actionButton}
                       appearance="primary" 
                       icon={<Play24Regular />} 
-                      disabled={missingFiles.includes('flash_all.bat')}
+                      disabled={!selectedFolderPath || missingFiles.includes('flash_all.bat') || isFlashing}
                       onClick={() => {
                         if (!checkMode()) return;
                         setBatchDialogTitle(`${t('flash.flash_clean')} (flash_all.bat)`);
@@ -475,13 +475,10 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                   <div className={styles.actionButtonContainer}>
                     <Button 
                       className={styles.actionButton}
-                      // Use a customized style for "Green" feel or just standard outline which is cleaner
-                      // Fluent UI doesn't have a direct "Success" button, utilizing inline style for green tint if needed
-                      // For now, Outline is distinct enough, or we can use a light green background if appearance="secondary"
                       appearance="outline"
                       style={{ color: "var(--colorPaletteGreenForeground1)", borderColor: "var(--colorPaletteGreenBorder1)" }}
                       icon={<Play24Regular />} 
-                      disabled={missingFiles.includes('flash_all_except_storage.bat')}
+                      disabled={!selectedFolderPath || missingFiles.includes('flash_all_except_storage.bat') || isFlashing}
                       onClick={() => {
                         if (!checkMode()) return;
                         setBatchDialogTitle(`${t('flash.flash_keep')} (flash_all_except_storage.bat)`);
@@ -504,7 +501,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                       appearance="primary"
                       style={{ backgroundColor: "var(--colorPaletteRedBackground3)", borderColor: "var(--colorPaletteRedBorderActive)" }}
                       icon={<LockClosed24Regular />} 
-                      disabled={missingFiles.includes('flash_all_lock.bat')}
+                      disabled={!selectedFolderPath || missingFiles.includes('flash_all_lock.bat') || isFlashing}
                       onClick={() => {
                         if (!checkMode()) return;
                         setBatchDialogTitle(`${t('flash.flash_lock')} (flash_all_lock.bat)`);
@@ -519,8 +516,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                       {t('flash.flash_lock_sub')}
                     </Text>
                   </div>
-                </div>
-              )}
+              </div>
           </div>
       </Card>
 

@@ -28,6 +28,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { logService } from "../../services/logService";
+import { useTranslation } from "react-i18next";
 
 // 简化的批处理执行参数接口
 interface BatchExecuteParams {
@@ -161,6 +162,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
   onClose,
 }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { setStatusBarMessage, config, updateConfig } = useAppStore();
   const [output, setOutput] = useState<string>('');
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -345,7 +347,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
     // 处理中文编码
     const decodedOutput = decodeChineseText(newOutput);
     
-    const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    const timestamp = new Date().toLocaleTimeString(t('common.locale_tag') || 'zh-CN', { hour12: false });
     const coloredOutput = getColoredOutput(decodedOutput, type);
     const formattedOutput = `[${timestamp}] ${coloredOutput}`;
     
@@ -396,8 +398,8 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         }
 
         // 显示将要执行的命令
-        const commandString = `执行批处理文件: ${batchFileName}`;
-        const initialOutput = `${commandString}\n工作目录: ${workingDirectory}\n${'='.repeat(80)}\n\n`;
+        const commandString = `${t('fastboot.executing')}: ${batchFileName}`;
+        const initialOutput = `${commandString}\n${t('flash.directory')}: ${workingDirectory}\n${'='.repeat(80)}\n\n`;
         setOutput(initialOutput);
 
         await logService.info(`启动批处理脚本: ${batchFileName}`, '脚本执行服务', { workingDirectory });
@@ -411,12 +413,12 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
 
         // 如果是刷机相关的批处理文件，添加提示信息
         if (batchFileName.toLowerCase().includes('flash')) {
-          const flashWarning = '[提示] 检测到刷机操作，设备将在执行过程中断开连接，这是正常现象。刷机完成后请等待设备重启并重新连接。\n\n';
+          const flashWarning = t('batch_executor.flash_notice');
           appendOutput(flashWarning, 'info');
           
           setStatusBarMessage({
             type: "warning",
-            message: "检测到刷机操作，设备将在执行过程中断开连接，这是正常现象。请耐心等待刷机完成并重新连接设备。",
+            message: t('batch_executor.flash_warning_msg'),
           });
         }
 
@@ -453,11 +455,11 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         // 显示执行结果
         let resultOutput = '';
         if (result.success) {
-          resultOutput = `\n${'='.repeat(80)}\n[执行完成] 批处理文件执行成功\n退出码: ${result.exit_code || 0}\n`;
+          resultOutput = `\n${'='.repeat(80)}\n${t('batch_executor.exec_completed', { code: result.exit_code || 0 })}`;
           appendOutput(resultOutput, 'info');
           await logService.info(`批处理脚本执行成功: ${batchFileName}`, '脚本执行服务', { exitCode: result.exit_code || 0 });
         } else {
-          resultOutput = `\n${'='.repeat(80)}\n[执行失败] ${result.error || '未知错误'}\n退出码: ${result.exit_code || 1}\n`;
+          resultOutput = `\n${'='.repeat(80)}\n${t('batch_executor.exec_failed', { error: result.error || t('common.unknown_error'), code: result.exit_code || 1 })}`;
           appendOutput(resultOutput, 'error');
           await logService.error(`批处理脚本执行失败: ${batchFileName}`, '脚本执行服务', { error: result.error, exitCode: result.exit_code || 1 });
         }
@@ -471,7 +473,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         setEndTime(new Date());
         setExitCode(1);
         setIsCompleted(true);
-        const errorOutput = `\n${'='.repeat(80)}\n[错误] ${error.message || error}\n`;
+        const errorOutput = `\n${'='.repeat(80)}\n${t('batch_executor.exec_error', { error: error.message || error })}\n`;
         appendOutput(errorOutput, 'error');
         await logService.error(`批处理脚本执行异常: ${batchFileName}`, '脚本执行服务', { error: String(error) });
         console.error('批处理文件执行失败:', error);
@@ -538,7 +540,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
     // 添加停止通知
     setStatusBarMessage({
       type: "warning",
-      message: "批处理脚本执行已被用户中断",
+      message: t('batch_executor.user_interrupted'),
     });
     
     // 恢复原始的自动检测状态
@@ -561,12 +563,12 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
       await navigator.clipboard.writeText(plainText);
       setStatusBarMessage({
         type: "success",
-        message: "输出内容已复制到剪贴板",
+        message: t('batch_executor.copy_success'),
       });
     } catch (error) {
       setStatusBarMessage({
         type: "error",
-        message: "无法复制到剪贴板",
+        message: t('batch_executor.copy_failed'),
       });
     }
   };
@@ -576,30 +578,30 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
     
     setStatusBarMessage({
       type: "info",
-      message: `日志文件保存在: ${logFileName.current}`,
+      message: t('batch_executor.log_saved', { path: logFileName.current }),
     });
   };
 
   const getStatusBadge = () => {
     if (isRunning) {
-      return <Badge appearance="filled" color="brand" icon={<Spinner size="tiny" />}>执行中</Badge>;
+      return <Badge appearance="filled" color="brand" icon={<Spinner size="tiny" />}>{t('batch_executor.status_running')}</Badge>;
     } else if (isCompleted) {
       if (exitCode === 0) {
-        return <Badge appearance="filled" color="success" icon={<CheckmarkCircle24Regular />}>执行成功</Badge>;
+        return <Badge appearance="filled" color="success" icon={<CheckmarkCircle24Regular />}>{t('batch_executor.status_success')}</Badge>;
       } else {
-        return <Badge appearance="filled" color="danger" icon={<ErrorCircle24Regular />}>执行失败</Badge>;
+        return <Badge appearance="filled" color="danger" icon={<ErrorCircle24Regular />}>{t('batch_executor.status_failed')}</Badge>;
       }
     }
-    return <Badge appearance="outline" color="subtle">准备中</Badge>;
+    return <Badge appearance="outline" color="subtle">{t('batch_executor.status_preparing')}</Badge>;
   };
 
   const getExecutionTime = () => {
     if (startTime && endTime) {
       const duration = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
-      return `${duration}秒`;
+      return `${duration}${t('batch_executor.seconds_unit')}`;
     } else if (startTime && isRunning) {
       const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-      return `${duration}秒`;
+      return `${duration}${t('batch_executor.seconds_unit')}`;
     }
     return '-';
   };
@@ -627,7 +629,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
                 borderRadius: '6px'
               }}
             >
-              {isRunning ? '停止执行' : '关闭'}
+              {isRunning ? t('batch_executor.stop_exec') : t('common.close')}
             </Button>
           </div>
 
@@ -635,9 +637,9 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         <div className={styles.statusBar}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             {getStatusBadge()}
-            <Text size={300}>文件: {batchFileName}</Text>
-            <Text size={300}>执行时间: {getExecutionTime()}</Text>
-            {exitCode !== null && <Text size={300}>退出码: {exitCode}</Text>}
+            <Text size={300}>{t('batch_executor.file_label')}{batchFileName}</Text>
+            <Text size={300}>{t('batch_executor.exec_time_label')}{getExecutionTime()}</Text>
+            {exitCode !== null && <Text size={300}>{t('batch_executor.exit_code_label')}{exitCode}</Text>}
           </div>
         </div>
         
@@ -660,7 +662,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
               parseAnsiToHtml(output)
             ) : (
               <span style={{ color: '#666', fontStyle: 'italic' }}>
-                等待执行输出...
+                {t('batch_executor.waiting_output')}
               </span>
             )}
           </div>
@@ -676,7 +678,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
               onClick={handleCopyOutput}
               disabled={!output}
             >
-              复制输出
+              {t('batch_executor.copy_output')}
             </Button>
             <Button
               size="small"
@@ -685,7 +687,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
               onClick={handleSaveLog}
               disabled={!logFileName.current}
             >
-              保存日志
+              {t('batch_executor.save_log')}
             </Button>
           </div>
           
@@ -695,7 +697,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
               onClick={handleClose}
               style={{ borderRadius: '6px' }}
             >
-              {isRunning ? '停止执行' : '完成'}
+              {isRunning ? t('batch_executor.stop_exec') : t('batch_executor.finish')}
             </Button>
           </div>
         </div>
@@ -708,15 +710,13 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
         <DialogTitle>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Warning24Regular style={{ color: 'var(--colorPaletteYellowForeground1)' }} />
-            <Text weight="semibold">确认停止执行</Text>
+            <Text weight="semibold">{t('batch_executor.confirm_stop_title')}</Text>
           </div>
         </DialogTitle>
         <DialogContent>
           <DialogBody>
-            <Text>
-              批处理脚本正在执行中，强制停止可能会导致设备处于不稳定状态。
-              <br /><br />
-              您确定要停止当前的执行过程吗？
+            <Text style={{ whiteSpace: 'pre-wrap' }}>
+              {t('batch_executor.confirm_stop_desc')}
             </Text>
           </DialogBody>
         </DialogContent>
@@ -726,7 +726,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
             onClick={handleCancelClose}
             style={{ borderRadius: '6px' }}
           >
-            取消
+            {t('common.cancel')}
           </Button>
           <Button 
             appearance="primary" 
@@ -737,7 +737,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
               borderRadius: '6px'
             }}
           >
-            确认停止
+            {t('batch_executor.confirm_stop_btn')}
           </Button>
         </DialogActions>
       </DialogSurface>

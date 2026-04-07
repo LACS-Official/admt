@@ -1,4 +1,5 @@
-import React, { useState }  from 'react';
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   makeStyles,
   Tab,
@@ -9,12 +10,10 @@ import {
 import {
   Info24Regular,
   Options24Regular,
-  Document24Regular,
   Shield24Regular,
   DeviceEq24Regular,
   Desktop24Regular,
   Bot24Regular,
-  Heart24Regular,
 } from "@fluentui/react-icons";
 import { SettingsView } from "../../types/app";
 import AboutPanel from "./AboutPanel";
@@ -74,23 +73,22 @@ const useStyles = makeStyles({
       color: "var(--colorNeutralForeground2)",
       margin: "0 4px",
 
-      
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground2)",
         color: "var(--colorNeutralForeground1)",
         transform: "translateY(-1px)",
         boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
-      
+
       "&[aria-selected='true']": {
         backgroundColor: "var(--colorBrandBackground2)",
         color: "var(--colorBrandForeground1)",
         border: "1px solid var(--colorBrandStroke2)",
         fontWeight: 600,
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
-    
+
     "@media (max-width: 768px)": {
       "& .fui-Tab": {
         fontSize: "11px",
@@ -111,39 +109,39 @@ const useStyles = makeStyles({
 const tabs = [
   {
     id: "about" as SettingsView,
-    label: "关于页面",
+    label: "settings.tabs.about",
     icon: <Info24Regular />,
   },
   {
     id: "devices-settings" as SettingsView,
-    label: "设备设置",
+    label: "settings.tabs.device_settings",
     icon: <DeviceEq24Regular />,
   },
-    {
+  {
     id: "other-settings" as SettingsView,
-    label: "基础设置",
+    label: "settings.tabs.basic_settings",
     icon: <Options24Regular />,
   },
   {
     id: "display-settings" as SettingsView,
-    label: "显示设置",
+    label: "settings.tabs.display_settings",
     icon: <Desktop24Regular />,
   },
-
   {
     id: "privacy" as SettingsView,
-    label: "隐私政策",
+    label: "settings.tabs.privacy",
     icon: <Shield24Regular />,
   },
   {
     id: "ai-settings" as SettingsView,
-    label: "AI 设置",
+    label: "settings.tabs.ai_settings",
     icon: <Bot24Regular />,
-  }
+  },
 ];
 
 const SettingsPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<SettingsView>("about");
 
   const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
@@ -167,11 +165,8 @@ const SettingsPanel: React.FC = () => {
     }
   };
 
-
-
   return (
     <div className={styles.container}>
-
       <div className={styles.tabContainer}>
         <TabList
           id="tour-settings-tabs"
@@ -180,20 +175,14 @@ const SettingsPanel: React.FC = () => {
           className={styles.headerTabList}
         >
           {tabs.map((tab) => (
-            <Tab
-              key={tab.id}
-              value={tab.id}
-              icon={tab.icon}
-            >
-              {tab.label}
+            <Tab key={tab.id} value={tab.id} icon={tab.icon}>
+              {t(tab.label)}
             </Tab>
           ))}
         </TabList>
       </div>
 
-      <div className={styles.content}>
-        {renderContent()}
-      </div>
+      <div className={styles.content}>{renderContent()}</div>
     </div>
   );
 };

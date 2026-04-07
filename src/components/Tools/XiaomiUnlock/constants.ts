@@ -71,9 +71,9 @@ export const SYSTEM_PROPS = {
 
 /**
  * 创建小米工具列表的工厂函数
- * 重构点：将工具列表创建逻辑提取为函数，支持动态生成
+ * 重构点：将工具列表创建逻辑提取为函数，支持动态生成，并支持国际化
  */
-export const createXiaomiTools = (device: any): XiaomiTool[] => {
+export const createXiaomiTools = (device: any, t: any): XiaomiTool[] => {
 
   const isXiaomiDevice = (device?.properties?.brand?.toLowerCase()?.includes("xiaomi") ?? false) || 
                         (device?.properties?.manufacturer?.toLowerCase()?.includes("xiaomi") ?? false);
@@ -82,32 +82,32 @@ export const createXiaomiTools = (device: any): XiaomiTool[] => {
   return [
     {
       id: "xiaomi_unlock_tool",
-      label: "小米解锁工具",
-      description: "启动小米官方解锁工具",
+      label: t("unlock.xiaomi_unlock_tool"),
+      description: t("unlock.xiaomi_unlock_tool_desc"),
       icon: React.createElement(LockOpen24Regular),
       dangerous: false,
       available: true,
     },
     {
       id: "bypass_unlock",
-      label: "Bypass解锁",
-      description: "执行小米设备bypass解锁操作",
+      label: t("unlock.bypass_unlock"),
+      description: t("unlock.bypass_unlock_desc"),
       icon: React.createElement(Flash24Regular),
       dangerous: true,
       available: isXiaomiDevice,
     },
     {
       id: "detect_unlock_method",
-      label: "检测解锁方式",
-      description: "检测当前小米设备支持的解锁方式",
+      label: t("unlock.detect_unlock_method"),
+      description: t("unlock.detect_unlock_method_desc"),
       icon: React.createElement(Search24Regular),
       dangerous: false,
       available: isXiaomiDevice,
     },
     {
       id: "install_unlock_settings",
-      label: "安装解锁专用设置",
-      description: "安装解锁过程中需要的专用设置",
+      label: t("unlock.install_unlock_settings"),
+      description: t("unlock.install_unlock_settings_desc"),
       icon: React.createElement(Settings24Regular),
       dangerous: false,
       available: isSysMode,

@@ -410,11 +410,8 @@ async fn start_scrcpy_process(args: &[String]) -> Result<std::process::Child> {
         log::info!("scrcpy directory: {}", parent_dir.display());
 
         // 检查必要的依赖文件
-        let required_files = if cfg!(windows) {
-            vec!["scrcpy-server", "adb.exe"]
-        } else {
-            vec!["scrcpy-server"]
-        };
+        let adb_filename = format!("adb{}", std::env::consts::EXE_SUFFIX);
+        let required_files = vec!["scrcpy-server".to_string(), adb_filename];
 
         for file in &required_files {
             let file_path = parent_dir.join(file);
@@ -549,6 +546,14 @@ pub async fn is_device_mirroring(
 fn find_scrcpy_executable() -> Result<String> {
     log::info!("Searching for scrcpy executable...");
 
+    use std::env::consts::EXE_SUFFIX;
+    let scrcpy_filename = format!("scrcpy{}", EXE_SUFFIX);
+    let platform_dir = if cfg!(windows) {
+        "scrcpy-win32-v3.3.1"
+    } else {
+        "scrcpy-linux-v3.3.1"
+    };
+
     // 1. 检查应用程序资源目录（发布版本优先）
     let exe_dir = std::env::current_exe()
         .map_err(|e| AdmtError::Io(format!("Failed to get executable directory: {}", e)))?
@@ -556,19 +561,15 @@ fn find_scrcpy_executable() -> Result<String> {
         .ok_or_else(|| AdmtError::Io("Failed to get parent directory".to_string()))?
         .to_path_buf();
 
-    // 发布版本中，scrcpy在应用程序根目录的tools/scrcpy-win32-v3.3.1/目录下
+    // 发布版本中，scrcpy资源路径
     let scrcpy_resource_paths = [
-        // 直接在可执行文件目录
-        exe_dir.join("scrcpy.exe"),
-        // 在tools目录下
-        exe_dir.join("tools").join("scrcpy.exe"),
-        // 在tools/scrcpy-win32-v3.3.1目录下（主要路径）
+        exe_dir.join(&scrcpy_filename),
+        exe_dir.join("tools").join(&scrcpy_filename),
         exe_dir
             .join("tools")
-            .join("scrcpy-win32-v3.3.1")
-            .join("scrcpy.exe"),
-        // 在scrcpy-win32-v3.3.1目录下
-        exe_dir.join("scrcpy-win32-v3.3.1").join("scrcpy.exe"),
+            .join(platform_dir)
+            .join(&scrcpy_filename),
+        exe_dir.join(platform_dir).join(&scrcpy_filename),
     ];
 
     for scrcpy_path in &scrcpy_resource_paths {
@@ -637,36 +638,28 @@ fn find_project_scrcpy() -> Result<String> {
         if package_json.exists() || src_tauri.exists() {
             use std::env::consts::EXE_SUFFIX;
             let scrcpy_filename = format!("scrcpy{}", EXE_SUFFIX);
+            let platform_dir = if cfg!(windows) {
+                "scrcpy-win32-v3.3.1"
+            } else {
+                "scrcpy-linux-v3.3.1"
+            };
 
             // 找到项目根目录，检查 scrcpy 的可能位置
             let scrcpy_locations = [
-                // 直接在根目录
                 current_dir.join(&scrcpy_filename),
-                // 在 scrcpy-win32 目录
-                current_dir
-                    .join("scrcpy-win32-v3.3.1")
-                    .join(&scrcpy_filename),
-                // 在 scrcpy-win64 目录
+                current_dir.join(platform_dir).join(&scrcpy_filename),
                 current_dir
                     .join("scrcpy-win64-v3.3.1")
                     .join(&scrcpy_filename),
-                // 在 scrcpy 目录
                 current_dir.join("scrcpy").join(&scrcpy_filename),
-                // 在 tools 目录
                 current_dir.join("tools").join(&scrcpy_filename),
                 current_dir
                     .join("tools")
                     .join("scrcpy")
                     .join(&scrcpy_filename),
-                // 在 tools/scrcpy-win32-v3.3.1 目录 (用户指定路径)
                 current_dir
                     .join("tools")
-                    .join("scrcpy-win32-v3.3.1")
-                    .join(&scrcpy_filename),
-                // 在 tools/scrcpy-v3.3.1 目录 (Linux 可能的路径)
-                current_dir
-                    .join("tools")
-                    .join("scrcpy-v3.3.1")
+                    .join(platform_dir)
                     .join(&scrcpy_filename),
             ];
 

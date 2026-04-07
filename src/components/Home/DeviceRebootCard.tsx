@@ -243,7 +243,7 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
     if (selectedDevice?.serial === "DEMO-ADB-001") {
       setStatusBarMessage({
         type: "warning",
-        message: "演示模式下无法执行重启操作",
+        message: t('reboot.demo_mode'),
         duration: 3000,
       });
       return;

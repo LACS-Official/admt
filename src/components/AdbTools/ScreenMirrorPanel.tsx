@@ -25,15 +25,17 @@ import {
     RecordStop24Regular,
     Desktop24Regular,
     Screenshot24Regular,
+    Speaker224Regular,
+    SpeakerMute24Regular,
     PhoneDesktop24Regular,
-    Info24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
 import { 
     ScreenMirrorDevice, 
     SCREEN_MIRROR_QUALITY_PRESETS,
-    ScreenMirrorSession 
+    ScreenMirrorSession,
+    ScreenMirrorConfig
 } from "../../types/screenMirror";
 import ScreenMirrorService from "../../services/screenMirrorService";
 import { DeviceInfo } from "../../types/device";
@@ -311,7 +313,18 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
     const handleBitrateChange = (bitrate: number) => updateConfig({ quality: { ...config.quality, bitrate } });
     const handleFramerateChange = (framerate: number) => updateConfig({ quality: { ...config.quality, framerate } });
     const handleCodecChange = (codec: "h264" | "h265") => updateConfig({ quality: { ...config.quality, codec } });
-    const handleSwitchChange = (field: string, checked: boolean) => updateConfig({ [field]: checked });
+    const handleSwitchChange = (field: keyof ScreenMirrorConfig, checked: boolean) => updateConfig({ [field]: checked });
+
+    // Find the current preset based on quality settings
+    const currentPreset = React.useMemo(() => {
+        return Object.keys(SCREEN_MIRROR_QUALITY_PRESETS).find(key => {
+            const preset = SCREEN_MIRROR_QUALITY_PRESETS[key];
+            return preset.resolution === config.quality.resolution &&
+                   preset.bitrate === config.quality.bitrate &&
+                   preset.framerate === config.quality.framerate &&
+                   preset.codec === config.quality.codec;
+        }) || "custom";
+    }, [config.quality]);
 
     const resolutionOptions = [
         { value: "auto", label: t('mirror.auto') },
@@ -326,7 +339,7 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
     ];
     const qualityPresetOptions = Object.keys(SCREEN_MIRROR_QUALITY_PRESETS).map(key => ({
         value: key,
-        label: key.charAt(0).toUpperCase() + key.slice(1),
+        label: t(`mirror.quality_${key}`),
     }));
 
     return (
@@ -409,11 +422,12 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <Field label={t('mirror.quality_preset')} size="small">
                                 <Dropdown
-                                    value={qualityPresetOptions.find(p => p.value === 'high')?.label || "High"}
+                                    value={currentPreset === "custom" ? t('mirror.custom') : t(`mirror.quality_${currentPreset}`)}
                                     placeholder={t('mirror.select_quality_placeholder')}
                                     onOptionSelect={(_, d) => handleQualityPresetChange(d.optionValue as string)}
                                 >
                                     {qualityPresetOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
+                                    <Option value="custom" disabled>{t('mirror.custom')}</Option>
                                 </Dropdown>
                             </Field>
                             <div style={{ display: 'flex', gap: '16px' }}>
@@ -425,7 +439,9 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                                         {resolutionOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
                                     </Dropdown>
                                 </Field>
-                                <Field label={t('mirror.codec')} size="small" style={{ flex: 1 }}>
+
+                            </div>
+                             <Field label={t('mirror.codec')} size="small" style={{ flex: 1 }}>
                                     <Dropdown
                                         value={config.quality.codec}
                                         onOptionSelect={(_, d) => handleCodecChange(d.optionValue as "h264" | "h265")}
@@ -433,16 +449,15 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                                         {codecOptions.map(o => <Option key={o.value} value={o.value}>{o.label}</Option>)}
                                     </Dropdown>
                                 </Field>
-                            </div>
                             <div className={styles.sliderRow}>
                                 <Text className={styles.sliderLabel}>{t('mirror.bitrate')}</Text>
                                 <Slider min={1} max={20} step={1} value={config.quality.bitrate} onChange={(_, d) => handleBitrateChange(d.value)} style={{ flex: 1 }} />
-                                <Text className={styles.sliderValue}>{config.quality.bitrate} Mbps</Text>
+                                <Text className={styles.sliderValue}>{config.quality.bitrate} {t('mirror.bitrate_unit')}</Text>
                             </div>
                             <div className={styles.sliderRow}>
                                 <Text className={styles.sliderLabel}>{t('mirror.framerate')}</Text>
                                 <Slider min={15} max={60} step={5} value={config.quality.framerate} onChange={(_, d) => handleFramerateChange(d.value)} style={{ flex: 1 }} />
-                                <Text className={styles.sliderValue}>{config.quality.framerate} fps</Text>
+                                <Text className={styles.sliderValue}>{config.quality.framerate} {t('mirror.framerate_unit')}</Text>
                             </div>
                         </div>
                     </div>
@@ -467,12 +482,16 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                                 <Switch checked={config.powerOffOnClose} onChange={(_, d) => handleSwitchChange('powerOffOnClose', d.checked)} />
                             </div>
                             <div className={styles.fieldRow}>
-                                <Text className={styles.fieldLabel}>{t('mirror.no_power_on')}</Text>
-                                <Switch checked={config.noPowerOn} onChange={(_, d) => handleSwitchChange('noPowerOn', d.checked)} />
+                                <Text className={styles.fieldLabel}>{t('mirror.audio_enabled')}</Text>
+                                <Switch checked={config.audioEnabled} onChange={(_, d) => handleSwitchChange('audioEnabled', d.checked)} />
                             </div>
                             <div className={styles.fieldRow}>
-                                <Text className={styles.fieldLabel}>{t('mirror.fullscreen_mode')}</Text>
-                                <Switch checked={config.fullscreen} onChange={(_, d) => handleSwitchChange('fullscreen', d.checked)} />
+                                <Text className={styles.fieldLabel}>{t('mirror.always_on_top')}</Text>
+                                <Switch checked={config.alwaysOnTop} onChange={(_, d) => handleSwitchChange('alwaysOnTop', d.checked)} />
+                            </div>
+                            <div className={styles.fieldRow}>
+                                <Text className={styles.fieldLabel}>{t('mirror.control_enabled')}</Text>
+                                <Switch checked={config.controlEnabled} onChange={(_, d) => handleSwitchChange('controlEnabled', d.checked)} />
                             </div>
                         </div>
                     </div>
@@ -492,21 +511,75 @@ const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMi
     const styles = useStyles();
     const { t } = useTranslation();
     const [isRecording, setIsRecording] = useState(false);
-    const [showDetails, setShowDetails] = useState(false);
     const { isFullscreen, toggleFullscreen } = useScreenMirrorStore();
 
     const handleToggleRecording = () => setIsRecording(!isRecording);
     const handleTakeScreenshot = () => console.log('Taking screenshot...');
-    const handleOpenScrcpyWindow = () => alert(t('mirror.scrcpy_hint'));
 
     const formatDuration = (startTime?: Date) => {
         if (!startTime) return "00:00";
         const now = new Date();
-        const diff = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+        const start = new Date(startTime);
+        const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
         const minutes = Math.floor(diff / 60);
         const seconds = diff % 60;
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     };
+
+    return (
+        <Card className={styles.displayCard}>
+            <div className={styles.displayContainer}>
+                <div className={styles.mirrorPlaceholder}>
+                    <PhoneDesktop24Regular style={{ fontSize: '64px', color: 'var(--colorBrandForeground1)' }} />
+                    <Text size={500} weight="semibold">{session.deviceName || session.deviceSerial || t('mirror.unknown_device')}</Text>
+                    <Badge color="success" appearance="tint">{t('mirror.mirroring')}</Badge>
+                    
+                    <div className={styles.infoCard}>
+                        <div className={styles.fieldRow}>
+                            <Text size={200}>{t('mirror.duration_label')}</Text>
+                            <Text size={200} weight="bold">{formatDuration(session.startTime)}</Text>
+                        </div>
+                        <div className={styles.fieldRow}>
+                            <Text size={200}>{t('mirror.resolution_label')}</Text>
+                            <Text size={200}>{session.config.quality.resolution}</Text>
+                        </div>
+                    </div>
+
+                    <div className={styles.buttonGroup}>
+                        <Button size="small" icon={<Screenshot24Regular />} onClick={handleTakeScreenshot}>
+                            {t('mirror.screenshot')}
+                        </Button>
+                        <Button 
+                            size="small" 
+                            icon={isRecording ? <RecordStop24Regular style={{ color: 'var(--colorPaletteRedForeground1)' }} /> : <Record24Regular />} 
+                            onClick={handleToggleRecording}
+                        >
+                            {isRecording ? t('mirror.stop_record') : t('mirror.start_record')}
+                        </Button>
+                        <Button size="small" icon={<FullScreenMaximize24Regular />} onClick={toggleFullscreen}>
+                            {isFullscreen ? t('common.close') : t('mirror.fullscreen')}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            <div className={styles.controls}>
+                <div className={styles.statusInfo}>
+                    <Text size={200} italic color="neutralTertiary">{t('mirror.scrcpy_hint')}</Text>
+                </div>
+                <div className={styles.controlsRight}>
+                    <Button 
+                        appearance="primary" 
+                        size="small" 
+                        icon={<Stop24Regular />} 
+                        onClick={onStopMirror}
+                    >
+                        {t('mirror.stop_mirror')}
+                    </Button>
+                </div>
+            </div>
+        </Card>
+    );
 };
 
 // --- Main ScreenMirrorPanel Component ---

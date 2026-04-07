@@ -19,6 +19,7 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { useTranslation } from 'react-i18next';
 import {
   Shield24Regular,
   Warning24Regular,
@@ -99,6 +100,7 @@ const useStyles = makeStyles({
 
 const PrivacyManagementPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [showFirstConfirmDialog, setShowFirstConfirmDialog] = useState(false);
   const [showSecondConfirmDialog, setShowSecondConfirmDialog] = useState(false);
 
@@ -116,8 +118,8 @@ const PrivacyManagementPanel: React.FC = () => {
   } = usePrivacyConsentStore();
 
   const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return '未设置';
-    return new Date(timestamp).toLocaleString('zh-CN');
+    if (!timestamp) return t('privacy.not_set');
+    return new Date(timestamp).toLocaleString(t('common.locale_tag'));
   };
 
 
@@ -202,7 +204,8 @@ const PrivacyManagementPanel: React.FC = () => {
         <CardHeader
           header={
             <Text weight="semibold" size={400}>
-              <Shield24Regular /> 隐私同意状态
+              <Shield24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
+              {t('privacy.panel_title')}
             </Text>
           }
         />
@@ -210,37 +213,37 @@ const PrivacyManagementPanel: React.FC = () => {
           <div className={styles.statusSection}>
             <div className={styles.statusItem}>
               <div>
-                <Text className={styles.statusLabel}>隐私政策</Text>
+                <Text className={styles.statusLabel}>{t('privacy.policy')}</Text>
                 <Text className={styles.timestampText}>
-                  -同意时间: {formatTimestamp(privacyPolicyAcceptedAt)}
+                  {t('privacy.accepted_at', { time: formatTimestamp(privacyPolicyAcceptedAt) })}
                 </Text>
               </div>
               <Text className={styles.statusValue}>
-                {hasAcceptedPrivacyPolicy ? '✅ 已同意' : '❌ 未同意'}
+                {hasAcceptedPrivacyPolicy ? t('privacy.accepted') : t('privacy.not_accepted')}
               </Text>
             </div>
             
             <div className={styles.statusItem}>
               <div>
-                <Text className={styles.statusLabel}>用户协议</Text>
+                <Text className={styles.statusLabel}>{t('privacy.agreement')}</Text>
                 <Text className={styles.timestampText}>
-                  -同意时间: {formatTimestamp(userAgreementAcceptedAt)}
+                  {t('privacy.accepted_at', { time: formatTimestamp(userAgreementAcceptedAt) })}
                 </Text>
               </div>
               <Text className={styles.statusValue}>
-                {hasAcceptedUserAgreement ? '✅ 已同意' : '❌ 未同意'}
+                {hasAcceptedUserAgreement ? t('privacy.accepted') : t('privacy.not_accepted')}
               </Text>
             </div>
             
             <div className={styles.statusItem}>
               <div>
-                <Text className={styles.statusLabel}>数据收集</Text>
+                <Text className={styles.statusLabel}>{t('privacy.data_collection')}</Text>
                 <Text className={styles.timestampText}>
-                  -同意时间: {formatTimestamp(dataCollectionAcceptedAt)}
+                  {t('privacy.accepted_at', { time: formatTimestamp(dataCollectionAcceptedAt) })}
                 </Text>
               </div>
               <Text className={styles.statusValue}>
-                {hasAcceptedDataCollection ? '✅ 已同意' : '❌ 未同意'}
+                {hasAcceptedDataCollection ? t('privacy.accepted') : t('privacy.not_accepted')}
               </Text>
             </div>
           </div>
@@ -248,7 +251,7 @@ const PrivacyManagementPanel: React.FC = () => {
           {!canCollectData() && (
             <MessageBar intent="warning">
               <Warning24Regular />
-              当前隐私设置不允许数据收集。软件功能可能受限。
+              {t('privacy.collection_warning')}
             </MessageBar>
           )}
         </div>
@@ -260,17 +263,18 @@ const PrivacyManagementPanel: React.FC = () => {
         <CardHeader
           header={
             <Text weight="semibold" size={400}>
-              <Warning24Regular /> 重置应用数据
+              <Warning24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
+              {t('privacy.reset_title')}
             </Text>
           }
         />
         <div className={styles.cardContent}>
           <div className={styles.dangerZone}>
             <Text weight="semibold" style={{ color: tokens.colorPaletteRedForeground3 }}>
-              ⚠️ 危险操作
+              {t('privacy.danger_zone')}
             </Text>
             <Text size={200} style={{ marginTop: tokens.spacingVerticalS }}>
-              重置应用数据将完全清除所有用户数据和设置，撤销所有已同意的条款，并将应用恢复到首次安装时的初始状态。此操作不可逆转，请谨慎操作。
+              {t('privacy.reset_desc')}
             </Text>
 
             <div style={{
@@ -284,7 +288,7 @@ const PrivacyManagementPanel: React.FC = () => {
                 icon={<ArrowReset24Regular />}
                 onClick={handleResetApp}
               >
-                重置应用数据
+                {t('privacy.reset_title')}
               </Button>
             </div>
           </div>
@@ -297,20 +301,20 @@ const PrivacyManagementPanel: React.FC = () => {
           <DialogBody>
             <DialogTitle style={{ color: tokens.colorPaletteRedForeground3 }}>
               <Warning24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
-              确认重置应用数据
+              {t('privacy.confirm_reset_title')}
             </DialogTitle>
             <DialogContent>
               <Text>
-                您确定要重置应用数据吗？此操作将：
+                {t('privacy.confirm_reset_desc')}
               </Text>
               <div style={{ marginTop: tokens.spacingVerticalS, marginLeft: tokens.spacingHorizontalM }}>
-                <Text>• 清除所有用户数据和设置</Text><br />
-                <Text>• 撤销所有已同意的条款和政策</Text><br />
-                <Text>• 将应用恢复到首次安装时的状态</Text><br />
-                <Text>• 下次启动时显示欢迎页面和首次使用流程</Text>
+                <Text>{t('privacy.reset_item1')}</Text><br />
+                <Text>{t('privacy.reset_item2')}</Text><br />
+                <Text>{t('privacy.reset_item3')}</Text><br />
+                <Text>{t('privacy.reset_item4')}</Text>
               </div>
               <Text style={{ marginTop: tokens.spacingVerticalS, fontWeight: tokens.fontWeightSemibold }}>
-                此操作不可逆转，请谨慎操作！
+                {t('privacy.irreversible_notice')}
               </Text>
             </DialogContent>
             <DialogActions>
@@ -318,13 +322,13 @@ const PrivacyManagementPanel: React.FC = () => {
                 appearance="secondary"
                 onClick={handleCancelReset}
               >
-                取消
+                {t('common.cancel')}
               </Button>
               <Button
                 appearance="primary"
                 onClick={handleFirstConfirm}
               >
-                确认重置
+                {t('common.confirm_reset')}
               </Button>
             </DialogActions>
           </DialogBody>
@@ -336,8 +340,8 @@ const PrivacyManagementPanel: React.FC = () => {
         <DialogSurface>
           <DialogBody>
             <DialogTitle>
-              <DismissCircle24Regular />
-              最终确认重置
+              <DismissCircle24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
+              {t('privacy.final_confirm_title')}
             </DialogTitle>
             <DialogContent>
               <Text style={{
@@ -345,10 +349,10 @@ const PrivacyManagementPanel: React.FC = () => {
                 fontWeight: tokens.fontWeightSemibold,
                 color: tokens.colorPaletteRedForeground3
               }}>
-                ⚠️ 这是最后一次确认机会！
+                {t('privacy.last_chance')}
               </Text>
               <Text style={{ marginTop: tokens.spacingVerticalM }}>
-                重置操作即将执行，这将：
+                {t('privacy.will_perform')}
               </Text>
               <div style={{
                 marginTop: tokens.spacingVerticalS,
@@ -358,17 +362,17 @@ const PrivacyManagementPanel: React.FC = () => {
                 borderRadius: tokens.borderRadiusSmall,
                 border: `1px solid ${tokens.colorPaletteRedBorder1}`
               }}>
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 永久删除所有应用数据</Text><br />
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 清除所有用户设置和偏好</Text><br />
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 撤销所有隐私政策同意</Text><br />
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>• 应用将自动退出并重启</Text>
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>{t('privacy.final_item1')}</Text><br />
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>{t('privacy.final_item2')}</Text><br />
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>{t('privacy.final_item3')}</Text><br />
+                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>{t('privacy.final_item4')}</Text>
               </div>
               <Text style={{
                 marginTop: tokens.spacingVerticalM,
                 fontWeight: tokens.fontWeightBold,
                 color: tokens.colorPaletteRedForeground3
               }}>
-                此操作无法撤销！确定要继续吗？
+                {t('privacy.final_notice')}
               </Text>
             </DialogContent>
             <DialogActions>
@@ -376,7 +380,7 @@ const PrivacyManagementPanel: React.FC = () => {
                 appearance="secondary"
                 onClick={handleCancelReset}
               >
-                取消
+                {t('common.cancel')}
               </Button>
               <Button
                 appearance="primary"
@@ -386,7 +390,7 @@ const PrivacyManagementPanel: React.FC = () => {
                   borderColor: tokens.colorPaletteRedBorder2
                 }}
               >
-                重置
+                {t('common.reset')}
               </Button>
             </DialogActions>
           </DialogBody>

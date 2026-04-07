@@ -31,7 +31,9 @@ import {
   Warning24Regular,
   Checkmark24Regular,
   Dismiss24Regular,
+  ArrowSync24Regular,
 } from '@fluentui/react-icons';
+import { useTranslation } from 'react-i18next';
 import { activationService } from '../../services/activationService';
 import { useAppConfigStore, useWelcomeStore } from '../../stores/welcomeStore';
 import { useStartupFlowStore } from '../../stores/startupFlowStore';
@@ -141,6 +143,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const { t } = useTranslation();
 
   const { setActivated, setConfig } = useAppConfigStore();
   const { setCurrentStep, resetWelcome } = useWelcomeStore();
@@ -185,7 +188,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
 
     } catch (err) {
       console.error('加载激活信息失败:', err);
-      setError('加载激活信息失败，请稍后重试');
+      setError(t('user_info.load_failed', '加载激活信息失败，请稍后重试'));
     } finally {
       setIsLoading(false);
     }
@@ -264,7 +267,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
 
     } catch (err) {
       console.error('删除激活数据失败:', err);
-      setError('删除激活数据失败，请稍后重试');
+      setError(t('user_info.delete_failed', '删除激活数据失败，请稍后重试'));
     } finally {
       setIsDeleting(false);
     }
@@ -318,7 +321,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
       return (
         <div className={styles.loadingContainer}>
           <Spinner size="medium" />
-          <Text>正在加载激活信息...</Text>
+          <Text>{t('user_info.loading')}</Text>
         </div>
       );
     }
@@ -335,10 +338,10 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
       return (
         <div className={styles.noDataContainer}>
           <Warning24Regular style={{ fontSize: '48px', color: 'var(--colorNeutralForeground3)' }} />
-          <Title3>未找到激活信息</Title3>
-          <Body1>当前应用未激活或激活数据已损坏</Body1>
+          <Title3>{t('user_info.not_found')}</Title3>
+          <Body1>{t('user_info.not_found_desc')}</Body1>
           <Body1 style={{ color: 'var(--colorBrandForeground1)', marginTop: '12px' }}>
-            正在跳转到激活页面...
+            {t('user_info.redirecting')}
           </Body1>
           <Spinner size="medium" style={{ marginTop: '16px' }} />
         </div>
@@ -351,7 +354,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
           <div className={styles.infoItem}>
             <Key24Regular className={styles.infoIcon} />
             <div className={styles.infoContent}>
-              <Text className={styles.infoLabel}>激活码</Text>
+              <Text className={styles.infoLabel}>{t('user_info.code')}</Text>
               <Text className={styles.infoValue}>{formatActivationCode(activationInfo.activationCode)}</Text>
             </div>
           </div>
@@ -361,7 +364,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
           <div className={styles.infoItem}>
             <Calendar24Regular className={styles.infoIcon} />
             <div className={styles.infoContent}>
-              <Text className={styles.infoLabel}>激活时间</Text>
+              <Text className={styles.infoLabel}>{t('user_info.time')}</Text>
               <Text className={styles.infoValue}>{formatDateTime(activationInfo.activationDate)}</Text>
             </div>
           </div>
@@ -369,15 +372,15 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
           <div className={styles.infoItem}>
             <Calendar24Regular className={styles.infoIcon} />
             <div className={styles.infoContent}>
-              <Text className={styles.infoLabel}>过期时间</Text>
+              <Text className={styles.infoLabel}>{t('user_info.expiry')}</Text>
               <Text className={styles.infoValue}>{formatDateTime(activationInfo.expiryDate)}</Text>
               {activationInfo.isExpired ? (
                 <Caption1 style={{ color: 'var(--colorPaletteRedForeground1)' }}>
-                  已过期
+                  {t('user_info.expired')}
                 </Caption1>
               ) : (
                 <Caption1 style={{ color: 'var(--colorPaletteGreenForeground1)' }}>
-                  剩余 {activationInfo.remainingDays} 天
+                  {t('user_info.remaining_days', { days: activationInfo.remainingDays })}
                 </Caption1>
               )}
             </div>
@@ -398,9 +401,9 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
         </div>
 
         <div className={styles.dangerZone}>
-          <Text className={styles.dangerTitle}>危险操作</Text>
+          <Text className={styles.dangerTitle}>{t('user_info.danger_title')}</Text>
           <Text className={styles.dangerDescription}>
-            删除本地激活数据将清除所有激活信息，您需要重新输入激活码才能继续使用应用。
+            {t('user_info.danger_desc')}
           </Text>
           
           {!showDeleteConfirm ? (
@@ -410,7 +413,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
               className={styles.deleteButton}
               onClick={() => setShowDeleteConfirm(true)}
             >
-              删除本地激活码
+              {t('user_info.delete_local_code')}
             </Button>
           ) : (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -421,7 +424,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
                 onClick={handleDeleteActivation}
                 disabled={isDeleting}
               >
-                {isDeleting ? '删除中...' : '确认删除'}
+                {isDeleting ? t('user_info.deleting') : t('user_info.confirm_delete')}
               </Button>
               <Button
                 appearance="secondary"
@@ -429,7 +432,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
               >
-                取消
+                {t('common.cancel')}
               </Button>
             </div>
           )}
@@ -438,7 +441,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
         {deleteSuccess && (
           <MessageBar intent="success">
             <MessageBarBody>
-              激活数据已成功删除！应用将在2秒后自动跳转到激活页面，您可以重新输入激活码。
+              {t('user_info.delete_success_msg')}
             </MessageBarBody>
           </MessageBar>
         )}
@@ -456,7 +459,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
           <DialogTitle>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Person24Regular />
-              我的信息
+              {t('user_info.title')}
             </div>
           </DialogTitle>
           <DialogContent className={styles.dialogContent}>
@@ -468,7 +471,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
               onClick={() => setIsOpen(false)}
               disabled={isDeleting}
             >
-              关闭
+              {t('common.close')}
             </Button>
             {activationInfo && !deleteSuccess && (
               <Button
@@ -476,7 +479,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
                 onClick={loadActivationInfo}
                 disabled={isLoading || isDeleting}
               >
-                刷新信息
+                {t('user_info.refresh')}
               </Button>
             )}
           </DialogActions>

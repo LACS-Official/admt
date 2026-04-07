@@ -52,7 +52,7 @@ const useStyles = makeStyles({
 });
 
 interface PatchImagePanelProps {
-  device: DeviceInfo;
+  device: DeviceInfo | null;
 }
 
 type PatchType = "Magisk" | "KernelSU" | "APatch";
@@ -84,8 +84,8 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
     const result = await open({
       multiple: false,
       filters: type === 'img' 
-        ? [{ name: "镜像文件", extensions: ["img"] }]
-        : [{ name: "Magisk APK / 工具", extensions: ["apk", "exe"] }],
+        ? [{ name: t('root.img_filter_name'), extensions: ["img"] }]
+        : [{ name: t('root.patch_tool_filter_name'), extensions: ["apk", "exe"] }],
     });
     if (typeof result === "string") {
       setter(result);
@@ -96,7 +96,7 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
     if (isOffline) {
         setIsPatching(true);
         setProgress(0);
-        setStatusText("准备开始修补...");
+        setStatusText(t('root.patch_preparing'));
         try {
             setMissingDependency(null);
             const result = await invoke("patch_boot_image_local", {
@@ -111,7 +111,7 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
                 setStatusText(t('root.patch_success'));
                 setProgress(100);
             } else {
-                const errMsg = result.error || result.output || "Unknown failure during patching";
+                const errMsg = result.error || result.output || t('root.patch_local_error');
                 setStatusText(t('root.patch_failed', { error: errMsg }));
                 console.error("Patch logically failed:", result);
             }
@@ -145,7 +145,7 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
             if (errorMsg.includes("DEPENDENCY_MISSING")) {
                 const dep = errorMsg.split(":")[1];
                 setMissingDependency(dep);
-                setStatusText(`缺少必要工具: ${dep}`);
+                setStatusText(t('root.missing_tool_title', { tool: dep }));
             } else {
                 setStatusText(t('root.patch_failed', { error: errorMsg }));
             }
@@ -154,7 +154,7 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
         }
     } else {
         // TODO: Implement online patching logic
-        alert("在线修补暂未实现，请使用脱机修补。");
+        alert(t('root.patch_online_not_implemented'));
     }
   };
 
@@ -172,23 +172,23 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
       {missingDependency && (
         <Card style={{ borderLeft: "4px solid var(--colorPaletteRedBorder1)", backgroundColor: "var(--colorPaletteRedBackground1)" }}>
           <CardHeader
-            header={<Text weight="bold" size={400}>📥 缺少必要工具: {missingDependency}</Text>}
+            header={<Text weight="bold" size={400}>{t('root.missing_tool_title', { tool: missingDependency })}</Text>}
             description={
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" }}>
-                <Text>PC 脱机修补需要 Windows 版的 magiskboot 工具。请手动下载并放置到指定目录：</Text>
+                <Text>{t('root.missing_tool_desc')}</Text>
                 <div style={{ display: "flex", gap: "8px" }}>
                     <Button 
                         size="small" 
                         onClick={() => window.open("https://github.com/PinNaCode/magiskboot_build/releases", "_blank")}
                     >
-                        前往 GitHub 下载 (PinNaCode)
+                      {t('root.download_pinna_code')}
                     </Button>
                     <Button size="small" onClick={handleOpenToolDir}>
-                        打开发布目录
+                      {t('root.open_release_dir')}
                     </Button>
                 </div>
                 <Text size={200} italic>
-                    提示：下载解压后，将 magiskboot.exe 放入上述目录即可。
+                  {t('root.patch_tool_hint')}
                 </Text>
               </div>
             }

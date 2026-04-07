@@ -1,4 +1,5 @@
-import React, { useState }  from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   makeStyles,
   Text,
@@ -92,6 +93,7 @@ type ExtendedFeaturesView = "tools" | "plugins" | "utilities";
 
 const ExtendedFeaturesPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
   const [currentView, setCurrentView] = useState<ExtendedFeaturesView>("tools");
 
@@ -100,17 +102,17 @@ const ExtendedFeaturesPanel: React.FC = () => {
   const tabs = [
     {
       id: "tools" as ExtendedFeaturesView,
-      label: "扩展工具",
+      label: t('extended_features.tabs.tools'),
       icon: <Wrench24Regular />,
     },
     {
       id: "plugins" as ExtendedFeaturesView,
-      label: "插件管理",
+      label: t('extended_features.tabs.plugins'),
       icon: <Apps24Regular />,
     },
     {
       id: "utilities" as ExtendedFeaturesView,
-      label: "实用工具",
+      label: t('extended_features.tabs.utilities'),
       icon: <Settings24Regular />,
     },
   ];
@@ -121,10 +123,9 @@ const ExtendedFeaturesPanel: React.FC = () => {
         return (
           <div className={styles.placeholder}>
             <Wrench24Regular className={styles.placeholderIcon} />
-            <Text className={styles.placeholderTitle}>扩展工具</Text>
+            <Text className={styles.placeholderTitle}>{t('extended_features.placeholders.tools_title')}</Text>
             <Text className={styles.placeholderDescription}>
-              此功能正在开发中，将提供更多专业的Android设备管理工具，
-              包括高级调试工具、性能分析工具等。
+              {t('extended_features.placeholders.tools_description')}
             </Text>
           </div>
         );
@@ -132,10 +133,9 @@ const ExtendedFeaturesPanel: React.FC = () => {
         return (
           <div className={styles.placeholder}>
             <Apps24Regular className={styles.placeholderIcon} />
-            <Text className={styles.placeholderTitle}>插件管理</Text>
+            <Text className={styles.placeholderTitle}>{t('extended_features.placeholders.plugins_title')}</Text>
             <Text className={styles.placeholderDescription}>
-              此功能正在开发中，将支持第三方插件扩展，
-              让您可以根据需要添加更多功能模块。
+              {t('extended_features.placeholders.plugins_description')}
             </Text>
           </div>
         );
@@ -143,10 +143,9 @@ const ExtendedFeaturesPanel: React.FC = () => {
         return (
           <div className={styles.placeholder}>
             <Settings24Regular className={styles.placeholderIcon} />
-            <Text className={styles.placeholderTitle}>实用工具</Text>
+            <Text className={styles.placeholderTitle}>{t('extended_features.placeholders.utilities_title')}</Text>
             <Text className={styles.placeholderDescription}>
-              此功能正在开发中，将提供各种实用的辅助工具，
-              如批处理脚本、自动化任务等。
+              {t('extended_features.placeholders.utilities_description')}
             </Text>
           </div>
         );
@@ -167,7 +166,7 @@ const ExtendedFeaturesPanel: React.FC = () => {
             </Badge>
           )}
         </div>
-        
+
         <div className={styles.headerRight}>
           <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
             {connectedDevices.length} 台设备已连接
@@ -178,17 +177,17 @@ const ExtendedFeaturesPanel: React.FC = () => {
       {connectedDevices.length === 0 ? (
         <div className={styles.noDevice}>
           <Wrench24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>未检测到设备</Text>
+          <Text size={400}>{t('extended_features.placeholders.no_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            请确保设备已连接并启用USB调试
+            {t('extended_features.placeholders.no_device_description')}
           </Text>
         </div>
       ) : !selectedDevice ? (
         <div className={styles.noDevice}>
           <Settings24Regular style={{ fontSize: "48px", color: "var(--colorNeutralForeground3)" }} />
-          <Text size={400}>请选择一个设备</Text>
+          <Text size={400}>{t('extended_features.placeholders.select_device_title')}</Text>
           <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            从设备信息页面选择要操作的设备
+            {t('extended_features.placeholders.select_device_description')}
           </Text>
         </div>
       ) : (

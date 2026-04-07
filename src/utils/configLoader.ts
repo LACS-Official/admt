@@ -7,6 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { resourceDir, appDataDir } from '@tauri-apps/api/path';
 import { listen } from '@tauri-apps/api/event';
+import i18n from '../i18n/config';
 
 export interface AdbCommand {
   id: string;
@@ -100,22 +101,23 @@ export async function loadAdbCommandsConfig(): Promise<AdbCommandsConfig> {
 
 // 提供默认配置作为后备方案
 function getDefaultAdbCommandsConfig(): AdbCommandsConfig {
+  const t = i18n.t;
   return {
     categories: [
       {
         id: "software_activation",
-        name: "软件激活",
+        name: t('adb_commands.categories.software_activation'),
         description: "常用软件激活命令",
         commands: [
           {
             id: "activate_shizuku",
-            label: "激活shizuku",
+            label: t('adb_commands.commands.activate_shizuku'),
             command: "shell sh /sdcard/android/data/moe.shizuku.privileged.api/start.sh",
             description: "激活Shizuku权限管理工具"
           },
           {
             id: "activate_scene",
-            label: "激活scene",
+            label: t('adb_commands.commands.activate_scene'),
             command: "shell sh /data/user/0/com.omarea.vtools/files/up.sh",
             description: "激活Scene工具箱"
           }
@@ -123,30 +125,30 @@ function getDefaultAdbCommandsConfig(): AdbCommandsConfig {
       },
       {
         id: "device_info",
-        name: "设备信息",
+        name: t('adb_commands.categories.device_info'),
         description: "获取设备硬件和系统信息",
         commands: [
           {
             id: "get_device_info",
-            label: "获取设备信息",
+            label: t('adb_commands.commands.get_device_info'),
             command: "shell getprop",
             description: "获取设备所有系统属性"
           },
           {
             id: "battery_info",
-            label: "查看电池信息",
+            label: t('adb_commands.commands.battery_info'),
             command: "shell dumpsys battery",
             description: "查看电池状态和健康信息"
           },
           {
             id: "memory_info",
-            label: "查看内存信息",
+            label: t('adb_commands.commands.memory_info'),
             command: "shell cat /proc/meminfo",
             description: "查看系统内存使用情况"
           },
           {
             id: "storage_info",
-            label: "查看存储信息",
+            label: t('adb_commands.commands.storage_info'),
             command: "shell df",
             description: "查看存储空间使用情况"
           }
@@ -159,19 +161,19 @@ function getDefaultAdbCommandsConfig(): AdbCommandsConfig {
         commands: [
           {
             id: "list_installed_apps",
-            label: "查看已安装应用",
+            label: t('adb_commands.commands.list_packages'),
             command: "shell pm list packages",
             description: "列出设备上已安装的所有应用包名"
           },
           {
             id: "running_processes",
-            label: "查看运行进程",
+            label: t('adb_commands.commands.list_processes'),
             command: "shell ps",
             description: "查看当前运行的进程列表"
           },
           {
             id: "system_logs",
-            label: "查看系统日志",
+            label: t('adb_commands.commands.logcat'),
             command: "logcat -d",
             description: "获取系统日志信息"
           }
@@ -184,19 +186,19 @@ function getDefaultAdbCommandsConfig(): AdbCommandsConfig {
         commands: [
           {
             id: "reboot_recovery",
-            label: "重启到Recovery",
+            label: t('adb_commands.commands.reboot_recovery'),
             command: "reboot recovery",
             description: "重启设备到Recovery模式"
           },
           {
             id: "reboot_fastboot",
-            label: "重启到Fastboot",
+            label: t('adb_commands.commands.reboot_fastboot'),
             command: "reboot bootloader",
             description: "重启设备到Fastboot模式"
           },
           {
             id: "reboot_system",
-            label: "重启到系统",
+            label: t('adb_commands.commands.reboot_system'),
             command: "reboot",
             description: "重启设备到正常系统"
           }
@@ -204,90 +206,90 @@ function getDefaultAdbCommandsConfig(): AdbCommandsConfig {
       },
       {
         id: "key_simulation",
-        name: "按键模拟",
+        name: t('adb_commands.categories.key_simulation'),
         description: "常用按键和媒体控制模拟",
         commands: [
           {
             id: "home",
-            label: "主页",
+            label: t('adb_commands.commands.key_home'),
             command: "shell input keyevent 3",
             description: "模拟按下桌面键"
           },
           {
             id: "back",
-            label: "返回",
+            label: t('adb_commands.commands.key_back'),
             command: "shell input keyevent 4",
             description: "模拟按下返回键"
           },
           {
             id: "recent_apps",
-            label: "最近任务",
+            label: t('adb_commands.commands.key_recent'),
             command: "shell input keyevent 187",
             description: "显示最近运行的应用列表"
           },
           {
             id: "volume_up",
-            label: "音量+",
+            label: t('adb_commands.commands.key_volume_up'),
             command: "shell input keyevent 24",
             description: "增加系统音量"
           },
           {
             id: "volume_down",
-            label: "音量-",
+            label: t('adb_commands.commands.key_volume_down'),
             command: "shell input keyevent 25",
             description: "降低系统音量"
           },
           {
             id: "volume_mute",
-            label: "静音",
+            label: t('adb_commands.commands.key_mute'),
             command: "shell input keyevent 164",
             description: "切换系统静音状态"
           },
           {
             id: "media_play_pause",
-            label: "播放/暂停",
+            label: t('adb_commands.commands.key_play_pause'),
             command: "shell input keyevent 85",
             description: "播放或暂停媒体内容"
           },
           {
             id: "media_next",
-            label: "下一曲",
+            label: t('adb_commands.commands.key_next'),
             command: "shell input keyevent 87",
             description: "切换到下一首媒体内容"
           },
           {
             id: "media_previous",
-            label: "上一曲",
+            label: t('adb_commands.commands.key_previous'),
             command: "shell input keyevent 88",
             description: "切换到上一首媒体内容"
           },
           {
             id: "screenshot",
-            label: "截屏",
+            label: t('adb_commands.commands.key_screenshot'),
             command: "shell screencap /sdcard/screenshot.png",
             description: "截取当前屏幕并保存"
           },
           {
             id: "menu",
-            label: "菜单",
+            label: t('adb_commands.commands.key_menu'),
             command: "shell input keyevent 82",
             description: "显示当前应用的菜单"
           },
           {
             id: "search",
-            label: "搜索",
+            label: t('adb_commands.commands.key_search'),
             command: "shell input keyevent 84",
             description: "启动系统搜索功能"
           },
           {
             id: "power_button",
-            label: "电源键",
+            label: t('adb_commands.commands.key_power'),
             command: "shell input keyevent 26",
             description: "模拟电源键点击"
           },
           {
             id: "split_screen",
-            label: "分屏",
+            label: t('adb_commands.commands.key_split_screen'),
             command: "shell input keyevent 286",
             description: "进入或退出系统的分屏模式"
           }
@@ -295,84 +297,84 @@ function getDefaultAdbCommandsConfig(): AdbCommandsConfig {
       },
       {
         id: "quick_settings",
-        name: "快捷设置",
+        name: t('adb_commands.categories.system_settings'),
         description: "系统快速设置和开关状态控制",
         commands: [
           {
             id: "brightness_max",
-            label: "亮度最大",
+            label: t('adb_commands.commands.brightness_max'),
             command: "shell settings put system screen_brightness 255",
             description: "将屏幕亮度设置为最大值"
           },
           {
             id: "brightness_low",
-            label: "亮度调低",
+            label: t('adb_commands.commands.brightness_down'),
             command: "shell settings put system screen_brightness 50",
             description: "将屏幕亮度设置为较低值"
           },
           {
             id: "developer_options",
-            label: "开发者选项",
+            label: t('adb_commands.commands.open_developer'),
             command: "shell am start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS",
             description: "直接跳转到系统的开发者选项页面"
           },
           {
             id: "wifi_on",
-            label: "开启WiFi",
+            label: t('adb_commands.commands.wifi_on'),
             command: "shell svc wifi enable",
             description: "开启设备WiFi"
           },
           {
             id: "wifi_off",
-            label: "关闭WiFi",
+            label: t('adb_commands.commands.wifi_off'),
             command: "shell svc wifi disable",
             description: "关闭设备WiFi"
           },
           {
             id: "data_on",
-            label: "开启数据",
+            label: t('adb_commands.commands.data_on'),
             command: "shell svc data enable",
             description: "开启移动数据网络"
           },
           {
             id: "data_off",
-            label: "关闭数据",
+            label: t('adb_commands.commands.data_off'),
             command: "shell svc data disable",
             description: "关闭移动数据网络"
           },
           {
             id: "airplane_mode_on",
-            label: "开启飞行模式",
+            label: t('adb_commands.commands.airplane_on'),
             command: "shell settings put global airplane_mode_on 1 && am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true",
             description: "开启飞行模式"
           },
           {
             id: "airplane_mode_off",
-            label: "关闭飞行模式",
+            label: t('adb_commands.commands.airplane_off'),
             command: "shell settings put global airplane_mode_on 0 && am broadcast -a android.intent.action.AIRPLANE_MODE --ez state false",
             description: "关闭飞行模式"
           },
           {
             id: "flashlight_on",
-            label: "开启手电筒",
+            label: t('adb_commands.commands.flashlight_on'),
             command: "shell cmd flashlight set-on true",
             description: "开启核心手电筒"
           },
           {
             id: "flashlight_off",
-            label: "关闭手电筒",
+            label: t('adb_commands.commands.flashlight_off'),
             command: "shell cmd flashlight set-on false",
             description: "关闭核心手电筒"
           },
           {
             id: "auto_rotate_on",
-            label: "开启自动旋转",
+            label: t('adb_commands.commands.autorotate_on'),
             command: "shell settings put system accelerometer_rotation 1",
             description: "开启屏幕自动旋转"
           },
           {
             id: "auto_rotate_off",
-            label: "关闭自动旋转",
+            label: t('adb_commands.commands.autorotate_off'),
             command: "shell settings put system accelerometer_rotation 0",
             description: "关闭屏幕自动旋转"
           }
@@ -586,28 +588,29 @@ export async function loadFastbootCommandsConfig(): Promise<AdbCommandsConfig> {
 
 // 提供默认Fastboot配置作为后备方案
 function getDefaultFastbootCommandsConfig(): AdbCommandsConfig {
+  const t = i18n.t;
   return {
     categories: [
       {
         id: "device_info",
-        name: "设备信息",
+        name: t('adb_commands.categories.fastboot_basic'),
         description: "获取fastboot设备的基本信息和状态",
         commands: [
           {
             id: "list_devices",
-            label: "列出设备",
+            label: t('adb_commands.commands.fb_devices'),
             command: "devices",
             description: "列出当前连接的所有fastboot设备"
           },
           {
             id: "get_variables",
-            label: "获取设备变量",
+            label: t('adb_commands.commands.fb_getvar'),
             command: "getvar all",
             description: "获取设备的所有变量信息"
           },
           {
             id: "oem_info",
-            label: "OEM设备信息",
+            label: t('adb_commands.commands.fb_oem_info'),
             command: "oem device-info",
             description: "获取OEM设备信息"
           }
@@ -615,30 +618,30 @@ function getDefaultFastbootCommandsConfig(): AdbCommandsConfig {
       },
       {
         id: "flash_operations",
-        name: "分区刷写",
+        name: t('adb_commands.categories.fastboot_flash'),
         description: "刷写设备分区镜像",
         commands: [
           {
             id: "flash_boot",
-            label: "刷写Boot",
+            label: t('adb_commands.commands.fb_flash_boot'),
             command: "flash boot boot.img",
             description: "刷写boot分区镜像"
           },
           {
             id: "flash_recovery",
-            label: "刷写Recovery",
+            label: t('adb_commands.commands.fb_flash_recovery'),
             command: "flash recovery recovery.img",
             description: "刷写recovery分区镜像"
           },
           {
             id: "flash_system",
-            label: "刷写System",
+            label: t('adb_commands.commands.fb_flash_system'),
             command: "flash system system.img",
             description: "刷写system分区镜像"
           },
           {
             id: "flash_vendor",
-            label: "刷写Vendor",
+            label: t('adb_commands.commands.fb_flash_vendor'),
             command: "flash vendor vendor.img",
             description: "刷写vendor分区镜像"
           }
@@ -646,30 +649,30 @@ function getDefaultFastbootCommandsConfig(): AdbCommandsConfig {
       },
       {
         id: "partition_operations",
-        name: "分区操作",
+        name: t('adb_commands.categories.fastboot_erase'),
         description: "擦除和格式化设备分区",
         commands: [
           {
             id: "erase_cache",
-            label: "擦除Cache",
+            label: t('adb_commands.commands.fb_erase_cache'),
             command: "erase cache",
             description: "擦除cache分区"
           },
           {
             id: "erase_userdata",
-            label: "擦除用户数据",
+            label: t('adb_commands.commands.fb_erase_data'),
             command: "erase userdata",
             description: "擦除userdata分区（恢复出厂设置）"
           },
           {
             id: "format_cache",
-            label: "格式化Cache",
+            label: t('adb_commands.commands.fb_format_cache'),
             command: "format cache",
             description: "格式化cache分区"
           },
           {
             id: "format_userdata",
-            label: "格式化用户数据",
+            label: t('adb_commands.commands.fb_format_data'),
             command: "format userdata",
             description: "格式化userdata分区"
           }
@@ -677,30 +680,30 @@ function getDefaultFastbootCommandsConfig(): AdbCommandsConfig {
       },
       {
         id: "reboot_operations",
-        name: "重启操作",
+        name: t('adb_commands.categories.fastboot_reboot'),
         description: "设备重启和引导相关命令",
         commands: [
           {
             id: "reboot_system",
-            label: "重启到系统",
+            label: t('adb_commands.commands.fb_reboot_system'),
             command: "reboot",
             description: "重启设备到正常系统"
           },
           {
             id: "reboot_bootloader",
-            label: "重启到Bootloader",
+            label: t('adb_commands.commands.fb_reboot_bootloader'),
             command: "reboot bootloader",
             description: "重启设备到bootloader模式"
           },
           {
             id: "reboot_recovery",
-            label: "重启到Recovery",
+            label: t('adb_commands.commands.fb_reboot_recovery'),
             command: "reboot recovery",
             description: "重启设备到Recovery模式"
           },
           {
             id: "reboot_fastboot",
-            label: "重启到Fastboot",
+            label: t('adb_commands.commands.fb_reboot_fastboot'),
             command: "reboot-fastboot",
             description: "重启设备到fastboot模式"
           }
@@ -708,30 +711,30 @@ function getDefaultFastbootCommandsConfig(): AdbCommandsConfig {
       },
       {
         id: "security_operations",
-        name: "安全操作",
+        name: t('adb_commands.categories.fastboot_unlock'),
         description: "Bootloader解锁和锁定相关操作",
         commands: [
           {
             id: "unlock_bootloader",
-            label: "解锁Bootloader",
+            label: t('adb_commands.commands.fb_unlock'),
             command: "unlock",
             description: "解锁设备Bootloader"
           },
           {
             id: "lock_bootloader",
-            label: "锁定Bootloader",
+            label: t('adb_commands.commands.fb_lock'),
             command: "lock",
             description: "锁定设备Bootloader"
           },
           {
             id: "flashing_unlock",
-            label: "解锁刷写权限",
+            label: t('adb_commands.commands.fb_unlock_critical'),
             command: "flashing unlock",
             description: "解锁设备刷写权限（新设备）"
           },
           {
             id: "flashing_lock",
-            label: "锁定刷写权限",
+            label: t('adb_commands.commands.fb_lock_critical'),
             command: "flashing lock",
             description: "锁定设备刷写权限"
           }

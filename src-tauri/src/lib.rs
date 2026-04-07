@@ -232,6 +232,7 @@ pub fn run() {
             crate::root::patch::patch_boot_image_local,
             get_device_partitions,
             backup_partition,
+            export_apk,
         ])
         .setup(|_app| {
             // 初始化应用状态

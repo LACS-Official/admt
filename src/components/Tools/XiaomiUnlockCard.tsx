@@ -121,7 +121,7 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [commandOutputs, setCommandOutputs] = useState<CommandOutput[]>([]);
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
-  const [resultDialogTitle, setResultDialogTitle] = useState("检测结果");
+  const [resultDialogTitle, setResultDialogTitle] = useState(t('unlock.detection_result'));
   const [resultDialogMessage, setResultDialogMessage] = useState("");
 
   // 重构点：使用提取的工具函数创建命令输出
@@ -131,7 +131,7 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   }, []);
 
   // 重构点：使用 useMemo 优化工具列表生成
-  const xiaomiTools = useMemo(() => createXiaomiTools(device), [device]);
+  const xiaomiTools = useMemo(() => createXiaomiTools(device, t), [device, t]);
 
   // 重构点：使用 useMemo 优化选中工具的获取
   const selectedTool = useMemo(() => 

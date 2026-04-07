@@ -3,6 +3,7 @@
 在线资源-在线资源卡片页面
 */
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   makeStyles,
   mergeClasses,
@@ -201,6 +202,7 @@ const useStyles = makeStyles({
 
 const OnlineResourcesPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [state, setState] = useState<OnlineResourcesState>({
     currentView: 'list',
     selectedSoftwareId: undefined,
@@ -339,13 +341,13 @@ const OnlineResourcesPanel: React.FC = () => {
 
 
   const categories = [
-    { value: 'ADMT', label: '全部' },
-    { value: '脚本', label: '脚本' },
-    { value: '驱动', label: '驱动' },
-    { value: '设置文件', label: '设置' },
-    { value: 'RootApp', label: 'RootApp' },
-    { value: '小米解锁', label: '小米解锁' },
-    { value: '其它', label: '其它' },
+    { value: 'ADMT', label: t('online_resources.categories.all') },
+    { value: '脚本', label: t('online_resources.categories.scripts') },
+    { value: '驱动', label: t('online_resources.categories.drivers') },
+    { value: '设置文件', label: t('online_resources.categories.settings') },
+    { value: 'RootApp', label: t('online_resources.categories.root_apps') },
+    { value: '小米解锁', label: t('online_resources.categories.xiaomi_unlock') },
+    { value: '其它', label: t('online_resources.categories.other') },
   ];
 
   return (
@@ -353,7 +355,7 @@ const OnlineResourcesPanel: React.FC = () => {
       <div className={styles.searchContainer}>
         <SearchBox
           className={styles.searchBox}
-          placeholder="搜索软件名称或描述..."
+          placeholder={t('online_resources.search_placeholder')}
           value={searchKeyword}
           onChange={(_, data) => setSearchKeyword(data.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -364,7 +366,7 @@ const OnlineResourcesPanel: React.FC = () => {
           onClick={handleSearch}
           disabled={loading}
         >
-          搜索
+          {t('online_resources.search_button')}
         </Button>
       </div>
 
@@ -393,13 +395,13 @@ const OnlineResourcesPanel: React.FC = () => {
 
         {loading ? (
           <div className={styles.loadingContainer}>
-            <Spinner label="正在加载软件列表..." />
+            <Spinner label={t('online_resources.loading_software')} />
           </div>
         ) : softwareList.length === 0 ? (
           <div className={styles.emptyContainer}>
             <CloudArrowDown24Regular style={{ fontSize: '48px', color: 'var(--colorNeutralForeground3)' }} />
-            <Body1>暂无可用的软件资源</Body1>
-            <Caption1>没找到想要的？ <Link onClick={() => window.open('https://github.com/LACS-Official/admt/issues')}>提交软件需求</Link></Caption1>
+            <Body1>{t('online_resources.no_software_available')}</Body1>
+            <Caption1>没找到想要的？ <Link onClick={() => window.open('https://admt.lacs.cc/feedback')}>提交软件需求</Link></Caption1>
           </div>
         ) : (
           <div className={styles.softwareGrid}>

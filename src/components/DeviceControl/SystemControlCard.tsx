@@ -20,8 +20,6 @@ import {
   ArrowReset24Regular,
   BatteryCharge24Regular,
   Info24Regular,
-  Star24Regular,
-  Star24Filled,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { DeviceInfo } from "../../types/device";
@@ -149,7 +147,6 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
   const { deviceService } = useDeviceService();
   const [executingCommand, setExecutingCommand] = useState<string | null>(null);
   const { setStatusBarMessage } = useAppStore();
-  const { controlFavorites, toggleControlFavorite } = useDeviceStore();
 
   // --- Display Settings State ---
   const [customInputs, setCustomInputs] = useState({
@@ -394,13 +391,14 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
   }, [device?.connected, device?.mode]);
 
   // --- Display Handlers ---
-  const handleApplyDisplay = async () => {
+  const handleApplyDisplay = async (updates?: Partial<typeof customInputs>) => {
     if (!checkMode()) return;
-    setExecutingCommand("display");
-    const width = parseInt(customInputs.resolutionWidth);
-    const height = parseInt(customInputs.resolutionHeight);
-    const density = parseInt(customInputs.density);
-    const fontScale = parseFloat(customInputs.fontScale);
+    
+    const inputs = { ...customInputs, ...updates };
+    const width = parseInt(inputs.resolutionWidth);
+    const height = parseInt(inputs.resolutionHeight);
+    const density = parseInt(inputs.density);
+    const fontScale = parseFloat(inputs.fontScale);
 
     try {
       if (width > 0 && height > 0)
@@ -425,11 +423,11 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
         ]);
 
       setStatusBarMessage({ type: "success", message: t("common.success") });
+      // Wait a bit and refresh to see if changes stuck
       setTimeout(fetchAllSettings, 500);
     } catch (e) {
       setStatusBarMessage({ type: "error", message: String(e) });
     }
-    setExecutingCommand(null);
   };
 
   const handleRestoreDisplay = async () => {
@@ -598,18 +596,13 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
               <Button
                 size="small"
                 appearance="subtle"
-                icon={
-                  controlFavorites?.includes("display_control") ? (
-                    <Star24Filled
-                      style={{ color: tokens.colorPaletteYellowForeground1 }}
-                    />
-                  ) : (
-                    <Star24Regular />
-                  )
-                }
-                onClick={() => toggleControlFavorite("display_control")}
+                icon={<ArrowReset24Regular />}
+                onClick={handleRestoreDisplay}
+                disabled={!isDeviceAvailable}
                 style={{ marginLeft: "auto" }}
-              />
+              >
+                {t("device_control.restore_default")}
+              </Button>
             </div>
 
             <div className={styles.controlGrid}>
@@ -641,6 +634,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
                         resolutionWidth: e.target.value,
                       }))
                     }
+                    onBlur={() => handleApplyDisplay()}
                     disabled={!isDeviceAvailable}
                   />
                   <Text>×</Text>
@@ -655,6 +649,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
                         resolutionHeight: e.target.value,
                       }))
                     }
+                    onBlur={() => handleApplyDisplay()}
                     disabled={!isDeviceAvailable}
                   />
                   <Text className={styles.unitLabel}>px</Text>
@@ -689,6 +684,7 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
                         density: e.target.value,
                       }))
                     }
+                    onBlur={() => handleApplyDisplay()}
                     disabled={!isDeviceAvailable}
                   />
                   <Text className={styles.unitLabel}>dpi</Text>
@@ -724,32 +720,12 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
                         fontScale: e.target.value,
                       }))
                     }
+                    onBlur={() => handleApplyDisplay()}
                     disabled={!isDeviceAvailable}
                   />
                   <Text className={styles.unitLabel}>x</Text>
                 </div>
               </div>
-            </div>
-
-            <div className={styles.sectionFooter}>
-              <Button
-                size="small"
-                appearance="secondary"
-                icon={<ArrowReset24Regular />}
-                onClick={handleRestoreDisplay}
-                disabled={!isDeviceAvailable}
-              >
-                {t("device_control.restore_default")}
-              </Button>
-              <Button
-                size="small"
-                appearance="primary"
-                icon={<Save24Regular />}
-                onClick={handleApplyDisplay}
-                disabled={!isDeviceAvailable}
-              >
-                {t("device_control.apply")}
-              </Button>
             </div>
           </div>
 
@@ -762,21 +738,6 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
               <Text weight="semibold" size={400}>
                 {t("device_control.animation_speed")}
               </Text>
-              <Button
-                size="small"
-                appearance="subtle"
-                icon={
-                  controlFavorites?.includes("animation_speed") ? (
-                    <Star24Filled
-                      style={{ color: tokens.colorPaletteYellowForeground1 }}
-                    />
-                  ) : (
-                    <Star24Regular />
-                  )
-                }
-                onClick={() => toggleControlFavorite("animation_speed")}
-                style={{ marginLeft: "auto" }}
-              />
             </div>
 
             <div className={styles.controlGrid}>
@@ -896,21 +857,6 @@ const SystemControlCard: React.FC<SystemControlCardProps> = ({
               <Text weight="semibold" size={400}>
                 {t("device_control.power_management")}
               </Text>
-              <Button
-                size="small"
-                appearance="subtle"
-                icon={
-                  controlFavorites?.includes("power_management") ? (
-                    <Star24Filled
-                      style={{ color: tokens.colorPaletteYellowForeground1 }}
-                    />
-                  ) : (
-                    <Star24Regular />
-                  )
-                }
-                onClick={() => toggleControlFavorite("power_management")}
-                style={{ marginLeft: "auto" }}
-              />
             </div>
 
             <div className={styles.controlGrid}>

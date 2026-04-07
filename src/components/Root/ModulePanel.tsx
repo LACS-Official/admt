@@ -46,7 +46,7 @@ interface RootModule {
 }
 
 interface ModulePanelProps {
-  device: DeviceInfo;
+  device: DeviceInfo | null;
 }
 
 const ModulePanel: React.FC<ModulePanelProps> = ({ device }) => {
@@ -63,12 +63,12 @@ const ModulePanel: React.FC<ModulePanelProps> = ({ device }) => {
     }),
     createTableColumn<RootModule>({
       columnId: "version",
-      renderHeaderCell: () => "版本", // TODO: add to translation if needed
+      renderHeaderCell: () => t('common.version'),
       renderCell: (item) => <Text>{item.version}</Text>,
     }),
     createTableColumn<RootModule>({
       columnId: "author",
-      renderHeaderCell: () => "作者", // TODO: add to translation if needed
+      renderHeaderCell: () => t('common.author'),
       renderCell: (item) => <Text size={200}>{item.author}</Text>,
     }),
     createTableColumn<RootModule>({
@@ -76,7 +76,7 @@ const ModulePanel: React.FC<ModulePanelProps> = ({ device }) => {
       renderHeaderCell: () => t('file_manager.header_actions'),
       renderCell: (item) => (
         <div style={{ display: "flex", gap: "8px" }}>
-          <Button size="small" icon={<Delete24Regular />} appearance="subtle">卸载</Button>
+          <Button size="small" icon={<Delete24Regular />} appearance="subtle">{t('common.uninstall')}</Button>
         </div>
       ),
     }),
@@ -103,7 +103,7 @@ const ModulePanel: React.FC<ModulePanelProps> = ({ device }) => {
       {modules.length === 0 && !isLoading ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px", gap: "12px", color: "var(--colorNeutralForeground3)" }}>
           <Warning24Regular style={{ fontSize: "40px" }} />
-          <Text>{t('common.no_data') || "未发现已安装模块"}</Text>
+          <Text>{t('root.no_modules')}</Text>
         </div>
       ) : (
         <DataGrid items={modules} columns={columns} className={styles.grid}>

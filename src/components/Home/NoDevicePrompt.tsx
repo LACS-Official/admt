@@ -21,13 +21,29 @@ import {
   Shield24Regular,
   DeveloperBoard24Regular,
   Warning24Regular,
+  WifiSettingsRegular,
 } from "@fluentui/react-icons";
 import MiscellaneousCard from './MiscellaneousCard';
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { useAppStore } from "../../stores/appStore";
 
 
 const useStyles = makeStyles({
+  ButtonStyle1: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "12px",
+    padding: "12px 24px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    boxSizing: 'border-box',
+    fontSize: "12px",
+    flex: 1,
+    minHeight: "56px",
+  },
   container: {
     display: "flex",
     borderRadius: "12px",
@@ -256,19 +272,32 @@ const useStyles = makeStyles({
     lineHeight: "1.5",
   },
   
-  // 扫描指示器样式
+  // 正在扫描指示器样式
   scanningIndicator: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "12px",
-    padding: "12px 20px",
+    padding: "12px 24px",
     backgroundColor: tokens.colorBrandBackground2,
-    borderRadius: "20px",
+    borderRadius: "12px",
     border: `1px solid ${tokens.colorBrandStroke1}`,
     boxShadow: tokens.shadow4,
     marginTop: "0",
-    width: "fit-content",
+    flex: 1,
+    minHeight: "56px",
+  },
+  
+  // 动作按钮行容器
+  actionRow: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "16px",
+    width: "100%",
+    maxWidth: "1200px",
+    marginTop: "24px",
   },
   
   // 扫描文本样式
@@ -313,6 +342,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
 }) => {
   const styles = useStyles();
   const { t } = useTranslation();
+  const { setWirelessDebuggingDialogOpen } = useAppStore();
 
 
   return (
@@ -349,32 +379,64 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
                 {t('main.no_device_title')}， {t('main.no_device_desc')}
               </Text>
               
-              {/* 扫描状态指示器 */}
-              {isScanning && (
-                <div className={styles.scanningIndicator}>
-                  <Spinner size="extra-small" />
-                  <Text className={styles.scanningText}>
-                    {t('status.scanning')}
-                  </Text>
-                </div>
-              )}
-              
-              {/* 刷新按钮 */}
-              {!isScanning && onRefresh && (
-                <motion.div 
-                  className={styles.refreshButton}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button 
-                    appearance="primary" 
-                    icon={<ArrowClockwise24Regular />}
-                    onClick={onRefresh}
-                  >
-                    {t('common.refresh_manual')}
-                  </Button>
-                </motion.div>
-              )}
+              {/* 按钮和状态行 */}
+              <div className={styles.actionRow}>
+                {isScanning ? (
+                  <>
+                    <div className={styles.scanningIndicator}>
+                      <Spinner size="extra-small" />
+                      <Text className={styles.scanningText}>
+                        {t('status.scanning')}
+                      </Text>
+                    </div>
+                    <Button
+                      appearance="subtle"
+                      size="medium"
+                      icon={<WifiSettingsRegular />}
+                      onClick={() => setWirelessDebuggingDialogOpen(true)}
+                      title={t('common.wireless_connection', '无线调试连接')}
+                      className={styles.ButtonStyle1}
+                    >
+                      无线调试连接
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {onRefresh && (
+                      <motion.div 
+                        className={styles.refreshButton}
+                        style={{ flex: 1 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button 
+                          appearance="primary" 
+                          icon={<ArrowClockwise24Regular />}
+                          onClick={onRefresh}
+                          style={{ width: '100%', height: '56px', borderRadius: '12px' }}
+                        >
+                          {t('common.refresh_manual')}
+                        </Button>
+                      </motion.div>
+                    )}
+                    
+                    <motion.div 
+                      style={{ flex: 1 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button 
+                        appearance="secondary" 
+                        icon={<WifiSettingsRegular />}
+                        onClick={() => setWirelessDebuggingDialogOpen(true)}
+                        style={{ width: '100%', height: '56px', borderRadius: '12px' }}
+                      >
+                        {t('common.wireless_connection')}
+                      </Button>
+                    </motion.div>
+                  </>
+                )}
+              </div>
             </div>
         </motion.div>
         

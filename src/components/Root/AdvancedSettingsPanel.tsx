@@ -27,7 +27,7 @@ const useStyles = makeStyles({
 });
 
 interface AdvancedSettingsPanelProps {
-  device: DeviceInfo;
+  device: DeviceInfo | null;
 }
 
 const AdvancedSettingsPanel: React.FC<AdvancedSettingsPanelProps> = ({ device }) => {
@@ -75,7 +75,7 @@ const AdvancedSettingsPanel: React.FC<AdvancedSettingsPanelProps> = ({ device })
         <Card>
           <CardHeader
             header={<Text weight="semibold">{t('root.selinux_status')}</Text>}
-            description="切换 SELinux 运行模式 (Enforcing/Permissive)"
+            description={t('root.selinux_mode_desc')}
           />
           <Field>
             <Switch label={t('root.selinux_enforcing')} checked />

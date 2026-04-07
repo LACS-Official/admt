@@ -14,6 +14,7 @@ import {
   Button,
   Text,
 } from "@fluentui/react-components";
+import { useTranslation } from 'react-i18next';
 import { XiaomiTool } from './types';
 
 interface ConfirmDialogProps {
@@ -35,28 +36,30 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel
 }) => {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={(_, data) => onOpenChange(data.open)}>
       <DialogSurface>
-        <DialogTitle>确认危险操作</DialogTitle>
+        <DialogTitle>{t('unlock.confirm_risky_op')}</DialogTitle>
         <DialogContent>
           <DialogBody>
             <Text>
-              您即将执行 "{selectedTool?.label}" 操作。
-              此操作具有风险，可能导致设备变砖或数据丢失。
+              {t('unlock.will_execute', { label: selectedTool?.label })}
+              {" "}
+              {t('unlock.risk_notice')}
             </Text>
             <br />
             <Text weight="semibold" style={{ color: "var(--colorPaletteRedForeground1)" }}>
-              请确认您已了解风险并备份了重要数据。
+              {t('unlock.warning_desc')}
             </Text>
           </DialogBody>
         </DialogContent>
         <DialogActions>
           <Button appearance="secondary" onClick={onCancel}>
-            取消
+            {t('common.cancel')}
           </Button>
           <Button appearance="primary" onClick={onConfirm}>
-            确认执行
+            {t('unlock.confirm_exec')}
           </Button>
         </DialogActions>
       </DialogSurface>
@@ -83,6 +86,7 @@ export const ResultDialog: React.FC<ResultDialogProps> = ({
   message,
   onClose
 }) => {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={(_, data) => onOpenChange(data.open)}>
       <DialogSurface>
@@ -94,7 +98,7 @@ export const ResultDialog: React.FC<ResultDialogProps> = ({
         </DialogContent>
         <DialogActions>
           <Button appearance="primary" onClick={onClose}>
-            知道了
+            {t('unlock.got_it')}
           </Button>
         </DialogActions>
       </DialogSurface>

@@ -193,7 +193,6 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
   const [flashlightEnabled, setFlashlightEnabled] = useState<boolean>(false);
   const [autoRotateEnabled, setAutoRotateEnabled] = useState<boolean>(false);
   const { setStatusBarMessage } = useAppStore();
-  const { controlFavorites, toggleControlFavorite } = useDeviceStore();
 
   // Polling for network status
   useEffect(() => {
@@ -206,9 +205,6 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
           setWifiSsid(status.wifiSsid);
           setMobileDataEnabled(status.mobileDataEnabled);
           setAirplaneModeEnabled(status.airplaneModeEnabled);
-          
-          const flashlightRes = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "get", "system", "flashlight_enabled"]);
-          setFlashlightEnabled(flashlightRes.output.trim() === "1" || flashlightRes.output.includes("1"));
           
           const rotateRes = await deviceService.executeAdbCommand(device.serial, "shell", ["settings", "get", "system", "accelerometer_rotation"]);
           setAutoRotateEnabled(rotateRes.output.trim() === "1");
@@ -280,7 +276,6 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
       status: cmd.id.startsWith("wifi") ? wifiEnabled :
               cmd.id.startsWith("data_") ? mobileDataEnabled :
               cmd.id.startsWith("airplane") ? airplaneModeEnabled :
-              cmd.id.startsWith("flashlight") ? flashlightEnabled :
               cmd.id.startsWith("auto_rotate") ? autoRotateEnabled : undefined,
       ssid: cmd.id.startsWith("wifi") ? wifiSsid : undefined
     })));
@@ -290,28 +285,41 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
       { id: "wifi_toggle", label: t('device_control.wifi_toggle_on'), icon: <Wifi124Regular />, description: t('device_control.desc_wifi_on'), status: wifiEnabled, ssid: wifiSsid },
       { id: "mobile_data_toggle", label: t('device_control.mobile_data_on'), icon: <Cellular4GRegular />, description: t('device_control.desc_mobile_data_on'), status: mobileDataEnabled },
       { id: "airplane_toggle", label: t('device_control.airplane_mode_on'), icon: <Airplane24Regular />, description: t('device_control.desc_airplane_mode_on'), status: airplaneModeEnabled },
-      { id: "flashlight_toggle", label: t('device_control.flashlight'), icon: <Flashlight24Regular />, description: t('device_control.desc_flashlight'), status: flashlightEnabled },
       { id: "auto_rotate_toggle", label: t('device_control.auto_rotate'), icon: <ArrowCounterclockwise24Regular />, description: t('device_control.desc_auto_rotate'), status: autoRotateEnabled },
     ];
 
-    // Remove the individual on/off commands from the main grid if we use toggles
+    // Remove the individual on/off commands and explicit rejects
     const filteredCommands = commands.filter(c => 
-      !["wifi_on", "wifi_off", "data_on", "data_off", "airplane_mode_on", "airplane_mode_off", "flashlight_on", "flashlight_off", "auto_rotate_on", "auto_rotate_off"].includes(c.id)
+      !["wifi_on", "wifi_off", "data_on", "data_off", "airplane_mode_on", "airplane_mode_off", "flashlight_on", "flashlight_off", "auto_rotate_on", "auto_rotate_off", "search", "split_screen"].includes(c.id)
     );
 
     return [...filteredCommands, ...toggles];
-  }, [adbCommands, wifiEnabled, wifiSsid, mobileDataEnabled, airplaneModeEnabled, flashlightEnabled, autoRotateEnabled, t]);
+  }, [adbCommands, wifiEnabled, wifiSsid, mobileDataEnabled, airplaneModeEnabled, autoRotateEnabled, t]);
 
   const pinnedItems = useMemo(() => allCommands.filter(c => (c as any).pinned), [allCommands]);
-  const otherItems = useMemo(() => allCommands.filter(c => !(c as any).pinned), [allCommands]);
+  
+  // Group Media and Volume
+  const mediaAndVolumeItems = useMemo(() => {
+    return allCommands.filter(c => 
+      ["media_previous", "media_play_pause", "media_next", "volume_mute", "volume_down", "volume_up"].includes(c.id)
+    ).sort((a, b) => {
+      const order = ["media_previous", "media_play_pause", "media_next", "volume_mute", "volume_down", "volume_up"];
+      return order.indexOf(a.id) - order.indexOf(b.id);
+    });
+  }, [allCommands]);
+
+  const otherItems = useMemo(() => {
+    return allCommands.filter(c => 
+      !(c as any).pinned && 
+      !["media_previous", "media_play_pause", "media_next", "volume_mute", "volume_down", "volume_up"].includes(c.id)
+    );
+  }, [allCommands]);
 
   const isDeviceAvailable = device?.connected && device?.mode === "sys";
 
   const renderButtonWithFavorite = (cmd: any, isPinned = false) => {
-    const isFavorited = controlFavorites?.includes(cmd.id);
-    
     return (
-      <div key={cmd.id} style={{ position: 'relative' }} id={`control-${cmd.id}`}>
+      <div key={cmd.id} id={`control-${cmd.id}`}>
         <Button
           appearance={isPinned ? "subtle" : "outline"}
           className={mergeClasses(
@@ -339,16 +347,6 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
             />
           )}
         </Button>
-        <Button
-          size="small"
-          appearance="subtle"
-          icon={isFavorited ? <Star24Filled style={{ color: tokens.colorPaletteYellowForeground1, fontSize: '14px' }} /> : <Star24Regular style={{ fontSize: '14px' }} />}
-          style={{ position: 'absolute', top: 2, right: 2, minWidth: '24px', height: '24px', padding: 0, zIndex: 1 }}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleControlFavorite(cmd.id);
-          }}
-        />
       </div>
     );
   };
@@ -362,7 +360,14 @@ const KeySimulationCard: React.FC<KeySimulationCardProps> = ({ device, onAdbRequ
       />
       
       <div className={styles.content}>
-        {/* All Commands grid */}
+        {/* Media and Volume Group */}
+        <div style={{ backgroundColor: 'var(--colorNeutralBackground2)', padding: '10px', borderRadius: '8px', border: '1px solid var(--colorNeutralStroke2)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            {mediaAndVolumeItems.map(cmd => renderButtonWithFavorite(cmd))}
+          </div>
+        </div>
+
+        {/* Other Commands grid */}
         <div>
           <div className={styles.commandGrid}>
             {otherItems.map(cmd => renderButtonWithFavorite(cmd))}

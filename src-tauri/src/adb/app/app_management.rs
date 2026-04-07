@@ -1029,3 +1029,59 @@ fn parse_aapt_output(output: &str, apk_info: &mut ApkInfo) {
         }
     }
 }
+
+/// 导出APK
+#[tauri::command]
+pub async fn export_apk(
+    serial: String,
+    package_name: String,
+    output_path: String,
+) -> Result<CommandResult> {
+    let device = get_device_info(serial.clone()).await?;
+
+    if !device.is_adb_available() {
+        return Err(AdmtError::InvalidDeviceMode {
+            mode: format!("{:?}", device.mode),
+        });
+    }
+
+    // 1. 获取 APK 路径
+    let path_args = ["-s", &serial, "shell", "pm", "path", &package_name];
+    let path_result = utils_execute_adb_command(&path_args, Some(10)).await?;
+
+    if !path_result.success || path_result.output.is_empty() {
+        return Err(AdmtError::CommandFailed {
+            command: "pm path".to_string(),
+            error: path_result
+                .error
+                .unwrap_or_else(|| "Package not found".to_string()),
+        });
+    }
+
+    // 解析路径，格式通常为 "package:/data/app/..."
+    // 可能会有多个路径（例如 split APKs），这里我们先处理第一个
+    let first_line = path_result.output.lines().next().unwrap_or_default();
+    let remote_path = first_line.trim().replace("package:", "");
+    if remote_path.is_empty() {
+        return Err(AdmtError::CommandFailed {
+            command: "pm path".to_string(),
+            error: "Failed to parse APK path".to_string(),
+        });
+    }
+
+    // 2. 构建本地文件名
+    let file_name = format!("{}.apk", package_name);
+    let local_path = std::path::Path::new(&output_path).join(file_name);
+
+    // 3. 执行 adb pull
+    let pull_args = [
+        "-s",
+        &serial,
+        "pull",
+        &remote_path,
+        &local_path.to_string_lossy(),
+    ];
+    let pull_result = utils_execute_adb_command(&pull_args, Some(300)).await?;
+
+    Ok(pull_result)
+}

@@ -2,6 +2,7 @@
 在线资源-在线资源区域卡片页面
 */  
 import React, { useState, useEffect} from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   makeStyles,
   TabList,
@@ -139,6 +140,7 @@ type FlashZoneView =  "online-resources" | "rom-download" | "download-manager";
 
 const OnlineZonePanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<FlashZoneView>("online-resources");
   const [downloadStats, setDownloadStats] = useState({
     total: 0,
@@ -171,12 +173,12 @@ const OnlineZonePanel: React.FC = () => {
   const tabs = [
     {
       id: "online-resources" as FlashZoneView,
-      label: "软件商店",
+      label: t('online_resources.tabs.software_store'),
       icon: <CloudArrowUp24Regular />,
     },
     {
       id: "download-manager" as FlashZoneView,
-      label: "下载管理",
+      label: t('online_resources.tabs.download_manager'),
       icon: <CloudArrowUp24Regular />,
     },
   ];
