@@ -106,7 +106,7 @@ const DonationPanel: React.FC = () => {
               className={styles.qrImage}
             />
           </div>
-          <Text size={200} weight="medium">微信支付</Text>
+          <Text size={200} weight="medium">{t('donation.wechat_pay')}</Text>
         </div>
 
         <div className={styles.qrItem}>
@@ -117,7 +117,7 @@ const DonationPanel: React.FC = () => {
               className={styles.qrImage}
             />
           </div>
-          <Text size={200} weight="medium">支付宝支付</Text>
+          <Text size={200} weight="medium">{t('donation.alipay')}</Text>
         </div>
       </div>
 
@@ -125,32 +125,31 @@ const DonationPanel: React.FC = () => {
       <div className={styles.noticeBox}>
         <div className={styles.noticeTitle}>
           <Warning24Filled />
-          <Text weight="bold" size={400}>注意!</Text>
-          <Text weight="semibold">使用本软件需诚信捐赠 ¥6.00 +</Text>
+          <Text weight="bold" size={400}>{t('donation.notice')}</Text>
+          <Text weight="semibold">{t('donation.honesty')}</Text>
         </div>
 
         <div className={styles.noticeSection}>
           <Text size={200} style={{ color: tokens.colorNeutralForeground2 }}>
-            玩机管家是一款由 <b>领创工作室 (Lead And Creative Studio)</b> 维护的免费项目。
-            我们的目标是为 Android 玩家提供强大、简洁、优雅的调试工具箱。
+            {t('donation.studio_info')}
           </Text>
         </div>
 
         <div className={styles.noticeSection}>
           <Text size={200} style={{ fontStyle: "italic" }}>
-            请确保您已有捐赠意愿，这不是一种购买行为。采取诚信付款机制，付款后将获得使用权。若有捐赠意愿但暂无捐赠能力，可以暂不捐赠，待有能力那天再来捐赠即可。
+            {t('donation.intent_desc')}
           </Text>
         </div>
 
         <div className={styles.noticeSection}>
-          <Text weight="semibold" size={200}>为什么需要您的支持？</Text>
+          <Text weight="semibold" size={200}>{t('donation.why_support')}</Text>
           <Text size={200} style={{ color: tokens.colorNeutralForeground2 }}>
-             赞助资金将直接用于服务器运营、官网维护以及支持开发者的持续开发热情。无论金额大小，您的每一份支持都是我们前进的动力。
+             {t('donation.support_desc')}
           </Text>
         </div>
 
         <Text align="center" size={100} style={{ color: tokens.colorNeutralForeground4, marginTop: "8px" }}>
-          捐赠后即视为同意本页内容。付款后概不退款，请您了解。
+          {t('donation.agree_notice')}
         </Text>
       </div>
 

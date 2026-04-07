@@ -51,6 +51,7 @@ import {
   Settings24Regular,
   DocumentText24Regular,
   Info24Regular,
+  History24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -165,9 +166,8 @@ const useStyles = makeStyles({
   },
   pathInput: {
     // 固定宽度且支持横向滚动，避免遮挡右侧快捷按钮
-    flex: "0 1 55%",
-    maxWidth: "55%",
-    minWidth: "260px",
+    flex: "0 1 85%",
+    maxWidth: "85%",
     overflowX: "auto",
     whiteSpace: "nowrap",
     padding: "0 4px",
@@ -449,7 +449,7 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
     } finally {
       setIsLoading(false);
     }
-  }, [device, deviceService, setStatusBarMessage, t, sortMode]);
+  }, [device?.serial, deviceService, setStatusBarMessage, t, sortMode]);
 
   // 排序选择变化
   const handleSortChange = (_: any, data: { optionValue: string }) => {
@@ -572,12 +572,11 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}GB`;
   };
-
   useEffect(() => {
     if (device) {
       loadFiles(currentPath);
     }
-  }, [device, loadFiles, currentPath]);
+  }, [device?.serial, loadFiles, currentPath]);
 
 
   const handleNavigateUp = () => {
@@ -801,19 +800,19 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
       const dirExists = await exists(exportDir);
       if (!dirExists) {
         await mkdir(exportDir, { recursive: true });
-        await logService.info(`创建本地导出目录: ${exportDir}`, '文件管理');
+        await logService.info(t('file_manager.msg_create_local_dir', { path: exportDir }), t('file_manager.card_title'));
       }
       
       // 打开目录 - 使用Tauri的invoke方式
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke('open_folder', { path: exportDir });
-      await logService.info(`打开本地导出文件夹: ${exportDir}`, '文件管理');
+      await logService.info(t('file_manager.msg_open_local_dir', { path: exportDir }), t('file_manager.card_title'));
       setStatusBarMessage({
         type: "success",
         message: t('file_manager.msg_open_dir_success'),
       });
     } catch (error) {
-      await logService.error(`打开导出文件夹失败: ${exportDir || '未知路径'}`, '文件管理', { error: String(error) });
+      await logService.error(t('file_manager.msg_open_local_dir_fail', { path: exportDir || t('common.unknown_path') }), t('file_manager.card_title'), { error: String(error) });
       setStatusBarMessage({
         type: "error",
         message: t('file_manager.msg_open_dir_fail', { error }),
@@ -848,10 +847,10 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
           const fileName = filePath.split(/[/\\]/).pop() || filePath;
           if (result.success) {
             successCount++;
-            await logService.info(`成功上传文件: ${fileName}`, '文件管理', { localPath: filePath, remoteDir: currentPath });
+            await logService.info(t('file_manager.msg_upload_success_detail', { name: fileName }), t('file_manager.card_title'), { localPath: filePath, remoteDir: currentPath });
           } else {
             failCount++;
-            await logService.error(`上传文件失败: ${fileName}`, '文件管理', { error: result.error, localPath: filePath });
+            await logService.error(t('file_manager.msg_upload_fail_detail', { name: fileName }), t('file_manager.card_title'), { error: result.error, localPath: filePath });
           }
         }
 
@@ -911,7 +910,7 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
       } else {
          setStatusBarMessage({
           type: "error",
-          message: t('file_manager.calc_size_fail', { error: result.error || 'Unknown error' }),
+          message: t('file_manager.calc_size_fail', { error: result.error || t('common.unknown_error') }),
         });
       }
     } catch (error) {
@@ -930,10 +929,8 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
       
       const unlisten = await appWindow.onDragDropEvent((event) => {
         if (event.payload.type === 'enter') {
-          console.log('User started dragging file over window');
           setIsDragging(true);
         } else if (event.payload.type === 'drop') {
-          console.log('User dropped file', event.payload.paths);
           setIsDragging(false);
           
           // Handle dropped files
@@ -941,7 +938,6 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
             handleDroppedFiles(event.payload.paths);
           }
         } else if (event.payload.type === 'leave') {
-          console.log('User left dragging');
           setIsDragging(false);
         }
       });
@@ -972,10 +968,10 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
           const fileName = filePath.split(/[/\\]/).pop() || filePath;
           if (result.success) {
             successCount++;
-            await logService.info(`成功上传文件(拖拽): ${fileName}`, '文件管理', { localPath: filePath, remoteDir: currentPath });
+            await logService.info(t('file_manager.msg_upload_success_detail', { name: fileName }), t('file_manager.card_title'), { localPath: filePath, remoteDir: currentPath });
           } else {
             failCount++;
-            await logService.error(`上传文件失败(拖拽): ${fileName}`, '文件管理', { error: result.error, localPath: filePath });
+            await logService.error(t('file_manager.msg_upload_fail_detail', { name: fileName }), t('file_manager.card_title'), { error: result.error, localPath: filePath });
           }
         }
 
@@ -1077,7 +1073,7 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
 
          {/* Toolbox */}
          <div className={styles.toolbox}>
-           <div className={styles.sidebarHeader}>工具箱</div>
+           <div className={styles.sidebarHeader}>{t('file_manager.toolbox')}</div>
            
            <div className={styles.toolboxItem} onClick={handleUploadFile}>
              {isUploading ? <Spinner size="tiny" /> : <ArrowUpload24Regular />}
@@ -1131,7 +1127,6 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
           )}
 
           <div className={styles.content}>
-            {/* Navigation Bar */}
             <div className={styles.navigationBar}>
               <Button
                 appearance="subtle"
@@ -1141,6 +1136,15 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
                 }}
                 disabled={currentPath === '/'}
                 title={t('file_manager.nav_up_title')}
+              />
+              <Button
+                appearance="subtle"
+                icon={<History24Regular />}
+                onClick={() => {
+                  if (checkMode()) loadFiles(currentPath);
+                }}
+                disabled={isLoading || !device}
+                title={t('common.refresh')}
               />
               {/*  文件路径输入框 */}
               <div className={styles.pathInput}>
@@ -1189,7 +1193,7 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
               </div>
             ) : (
               <div className={styles.tableContainer}>
-                <Table arial-label="文件列表">
+                <Table arial-label={t('file_manager.table_aria_label')}>
                   <TableHeader>
                     <TableRow>
                       <TableHeaderCell className={styles.compactCell}>

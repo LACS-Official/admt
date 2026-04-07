@@ -25,11 +25,7 @@ import {
   Home24Regular,
   Icons24Regular,
   Notepad24Regular,
-  ChevronDown24Regular,
-  Warning24Regular,
   ShieldKeyhole24Regular,
-  Wifi124Regular,
-  Wrench24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
@@ -49,12 +45,9 @@ import OnlineZonePanel from "../OnlineResources/OnlineZonePanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
-import RootPanel from "../Root/RootPanel";
 import WirelessDebuggingPanel from "../AdbTools/WirelessDebuggingPanel";
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import AutoMirrorManager from "../Common/AutoMirrorManager";
-
-import { usageTrackingService } from "../../services/usageTrackingService";
 import { systemTrayManager } from "../../services/systemTrayManager";
 
 const useStyles = makeStyles({
@@ -68,14 +61,14 @@ const useStyles = makeStyles({
     gap: "1px", // 添加分隔线效果
   },
   sidebar: {
-    width: "180px", // 增加宽度
+    width: "180px", 
     maxWidth: "250px",
-    backgroundColor: "var(--colorNeutralBackground2)", // 使用更深的背景色
-    borderRight: "1px solid var(--colorNeutralStroke3)", // 更淡的边框
+    backgroundColor: "var(--colorNeutralBackground2)", 
+    borderRight: "1px solid var(--colorNeutralStroke3)", 
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    boxShadow: "2px 0 16px rgba(0, 0, 0, 0.08)", // 更现代的阴影
+    boxShadow: "2px 0 16px rgba(0, 0, 0, 0.08)", 
     position: "relative",
     zIndex: 10,
     // 添加渐变背景
@@ -671,11 +664,6 @@ const MainContent: React.FC = () => {
       icon: <CloudArrowDown24Regular />,
     },
     {
-      id: "root" as AppView,
-      label: t("sidebar.root_zone"),
-      icon: <ShieldKeyhole24Regular />,
-    },
-    {
       id: "settings" as AppView,
       label: t("sidebar.settings"),
       icon: <Settings24Regular />,
@@ -689,9 +677,6 @@ const MainContent: React.FC = () => {
   const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
   const [updateCheckCompleted, setUpdateCheckCompleted] = useState(false);
 
-  // 设备选择弹窗状态
-  const [isDeviceSelectionDialogOpen, setIsDeviceSelectionDialogOpen] =
-    useState(false);
 
   // 离线弹窗状态
   const [isOfflineDialogOpen, setIsOfflineDialogOpen] = useState(false);
@@ -958,7 +943,7 @@ const MainContent: React.FC = () => {
           // 仅在创建失败时设置状态消息
           setStatusBarMessage({
             type: 'error',
-            message: '设备选择窗口创建失败'
+            message: t('main.device_selection_window_create_failed')
           });
         });
       }
@@ -971,7 +956,7 @@ const MainContent: React.FC = () => {
         console.error("打开设备选择窗口过程中发生异常:", error);
         setStatusBarMessage({
           type: 'error',
-          message: '打开设备选择窗口失败'
+          message: t('main.open_device_selection_window_failed')
         });
       }
     } finally {
@@ -1038,7 +1023,7 @@ const MainContent: React.FC = () => {
         console.error("打开控制台子窗口失败:", error);
         setStatusBarMessage({
           type: 'error',
-          message: '打开控制台窗口失败'
+          message: t('main.open_console_window_failed')
         });
       }
     } finally {
@@ -1156,10 +1141,6 @@ const MainContent: React.FC = () => {
       );
     };
 
-    const getDeviceOptionText = (device: any) => {
-      // 直接返回设备序列号
-      return device.serial;
-    };
 
     const getDeviceCodeName = () => {
       if (
@@ -1250,8 +1231,6 @@ const MainContent: React.FC = () => {
         return <AdbZonePanel />;
       case "flash-zone":
         return <FlashZonePanel />;
-      case "root":
-        return <RootPanel />;
       case "extended-features":
         return <ExtendedFeaturesPanel />;
       case "online-resources":

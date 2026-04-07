@@ -48,7 +48,7 @@ const defaultConfig: AppConfig = {
   carouselInterval: 8000,
   globalSearchHotkey: 'Ctrl+K',
   monitorAutoStart: true,
-  monitorAutoCsvExport: false,
+  monitorAutoCsvExport: true,
   cpuMonitorInterval: 1000,
   autoScreenMirror: false,
   ai: {

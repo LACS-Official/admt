@@ -47,14 +47,25 @@ export const useDeviceStore = create<DeviceState>()(
         // 稳定保持选中设备的引用（如果它仍在列表中）
         let nextSelectedDevice = get().selectedDevice;
         if (nextSelectedDevice) {
-           const stillPresent = mergedDevices.find(d => d.serial === currentSelectedDeviceId);
-           if (stillPresent) {
-             // 只有当选中设备的连接状态或模式真正改变时，才考虑更新引用以触发 React 重绘，
-             // 这里我们由于想保住 properties 等属性，优先选 mergedDevices 里的（它已经合并过旧属性了）
-             nextSelectedDevice = stillPresent;
-           } else {
-             nextSelectedDevice = undefined;
-           }
+          const currentSelectedDeviceId = nextSelectedDevice.serial;
+          const stillPresent = mergedDevices.find(d => d.serial === currentSelectedDeviceId);
+          if (stillPresent) {
+            // 核心属性比对：只有当选中设备的连接状态、模式等关键属性真正改变时，才更新引用。
+            // 这能有效防止后台扫描频率更新导致的 UI 持续刷新问题。
+            const prev = get().selectedDevice;
+            const hasChanged = !prev || 
+              prev.serial !== stillPresent.serial || 
+              prev.connected !== stillPresent.connected || 
+              prev.mode !== stillPresent.mode;
+            
+            if (hasChanged) {
+              nextSelectedDevice = stillPresent;
+            } else {
+              nextSelectedDevice = prev;
+            }
+          } else {
+            nextSelectedDevice = undefined;
+          }
         }
 
         set({ 

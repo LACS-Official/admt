@@ -304,14 +304,7 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
               {activeTask.status === 'extracting' ? '正在解压' : '正在下载'}
             </Button>
           ) : (
-            <Button
-              size="small"
-              appearance="primary"
-              icon={<ArrowDownload24Regular />}
-              onClick={handleDownload}
-            >
-              立即下载
-            </Button>
+            <button></button>
           )}
         </div>
       </div>

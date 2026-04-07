@@ -38,6 +38,7 @@ import html2canvas from 'html2canvas';
 
 import { useAppStore } from '../../stores/appStore';
 import { useDeviceStore } from '../../stores/deviceStore';
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
@@ -150,6 +151,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
   const { config } = useAppStore();
   const { selectedDevice: storeDevice } = useDeviceStore();
   const selectedDevice = propDevice || storeDevice;
+  const { t } = useTranslation();
   
   const [isMonitoring, setIsMonitoring] = useState(config.monitorAutoStart || !!selectedDevice);
   const [dataPoints, setDataPoints] = useState<MonitorDataPoint[]>([]);
@@ -213,12 +215,26 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
     }
   };
 
+  const [displayRange, setDisplayRange] = useState(60); // Seconds to display
+  const maxHistory = 3600; // Keep up to 1 hour (3600 seconds)
+
+  const isFetching = useRef(false);
+
+  const isMonitoringRef = useRef(isMonitoring);
+  useEffect(() => {
+    isMonitoringRef.current = isMonitoring;
+  }, [isMonitoring]);
+
   // 监控循环
   useEffect(() => {
     let timer: any;
     if (isMonitoring && selectedDevice) {
       console.log(`[Monitor] Starting monitoring for device: ${selectedDevice.serial}`);
+      
       const fetchData = async () => {
+        if (!isMonitoringRef.current || isFetching.current) return;
+        isFetching.current = true;
+        
         const startTime = Date.now();
         try {
           let res: any;
@@ -264,6 +280,8 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
             res = await invoke('get_device_realtime_monitor_data', { serial: selectedDevice.serial });
           }
           
+          if (!isMonitoringRef.current) return;
+
           if (!res || !res.cpu) {
             throw new Error("Invalid data received from backend");
           }
@@ -295,7 +313,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
 
           setDataPoints(prev => {
             const next = [...prev, newDataPoint];
-            return next.length > 60 ? next.slice(next.length - 60) : next;
+            return next.length > maxHistory ? next.slice(next.length - maxHistory) : next;
           });
           setError(null);
 
@@ -305,20 +323,29 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
           }
           
           const duration = Date.now() - startTime;
-          if (duration > 1000) {
+          if (duration > 1500) {
             console.warn(`[Monitor] Fetch data took too long: ${duration}ms`);
           }
         } catch (e: any) {
           console.error("[Monitor] Fetch failed:", e);
-          setError(e.message || String(e));
+          if (isMonitoringRef.current) {
+            setError(e.message || String(e));
+          }
+        } finally {
+          isFetching.current = false;
+          lastFetchTime.current = Date.now();
+          if (isMonitoringRef.current) {
+            timer = setTimeout(fetchData, config.cpuMonitorInterval);
+          }
         }
-        lastFetchTime.current = Date.now();
-        timer = setTimeout(fetchData, config.cpuMonitorInterval);
       };
       fetchData();
     }
-    return () => clearTimeout(timer);
-  }, [isMonitoring, selectedDevice, config.cpuMonitorInterval]);
+    return () => {
+      clearTimeout(timer);
+      isFetching.current = false;
+    };
+  }, [isMonitoring, selectedDevice, config.cpuMonitorInterval, config.monitorAutoCsvExport, maxHistory]);
 
   // 处理 CSV 自动写入
   const handleAutoCsvWrite = async (data: MonitorDataPoint) => {
@@ -326,7 +353,16 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
       if (!csvFileRef.current) {
         const docDir = await documentDir();
         const admtDir = await join(docDir, 'admt');
-        const fname = `monitor_${selectedDevice?.serial}_${Date.now()}.csv`;
+        
+        // 格式化设备名称 (移除不合法文件名字符)
+        const rawName = selectedDevice?.market_name || selectedDevice?.model || selectedDevice?.serial || 'unknown';
+        const deviceName = rawName.replace(/[\\/:*?"<>|]/g, '_');
+        
+        // 时间戳 YYYYMMDDHHMMSS
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+        
+        const fname = `admt_DeviceInfo_${deviceName}_${timestamp}.csv`;
         csvFileRef.current = await join(admtDir, fname);
         const header = "Time,CPU Usage(%),Mem Usage(%),CPU Temp(C),Battery Temp(C),Battery(%),Power(W)\n";
         
@@ -345,6 +381,16 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
       console.error("CSV Auto Write Failed:", e);
     }
   };
+
+  // 当切换设备或检测到新连接时，根据配置自动开启循环
+  useEffect(() => {
+    if (selectedDevice && config.monitorAutoStart) {
+      setIsMonitoring(true);
+      // 清空旧数据以开启新 Session
+      setDataPoints([]);
+      csvFileRef.current = null;
+    }
+  }, [selectedDevice?.serial, config.monitorAutoStart]);
 
   const clearData = () => {
     setDataPoints([]);
@@ -413,26 +459,41 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
     return null;
   };
 
+  // 渲染显示的数据点 (增加采样逻辑防止长周期图表卡顿)
+  const displayedDataPoints = useMemo(() => {
+    const raw = dataPoints.slice(-displayRange);
+    if (displayRange <= 300) return raw;
+    
+    // 如果点数太多，进行等距采样 (最大保留约 300 个点)
+    const step = Math.ceil(displayRange / 300);
+    return raw.filter((_, index) => index % step === 0);
+  }, [dataPoints, displayRange]);
+
   return (
     <Card className={styles.card}>
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <Pulse24Regular color="var(--colorBrandForeground1)" />
-          <Text weight="bold" size={500}>硬件实时监控</Text>
-          {isMonitoring && <Badge appearance="filled" color="success" size="small" style={{ borderRadius: '4px' }}>LIVE</Badge>}
+          <Text weight="bold" size={500}>{t('monitor.title')}</Text>
         </div>
         <div className={styles.controls}>
+          <div style={{ display: 'flex', backgroundColor: 'var(--colorNeutralBackground3)', padding: '2px', borderRadius: '8px', marginRight: '8px' }}>
+            <Button size="small" appearance={displayRange === 60 ? "secondary" : "transparent"} onClick={() => setDisplayRange(60)}>{t('monitor.range_1m')}</Button>
+            <Button size="small" appearance={displayRange === 600 ? "secondary" : "transparent"} onClick={() => setDisplayRange(600)}>{t('monitor.range_10m')}</Button>
+            <Button size="small" appearance={displayRange === 1800 ? "secondary" : "transparent"} onClick={() => setDisplayRange(1800)}>{t('monitor.range_30m')}</Button>
+            <Button size="small" appearance={displayRange === 3600 ? "secondary" : "transparent"} onClick={() => setDisplayRange(3600)}>{t('monitor.range_1h')}</Button>
+          </div>
           <Button 
             icon={isMonitoring ? <Stop24Filled /> : <Play24Filled />}
             appearance={isMonitoring ? "subtle" : "primary"}
             onClick={() => setIsMonitoring(!isMonitoring)}
             size="medium"
           >
-            {isMonitoring ? "停止" : "启动"}
+            {isMonitoring ? t('monitor.stop') : t('monitor.start')}
           </Button>
-          <Button icon={<ArrowDownload24Regular />} onClick={exportCsvManually} disabled={dataPoints.length === 0}>导出</Button>
-          <Button icon={<Image24Regular />} onClick={exportImage} disabled={dataPoints.length === 0}>截图</Button>
-          <Button icon={<Delete24Regular />} onClick={clearData} appearance="transparent">清空</Button>
+          <Button icon={<ArrowDownload24Regular />} onClick={exportCsvManually} disabled={dataPoints.length === 0}>{t('monitor.export')}</Button>
+          <Button icon={<Image24Regular />} onClick={exportImage} disabled={dataPoints.length === 0}>{t('monitor.screenshot')}</Button>
+          <Button icon={<Delete24Regular />} onClick={clearData} appearance="transparent">{t('monitor.clear')}</Button>
         </div>
       </div>
 
@@ -445,25 +506,25 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
           }}
           appearance="subtle"
         >
-          <Tab value="cpu">CPU性能</Tab>
-          <Tab value="memory">运行内存</Tab>
-          <Tab value="temperature">实时温度</Tab>
-          <Tab value="power">电量与功率</Tab>
-          <Tab value="network">网络流量</Tab>
-          <Tab value="gpu">GPU状态</Tab>
+          <Tab value="cpu">{t('monitor.cpu_perf')}</Tab>
+          <Tab value="memory">{t('monitor.memory')}</Tab>
+          <Tab value="temperature">{t('monitor.temperature')}</Tab>
+          <Tab value="power">{t('monitor.power')}</Tab>
+          <Tab value="network">{t('monitor.network')}</Tab>
+          <Tab value="gpu">{t('monitor.gpu')}</Tab>
         </TabList>
 
         <div style={{ display: 'flex', gap: '8px' }}>
           {activeTab === 'cpu' && (
             <div style={{ display: 'flex', backgroundColor: 'var(--colorNeutralBackground3)', padding: '2px', borderRadius: '8px' }}>
-              <Button size="small" appearance={cpuDisplayMode === 'utilization' ? "secondary" : "transparent"} onClick={() => setCpuDisplayMode('utilization')}>利用率</Button>
-              <Button size="small" appearance={cpuDisplayMode === 'frequency' ? "secondary" : "transparent"} onClick={() => setCpuDisplayMode('frequency')}>频率</Button>
+              <Button size="small" appearance={cpuDisplayMode === 'utilization' ? "secondary" : "transparent"} onClick={() => setCpuDisplayMode('utilization')}>{t('monitor.utilization')}</Button>
+              <Button size="small" appearance={cpuDisplayMode === 'frequency' ? "secondary" : "transparent"} onClick={() => setCpuDisplayMode('frequency')}>{t('monitor.frequency')}</Button>
             </div>
           )}
           {activeTab === 'memory' && (
             <div style={{ display: 'flex', backgroundColor: 'var(--colorNeutralBackground3)', padding: '2px', borderRadius: '8px' }}>
-              <Button size="small" appearance={memDisplayMode === 'percent' ? "secondary" : "transparent"} onClick={() => setMemDisplayMode('percent')}>百分比</Button>
-              <Button size="small" appearance={memDisplayMode === 'space' ? "secondary" : "transparent"} onClick={() => setMemDisplayMode('space')}>容量</Button>
+              <Button size="small" appearance={memDisplayMode === 'percent' ? "secondary" : "transparent"} onClick={() => setMemDisplayMode('percent')}>{t('monitor.percentage')}</Button>
+              <Button size="small" appearance={memDisplayMode === 'space' ? "secondary" : "transparent"} onClick={() => setMemDisplayMode('space')}>{t('monitor.capacity')}</Button>
             </div>
           )}
         </div>
@@ -473,16 +534,16 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
         <div className={styles.chartContainer} ref={chartRef}>
           {error && (
             <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 100, backgroundColor: 'rgba(209, 52, 56, 0.1)', color: 'var(--colorStatusDangerForeground1)', padding: '2px 12px', borderRadius: '4px', fontSize: '11px', border: '1px solid var(--colorStatusDangerBorder1)' }}>
-              监控采集异常: {error}
+              {t('monitor.exception', { error })}
             </div>
           )}
           <div style={{ position: 'absolute', right: 16, top: 8, zIndex: 10 }}>
              <Button size="small" appearance="subtle" onClick={toggleCurrentTabLines}>
-               切换全部
+               {t('monitor.switching_all')}
              </Button>
           </div>
           <ResponsiveContainer width="100%" height="100%" debounce={50}>
-            <LineChart data={dataPoints} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+            <LineChart data={displayedDataPoints} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--colorNeutralStroke2)" opacity={0.3} />
               <XAxis 
                 dataKey="time" 
@@ -534,7 +595,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
               
               {activeTab === 'cpu' && cpuDisplayMode === 'utilization' && (
                 <>
-                  <Line aria-label="总CPU使用率" hide={hiddenLines.includes('totalCpuUsage')} type="monotone" dataKey="totalCpuUsage" name="总线" stroke="#3a7bd5" strokeWidth={3} dot={false} isAnimationActive={false} />
+                  <Line aria-label={t('monitor.total_cpu')} hide={hiddenLines.includes('totalCpuUsage')} type="monotone" dataKey="totalCpuUsage" name={t('monitor.total_line')} stroke="#3a7bd5" strokeWidth={3} dot={false} isAnimationActive={false} />
                   {cpuCoreNames.map((name, i) => (
                     <Line key={name} hide={hiddenLines.includes(name)} type="monotone" dataKey={name} name={name} stroke={COLORS[i % COLORS.length]} strokeWidth={1} dot={false} isAnimationActive={false} />
                   ))}
@@ -547,38 +608,38 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
               )}
               {activeTab === 'memory' && memDisplayMode === 'percent' && (
                 <>
-                  <Line hide={hiddenLines.includes('memUsedPercent')} type="monotone" dataKey="memUsedPercent" name="已用" stroke="#f2994a" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('memFreePercent')} type="monotone" dataKey="memFreePercent" name="空闲" stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('memUsedPercent')} type="monotone" dataKey="memUsedPercent" name={t('monitor.used')} stroke="#f2994a" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('memFreePercent')} type="monotone" dataKey="memFreePercent" name={t('monitor.free')} stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'memory' && memDisplayMode === 'space' && (
                 <>
-                  <Line hide={hiddenLines.includes('memUsedGb')} type="monotone" dataKey="memUsedGb" name="已用(GB)" stroke="#f2994a" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('memFreeGb')} type="monotone" dataKey="memFreeGb" name="空闲(GB)" stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('memUsedGb')} type="monotone" dataKey="memUsedGb" name={t('monitor.used_gb')} stroke="#f2994a" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('memFreeGb')} type="monotone" dataKey="memFreeGb" name={t('monitor.free_gb')} stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'temperature' && (
                 <>
-                  <Line hide={hiddenLines.includes('cpuTemp')} type="monotone" dataKey="cpuTemp" name="核心" stroke="#eb3349" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('battTemp')} type="monotone" dataKey="battTemp" name="电池" stroke="#ffaa00" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('cpuTemp')} type="monotone" dataKey="cpuTemp" name={t('monitor.core')} stroke="#eb3349" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('battTemp')} type="monotone" dataKey="battTemp" name={t('monitor.battery')} stroke="#ffaa00" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'power' && (
                 <>
-                  <Line hide={hiddenLines.includes('battCap')} type="monotone" dataKey="battCap" name="电量" stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('battPower')} type="monotone" dataKey="battPower" name="功率(W)" stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('battCap')} type="monotone" dataKey="battCap" name={t('monitor.level')} stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('battPower')} type="monotone" dataKey="battPower" name={t('monitor.power_w')} stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'network' && (
                 <>
-                  <Line hide={hiddenLines.includes('rxSpeed')} type="monotone" dataKey="rxSpeed" name="下载(KB/s)" stroke="#0078d4" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('txSpeed')} type="monotone" dataKey="txSpeed" name="上传(KB/s)" stroke="#d13438" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('rxSpeed')} type="monotone" dataKey="rxSpeed" name={t('monitor.download_kb')} stroke="#0078d4" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('txSpeed')} type="monotone" dataKey="txSpeed" name={t('monitor.upload_kb')} stroke="#d13438" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'gpu' && (
                 <>
-                  <Line hide={hiddenLines.includes('gpuLoad')} type="monotone" dataKey="gpuLoad" name="GPU负载(%)" stroke="#00b7c3" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('gpuFreq')} type="monotone" dataKey="gpuFreq" name="GPU频率(MHz)" stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('gpuLoad')} type="monotone" dataKey="gpuLoad" name={t('monitor.gpu_load')} stroke="#00b7c3" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('gpuFreq')} type="monotone" dataKey="gpuFreq" name={t('monitor.gpu_freq')} stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
             </LineChart>
@@ -588,10 +649,10 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
           {isMonitoring ? (
             <>
-              <Spinner label="正在抓取设备状态..." />
+              <Spinner label={t('monitor.fetching_data')} />
               {error && <Text size={200} style={{ color: 'var(--colorStatusDangerForeground1)', marginTop: '8px' }}>错误: {error}</Text>}
             </>
-          ) : <Text>点击“启动监控”开始记录硬件指标</Text>}
+          ) : <Text>{t('monitor.click_to_start')}</Text>}
         </div>
       )}
 

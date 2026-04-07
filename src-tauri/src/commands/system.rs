@@ -87,294 +87,145 @@ static NETWORK_CACHE: Lazy<Mutex<HashMap<String, NetworkCounters>>> =
 /// 获取实时监控数据
 #[tauri::command]
 pub async fn get_device_realtime_monitor_data(serial: String) -> Result<MonitorDataPoint> {
-    // 准备并行任务
-    let cpu_serial = serial.clone();
-    let mem_serial = serial.clone();
-    let temp_serial = serial.clone();
-    let batt_serial = serial.clone();
-    let serial_shared = serial.clone();
+    let _start_time = std::time::Instant::now();
 
-    // 1. CPU 采集
-    let cpu_task = tokio::spawn(async move {
-        if let Ok(cpu_stat) =
-            utils_execute_adb_command(&["-s", &cpu_serial, "shell", "cat", "/proc/stat"], Some(3))
-                .await
-        {
-            if cpu_stat.success {
-                return calculate_realtime_cpu_usage(&cpu_serial, &cpu_stat.output);
-            }
-        }
-        (0.0, Vec::new())
+    // 1. 批量采集基础硬件信息 (使用分隔符确保解析可靠性)
+    let batch_cmd = "echo '<<<STAT>>>'; cat /proc/stat; \
+        echo '<<<MEM>>>'; cat /proc/meminfo; \
+        echo '<<<NET>>>'; cat /proc/net/dev; \
+        echo '<<<FREQ>>>'; cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq; \
+        echo '<<<TEMP>>>'; cat /sys/class/thermal/thermal_zone0/temp; \
+        echo '<<<BTEMP>>>'; cat /sys/class/power_supply/battery/temp; \
+        echo '<<<BCAP>>>'; cat /sys/class/power_supply/battery/capacity; \
+        echo '<<<BCUR>>>'; cat /sys/class/power_supply/battery/current_now; \
+        echo '<<<BVOLT>>>'; cat /sys/class/power_supply/battery/voltage_now; \
+        echo '<<<GPU>>>'; cat /sys/class/kgsl/kgsl-3d0/gpubusy; \
+        echo '<<<GCLK>>>'; cat /sys/class/kgsl/kgsl-3d0/gpuclk; \
+        echo '<<<END>>>'"
+        .to_string();
+
+    let serial_batch = serial.clone();
+    let batch_task = tokio::spawn(async move {
+        utils_execute_adb_command(&["-s", &serial_batch, "shell", &batch_cmd], Some(5)).await
     });
 
-    // 2. CPU 频率采集
-    let freq_task = tokio::spawn(async move {
-        let mut frequencies = HashMap::new();
-        if let Ok(freq_res) = utils_execute_adb_command(
-            &[
-                "-s",
-                &serial_shared,
-                "shell",
-                "cat",
-                "/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
-            ],
-            Some(3),
-        )
-        .await
-        {
-            if freq_res.success {
-                for (i, line) in freq_res.output.lines().enumerate() {
-                    if let Ok(f) = line.trim().parse::<u64>() {
-                        frequencies.insert(format!("cpu{}", i), f / 1000);
-                    }
-                }
-            }
-        }
-        frequencies
-    });
-
-    // 3. 内存采集
-    let mem_task = tokio::spawn(async move {
-        if let Ok(mem_info) = utils_execute_adb_command(
-            &["-s", &mem_serial, "shell", "cat", "/proc/meminfo"],
-            Some(3),
-        )
-        .await
-        {
-            if mem_info.success {
-                return parse_meminfo(&mem_info.output);
-            }
-        }
-        (0, 0, 0)
-    });
-
-    // 4. 温度采集
-    let temp_task = tokio::spawn(async move {
-        let mut cpu_temp = 0.0;
-        let mut batt_temp = 0.0;
-
-        // 尝试快速读取 sysfs 温度
-        let temp_paths = [
-            "/sys/class/thermal/thermal_zone0/temp",
-            "/sys/devices/virtual/thermal/thermal_zone0/temp",
-            "/sys/class/thermal/cooling_device0/cur_state",
-        ];
-        for path in temp_paths {
-            if let Ok(res) =
-                utils_execute_adb_command(&["-s", &temp_serial, "shell", "cat", path], Some(1))
-                    .await
-            {
-                if res.success {
-                    if let Ok(t) = res.output.trim().parse::<f64>() {
-                        let val = if t > 1000.0 { t / 1000.0 } else { t };
-                        if val > 1.0 && val < 150.0 {
-                            cpu_temp = val;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        // 快速读取电池温度
-        let b_temp_paths = [
-            "/sys/class/power_supply/battery/temp",
-            "/sys/class/power_supply/battery/batt_temp",
-        ];
-        for path in b_temp_paths {
-            if let Ok(res) =
-                utils_execute_adb_command(&["-s", &temp_serial, "shell", "cat", path], Some(1))
-                    .await
-            {
-                if res.success {
-                    if let Ok(t) = res.output.trim().parse::<f64>() {
-                        batt_temp = t / 10.0;
-                        break;
-                    }
-                }
-            }
-        }
-
-        (cpu_temp, batt_temp)
-    });
-
-    // 5. 电池与功率采集
-    let batt_task = tokio::spawn(async move {
-        let (mut level, mut health) = (0, None);
-        let (mut current, mut voltage) = (0.0, 0.0);
-
-        if let Ok(res) = utils_execute_adb_command(
-            &["-s", &batt_serial, "shell", "dumpsys", "battery"],
-            Some(3),
-        )
-        .await
-        {
-            if res.success {
-                let (l, h) = parse_battery_level_and_health(&res.output);
-                level = l;
-                health = h;
-            }
-        }
-
-        let curr_paths = [
-            "/sys/class/power_supply/battery/current_now",
-            "/sys/class/power_supply/main/current_now",
-        ];
-        for path in curr_paths {
-            if let Ok(res) =
-                utils_execute_adb_command(&["-s", &batt_serial, "shell", "cat", path], Some(1))
-                    .await
-            {
-                if res.success {
-                    current = res.output.trim().parse::<f64>().unwrap_or(0.0);
-                    break;
-                }
-            }
-        }
-
-        let volt_paths = [
-            "/sys/class/power_supply/battery/voltage_now",
-            "/sys/class/power_supply/main/voltage_now",
-        ];
-        for path in volt_paths {
-            if let Ok(res) =
-                utils_execute_adb_command(&["-s", &batt_serial, "shell", "cat", path], Some(1))
-                    .await
-            {
-                if res.success {
-                    voltage = res.output.trim().parse::<f64>().unwrap_or(0.0);
-                    break;
-                }
-            }
-        }
-
-        (level, health, current, voltage)
-    });
-
-    // 6. 网络流量采集
-    let net_serial = serial.clone();
-    let net_task = tokio::spawn(async move {
-        if let Ok(res) = utils_execute_adb_command(
-            &["-s", &net_serial, "shell", "cat", "/proc/net/dev"],
-            Some(2),
-        )
-        .await
-        {
-            if res.success {
-                return calculate_network_speed(&net_serial, &res.output);
-            }
-        }
-        (0.0, 0.0)
-    });
-
-    // 7. GPU 采集
-    let gpu_serial = serial.clone();
-    let gpu_task = tokio::spawn(async move {
-        let mut load = 0.0;
-        let mut freq = 0;
-
-        // Qualcomm Adreno
-        if let Ok(res) = utils_execute_adb_command(
-            &[
-                "-s",
-                &gpu_serial,
-                "shell",
-                "cat",
-                "/sys/class/kgsl/kgsl-3d0/gpubusy",
-            ],
-            Some(1),
-        )
-        .await
-        {
-            if res.success {
-                let parts: Vec<&str> = res.output.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    let busy: f64 = parts[0].parse().unwrap_or(0.0);
-                    let total: f64 = parts[1].parse().unwrap_or(1.0);
-                    if total > 0.0 {
-                        load = (busy / total * 100.0).clamp(0.0, 100.0);
-                    }
-                }
-            }
-        }
-
-        if let Ok(res) = utils_execute_adb_command(
-            &[
-                "-s",
-                &gpu_serial,
-                "shell",
-                "cat",
-                "/sys/class/kgsl/kgsl-3d0/gpuclk",
-            ],
-            Some(1),
-        )
-        .await
-        {
-            if res.success {
-                freq = res.output.trim().parse::<u64>().unwrap_or(0) / 1000000; // Hz -> MHz
-            }
-        }
-
-        (load, freq)
-    });
-
-    // 8. 进程排行采集 (耗时较长，增加超时)
+    // 2. 进程排行采集 (保持独立)
     let proc_serial = serial.clone();
     let proc_task = tokio::spawn(async move {
-        if let Ok(res) = utils_execute_adb_command(
+        utils_execute_adb_command(
             &[
                 "-s",
                 &proc_serial,
                 "shell",
-                "top",
-                "-b",
-                "-n",
-                "1",
-                "-o",
-                "%CPU,%MEM",
+                "top -b -n 1 -o %CPU,%MEM | head -n 12",
             ],
             Some(5),
         )
         .await
-        {
-            if res.success {
-                return parse_top_processes(&res.output);
-            }
-        }
-        Vec::new()
     });
 
-    // 等待所有并行任务完成
-    let (cpu_res, freq_res, mem_res, temp_res, batt_res, net_res, gpu_res, proc_res) = tokio::join!(
-        cpu_task, freq_task, mem_task, temp_task, batt_task, net_task, gpu_task, proc_task
+    let batch_output = match batch_task.await {
+        Ok(Ok(res)) if res.success => res.output,
+        _ => String::new(),
+    };
+
+    // 按分隔符分割数据
+    let mut sections: HashMap<String, String> = HashMap::new();
+    let mut current_section = String::new();
+    let mut current_content = Vec::new();
+
+    for line in batch_output.lines() {
+        let line = line.trim();
+        if line.starts_with("<<<") && line.ends_with(">>>") {
+            if !current_section.is_empty() {
+                sections.insert(current_section.clone(), current_content.join("\n"));
+            }
+            current_section = line[3..line.len() - 3].to_string();
+            current_content.clear();
+        } else {
+            current_content.push(line.to_string());
+        }
+    }
+    if !current_section.is_empty() {
+        sections.insert(current_section, current_content.join("\n"));
+    }
+
+    // 解析各部分数据
+    let (total_usage, core_usages) = calculate_realtime_cpu_usage(
+        &serial,
+        sections.get("STAT").map(|s| s.as_str()).unwrap_or(""),
+    );
+    let (mem_total, mem_free, mem_avail) =
+        parse_meminfo(sections.get("MEM").map(|s| s.as_str()).unwrap_or(""));
+    let (rx_speed, tx_speed) = calculate_network_speed(
+        &serial,
+        sections.get("NET").map(|s| s.as_str()).unwrap_or(""),
     );
 
-    let (total_usage, core_usages) = cpu_res.unwrap_or_else(|_| (0.0, Vec::new()));
-    let frequencies = freq_res.unwrap_or_default();
-    let (mem_total, mem_free, mem_avail) = mem_res.unwrap_or_else(|_| (0, 0, 0));
-    let (cpu_temp, batt_temp) = temp_res.unwrap_or_else(|_| (0.0, 0.0));
-    let (batt_level, batt_health, current, voltage) =
-        batt_res.unwrap_or_else(|_| (0, None, 0.0, 0.0));
-    let (rx_speed, tx_speed) = net_res.unwrap_or_else(|_| (0.0, 0.0));
-    let (gpu_load, gpu_freq) = gpu_res.unwrap_or_else(|_| (0.0, 0));
-    let processes = proc_res.unwrap_or_default();
+    let mut frequencies = HashMap::new();
+    if let Some(freq_str) = sections.get("FREQ") {
+        for (i, line) in freq_str.lines().enumerate() {
+            if let Ok(val) = line.trim().parse::<u64>() {
+                frequencies.insert(format!("cpu{}", i), val / 1000);
+            }
+        }
+    }
 
-    // 计算功率 (W), 电流通常为 uA, 电压通常为 uV
-    // 转换为标准单位处理，如果数值太大则认为是 uA/uV
+    let cpu_temp = sections
+        .get("TEMP")
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .map(|v| if v > 1000.0 { v / 1000.0 } else { v })
+        .unwrap_or(0.0);
+    let batt_temp = sections
+        .get("BTEMP")
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .map(|v| v / 10.0)
+        .unwrap_or(0.0);
+    let batt_level = sections
+        .get("BCAP")
+        .and_then(|s| s.trim().parse::<i32>().ok())
+        .unwrap_or(0);
+    let current = sections
+        .get("BCUR")
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .unwrap_or(0.0);
+    let voltage = sections
+        .get("BVOLT")
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .unwrap_or(0.0);
+
+    let mut gpu_load = 0.0;
+    if let Some(gpu_str) = sections.get("GPU") {
+        let parts: Vec<&str> = gpu_str.split_whitespace().collect();
+        if parts.len() == 2 {
+            if let (Ok(busy), Ok(total)) = (parts[0].parse::<f64>(), parts[1].parse::<f64>()) {
+                if total > 0.0 {
+                    gpu_load = (busy / total * 100.0).clamp(0.0, 100.0);
+                }
+            }
+        }
+    }
+    let gpu_freq = sections
+        .get("GCLK")
+        .and_then(|s| s.trim().parse::<u64>().ok())
+        .map(|v| v / 1000000)
+        .unwrap_or(0);
+
+    let processes = match proc_task.await {
+        Ok(Ok(res)) if res.success => parse_top_processes(&res.output),
+        _ => Vec::new(),
+    };
+
     let abs_current = current.abs();
     let norm_current = if abs_current > 100000.0 {
         abs_current / 1000000.0
-    } else if abs_current > 1000.0 {
-        abs_current / 1000.0
     } else {
-        abs_current
+        abs_current / 1000.0
     };
     let norm_voltage = if voltage > 100000.0 {
         voltage / 1000000.0
-    } else if voltage > 1000.0 {
-        voltage / 1000.0
     } else {
-        voltage
+        voltage / 1000.0
     };
     let power = norm_current * norm_voltage;
 
@@ -398,7 +249,7 @@ pub async fn get_device_realtime_monitor_data(serial: String) -> Result<MonitorD
             level: batt_level,
             current,
             voltage,
-            health: batt_health,
+            health: None,
             power,
         },
         network: MonitorNetworkData { rx_speed, tx_speed },

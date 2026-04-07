@@ -17,6 +17,7 @@ import {
   Wrench24Regular,
   Warning24Regular,
   Info24Regular,
+  WifiSettingsRegular,
 } from "@fluentui/react-icons";
 
 import { useTranslation } from "react-i18next";
@@ -167,7 +168,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device
   const { t } = useTranslation();
   const { selectedDevice: storeDevice } = useDeviceStore();
   const selectedDevice = propDevice || storeDevice;
-  const { setStatusBarMessage } = useAppStore();
+  const { setStatusBarMessage, setWirelessDebuggingDialogOpen } = useAppStore();
   const { BatchExecutorDialog } = useBatchExecutor();
 
   const [executingFunction, setExecutingFunction] = useState<string | null>(null);
@@ -187,7 +188,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device
     if (selectedDevice?.serial === "DEMO-ADB-001") {
       setStatusBarMessage({
         type: "warning",
-        message: "演示模式下无法执行该操作",
+        message: t('adb.demo_mode'),
         duration: 3000,
       });
       return;
@@ -379,12 +380,6 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device
       isRisky: false,
       action: handleFinishAdb,
     },
-    // {
-    //   id: "finish-adb5037",
-    //   title: "结束ADB-5037端口",
-    //   isRisky: true,
-    //   action: handleFinishAdb5037,
-    // },
     {
       id: "install-driver",
       title: t('misc.install_driver'),

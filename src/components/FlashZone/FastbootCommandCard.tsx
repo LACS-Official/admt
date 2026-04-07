@@ -26,6 +26,7 @@ import {
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
@@ -170,45 +171,48 @@ if (typeof document !== 'undefined') {
   }
 }
 
-// 分类的快捷命令
-const categorizedQuickCommands = [
+// Get quick commands helper
+const getCategorizedQuickCommands = (t: any) => [
   {
-    category: "设备信息",
+    category: t("fastboot.cat_device_info"),
     commands: [
-      { label: "获取设备列表", command: "devices" },
-      { label: "获取所有变量", command: "getvar all" },
-      { label: "获取设备锁状态", command: "oem device-info" },
-      { label: "查看基带版本", command: "getvar version-baseband" },
+      { label: t("fastboot.cmd_list_devices"), command: "devices" },
+      { label: t("fastboot.cmd_getvar_all"), command: "getvar all" },
+      { label: t("fastboot.cmd_oem_device_info"), command: "oem device-info" },
+      { label: t("fastboot.cmd_version_baseband"), command: "getvar version-baseband" },
     ]
   },
   {
-    category: "刷机操作",
+    category: t("fastboot.cat_flash_ops"),
     commands: [
-      { label: "擦除数据分区", command: "erase userdata" },
-      { label: "擦除缓存分区", command: "erase cache" },
-      { label: "格式化数据分区", command: "format userdata" },
+      { label: t("fastboot.cmd_erase_userdata"), command: "erase userdata" },
+      { label: t("fastboot.cmd_erase_cache"), command: "erase cache" },
+      { label: t("fastboot.cmd_format_userdata"), command: "format userdata" },
     ]
   },
   {
-    category: "解锁与引导",
+    category: t("fastboot.cat_unlock_boot"),
     commands: [
-      { label: "解锁Bootloader", command: "oem unlock" },
-      { label: "重新锁定Bootloader", command: "oem lock" },
+      { label: t("fastboot.cmd_oem_unlock"), command: "oem unlock" },
+      { label: t("fastboot.cmd_oem_lock"), command: "oem lock" },
     ]
   }
 ];
 
 // 扁平化所有命令以便搜索
-const getAllCommands = () => {
-  return categorizedQuickCommands.flatMap(category => 
+const getAllCommands = (t: any) => {
+  return getCategorizedQuickCommands(t).flatMap(category => 
     category.commands.map(cmd => ({ ...cmd, category: category.category }))
   );
 };
 
 const FastbootCommandCard: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { selectedDevice } = useDeviceStore();
   const { deviceService } = useDeviceService();
+  
+  const categorizedQuickCommands = useMemo(() => getCategorizedQuickCommands(t), [t]);
   
   const [command, setCommand] = useState("");
   const [output, setOutput] = useState("");
@@ -338,13 +342,13 @@ const FastbootCommandCard: React.FC = () => {
         console.log(`[FastbootCommandCard] 设置输出:`, outputText);
         setOutput(outputText);
       } else {
-        const errorText = newOutput + `错误: ${result.error || "命令执行失败"}\n\n`;
+        const errorText = newOutput + t('fastboot.exec_error', { error: result.error || t('command_panel.exec_failed') }) + "\n\n";
         console.log(`[FastbootCommandCard] 设置错误输出:`, errorText);
         setOutput(errorText);
       }
     } catch (error) {
       const timestamp = new Date().toLocaleTimeString();
-      const errorText = `[${timestamp}] 错误: ${error}\n\n`;
+      const errorText = `[${timestamp}] ` + t('fastboot.exec_error', { error }) + "\n\n";
       console.error(`[FastbootCommandCard] 捕获异常:`, error);
       console.error(`[FastbootCommandCard] 设置错误输出:`, errorText);
       setOutput(errorText);
@@ -407,7 +411,7 @@ const FastbootCommandCard: React.FC = () => {
                     <Input
                       value={command}
                       onChange={(_, data) => setCommand(data.value)}
-                      placeholder="例如: flash recovery recovery.img"
+                      placeholder={t('fastboot.command_placeholder')}
                       disabled={!selectedDevice || isExecuting}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
@@ -425,7 +429,7 @@ const FastbootCommandCard: React.FC = () => {
                   disabled={!selectedDevice || isExecuting || !command.trim()}
                   style={{ alignSelf: "flex-end", marginBottom: "8px" }}
                 >
-                  {isExecuting ? '执行中...' : '执行'}
+                  {isExecuting ? t('fastboot.executing') : t('command_panel.execute')}
                 </Button>
               </div>
               <Button
@@ -435,7 +439,7 @@ const FastbootCommandCard: React.FC = () => {
                 disabled={!selectedDevice || isExecuting}
                 style={{ alignSelf: "flex-end", marginBottom: "8px" }}
               >
-                快捷命令
+                {t('fastboot.quick_commands')}
               </Button>
             </div>
 
@@ -443,7 +447,7 @@ const FastbootCommandCard: React.FC = () => {
             <div className={styles.searchAndActionsRow}>
               <div className={styles.searchContainer}>
                 <Input
-                  placeholder="搜索输出..."
+                  placeholder={t('fastboot.search_output')}
                   value={searchTerm}
                   onChange={(_, data) => setSearchTerm(data.value)}
                   contentBefore={<Search24Regular />}
@@ -454,7 +458,7 @@ const FastbootCommandCard: React.FC = () => {
                 {searchTerm && searchMatches.length > 0 && (
                   <div className={styles.searchMatchesInfo}>
                     <Text size={200}>
-                      找到 {searchMatches.length} 个匹配项
+                      {t('command_panel.matches_found', { count: searchMatches.length })}
                     </Text>
                     <Button
                       appearance="subtle"
@@ -462,7 +466,7 @@ const FastbootCommandCard: React.FC = () => {
                       onClick={navigateToMatch}
                       disabled={!searchTerm || searchMatches.length === 0}
                     >
-                      下一个
+                      {t('command_panel.next_match')}
                     </Button>
                   </div>
                 )}
@@ -471,14 +475,14 @@ const FastbootCommandCard: React.FC = () => {
                   icon={<Copy24Regular />}
                   onClick={copyOutput}
                   disabled={!output}
-                  title="复制输出"
+                  title={t('command_panel.copy_output')}
                 />
                 <Button
                   appearance="subtle"
                   icon={<Delete24Regular />}
                   onClick={clearOutput}
                   disabled={!output}
-                  title="清空输出"
+                  title={t('command_panel.clear_output')}
                 />
               </div>
             </div>
@@ -491,7 +495,7 @@ const FastbootCommandCard: React.FC = () => {
                 <pre
                   ref={outputRef}
                   dangerouslySetInnerHTML={{
-                    __html: highlightedOutput || '<span style="color: #888">Fastboot命令输出将显示在这里...</span>'
+                    __html: highlightedOutput || `<span style="color: #888">${t('fastboot.output_placeholder')}</span>`
                   }}
                 />
               </div>
@@ -509,7 +513,7 @@ const FastbootCommandCard: React.FC = () => {
         <DialogSurface>
           <DialogBody>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <DialogTitle>选择快捷命令</DialogTitle>
+              <DialogTitle>{t('fastboot.select_quick_command')}</DialogTitle>
               <Button 
                 appearance="subtle" 
                 size="small" 
@@ -524,7 +528,7 @@ const FastbootCommandCard: React.FC = () => {
             
             <DialogContent className={styles.dialogBody}>
               <Input
-                placeholder="搜索命令..."
+                placeholder={t('command_panel.search_commands')}
                 value={dialogSearchTerm}
                 onChange={(_, data) => setDialogSearchTerm(data.value)}
                 contentBefore={<Search24Regular />}
@@ -552,7 +556,7 @@ const FastbootCommandCard: React.FC = () => {
             </DialogContent>
             
             <DialogActions>
-              <Button onClick={() => setIsQuickCommandDialogOpen(false)}>关闭</Button>
+              <Button onClick={() => setIsQuickCommandDialogOpen(false)}>{t('common.close')}</Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
