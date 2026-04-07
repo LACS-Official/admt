@@ -561,15 +561,12 @@ fn find_scrcpy_executable() -> Result<String> {
         .ok_or_else(|| AdmtError::Io("Failed to get parent directory".to_string()))?
         .to_path_buf();
 
-    // 发布版本中，scrcpy资源路径
+    // 发布版本中，scrcpy资源统一通过 prepare-scrcpy.cjs 解压并放置于 tools/scrcpy
     let scrcpy_resource_paths = [
         exe_dir.join(&scrcpy_filename),
         exe_dir.join("tools").join(&scrcpy_filename),
-        exe_dir
-            .join("tools")
-            .join(platform_dir)
-            .join(&scrcpy_filename),
-        exe_dir.join(platform_dir).join(&scrcpy_filename),
+        exe_dir.join("tools").join("scrcpy").join(&scrcpy_filename),
+        exe_dir.join("scrcpy").join(&scrcpy_filename),
     ];
 
     for scrcpy_path in &scrcpy_resource_paths {

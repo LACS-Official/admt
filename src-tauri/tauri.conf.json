@@ -136,7 +136,9 @@
     "copyright": "Copyright © 2020-2026 领创工作室. All rights reserved.",
     "externalBin": [],
     "resources": [
-      "tools",
+      "tools/adb-bin",
+      "tools/lacs",
+      "tools/scrcpy",
       "config",
       "resource"
     ],
