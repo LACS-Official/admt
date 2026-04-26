@@ -4,7 +4,6 @@ import {
   Text,
   Badge,
   Card,
-  CardHeader,
   Button,
   Field,
   Input,
@@ -49,7 +48,6 @@ import {
   ShieldLock24Regular,
   Open24Regular,
   Copy24Regular,
-  AppsListDetail24Regular,
   Play24Regular,
 } from "@fluentui/react-icons";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
@@ -60,7 +58,6 @@ import { useAppStore } from "../../stores/appStore";
 import { InstalledApp, BatchOperation, DeviceInfo } from "../../types/device";
 import ErrorDialog from "../Common/ErrorDialog";
 import APKAuditorPanel from "./APKAuditorPanel";
-import { aiService } from "../../services/aiService";
 
 import { ErrorInfo } from "../../utils/errorHandler";
 // 移除Node.js path模块导入，避免浏览器环境中的兼容性问题
@@ -141,6 +138,7 @@ const useStyles = makeStyles({
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
     flexDirection: "column",
+    minHeight: 0,
   },
   content: {
     flex: 1,
@@ -148,6 +146,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     gap: "16px",
+    minHeight: 0,
   },
   toolbar: {
     display: "flex",
@@ -2182,207 +2181,209 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
                   <Text size={200}>{t("unlock.select_device_hint")}</Text>
                 </div>
               ) : (
-                <Table
-                  arial-label={t("app_manager.card_title")}
-                  style={{ tableLayout: "fixed", width: "100%" }}
-                >
-                  <colgroup>
-                    <col style={{ width: 44 }} />
-                    <col />
-                    <col style={{ width: "120px" }} />
-                    <col style={{ width: "100px" }} />
-                    <col style={{ width: "64px" }} />
-                  </colgroup>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHeaderCell>
-                        <Checkbox
-                          checked={
-                            selectedApps.size === filteredApps.length &&
-                            filteredApps.length > 0
-                          }
-                          onChange={(_, data) =>
-                            handleSelectAll(data.checked === true)
-                          }
-                        />
-                      </TableHeaderCell>
-                      <TableHeaderCell>
-                        {t("app_manager.app_name_package")}
-                      </TableHeaderCell>
-                      <TableHeaderCell>
-                        {t("app_manager.version")}
-                      </TableHeaderCell>
-                      <TableHeaderCell>
-                        {t("app_manager.status")}
-                      </TableHeaderCell>
-                      <TableHeaderCell>
-                        {t("app_manager.actions")}
-                      </TableHeaderCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredApps.map((app) => (
-                      <TableRow
-                        key={app.packageName}
-                        className={styles.compactTableRow}
-                        onContextMenu={(e) => handleContextMenu(e, app)}
-                      >
-                        <TableCell className={styles.compactCell}>
+                <div className={styles.tableContainer}>
+                  <Table
+                    arial-label={t("app_manager.card_title")}
+                    style={{ tableLayout: "fixed", width: "100%" }}
+                  >
+                    <colgroup>
+                      <col style={{ width: 44 }} />
+                      <col />
+                      <col style={{ width: "120px" }} />
+                      <col style={{ width: "100px" }} />
+                      <col style={{ width: "64px" }} />
+                    </colgroup>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell>
                           <Checkbox
-                            checked={selectedApps.has(app.packageName)}
+                            checked={
+                              selectedApps.size === filteredApps.length &&
+                              filteredApps.length > 0
+                            }
                             onChange={(_, data) =>
-                              handleSelectApp(
-                                app.packageName,
-                                data.checked === true,
-                              )
+                              handleSelectAll(data.checked === true)
                             }
                           />
-                        </TableCell>
-                        <TableCell className={styles.compactCell}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              minWidth: 0,
-                            }}
-                          >
-                            <div
-                              className={styles.appIconLarge}
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                fontSize: "14px",
-                              }}
-                            >
-                              <Text weight="semibold">
-                                {(app as any).label
-                                  ? (app as any).label.charAt(0).toUpperCase()
-                                  : app.packageName
-                                      .split(".")
-                                      .pop()
-                                      ?.charAt(0)
-                                      .toUpperCase() || "?"}
-                              </Text>
-                            </div>
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {t("app_manager.app_name_package")}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {t("app_manager.version")}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {t("app_manager.status")}
+                        </TableHeaderCell>
+                        <TableHeaderCell>
+                          {t("app_manager.actions")}
+                        </TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredApps.map((app) => (
+                        <TableRow
+                          key={app.packageName}
+                          className={styles.compactTableRow}
+                          onContextMenu={(e) => handleContextMenu(e, app)}
+                        >
+                          <TableCell className={styles.compactCell}>
+                            <Checkbox
+                              checked={selectedApps.has(app.packageName)}
+                              onChange={(_, data) =>
+                                handleSelectApp(
+                                  app.packageName,
+                                  data.checked === true,
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className={styles.compactCell}>
                             <div
                               style={{
                                 display: "flex",
-                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: "8px",
                                 minWidth: 0,
                               }}
                             >
-                              <Text
-                                className={styles.appNamePrimary}
-                                style={{ fontSize: "13px" }}
-                                title={(app as any).label || app.packageName}
+                              <div
+                                className={styles.appIconLarge}
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  fontSize: "14px",
+                                }}
                               >
-                                {(app as any).label || app.packageName}
-                              </Text>
-                              <Text
-                                className={styles.appNameSecondary}
-                                style={{ fontSize: "11px" }}
-                                title={app.packageName}
+                                <Text weight="semibold">
+                                  {(app as any).label
+                                    ? (app as any).label.charAt(0).toUpperCase()
+                                    : app.packageName
+                                        .split(".")
+                                        .pop()
+                                        ?.charAt(0)
+                                        .toUpperCase() || "?"}
+                                </Text>
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  minWidth: 0,
+                                }}
                               >
-                                {app.packageName}
-                              </Text>
+                                <Text
+                                  className={styles.appNamePrimary}
+                                  style={{ fontSize: "13px" }}
+                                  title={(app as any).label || app.packageName}
+                                >
+                                  {(app as any).label || app.packageName}
+                                </Text>
+                                <Text
+                                  className={styles.appNameSecondary}
+                                  style={{ fontSize: "11px" }}
+                                  title={app.packageName}
+                                >
+                                  {app.packageName}
+                                </Text>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className={styles.compactCell}>
-                          <Text size={200} title={app.versionName || ""}>
-                            {app.versionName
-                              ? formatVersionName(app.versionName)
-                              : "-"}
-                          </Text>
-                        </TableCell>
-                        <TableCell className={styles.compactCell}>
-                          <Badge
-                            appearance={app.isEnabled ? "filled" : "ghost"}
-                            color={app.isEnabled ? "success" : "danger"}
-                            size="small"
-                          >
-                            {app.isEnabled
-                              ? t("app_manager.enabled")
-                              : t("app_manager.disabled")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className={styles.compactCell}>
-                          <Menu>
-                            <MenuTrigger disableButtonEnhancement>
-                              <Button
-                                appearance="subtle"
-                                icon={<MoreHorizontal24Regular />}
-                                size="small"
-                              />
-                            </MenuTrigger>
-                            <MenuPopover>
-                              <MenuList>
-                                <MenuItem
-                                  icon={<Info24Regular />}
-                                  onClick={() => handleShowDetails(app)}
-                                >
-                                  {t("app_properties.detail_info")}
-                                </MenuItem>
-                                {!app.isSystemApp && (
-                                  <>
-                                    <MenuItem
-                                      icon={<Delete24Regular />}
-                                      onClick={() => handleUninstallClick(app)}
-                                    >
-                                      {t("app_manager.uninstall")}
-                                    </MenuItem>
-                                    <MenuItem
-                                      icon={
-                                        app.isEnabled ? (
-                                          <LockClosed24Regular />
-                                        ) : (
-                                          <LockOpen24Regular />
-                                        )
-                                      }
-                                      onClick={() =>
-                                        handleFreezeToggle(
-                                          app.packageName,
-                                          app.isEnabled,
-                                        )
-                                      }
-                                    >
-                                      {app.isEnabled
-                                        ? t("app_manager.freeze")
-                                        : t("app_manager.unfreeze")}
-                                    </MenuItem>
-                                    <MenuItem
-                                      icon={<Eraser24Regular />}
-                                      onClick={() =>
-                                        handleClearData(app.packageName)
-                                      }
-                                    >
-                                      {t("app_manager.clear_data")}
-                                    </MenuItem>
-                                    <MenuItem
-                                      icon={<Save24Regular />}
-                                      onClick={() =>
-                                        handleExportApk(app.packageName)
-                                      }
-                                    >
-                                      {t("app_manager.export_apk")}
-                                    </MenuItem>
-                                  </>
-                                )}
-                                <MenuItem
-                                  icon={<ShieldLock24Regular />}
-                                  onClick={() => handleOpenAuditor(app)}
-                                >
-                                  {t("app_manager.ai_auditor_beta")}
-                                </MenuItem>
-                              </MenuList>
-                            </MenuPopover>
-                          </Menu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                          <TableCell className={styles.compactCell}>
+                            <Text size={200} title={app.versionName || ""}>
+                              {app.versionName
+                                ? formatVersionName(app.versionName)
+                                : "-"}
+                            </Text>
+                          </TableCell>
+                          <TableCell className={styles.compactCell}>
+                            <Badge
+                              appearance={app.isEnabled ? "filled" : "ghost"}
+                              color={app.isEnabled ? "success" : "danger"}
+                              size="small"
+                            >
+                              {app.isEnabled
+                                ? t("app_manager.enabled")
+                                : t("app_manager.disabled")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className={styles.compactCell}>
+                            <Menu>
+                              <MenuTrigger disableButtonEnhancement>
+                                <Button
+                                  appearance="subtle"
+                                  icon={<MoreHorizontal24Regular />}
+                                  size="small"
+                                />
+                              </MenuTrigger>
+                              <MenuPopover>
+                                <MenuList>
+                                  <MenuItem
+                                    icon={<Info24Regular />}
+                                    onClick={() => handleShowDetails(app)}
+                                  >
+                                    {t("app_properties.detail_info")}
+                                  </MenuItem>
+                                  {!app.isSystemApp && (
+                                    <>
+                                      <MenuItem
+                                        icon={<Delete24Regular />}
+                                        onClick={() => handleUninstallClick(app)}
+                                      >
+                                        {t("app_manager.uninstall")}
+                                      </MenuItem>
+                                      <MenuItem
+                                        icon={
+                                          app.isEnabled ? (
+                                            <LockClosed24Regular />
+                                          ) : (
+                                            <LockOpen24Regular />
+                                          )
+                                        }
+                                        onClick={() =>
+                                          handleFreezeToggle(
+                                            app.packageName,
+                                            app.isEnabled,
+                                          )
+                                        }
+                                      >
+                                        {app.isEnabled
+                                          ? t("app_manager.freeze")
+                                          : t("app_manager.unfreeze")}
+                                      </MenuItem>
+                                      <MenuItem
+                                        icon={<Eraser24Regular />}
+                                        onClick={() =>
+                                          handleClearData(app.packageName)
+                                        }
+                                      >
+                                        {t("app_manager.clear_data")}
+                                      </MenuItem>
+                                      <MenuItem
+                                        icon={<Save24Regular />}
+                                        onClick={() =>
+                                          handleExportApk(app.packageName)
+                                        }
+                                      >
+                                        {t("app_manager.export_apk")}
+                                      </MenuItem>
+                                    </>
+                                  )}
+                                  <MenuItem
+                                    icon={<ShieldLock24Regular />}
+                                    onClick={() => handleOpenAuditor(app)}
+                                  >
+                                    {t("app_manager.ai_auditor_beta")}
+                                  </MenuItem>
+                                </MenuList>
+                              </MenuPopover>
+                            </Menu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </div>
           </Card>

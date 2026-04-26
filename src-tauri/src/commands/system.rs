@@ -357,6 +357,7 @@ fn calculate_realtime_cpu_usage(serial: &str, output: &str) -> (f64, Vec<f64>) {
     (total_usage, core_usages)
 }
 
+#[allow(dead_code)]
 fn parse_battery_level_and_health(output: &str) -> (i32, Option<String>) {
     let mut level = 0;
     let mut health = None;

@@ -27,7 +27,6 @@
         "decorations": false,
         "alwaysOnTop": false,
         "skipTaskbar": false,
-        "theme": "Light",
         "dragDropEnabled": false
       },
       {
@@ -45,7 +44,6 @@
         "decorations": false,
         "alwaysOnTop": false,
         "skipTaskbar": false,
-        "theme": "Light",
         "visible": false,
         "dragDropEnabled": false
       },
@@ -64,7 +62,6 @@
         "decorations": false,
         "alwaysOnTop": false,
         "skipTaskbar": false,
-        "theme": "Light",
         "visible": false,
         "dragDropEnabled": false
       },

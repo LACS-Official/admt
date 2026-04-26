@@ -548,7 +548,7 @@ fn find_scrcpy_executable() -> Result<String> {
 
     use std::env::consts::EXE_SUFFIX;
     let scrcpy_filename = format!("scrcpy{}", EXE_SUFFIX);
-    let platform_dir = if cfg!(windows) {
+    let _platform_dir = if cfg!(windows) {
         "scrcpy-win32-v3.3.1"
     } else {
         "scrcpy-linux-v3.3.1"

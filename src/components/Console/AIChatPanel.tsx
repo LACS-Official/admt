@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   makeStyles,
-  shorthands,
   tokens,
   Button,
-  Input,
   Textarea,
   Text,
   Avatar,
@@ -21,9 +19,8 @@ import {
   Chat24Regular,
   Bot24Regular,
   Person24Regular,
-  ArrowSync24Regular,
-  MoreHorizontal24Regular,
   Copy24Regular,
+  Play24Regular,
   PanelLeft24Regular,
   PanelRight24Regular,
   ArrowDownload24Regular,
@@ -31,14 +28,14 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
-import { useAIChatStore, Message } from "../../stores/aiChatStore";
+import { useAIChatStore } from "../../stores/aiChatStore";
 import { useAppStore } from "../../stores/appStore";
-import { fetch } from "@tauri-apps/plugin-http";
 import { logService } from "../../services/logService";
 import { aiService } from "../../services/aiService";
-import { listen } from "@tauri-apps/api/event";
+import { listen, emit } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 const useStyles = makeStyles({
   container: {
@@ -301,7 +298,7 @@ const AIChatPanel: React.FC = () => {
   const { setStatusBarMessage } = useAppStore();
   
   const currentConversation = conversations.find(c => c.id === currentConversationId);
-  const messages = currentConversation?.messages || [];
+  const messages = React.useMemo(() => currentConversation?.messages || [], [currentConversation?.messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -406,6 +403,27 @@ const AIChatPanel: React.FC = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleRunCommand = async (cmd: string) => {
+    // Check if the command line window is available
+    const cmdWindow = await WebviewWindow.getByLabel("command-line");
+    if (cmdWindow) {
+      await cmdWindow.show();
+      await cmdWindow.setFocus();
+    } else {
+      // If the unified layout doesn't use the separate window, maybe emit directly will show it in App.
+      // E.g., user is in the main window
+      const currentWindow = await WebviewWindow.getCurrent();
+      await currentWindow.setFocus(); 
+    }
+    
+    // Broadcast the event to command-line module
+    emit("execute-command-from-ai", { command: cmd.trim() });
+    setStatusBarMessage({
+      type: "success",
+      message: "已发送指令至命令行执行"
+    });
   };
 
   return (
@@ -531,7 +549,68 @@ const AIChatPanel: React.FC = () => {
                         styles.markdownWrapper
                       )}
                     >
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ inline, className, children, ...props }: any) {
+                            const match = /language-(\w+)/.exec(className || "");
+                            const rawCode = String(children).replace(/\n$/, "");
+                            
+                            if (!inline && rawCode.length > 0) {
+                              const isCommand = match && ["bash", "sh", "batch", "powershell"].includes(match[1]) || rawCode.startsWith("adb ") || rawCode.startsWith("fastboot ");
+                              return (
+                                <div style={{ 
+                                  border: `1px solid ${tokens.colorNeutralStroke2}`, 
+                                  borderRadius: "6px", 
+                                  overflow: "hidden", 
+                                  margin: "8px 0" 
+                                }}>
+                                  <div style={{ 
+                                    display: "flex", 
+                                    justifyContent: "space-between", 
+                                    alignItems: "center", 
+                                    padding: "4px 8px", 
+                                    backgroundColor: tokens.colorNeutralBackground3,
+                                    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
+                                  }}>
+                                    <Text size={200} style={{ fontFamily: "monospace" }}>
+                                      {match ? match[1] : "code"}
+                                    </Text>
+                                    <div style={{ display: "flex", gap: "4px" }}>
+                                      <Tooltip content="复制完整代码" relationship="label">
+                                        <Button 
+                                          size="small" 
+                                          appearance="subtle" 
+                                          icon={<Copy24Regular style={{ fontSize: "16px" }} />} 
+                                          onClick={() => navigator.clipboard.writeText(rawCode)}
+                                        />
+                                      </Tooltip>
+                                      {isCommand && (
+                                        <Tooltip content="在命令行工具中运行" relationship="label">
+                                          <Button 
+                                            size="small" 
+                                            appearance="subtle" 
+                                            icon={<Play24Regular style={{ fontSize: "16px" }} />} 
+                                            onClick={() => handleRunCommand(rawCode)}
+                                          />
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div style={{ padding: 0 }}>
+                                    <pre className={className} style={{ margin: 0, padding: "8px", overflowX: "auto" }}>
+                                      <code className={className} {...props}>
+                                        {children}
+                                      </code>
+                                    </pre>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <code className={className} {...props}>{children}</code>;
+                          }
+                        }}
+                      >
                         {msg.content}
                       </ReactMarkdown>
                     </div>

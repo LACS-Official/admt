@@ -1,9 +1,8 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import {
   FluentProvider,
-  webLightTheme,
-  webDarkTheme,
   createLightTheme,
   createDarkTheme,
   BrandVariants,
@@ -28,7 +27,6 @@ import i18n from "./i18n/config";
 
 // 在应用启动时清除 localStorage 中的 token
 localStorage.removeItem("rom-download-storage");
-console.log("已清除 localStorage 中的 rom-download-storage");
 
 import CommandLineWindow from "./components/Console/CommandLineWindow";
 import LogsWindow from "./components/Console/LogsWindow";
@@ -36,16 +34,18 @@ import AIChatWindow from "./components/Console/AIChatWindow";
 import DeviceSelectionWindow from "./components/MainContent/DeviceSelectionWindow";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useDeviceStore } from "./stores/deviceStore";
+import { useAIChatStore } from "./stores/aiChatStore";
 
 // 辅助函数：根据十六进制颜色生成品牌色阶 (BrandVariants)
 const generateBrandVariants = (hex: string): BrandVariants => {
   // 十六进制转 HSL
   const hexToHsl = (hexStr: string) => {
-    let r = parseInt(hexStr.slice(1, 3), 16) / 255;
-    let g = parseInt(hexStr.slice(3, 5), 16) / 255;
-    let b = parseInt(hexStr.slice(5, 7), 16) / 255;
+    const r = parseInt(hexStr.slice(1, 3), 16) / 255;
+    const g = parseInt(hexStr.slice(3, 5), 16) / 255;
+    const b = parseInt(hexStr.slice(5, 7), 16) / 255;
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h = 0, s = 0, l = (max + min) / 2;
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
     if (max !== min) {
       const d = max - min;
       s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
@@ -78,9 +78,8 @@ const generateBrandVariants = (hex: string): BrandVariants => {
     110: 75, 120: 82, 130: 88, 140: 92, 150: 96, 160: 98.5
   };
 
-  const variants: any = {};
+  const variants: Record<string, string> = {};
   Object.entries(lightnessLevels).forEach(([key, l]) => {
-    const k = parseInt(key);
     let targetS = s;
     
     // 极浅或极深时适当降低饱和度
@@ -140,7 +139,9 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       finalTheme.spacingVerticalXL = "16px";
 
       // 额外对一些组件常用的间距进行微调
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (finalTheme as any).spacingHorizontalXXL = "24px";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (finalTheme as any).spacingVerticalXXL = "24px";
     }
 
@@ -161,11 +162,9 @@ function AppWithTheme() {
   const {
     followSystemTheme,
     updateThemeBasedOnSystem,
-    subscribeToStorageChanges,
   } = useThemeStore();
-  const { subscribeToStorageChanges: subscribeToDeviceChanges } = useDeviceStore();
-  const [isActivationValid, setIsActivationValid] = useState(true);
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(true);
+  const [, setIsActivationValid] = useState(true);
+  const [, setHasAcceptedTerms] = useState(true);
   const { setCurrentPhase } = useStartupFlowStore();
   const {
     hasCompletedPrivacySetup,
@@ -192,15 +191,6 @@ function AppWithTheme() {
   }, [config.language]);
 
   useEffect(() => {
-    const cleanup = subscribeToStorageChanges();
-    const deviceCleanup = subscribeToDeviceChanges();
-    return () => {
-      cleanup();
-      deviceCleanup();
-    };
-  }, [subscribeToStorageChanges, subscribeToDeviceChanges]);
-
-  useEffect(() => {
     const checkActivationStatus = () => {
       try {
         const activationStatus = activationService.checkActivationStatus();
@@ -213,7 +203,7 @@ function AppWithTheme() {
         } else {
           setIsActivationValid(true);
         }
-      } catch (error) {
+      } catch (_error) {
         setIsActivationValid(false);
         setCurrentPhase("activation-verification");
       }
@@ -234,7 +224,7 @@ function AppWithTheme() {
         } else {
           setHasAcceptedTerms(true);
         }
-      } catch (error) {
+      } catch (_error) {
         setHasAcceptedTerms(false);
         setCurrentPhase("privacy-consent");
       }
@@ -267,6 +257,22 @@ function DeviceSelectionWindowWithTheme() {
 
 function Root() {
   const [label, setLabel] = useState<string | null>(null);
+
+  // Subscribe to across-window state changes so that ANY window gets them.
+  const { subscribeToStorageChanges: themeStorageChanges } = useThemeStore();
+  const { subscribeToStorageChanges: deviceStorageChanges } = useDeviceStore();
+  const { subscribeToStorageChanges: aiChatStorageChanges } = useAIChatStore();
+
+  useEffect(() => {
+    const themeCleanup = themeStorageChanges();
+    const deviceCleanup = deviceStorageChanges();
+    const aiChatCleanup = aiChatStorageChanges();
+    return () => {
+      themeCleanup();
+      deviceCleanup();
+      aiChatCleanup();
+    };
+  }, [themeStorageChanges, deviceStorageChanges, aiChatStorageChanges]);
 
   useEffect(() => {
     setLabel(getCurrentWebviewWindow().label);

@@ -35,7 +35,7 @@ import {
   Bot24Regular,
   Sparkle24Regular,
 } from "@fluentui/react-icons";
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { windowService } from "../../services/windowService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
@@ -479,6 +479,37 @@ const CommandExecutePanel: React.FC = () => {
       }
     };
   }, [setStatusBarMessage, selectedDevice?.mode]);
+
+  // 新增：监听从AI助手发过来的代码运行请求
+  useEffect(() => {
+    const setupListener = async () => {
+      const unlisten = await listen<{ command: string }>("execute-command-from-ai", (event) => {
+        if (event.payload && event.payload.command) {
+          let aiCmd = event.payload.command.trim();
+          
+          // 如果命令以 adb 或 fastboot 开头，去掉它（因为 executeCommand 会自动补充并添加设备号）
+          if (aiCmd.startsWith("adb ")) {
+            aiCmd = aiCmd.substring(4).trim();
+          } else if (aiCmd.startsWith("fastboot ")) {
+            aiCmd = aiCmd.substring(9).trim();
+          }
+
+          // 进一步清理 AI 可能包含的 -s <serial> 
+          aiCmd = aiCmd.replace(/^-s\s+(?:"[^"]*"|\S+)\s+/, "");
+
+          executeCommand(aiCmd);
+        }
+      });
+      return unlisten;
+    };
+    
+    let unlistenFn: (() => void) | undefined;
+    setupListener().then(fn => unlistenFn = fn);
+
+    return () => {
+      if (unlistenFn) unlistenFn();
+    };
+  }, [selectedDevice]); 
 
   // 加载配置文件
   useEffect(() => {

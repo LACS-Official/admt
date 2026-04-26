@@ -28,8 +28,8 @@ body::after {
   height: 100%;
   pointer-events: none;
   z-index: 999999;
-  opacity: 0.015;
-  background-image: url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='200' y='200' fill='gray' font-family='Segoe UI, Microsoft YaHei' font-size='24' text-anchor='middle' transform='rotate(-30, 200, 200)'%3E玩机管家 ADMT%3C/text%3E%3C/svg%3E");
+  opacity: 0.023;
+  background-image: url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='200' y='200' fill='gray' font-family='Segoe UI, Microsoft YaHei' font-size='24' text-anchor='middle' transform='rotate(-30, 200, 200)'%3E玩机管家 admt.lacs.cc%3C/text%3E%3C/svg%3E");
   background-repeat: repeat;
 }
 

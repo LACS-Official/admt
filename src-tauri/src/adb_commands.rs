@@ -285,6 +285,7 @@ pub async fn execute_adb_command_with_path(
 }
 
 /// 使用指定的Fastboot路径执行命令
+#[allow(dead_code)]
 pub async fn execute_fastboot_command_with_path(
     fastboot_path: &str,
     serial: &str,

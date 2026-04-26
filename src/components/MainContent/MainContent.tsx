@@ -25,7 +25,6 @@ import {
   Home24Regular,
   Icons24Regular,
   Notepad24Regular,
-  ShieldKeyhole24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
@@ -718,7 +717,7 @@ const MainContent: React.FC = () => {
         });
       }
     }
-  }, [selectedDevice]);
+  }, [selectedDevice, setStatusBarMessage, t]);
 
   // 监听设备连接/断开，提示状态栏消息
   useEffect(() => {
@@ -755,7 +754,7 @@ const MainContent: React.FC = () => {
     }
 
     prevConnectedCount.current = connectedCount;
-  }, [devices]);
+  }, [devices, setStatusBarMessage, t]);
 
   // 当选择设备时自动获取设备属性
   useEffect(() => {
@@ -770,7 +769,7 @@ const MainContent: React.FC = () => {
       });
       refreshDeviceInfo(selectedDevice.serial);
     }
-  }, [selectedDevice, refreshDeviceInfo]);
+  }, [selectedDevice, refreshDeviceInfo, setStatusBarMessage, t]);
 
 
   // 用户行为追踪 - 在MainContent组件挂载时发送使用数据（备用方案）
@@ -839,6 +838,7 @@ const MainContent: React.FC = () => {
           });
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error("系统托盘初始化失败:", error);
       }
     };
@@ -850,7 +850,7 @@ const MainContent: React.FC = () => {
       // 注意：这里不清理托盘，因为托盘应该在应用生命周期内保持存在
       // 只有在应用退出时才需要清理托盘
     };
-  }, []); // 只在组件挂载时执行一次
+  }, [config.systemTrayEnabled, config.minimizeToTrayOnClose]); // 只在组件挂载时执行一次
 
   // 监听配置变化，更新系统托盘行为
   useEffect(() => {
@@ -861,6 +861,7 @@ const MainContent: React.FC = () => {
           minimizeToTrayOnClose: config.minimizeToTrayOnClose,
         });
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error("更新系统托盘配置失败:", error);
       }
     };
@@ -884,6 +885,7 @@ const MainContent: React.FC = () => {
 
   // 处理版本检查完成
   const handleUpdateCheckComplete = () => {
+    // eslint-disable-next-line no-console
     console.log("✅ 版本检查完成");
     setUpdateCheckCompleted(true);
     setTriggerVersionCheck(false);
@@ -915,6 +917,7 @@ const MainContent: React.FC = () => {
           await targetWindow.show();
           await targetWindow.setFocus();
         } catch (e) {
+          // eslint-disable-next-line no-console
           console.warn("主应用聚焦已有设备选择窗口失败(非关键):", e);
         }
       } else {
@@ -934,11 +937,13 @@ const MainContent: React.FC = () => {
         });
 
         targetWindow.once('tauri://created', function () {
+          // eslint-disable-next-line no-console
           console.log(`${title} 窗口创建成功`);
           targetWindow.show();
         });
 
         targetWindow.once('tauri://error', function (e) {
+          // eslint-disable-next-line no-console
           console.error(`${title} 窗口创建失败:`, e);
           // 仅在创建失败时设置状态消息
           setStatusBarMessage({
@@ -951,8 +956,10 @@ const MainContent: React.FC = () => {
       // 检查是否是由于并发导致的标签冲突，这种情况下不需要报错提示
       const errorStr = String(error);
       if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
+        // eslint-disable-next-line no-console
         console.warn("设备选择窗口已在创建或显示过程中:", error);
       } else {
+        // eslint-disable-next-line no-console
         console.error("打开设备选择窗口过程中发生异常:", error);
         setStatusBarMessage({
           type: 'error',
@@ -965,7 +972,7 @@ const MainContent: React.FC = () => {
         isOpeningWindowRef.current = false;
       }, 500);
     }
-  }, [setStatusBarMessage]);
+  }, [setStatusBarMessage, t]);
 
   const openConsoleWindow = useCallback(async (tab: 'logs' | 'command-line') => {
     if (isOpeningWindowRef.current) return;
@@ -985,6 +992,7 @@ const MainContent: React.FC = () => {
           await targetWindow.show();
           await targetWindow.setFocus();
         } catch (e) {
+          // eslint-disable-next-line no-console
           console.warn("主应用聚焦已有窗口失败(非关键):", e);
         }
       } else {
@@ -1003,11 +1011,13 @@ const MainContent: React.FC = () => {
         });
 
         targetWindow.once('tauri://created', function () {
+          // eslint-disable-next-line no-console
           console.log(`${title} 窗口创建成功`);
           targetWindow.show();
         });
 
         targetWindow.once('tauri://error', function (e) {
+          // eslint-disable-next-line no-console
           console.error(`${title} 窗口创建失败:`, e);
           setStatusBarMessage({
             type: 'error',
@@ -1018,8 +1028,10 @@ const MainContent: React.FC = () => {
     } catch (error) {
       const errorStr = String(error);
       if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
+        // eslint-disable-next-line no-console
         console.warn("窗口已在创建或显示过程中:", error);
       } else {
+        // eslint-disable-next-line no-console
         console.error("打开控制台子窗口失败:", error);
         setStatusBarMessage({
           type: 'error',
@@ -1031,11 +1043,12 @@ const MainContent: React.FC = () => {
         isOpeningWindowRef.current = false;
       }, 500);
     }
-  }, [setStatusBarMessage]);
+  }, [setStatusBarMessage, t]);
 
-  const handleDeviceSelect = (device: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleDeviceSelect = useCallback((device: any) => {
     selectDevice(device);
-  };
+  }, [selectDevice]);
 
   const getDeviceMode = () => {
     switch (selectedDevice.mode) {
@@ -1074,7 +1087,7 @@ const MainContent: React.FC = () => {
     if (connectedDevices.length > 0 && !selectedDevice) {
       handleDeviceSelect(connectedDevices[0]);
     }
-  }, [connectedDevices, selectedDevice]);
+  }, [connectedDevices, selectedDevice, handleDeviceSelect]);
 
   const renderDeviceInfo = () => {
     if (connectedDevices.length === 0) {
@@ -1324,16 +1337,19 @@ const MainContent: React.FC = () => {
       {/* 版本检查组件 - 隐藏但功能完整 */}
       <VersionChecker
         triggerCheck={triggerVersionCheck}
-        onCheckUpdate={() => console.log("🔄 开始检查更新...")}
+        onCheckUpdate={() => { /* noop */ }}
         onUpdateFound={(result) => {
+          // eslint-disable-next-line no-console
           console.log("🆕 发现新版本:", result);
           handleUpdateCheckComplete();
         }}
         onNoUpdate={(currentVersion) => {
+          // eslint-disable-next-line no-console
           console.log("✅ 当前已是最新版本:", currentVersion);
           handleUpdateCheckComplete();
         }}
         onError={(error) => {
+          // eslint-disable-next-line no-console
           console.error("❌ 版本检查失败:", error);
           handleUpdateCheckComplete();
         }}

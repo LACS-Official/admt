@@ -2,17 +2,12 @@ import React, { useState, useCallback, useEffect } from 'react';
 import {
   makeStyles,
   Text,
-  Card,
-  CardHeader,
   Button,
   Field,
-  Input,
   Spinner,
   Checkbox,
   RadioGroup,
   Radio,
-  ProgressBar,
-  Badge,
   mergeClasses,
   Textarea,
 } from "@fluentui/react-components";
@@ -26,7 +21,6 @@ import {
   Clock24Regular,
   Play24Regular
 } from "@fluentui/react-icons";
-import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -230,7 +224,6 @@ interface AppInstallPanelProps {
 
 const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired }) => {
   const styles = useStyles();
-  const { devices } = useDeviceStore();
   const { deviceService } = useDeviceService();
   const { setStatusBarMessage } = useAppStore();
   const { t } = useTranslation();

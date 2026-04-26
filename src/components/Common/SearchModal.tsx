@@ -15,7 +15,6 @@ import {
   Wrench24Regular,
   Flash24Regular,
   PhoneDesktop24Regular,
-  AppsList24Regular,
   Globe24Regular,
   Settings24Regular,
   ShieldKeyhole24Regular,
@@ -269,6 +268,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             await targetWindow.show();
             await targetWindow.setFocus();
           } catch (e) {
+            // eslint-disable-next-line no-console
             console.warn("从搜索聚焦已有窗口失败(非关键):", e);
           }
         } else {
@@ -290,8 +290,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       } catch (error) {
         const errorStr = String(error);
         if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
+          // eslint-disable-next-line no-console
           console.warn("从搜索打开窗口冲突(非关键):", error);
         } else {
+          // eslint-disable-next-line no-console
           console.error("从搜索打开控制台窗口失败:", error);
         }
       } finally {
