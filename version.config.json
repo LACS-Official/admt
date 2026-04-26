@@ -1,7 +1,7 @@
 {
-  "version": "1.4.0",
-  "buildNumber": 3,
-  "versionName": "1.4.0",
+  "version": "1.4.1",
+  "buildNumber": 4,
+  "versionName": "1.4.1",
   "releaseDate": "2025-11-20",
   "description": "统一版本管理配置文件",
   "changelog": [
