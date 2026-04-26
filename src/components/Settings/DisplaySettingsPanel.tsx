@@ -6,33 +6,21 @@ import {
   CardHeader,
   Switch,
   Slider,
-  Label,
   RadioGroup,
   Radio,
 } from "@fluentui/react-components";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
 import {
-  Grid24Regular,
-  WeatherMoon24Regular,
   Timer24Regular,
   Color24Regular,
   ArrowReset24Regular,
-  TextFontSize24Regular,
-  ShapeOrganic24Regular,
-  Play20Regular,
   Sparkle20Regular,
-  Flash20Regular,
-  TextLineSpacing20Regular,
-  TextGrammarSettings20Regular,
 } from "@fluentui/react-icons";
 import { 
     Button, 
     shorthands,
     mergeClasses,
-    TabList,
-    Tab,
-    Divider,
     Badge
 } from "@fluentui/react-components";
 import { ChromePicker } from 'react-color';
@@ -390,6 +378,20 @@ const DisplaySettingsPanel: React.FC = () => {
                             <Radio value="large" label={t('settings.radius_large')} />
                         </RadioGroup>
                     </div>
+                </div>
+
+                {/* 标题栏按钮显示控制 */}
+                <div className={styles.settingTile}>
+                  <div className={styles.settingRow}>
+                    <div className={styles.rowInfo}>
+                      <Text weight="semibold">{t('settings.show_title_bar_buttons')}</Text>
+                      <Text className={styles.settingDescription}>{t('settings.show_title_bar_buttons_desc')}</Text>
+                    </div>
+                    <Switch
+                        checked={useThemeStore.getState().showTitleBarButtons}
+                        onChange={(_, data) => useThemeStore.getState().setShowTitleBarButtons(data.checked === true)}
+                    />
+                  </div>
                 </div>
             </div>
         </Card>

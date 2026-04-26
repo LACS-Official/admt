@@ -1,15 +1,18 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { FluentProvider, webLightTheme, webDarkTheme } from "@fluentui/react-components";
 import CommandExecutePanel from './components/Others/CommandExecutePanel';
 import { useThemeStore } from './stores/themeStore';
+import { useDeviceStore } from './stores/deviceStore';
 import TitleBar from './components/Bar/TitleBarMini';
 import StatusBar from './components/Bar/StatusBarMini'; 
 import "./styles/global.css";
 
 
 function AppWithTheme() {
-  const { isDarkMode, subscribeToStorageChanges } = useThemeStore();
+  const { isDarkMode, subscribeToStorageChanges: themeStorageChanges } = useThemeStore();
+  const { subscribeToStorageChanges: deviceStorageChanges } = useDeviceStore();
 
   // 在主题切换时更新HTML和body元素的类名
   useEffect(() => {
@@ -27,9 +30,13 @@ function AppWithTheme() {
 
   // 监听跨页面的主题变化
   useEffect(() => {
-    const cleanup = subscribeToStorageChanges();
-    return cleanup;
-  }, [subscribeToStorageChanges]);
+    const themeCleanup = themeStorageChanges();
+    const deviceCleanup = deviceStorageChanges();
+    return () => {
+      themeCleanup();
+      deviceCleanup();
+    };
+  }, [themeStorageChanges, deviceStorageChanges]);
 
   return (
     <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme} className="app-container">

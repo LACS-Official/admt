@@ -89,6 +89,8 @@
     "radius_small": "较小",
     "radius_medium": "适中",
     "radius_large": "较大",
+    "show_title_bar_buttons": "显示标题栏右侧按钮",
+    "show_title_bar_buttons_desc": "在标题栏右侧显示 AI 助手、搜索、主题等快捷功能按钮",
     "fastest": "最快",
     "slowest": "最慢",
     "test": "测试",
@@ -185,6 +187,7 @@
     "device_not_connected": "设备未连接，无法执行重启操作"
   },
   "common": {
+    "confirm_reset":"确定要重置吗？",
     "cancel": "取消",
     "think_again": "我再想想",
     "confirm_exit": "确认退出",
@@ -228,6 +231,7 @@
     "select_device": "请选择设备",
     "select_device_hint": "从顶部工具栏选择要操作的设备",
     "refresh": "刷新",
+    "screenshot_app": "软件截图",
     "wireless_connection": "无线调试连接"
   },
   "privacy": {
@@ -338,6 +342,8 @@
     "pin_button_desc": "将应用窗口固定在最前端，方便在操作其他软件时参考参数。",
     "theme_button_title": "主题切换",
     "theme_button_desc": "一键切换深色/浅色模式，为您提供更舒适的视觉体验。",
+    "screenshot_app_button_title": "窗口截图",
+    "screenshot_app_button_desc": "快速截取当前整个软件窗口的界面并保存为图片。",
     "announcement_title": "系统公告",
     "announcement_desc": "获取最新的版本动态、功能说明及官方重要通知。",
     "command_line_title": "快捷命令行",
@@ -1070,6 +1076,7 @@
     "table_aria_label": "文件列表"
   },
   "app_manager": {
+    "ai_auditor_beta":"AI审计(Beta)",
     "batch_ops": "批量操作",
     "card_title": "应用管理",
     "card_desc": "管理已安装的应用程序",

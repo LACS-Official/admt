@@ -27,6 +27,7 @@ interface AIChatState {
   setCurrentConversation: (id: string | null) => void;
   updateConversationTitle: (id: string, title: string) => void;
   clearHistory: () => void;
+  subscribeToStorageChanges: () => () => void;
 }
 
 export const useAIChatStore = create<AIChatState>()(
@@ -102,6 +103,30 @@ export const useAIChatStore = create<AIChatState>()(
       },
 
       clearHistory: () => set({ conversations: [], currentConversationId: null }),
+
+      subscribeToStorageChanges: () => {
+        const handleStorageChange = (event: StorageEvent) => {
+          if (event.key === "admt-ai-chat-storage" && event.newValue) {
+            try {
+              const newState = JSON.parse(event.newValue);
+              const currentState = get();
+              if (JSON.stringify(newState.state.conversations) !== JSON.stringify(currentState.conversations)) {
+                set({ 
+                  conversations: newState.state.conversations,
+                  currentConversationId: newState.state.currentConversationId 
+                });
+                // eslint-disable-next-line no-console
+                console.log('AI对话记录已从其他页面同步');
+              }
+            } catch (error) {
+              // eslint-disable-next-line no-console
+              console.error('解析AI存储数据失败:', error);
+            }
+          }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+      }
     }),
     {
       name: "admt-ai-chat-storage",

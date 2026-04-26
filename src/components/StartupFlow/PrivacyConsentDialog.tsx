@@ -39,6 +39,7 @@ import {
   Play24Regular,
   ArrowMinimize24Regular,
   Settings24Regular,
+  Heart24Regular,
 } from "@fluentui/react-icons";
 import { usePrivacyConsentStore } from "../../stores/privacyConsentStore";
 import { useAppStore } from "../../stores/appStore";
@@ -319,6 +320,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
       return;
     }
     setStep("sponsorship");
+  };
+
+  const openDonationPage = () => {
+    window.open("https://www.lacs.cc/donate", "_blank");
   };
 
   const handleFinalAccept = () => {
@@ -803,13 +808,13 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                           block
                           style={{ marginBottom: "8px" }}
                         >
-                          捐赠后即视为同意本页内容
+                          捐赠后即视为同意本页内容，付款后概不退款，请您了解
                         </Text>
                         <Text
                           block
-                          style={{ color: tokens.colorNeutralForeground2 }}
+                          style={{ color: tokens.colorBrandBackground3Static }}
                         >
-                          付款后概不退款，请您了解
+                          已捐赠用户我们会记录到捐赠墙，感谢支持
                         </Text>
                       </motion.div>
 
@@ -818,6 +823,14 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                         style={{ marginTop: "auto" }}
                       >
                         <div className={styles.actionButtons}>
+                        <Button
+                          appearance="primary"
+                          size="large"
+                          onClick={openDonationPage}
+                          icon={<Heart24Regular />}
+                        >
+                          打开捐赠墙
+                        </Button>
                           <Button
                             appearance="primary"
                             size="large"

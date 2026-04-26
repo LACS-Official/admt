@@ -16,6 +16,8 @@ interface ThemeState {
   setCornerRadius: (radius: 'small' | 'medium' | 'large') => void;
   showConfetti: boolean;
   setShowConfetti: (show: boolean) => void;
+  showTitleBarButtons: boolean;
+  setShowTitleBarButtons: (show: boolean) => void;
   subscribeToStorageChanges: () => () => void; // 返回清理函数
 }
 
@@ -39,6 +41,8 @@ export const useThemeStore = create<ThemeState>()(
       setCornerRadius: (radius: 'small' | 'medium' | 'large') => set({ cornerRadius: radius }),
       showConfetti: true,
       setShowConfetti: (show: boolean) => set({ showConfetti: show }),
+      showTitleBarButtons: true,
+      setShowTitleBarButtons: (show: boolean) => set({ showTitleBarButtons: show }),
       subscribeToStorageChanges: () => {
         // 监听storage变化事件，实现跨页面主题同步
         const handleStorageChange = (event: StorageEvent) => {
@@ -64,6 +68,9 @@ export const useThemeStore = create<ThemeState>()(
               }
               if (newState.state.showConfetti !== currentState.showConfetti) {
                   set({ showConfetti: newState.state.showConfetti });
+              }
+              if (newState.state.showTitleBarButtons !== currentState.showTitleBarButtons) {
+                  set({ showTitleBarButtons: newState.state.showTitleBarButtons });
               }
             } catch (error) {
               console.error('解析主题存储数据失败:', error);

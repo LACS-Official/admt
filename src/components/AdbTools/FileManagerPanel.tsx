@@ -9,8 +9,6 @@ import {
   Text,
   Button,
   Card,
-  CardHeader,
-  Input,
   Spinner,
   Table,
   TableHeader,
