@@ -85,5 +85,5 @@
     "typescript-eslint": "^8.38.0",
     "vite": "^6.0.1"
   },
-  "version": "1.4.0"
+  "version": "1.4.1"
 }
