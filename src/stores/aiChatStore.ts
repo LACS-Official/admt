@@ -30,6 +30,8 @@ interface AIChatState {
   subscribeToStorageChanges: () => () => void;
 }
 
+let isSyncingFromStorage = false;
+
 export const useAIChatStore = create<AIChatState>()(
   persist(
     (set, get) => ({
@@ -110,11 +112,21 @@ export const useAIChatStore = create<AIChatState>()(
             try {
               const newState = JSON.parse(event.newValue);
               const currentState = get();
+              const updates: Partial<AIChatState> = {};
+              
               if (JSON.stringify(newState.state.conversations) !== JSON.stringify(currentState.conversations)) {
-                set({ 
-                  conversations: newState.state.conversations,
-                  currentConversationId: newState.state.currentConversationId 
-                });
+                updates.conversations = newState.state.conversations;
+              }
+              if (newState.state.currentConversationId !== currentState.currentConversationId) {
+                updates.currentConversationId = newState.state.currentConversationId;
+              }
+
+              if (Object.keys(updates).length > 0) {
+                isSyncingFromStorage = true;
+                set(updates);
+                setTimeout(() => {
+                  isSyncingFromStorage = false;
+                }, 50);
                 // eslint-disable-next-line no-console
                 console.log('AI对话记录已从其他页面同步');
               }
@@ -130,7 +142,16 @@ export const useAIChatStore = create<AIChatState>()(
     }),
     {
       name: "admt-ai-chat-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: (name) => localStorage.getItem(name),
+        setItem: (name, value) => {
+          if (isSyncingFromStorage) {
+            return;
+          }
+          localStorage.setItem(name, value);
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      })),
     }
   )
 );

@@ -31,6 +31,7 @@ interface AppStoreState extends AppState {
   setWirelessDebuggingDialogOpen: (open: boolean) => void;
   saveToDisk: () => Promise<boolean>;
   initialize: () => Promise<void>;
+  subscribeToStorageChanges: () => () => void;
 }
 
 const defaultConfig: AppConfig = {
@@ -60,6 +61,8 @@ const defaultConfig: AppConfig = {
     temperature: 0.7,
   },
 };
+
+let isSyncingFromStorage = false;
 
 export const useAppStore = create<AppStoreState>()(
   persist(
@@ -225,10 +228,51 @@ export const useAppStore = create<AppStoreState>()(
         }
         set({ isInitialized: true });
       },
+
+      subscribeToStorageChanges: () => {
+        const handleStorageChange = (event: StorageEvent) => {
+          if (event.key === "hout-app-storage" && event.newValue) {
+            try {
+              const newState = JSON.parse(event.newValue);
+              const currentState = get();
+              const updates: Partial<AppStoreState> = {};
+              
+              if (JSON.stringify(newState.state.config) !== JSON.stringify(currentState.config)) {
+                updates.config = newState.state.config;
+              }
+              if (newState.state.currentView !== currentState.currentView) {
+                updates.currentView = newState.state.currentView;
+              }
+              
+              if (Object.keys(updates).length > 0) {
+                isSyncingFromStorage = true;
+                set(updates);
+                setTimeout(() => {
+                  isSyncingFromStorage = false;
+                }, 50);
+                console.log('应用配置状态已从其他页面同步');
+              }
+            } catch (error) {
+              console.error('Failed to parse app storage data:', error);
+            }
+          }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+      },
     }),
     {
       name: "hout-app-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: (name) => localStorage.getItem(name),
+        setItem: (name, value) => {
+          if (isSyncingFromStorage) {
+            return;
+          }
+          localStorage.setItem(name, value);
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      })),
       partialize: (state) => ({
         config: state.config,
         currentView: state.currentView,

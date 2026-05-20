@@ -685,6 +685,11 @@ export class DeviceService {
     }
   }
 
+  resetConnectionState(): void {
+    this.connectedDevices.clear();
+    this.initialScanDone = false;
+  }
+
   // APK下载相关方法
   async downloadApk(url: string, fileName: string, isDirect: boolean): Promise<string> {
     try {

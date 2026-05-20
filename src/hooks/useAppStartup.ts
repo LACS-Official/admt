@@ -12,6 +12,7 @@ import { activationService } from "../services/activationService";
 import { usageTrackingService } from "../services/usageTrackingService";
 import { deviceService } from "../services/deviceService";
 import { useConfigStore } from "../stores/configStore";
+import { useDeviceStore } from "../stores/deviceStore";
 
 export const useAppStartup = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -23,25 +24,25 @@ export const useAppStartup = () => {
   const [transitionStage, setTransitionStage] = useState<'start' | 'progress' | 'complete'>('start');
 
   const { initialize, config, setStatusBarMessage } = useAppStore();
-  const { 
-    currentPhase, 
-    setCurrentPhase, 
+  const {
+    currentPhase,
+    setCurrentPhase,
     versionCheckResult,
-    setVersionCheckResult, 
+    setVersionCheckResult,
     setVersionCheckCompleted,
     markPrivacyConsentCompleted
   } = useStartupFlowStore();
-  const { 
-    hasCompletedPrivacySetup, 
+  const {
+    hasCompletedPrivacySetup,
     shouldExitApp
   } = usePrivacyConsentStore();
-  
+
   const {
     startPreload,
     completeStartup,
     getPerformanceMetrics
   } = useStartupOptimization();
-  
+
   const initializationRef = useRef(false);
   const versionCheckRef = useRef(false);
   const preloadRef = useRef(false);
@@ -53,14 +54,14 @@ export const useAppStartup = () => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // 禁用F5刷新和Ctrl+R刷新
-      if (event.key === 'F5' || (event.ctrlKey && event.key === 'r') || 
-          (event.ctrlKey && event.shiftKey && event.key === 'R')) {
+      if (event.key === 'F5' || (event.ctrlKey && event.key === 'r') ||
+        (event.ctrlKey && event.shiftKey && event.key === 'R')) {
         event.preventDefault();
         event.stopPropagation();
         logService.info('用户尝试刷新页面，已被拦截', 'App');
         return;
       }
-      
+
       // 禁用F3和F7以及其他功能键
       if (event.key.startsWith('F') && event.key.length >= 2 && event.key.length <= 3) {
         const fKeyNum = parseInt(event.key.substring(1));
@@ -73,7 +74,7 @@ export const useAppStartup = () => {
             logService.info(`用户尝试使用F${fKeyNum}快捷键，已被拦截`, 'App');
             return;
           }
-          
+
           // 其他F键也在这里统一处理
           event.preventDefault();
           event.stopPropagation();
@@ -113,25 +114,25 @@ export const useAppStartup = () => {
     if (showTransition) {
       const timer = setTimeout(() => {
         setTransitionStage('progress');
-        
+
         setTimeout(() => {
           setTransitionStage('complete');
           setTimeout(() => {
-              setShowTransition(false);
-              // 检查是否有版本检查结果，如果没有更新则允许进入主页面
-              const hasUpdate = versionCheckResult?.hasUpdate;
-              if (currentPhase !== 'version-check' || !hasUpdate) {
-                console.log('✅ 允许进入主页面');
-                setShowStartupFlow(false);
-                completeStartup();
-              } else {
-                console.log('⚠️ 检测到新版本，停留在版本检查阶段，不进入主页面');
-                // 保持在版本检查阶段，不隐藏启动流程
-              }
-            }, 500);
+            setShowTransition(false);
+            useDeviceStore.getState().clearDevices();
+            deviceService.resetConnectionState();
+            const hasUpdate = versionCheckResult?.hasUpdate;
+            if (currentPhase !== 'version-check' || !hasUpdate) {
+              console.log('✅ 允许进入主页面');
+              setShowStartupFlow(false);
+              completeStartup();
+            } else {
+              console.log('⚠️ 检测到新版本，停留在版本检查阶段，不进入主页面');
+            }
+          }, 500);
         }, 1000);
       }, 100);
-      
+
       return () => clearTimeout(timer);
     }
   }, [showTransition, completeStartup, currentPhase, versionCheckResult]);
@@ -140,11 +141,11 @@ export const useAppStartup = () => {
   const initializeStartupFlow = useCallback(async () => {
     if (initializationRef.current) return;
     initializationRef.current = true;
-    
+
     try {
       console.log('🚀 初始化启动流程...');
       startPreload();
-      
+
       // 并行执行初始化任务
       const initTasks = [
         // 预加载资源
@@ -158,7 +159,7 @@ export const useAppStartup = () => {
             console.error('❌ 资源预加载失败:', error);
           }
         })(),
-        
+
         // 安全配置初始化
         (async () => {
           try {
@@ -171,7 +172,7 @@ export const useAppStartup = () => {
             throw new Error('安全配置初始化失败，无法继续启动');
           }
         })(),
-        
+
         // 版本检查
         (async () => {
           try {
@@ -184,7 +185,7 @@ export const useAppStartup = () => {
           }
         })(),
 
-        
+
         // ADB工具初始化
         (async () => {
           try {
@@ -192,7 +193,7 @@ export const useAppStartup = () => {
             await adbToolsManager.initialize();
             adbInitRef.current = true;
             console.log('✅ ADB工具初始化完成');
-            
+
             // 加载ADB命令配置
             console.log('📜 加载ADB命令配置...');
             await useConfigStore.getState().loadAdbCommands();
@@ -204,15 +205,15 @@ export const useAppStartup = () => {
 
         // 开启设备扫描的操作将被移到启动完成后执行，减少启动时的负载
       ];
-      
+
       await Promise.all(initTasks);
-      
+
       if (!securityConfigRef.current) {
         throw new Error('安全配置初始化失败，无法继续启动');
       }
-      
+
       console.log('🎯 启动流程初始化完成');
-      
+
       // 根据当前状态决定进入哪个阶段
       if (!hasCompletedPrivacySetup) {
         console.log('📋 需要完成隐私政策设置，进入隐私政策同意阶段');
@@ -224,7 +225,7 @@ export const useAppStartup = () => {
           const versionCheckResult = await unifiedVersionService.checkForUpdates();
           setVersionCheckResult(versionCheckResult);
           setVersionCheckCompleted(true);
-          
+
           if (!versionCheckResult.hasUpdate) {
             console.log('✅ 版本已是最新，所有检查通过，进入主应用');
             handleStartupFlowComplete();
@@ -234,7 +235,7 @@ export const useAppStartup = () => {
             // 不再继续执行后续流程，用户必须处理更新
             // 确保不会调用 handleStartupFlowComplete
             //不允许进入主页面‘’
-            
+
             return;
           }
         } catch (error) {
@@ -262,22 +263,22 @@ export const useAppStartup = () => {
   const handleStartupFlowComplete = useCallback(() => {
     if (completionRef.current) return;
     completionRef.current = true;
-    
+
     logService.info('启动流程完成', 'App');
-    
+
     const metrics = getPerformanceMetrics();
     logService.info('启动流程性能指标', 'App', metrics);
-    
+
     // 追踪进入主页面
     setTimeout(() => {
       usageTrackingService.trackMainPageEntry().catch(err => {
         logService.error('主页面进入追踪失败', 'App', err);
       });
-      
+
       // 启动流程彻底完成后，再开启设备扫描，并给予一定的缓冲时间
       if (config.autoDetectDevices) {
         console.log('🔍 启动流程彻底完成，开启设备扫描...');
-        deviceService.startScanning(config.scanInterval, 2000); 
+        deviceService.startScanning(config.scanInterval, 2000);
       } else {
         console.log('🔍 自动检测设备已禁用，跳过开启扫描');
       }
@@ -289,11 +290,11 @@ export const useAppStartup = () => {
   const handleStartupFlowError = useCallback(async (error: string) => {
     logService.error('启动流程失败', 'App', error);
     setError(error);
-    
+
     setIsLoading(false);
     setShowErrorNotification(true);
     setCountdown(5);
-    
+
     const countdownInterval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -317,13 +318,13 @@ export const useAppStartup = () => {
   // 处理激活验证成功
   const handleActivationSuccess = useCallback((activationStatus: any) => {
     console.log('激活验证成功:', activationStatus);
-    
+
     console.log('🔄 激活成功后检查版本是否最新...');
     unifiedVersionService.checkForUpdates()
       .then((versionCheckResult) => {
         setVersionCheckResult(versionCheckResult);
         setVersionCheckCompleted(true);
-        
+
         if (!versionCheckResult.hasUpdate) {
           // 如果用户已经完成了所有设置（在隐私政策页面已经全部同意），则直接进入主应用
           const privacyState = usePrivacyConsentStore.getState();
@@ -344,7 +345,7 @@ export const useAppStartup = () => {
         console.log('⚠️ 版本检查失败，进入版本检查阶段');
         setCurrentPhase('version-check');
       });
-      
+
     return;
   }, [setCurrentPhase, setVersionCheckResult, setVersionCheckCompleted, handleStartupFlowComplete]);
 
@@ -352,7 +353,7 @@ export const useAppStartup = () => {
   const handlePrivacyConsent = useCallback(() => {
     console.log('隐私政策已同意');
     markPrivacyConsentCompleted();
-    
+
     // 检查激活状态，如果已激活（Stubbed服务总是返回true）则跳过激活验证阶段
     const status = activationService.checkActivationStatus();
     if (status.isActivated && !status.isExpired) {
@@ -366,12 +367,12 @@ export const useAppStartup = () => {
   // 处理数据收集同意
   const handleDataCollectionConsent = useCallback((consent: boolean) => {
     console.log(`📊 用户数据收集同意: ${consent ? '同意' : '拒绝'}`);
-    
+
     unifiedVersionService.checkForUpdates()
       .then((versionCheckResult) => {
         setVersionCheckResult(versionCheckResult);
         setVersionCheckCompleted(true);
-        
+
         if (!versionCheckResult.hasUpdate) {
           console.log('✅ 版本已是最新，所有检查通过，进入主应用');
           handleStartupFlowComplete();
@@ -389,7 +390,7 @@ export const useAppStartup = () => {
         // 不再继续执行后续流程，用户必须处理版本检查问题
         // 这里不需要return，因为已经设置了phase，后续流程会被阻止
       });
-      
+
     // 重要：在异步操作开始后立即返回，确保不会继续执行后续同步代码
     return;
   }, [setCurrentPhase, setVersionCheckResult, setVersionCheckCompleted, handleStartupFlowComplete]);
@@ -427,7 +428,7 @@ export const useAppStartup = () => {
 
         logService.info('ADMT 应用初始化完成', 'App');
         setIsLoading(false);
-        
+
         // 5. 初始化启动流程
         await initializeStartupFlow();
       } catch (err) {
