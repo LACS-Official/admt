@@ -262,17 +262,20 @@ function Root() {
   const { subscribeToStorageChanges: themeStorageChanges } = useThemeStore();
   const { subscribeToStorageChanges: deviceStorageChanges } = useDeviceStore();
   const { subscribeToStorageChanges: aiChatStorageChanges } = useAIChatStore();
+  const { subscribeToStorageChanges: appStorageChanges } = useAppStore();
 
   useEffect(() => {
     const themeCleanup = themeStorageChanges();
     const deviceCleanup = deviceStorageChanges();
     const aiChatCleanup = aiChatStorageChanges();
+    const appCleanup = appStorageChanges();
     return () => {
       themeCleanup();
       deviceCleanup();
       aiChatCleanup();
+      appCleanup();
     };
-  }, [themeStorageChanges, deviceStorageChanges, aiChatStorageChanges]);
+  }, [themeStorageChanges, deviceStorageChanges, aiChatStorageChanges, appStorageChanges]);
 
   useEffect(() => {
     setLabel(getCurrentWebviewWindow().label);

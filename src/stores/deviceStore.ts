@@ -14,6 +14,8 @@ interface DeviceState extends DeviceStatus {
   toggleControlFavorite: (controlId: string) => void;
 }
 
+let isSyncingFromStorage = false;
+
 export const useDeviceStore = create<DeviceState>()(
   persist(
     (set, get) => ({
@@ -105,12 +107,21 @@ export const useDeviceStore = create<DeviceState>()(
             try {
               const newState = JSON.parse(event.newValue);
               const currentState = get();
+              const updates: Partial<DeviceState> = {};
               
               if (JSON.stringify(newState.state.selectedDevice) !== JSON.stringify(currentState.selectedDevice)) {
-                set({ selectedDevice: newState.state.selectedDevice });
+                updates.selectedDevice = newState.state.selectedDevice;
               }
               if (JSON.stringify(newState.state.devices) !== JSON.stringify(currentState.devices)) {
-                set({ devices: newState.state.devices });
+                updates.devices = newState.state.devices;
+              }
+              
+              if (Object.keys(updates).length > 0) {
+                isSyncingFromStorage = true;
+                set(updates);
+                setTimeout(() => {
+                  isSyncingFromStorage = false;
+                }, 50);
               }
             } catch (error) {
               console.error('Failed to parse device storage data:', error);
@@ -136,7 +147,16 @@ export const useDeviceStore = create<DeviceState>()(
     }),
     {
       name: "hout-device-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: (name) => localStorage.getItem(name),
+        setItem: (name, value) => {
+          if (isSyncingFromStorage) {
+            return;
+          }
+          localStorage.setItem(name, value);
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      })),
     }
   )
 );

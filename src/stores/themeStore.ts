@@ -21,6 +21,8 @@ interface ThemeState {
   subscribeToStorageChanges: () => () => void; // 返回清理函数
 }
 
+let isSyncingFromStorage = false;
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
@@ -50,27 +52,34 @@ export const useThemeStore = create<ThemeState>()(
             try {
               const newState = JSON.parse(event.newValue);
               const currentState = get();
+              const updates: Partial<ThemeState> = {};
               
               // 只有当主题状态确实发生变化时才更新
               if (newState.state.isDarkMode !== currentState.isDarkMode) {
-                set({ isDarkMode: newState.state.isDarkMode });
-                console.log('主题状态已从其他页面同步:', newState.state.isDarkMode ? '暗黑模式' : '亮色模式');
-                console.log('主题状态已从其他页面同步:', newState.state.isDarkMode ? '暗黑模式' : '亮色模式');
+                updates.isDarkMode = newState.state.isDarkMode;
               }
               if (newState.state.accentColor !== currentState.accentColor) {
-                  set({ accentColor: newState.state.accentColor });
+                updates.accentColor = newState.state.accentColor;
               }
               if (newState.state.contentDensity !== currentState.contentDensity) {
-                  set({ contentDensity: newState.state.contentDensity });
+                updates.contentDensity = newState.state.contentDensity;
               }
               if (newState.state.cornerRadius !== currentState.cornerRadius) {
-                  set({ cornerRadius: newState.state.cornerRadius });
+                updates.cornerRadius = newState.state.cornerRadius;
               }
               if (newState.state.showConfetti !== currentState.showConfetti) {
-                  set({ showConfetti: newState.state.showConfetti });
+                updates.showConfetti = newState.state.showConfetti;
               }
               if (newState.state.showTitleBarButtons !== currentState.showTitleBarButtons) {
-                  set({ showTitleBarButtons: newState.state.showTitleBarButtons });
+                updates.showTitleBarButtons = newState.state.showTitleBarButtons;
+              }
+
+              if (Object.keys(updates).length > 0) {
+                isSyncingFromStorage = true;
+                set(updates);
+                setTimeout(() => {
+                  isSyncingFromStorage = false;
+                }, 50);
               }
             } catch (error) {
               console.error('解析主题存储数据失败:', error);
@@ -88,7 +97,16 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: "hout-theme-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: (name) => localStorage.getItem(name),
+        setItem: (name, value) => {
+          if (isSyncingFromStorage) {
+            return;
+          }
+          localStorage.setItem(name, value);
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      })),
     }
   )
 );
