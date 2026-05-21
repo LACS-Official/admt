@@ -37,10 +37,10 @@ class AIService {
         "Content-Type": "application/json",
       };
 
-      if (provider === "openai" || provider === "local") {
+      if (provider === "openai" || provider === "local" || provider === "zhipu") {
         headers["Authorization"] = `Bearer ${apiKey}`;
         body = {
-          model: model || "gpt-3.5-turbo",
+          model: model || (provider === "zhipu" ? "glm-4" : "gpt-3.5-turbo"),
           messages: messages,
           temperature: 0.7,
         };
@@ -68,7 +68,7 @@ class AIService {
       }
 
       const baseUrl = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
-      const fullUrl = baseUrl + (provider === "openai" || provider === "local" ? "/chat/completions" : "");
+      const fullUrl = baseUrl + (provider === "openai" || provider === "local" || provider === "zhipu" ? "/chat/completions" : "");
 
       const response = await fetch(fullUrl, {
         method: "POST",
@@ -85,7 +85,7 @@ class AIService {
       const result = await response.json();
       let responseText = "";
 
-      if (provider === "openai" || provider === "local") {
+      if (provider === "openai" || provider === "local" || provider === "zhipu") {
         responseText = result.choices?.[0]?.message?.content || "无回复内容";
       } else if (provider === "anthropic") {
         responseText = result.content?.[0]?.text || "无回复内容";
@@ -97,13 +97,13 @@ class AIService {
       } else {
         logService.info("AI 请求成功", "AIService", { category: "ai", provider, model, responseLength: responseText.length });
       }
-      
+
       return { content: responseText };
     } catch (error: any) {
       logService.error("AI 请求失败", "AIService", { error: error.message, category: "ai" });
-      return { 
-        content: "", 
-        error: error.message 
+      return {
+        content: "",
+        error: error.message
       };
     }
   }
