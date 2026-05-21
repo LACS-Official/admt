@@ -132,7 +132,7 @@ const AISettingsPanel: React.FC = () => {
     setTestStatus({ type: "loading" });
     const { provider, apiKey, endpoint } = config.ai || {};
     logService.info(`开始测试 AI 连接: ${provider}`, "AISettings", { endpoint, category: "network" });
-    
+
     try {
       if (!apiKey && provider !== "local") {
         throw new Error("API Key 不能为空");
@@ -154,13 +154,20 @@ const AISettingsPanel: React.FC = () => {
         headers["anthropic-dangerous-direct-browser-access"] = "true";
       } else if (provider === "google") {
         url = `${endpoint}/v1beta/models?key=${apiKey}`;
+      } else if (provider === "zhipu") {
+        url = `${baseEndpoint}/chat/completions`;
+        headers["Authorization"] = `Bearer ${apiKey}`;
       }
 
       const response = await fetch(url, {
-        method: provider === "anthropic" ? "POST" : "GET",
+        method: provider === "anthropic" || provider === "zhipu" ? "POST" : "GET",
         headers,
         body: provider === "anthropic" ? JSON.stringify({
           model: "claude-3-haiku-20240307",
+          max_tokens: 1,
+          messages: [{ role: "user", content: "hi" }]
+        }) : provider === "zhipu" ? JSON.stringify({
+          model: "glm-4",
           max_tokens: 1,
           messages: [{ role: "user", content: "hi" }]
         }) : undefined,
@@ -175,7 +182,9 @@ const AISettingsPanel: React.FC = () => {
         try {
           const json = JSON.parse(errorData);
           errorMsg = json.error?.message || json.message || errorMsg;
-        } catch (e) { }
+        } catch (e) {
+          errorMsg = `${errorMsg} (解析响应失败: ${e instanceof Error ? e.message : String(e)})`;
+        }
         logService.error(`AI 连接测试失败: ${provider}`, "AISettings", { error: errorMsg, status: response.status, url, category: "network" });
         setTestStatus({ type: "error", message: errorMsg, details: { url, status: response.status } });
         throw new Error(errorMsg);
@@ -184,18 +193,18 @@ const AISettingsPanel: React.FC = () => {
       console.error("Test connection failed:", error);
       const errorMsg = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
-      
+
       // 注意：如果是 catch 住的错误，可能没有 URL，除非是上面的 throw
-      setTestStatus(prev => ({ 
-        type: "error", 
-        message: errorMsg, 
-        details: prev.type === "loading" ? undefined : prev.details 
+      setTestStatus(prev => ({
+        type: "error",
+        message: errorMsg,
+        details: prev.type === "loading" ? undefined : prev.details
       }));
-      logService.error(`AI 连接测试异常: ${provider}`, "AISettings", { 
-        error: errorMsg, 
+      logService.error(`AI 连接测试异常: ${provider}`, "AISettings", {
+        error: errorMsg,
         stack,
         endpoint,
-        category: "network" 
+        category: "network"
       });
     }
   };
@@ -244,10 +253,12 @@ const AISettingsPanel: React.FC = () => {
                       data.value === "openai"
                         ? "https://api.openai.com/v1"
                         : data.value === "anthropic"
-                        ? "https://api.anthropic.com/v1"
-                        : data.value === "google"
-                        ? "https://generativelanguage.googleapis.com"
-                        : config.ai?.endpoint ?? "",
+                          ? "https://api.anthropic.com/v1"
+                          : data.value === "google"
+                            ? "https://generativelanguage.googleapis.com"
+                            : data.value === "zhipu"
+                              ? "https://open.bigmodel.cn/api/paas/v4"
+                              : config.ai?.endpoint ?? "",
                   })
                 }
               >
@@ -255,6 +266,7 @@ const AISettingsPanel: React.FC = () => {
                 <option value="anthropic">Anthropic (Claude)</option>
                 <option value="google">Google (Gemini)</option>
                 <option value="local">Local (Ollama/LM Studio)</option>
+                <option value="zhipu">智谱AI (GLM)</option>
               </Select>
             </Field>
 
@@ -295,7 +307,7 @@ const AISettingsPanel: React.FC = () => {
             </Field>
 
             {/* Endpoint */}
-            <Field 
+            <Field
               label={t("settings.ai_endpoint")}
             >
               <Input
