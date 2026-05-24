@@ -64,6 +64,26 @@ pub async fn restart_adb_service() -> Result<CommandResult> {
         }
     }
 
+    #[cfg(not(windows))]
+    {
+        use std::process::Command;
+
+        let mut check_cmd = Command::new("pgrep");
+        check_cmd.arg("-x").arg("adb");
+
+        if let Ok(output) = check_cmd.output() {
+            if output.status.success() {
+                log::warn!("ADB processes still running, attempting to force kill");
+                let mut force_kill = Command::new("killall");
+                force_kill.args(["-9", "adb"]);
+                let _ = force_kill.output();
+
+                // 再等待一秒
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            }
+        }
+    }
+
     // 第三步：启动ADB服务
     log::info!("Step 2: Starting ADB server");
     let start_result = utils_execute_adb_command(&["start-server"], Some(15)).await;

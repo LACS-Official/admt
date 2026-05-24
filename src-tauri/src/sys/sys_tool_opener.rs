@@ -225,12 +225,39 @@ pub async fn open_task_manager() -> Result<CommandResult> {
         })
     }
 
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
+    {
+        log::info!("Attempting to open system monitor on Linux");
+        let mut cmd = Command::new("gnome-system-monitor");
+        match cmd.spawn() {
+            Ok(child) => {
+                let pid = child.id();
+                log::info!("System monitor started successfully with PID: {}", pid);
+                return Ok(CommandResult {
+                    success: true,
+                    output: format!("系统监视器已成功打开 (进程ID: {})", pid),
+                    error: None,
+                    exit_code: Some(0),
+                });
+            }
+            Err(e) => {
+                log::error!("Failed to open gnome-system-monitor: {}", e);
+                return Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(format!("无法打开系统监视器: {}", e)),
+                    exit_code: Some(1),
+                });
+            }
+        }
+    }
+
+    #[cfg(not(any(windows, target_os = "linux")))]
     {
         Ok(CommandResult {
             success: false,
             output: String::new(),
-            error: Some("任务管理器功能仅在Windows系统上可用".to_string()),
+            error: Some("任务管理器功能目前仅支持 Windows 和 Linux".to_string()),
             exit_code: Some(1),
         })
     }
