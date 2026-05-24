@@ -17,8 +17,6 @@ import {
   Bot24Regular,
   Key24Regular,
   Wand24Regular,
-  CheckmarkCircle24Regular,
-  ErrorCircle24Regular,
   Save24Regular,
 } from "@fluentui/react-icons";
 import { fetch } from "@tauri-apps/plugin-http";
@@ -173,9 +171,13 @@ const AISettingsPanel: React.FC = () => {
         }) : undefined,
       });
 
-      if (response.ok) {
-        setTestStatus({ type: "success" });
-        logService.info(`AI 连接测试成功: ${provider}`, "AISettings", { category: "network" });
+      if (response.ok || response.status === 404) {
+        setTestStatus({ type: "idle" });
+        setStatusBarMessage({
+          type: "success",
+          message: t("settings.ai_test_success"),
+        });
+        logService.info(`AI 连接测试成功: ${provider} (状态码: ${response.status})`, "AISettings", { category: "network" });
       } else {
         const errorData = await response.text();
         let errorMsg = `HTTP ${response.status}`;
@@ -186,20 +188,23 @@ const AISettingsPanel: React.FC = () => {
           errorMsg = `${errorMsg} (解析响应失败: ${e instanceof Error ? e.message : String(e)})`;
         }
         logService.error(`AI 连接测试失败: ${provider}`, "AISettings", { error: errorMsg, status: response.status, url, category: "network" });
-        setTestStatus({ type: "error", message: errorMsg, details: { url, status: response.status } });
         throw new Error(errorMsg);
       }
     } catch (error: any) {
       console.error("Test connection failed:", error);
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      let errorMsg = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
 
-      // 注意：如果是 catch 住的错误，可能没有 URL，除非是上面的 throw
-      setTestStatus(prev => ({
+      // 针对 NVIDIA Endpoint 缺失 /v1 给予友好提示
+      if (endpoint && endpoint.includes("nvidia.com") && !endpoint.endsWith("/v1") && !endpoint.endsWith("/v1/")) {
+        errorMsg = `${errorMsg} (请检查api链接和apikey是否完全正确)`;
+      }
+
+      setTestStatus({ type: "idle" });
+      setStatusBarMessage({
         type: "error",
-        message: errorMsg,
-        details: prev.type === "loading" ? undefined : prev.details
-      }));
+        message: t("settings.ai_test_failed", { error: errorMsg }),
+      });
       logService.error(`AI 连接测试异常: ${provider}`, "AISettings", {
         error: errorMsg,
         stack,
@@ -351,27 +356,6 @@ const AISettingsPanel: React.FC = () => {
               >
                 {isSaving ? t("settings.ai_saving") : t("settings.ai_save_config")}
               </Button>
-
-              {testStatus.type === "success" && (
-                <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--colorStatusSuccessForeground1)" }}>
-                  <CheckmarkCircle24Regular fontSize={20} />
-                  <Text size={200}>{t("settings.ai_test_success")}</Text>
-                </div>
-              )}
-
-              {testStatus.type === "error" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "2px", color: "var(--colorStatusDangerForeground1)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <ErrorCircle24Regular fontSize={20} />
-                    <Text size={200} weight="semibold">{t("settings.ai_test_failed", { error: testStatus.message })}</Text>
-                  </div>
-                  {testStatus.details?.url && (
-                    <Text size={100} style={{ marginLeft: "24px", opacity: 0.8 }}>
-                      URL: {testStatus.details.url}
-                    </Text>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </Card>

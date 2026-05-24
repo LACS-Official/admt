@@ -6,12 +6,18 @@ use std::time::Duration;
 use tokio::process::Command as TokioCommand;
 use tokio::time::timeout;
 
+use std::env::consts::EXE_SUFFIX;
+
+/// 根据当前操作系统获取可执行文件名称
+pub fn executable_name(name: &str) -> String {
+    format!("{}{}", name, EXE_SUFFIX)
+}
+
 /// 获取ADB可执行文件路径（已弃用，请使用缓存版本）
 #[deprecated(note = "Use get_cached_adb_path() for better performance")]
 #[allow(dead_code)]
 pub fn get_adb_path() -> PathBuf {
-    use std::env::consts::EXE_SUFFIX;
-    let adb_filename = format!("adb{}", EXE_SUFFIX);
+    let adb_filename = executable_name("adb");
 
     // 1. 优先尝试从应用工具目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
@@ -55,8 +61,7 @@ pub fn get_adb_path() -> PathBuf {
 #[deprecated(note = "Use get_cached_fastboot_path() for better performance")]
 #[allow(dead_code)]
 pub fn get_fastboot_path() -> PathBuf {
-    use std::env::consts::EXE_SUFFIX;
-    let fb_filename = format!("fastboot{}", EXE_SUFFIX);
+    let fb_filename = executable_name("fastboot");
 
     // 1. 优先尝试从应用工具目录获取（生产模式）
     if let Ok(exe_dir) = std::env::current_exe() {
@@ -188,9 +193,9 @@ pub async fn execute_command(
             "Fastboot"
         };
         return Err(AdmtError::Io(format!(
-            "{} executable not found in tools directory. Please ensure {}.exe is placed in src-tauri/tools/adb/",
+            "{} executable not found in tools directory. Please ensure {} is placed in src-tauri/tools/adb/",
             tool_name,
-            tool_name.to_lowercase()
+            executable_name(&tool_name.to_lowercase())
         )));
     }
 

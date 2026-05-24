@@ -79,11 +79,11 @@ async fn patch_magisk(
     // On Windows, we need magiskboot.exe (usually not in APK)
     // and magisk32/64 binaries (in lib/)
 
-    // For now, let's look for magiskboot.exe in tools first
+    // For now, let's look for magiskboot in tools first
     let magiskboot_exe = find_magiskboot_exe(window.app_handle())?;
-    let work_magiskboot = work_dir.join("magiskboot.exe");
+    let work_magiskboot = work_dir.join(crate::utils::executable_name("magiskboot"));
     fs::copy(&magiskboot_exe, &work_magiskboot)
-        .map_err(|e| AdmtError::Io(format!("Failed to copy magiskboot.exe: {}", e)))?;
+        .map_err(|e| AdmtError::Io(format!("Failed to copy magiskboot: {}", e)))?;
 
     // Extract magisk32/64 from APK
     extract_magisk_bins(apk_path, work_dir)?;
@@ -233,34 +233,40 @@ fn extract_magisk_bins(apk_path: &Path, out_dir: &Path) -> Result<()> {
 }
 
 fn find_magiskboot_exe(app_handle: &tauri::AppHandle) -> Result<PathBuf> {
-    // Search in tools/adb/windows or similar
+    let os_dir = std::env::consts::OS;
+    let magisk_name = crate::utils::executable_name("magiskboot");
+
+    // Search in tools/adb/OS or similar
     let exe_dir = std::env::current_exe().ok();
     if let Some(mut p) = exe_dir {
         p.pop();
         let path = p
             .join("tools")
             .join("adb")
-            .join("windows")
-            .join("magiskboot.exe");
+            .join(os_dir)
+            .join(&magisk_name);
         if path.exists() {
             return Ok(path);
         }
     }
 
-    // 2. Resolve magiskboot path (Windows)
+    // 2. Resolve magiskboot path
+    let resource_path = format!("tools/adb/{}/{}", os_dir, magisk_name);
     let magiskboot_path = app_handle
         .path()
-        .resolve("tools/adb/windows/magiskboot.exe", BaseDirectory::Resource)
+        .resolve(&resource_path, BaseDirectory::Resource)
         .map_err(|e| AdmtError::Io(format!("无法解析工具路径: {}. 请确保应用安装完整。", e)))?;
 
     if !magiskboot_path.exists() {
         log::error!(
-            "❌ Missing magiskboot.exe at: {}",
+            "❌ Missing {} at: {}",
+            magisk_name,
             magiskboot_path.display()
         );
-        return Err(AdmtError::Io(
-            "DEPENDENCY_MISSING:magiskboot.exe".to_string(),
-        ));
+        return Err(AdmtError::Io(format!(
+            "DEPENDENCY_MISSING:{}",
+            magisk_name
+        )));
     }
     Ok(magiskboot_path)
 }
