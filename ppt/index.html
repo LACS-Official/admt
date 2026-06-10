@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>玩机管家-ADMT · Android 设备管理工具</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+SC:wght@200;300;400;500;700;900&display=swap"
+    rel="stylesheet">
+  <style>
+    @import './index.css';
+  </style>
+</head>
+
+<body class="canvas-mode">
+  <script>
+    if (/Win/i.test(navigator.platform || navigator.userAgentData?.platform || '')) {
+      document.body.classList.add('is-win');
+    }
+    (function () {
+      const KEY = 'guizang-ppt-low-power';
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const stored = localStorage.getItem(KEY);
+      window.__lowPowerMode = stored === '1' || (stored === null && reduced);
+      function updateHint() {
+        const hint = document.getElementById('hint');
+        if (hint) hint.textContent = `← → 翻页 · B ${window.__lowPowerMode ? '动态' : '静态'} · ESC 索引`;
+      }
+      window.__setLowPowerMode = function (on, opts = {}) {
+        window.__lowPowerMode = !!on;
+        document.body.classList.toggle('low-power', window.__lowPowerMode);
+        if (opts.persist !== false) localStorage.setItem(KEY, window.__lowPowerMode ? '1' : '0');
+        if (window.__lowPowerMode && document.getAnimations) {
+          document.getAnimations().forEach(a => a.cancel());
+        }
+        updateHint();
+        dispatchEvent(new CustomEvent('swiss-low-power-change', { detail: { on: window.__lowPowerMode } }));
+        if (window.__playSlide) window.__playSlide(window.__currentSlideIndex || 0);
+      };
+      document.body.classList.toggle('low-power', window.__lowPowerMode);
+      addEventListener('DOMContentLoaded', updateHint, { once: true });
+    })();
+  </script>
+
+  <div id="hint">← → 翻页 · B 静态 · ESC 索引</div>
+
+  <div id="deck">
+
+    <!-- ============ P1 · Cover · IKB 满屏 + ASCII 呼吸场 ============ -->
+    <section class="slide accent" data-animate="hero" data-layout="S01">
+      <div class="canvas-card">
+        <canvas class="ascii-bg" aria-hidden="true"></canvas>
+        <div class="chrome-min">
+          <div class="l">玩机管家-ADMT · Android Device Management Tool</div>
+          <div class="r">SS · 26.05.25 · 01 / 12</div>
+        </div>
+        <div style="flex:1;padding:0;display:grid;grid-template-rows:auto 1fr auto;gap:2.6vh">
+          <div data-anim="kicker" class="t-meta" style="color:rgba(255,255,255,.78);letter-spacing:.22em">ANDROID DEVICE
+            MANAGEMENT</div>
+          <h1 data-anim="title"
+            style="align-self:center;font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(11.6vw,19vh);line-height:.94;letter-spacing:-.025em;color:#fff">
+            玩机管家<br /><span style="font-style:italic;font-weight:300">ADMT</span></h1>
+          <div data-anim="bottom"
+            style="display:grid;grid-template-rows:auto auto;gap:1.6vh;border-top:1px solid rgba(255,255,255,.22);padding-top:2vh">
+            <div data-anim="lead" class="lead" style="max-width:52ch;color:rgba(255,255,255,.86);font-weight:300">全能的
+              Android 设备管理工具，让连接更简单，让调试更高效。</div>
+            <div style="display:flex;justify-content:space-between;align-items:end">
+              <div class="t-meta" style="color:rgba(255,255,255,.6)">LACS · 开源免费</div>
+              <div class="t-meta" style="color:rgba(255,255,255,.6)">→ swipe / arrow keys</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P2 · Statement · 核心定位 ============ -->
+    <section class="slide" data-animate="statement-rise" data-layout="S03">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">POSITIONING</div>
+          <div class="r">02 / 12</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:4vh">
+          <h1 class="h-statement"
+            style="font-family:var(--sans),var(--sans-zh);font-weight:200;font-size:min(9.6vw,16vh);line-height:.95;letter-spacing:-.04em">
+            <span>看见每一处</span> <span style="font-style:italic;font-weight:300">细节</span>
+          </h1>
+          <div style="max-width:60ch">
+            <p class="t-body" style="color:var(--text-secondary)">全方位的设备信息展示，实时的系统日志捕获，全能的手机信息管理。ADMT 为开发者和极客打造，让
+              Android 设备管理变得简单直观。</p>
+          </div>
+        </div>
+        <div class="t-meta" style="color:var(--text-helper)">— 产品定位</div>
+      </div>
+    </section>
+
+    <!-- ============ P3 · Six Cells · 六大核心功能 ============ -->
+    <section class="slide" data-animate="grid-reveal" data-layout="S04">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">CORE FEATURES</div>
+          <div class="r">03 / 12</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:3vh">
+          <div>
+            <div class="t-cat" style="margin-bottom:1.4vh">FEATURES</div>
+            <h2 class="h-xl-zh" style="font-size:min(5.8vw,10vh)">六大核心能力</h2>
+          </div>
+          <div class="sub-grid-3-2" style="margin-top:2vh">
+            <div class="sub-card">
+              <i data-lucide="smartphone" class="lucide"></i>
+              <span class="nb-corner">01</span>
+              <h4 class="ttl">设备连接</h4>
+              <p class="desc">USB / 无线双模连接，自动识别设备状态</p>
+            </div>
+            <div class="sub-card">
+              <i data-lucide="package" class="lucide"></i>
+              <span class="nb-corner">02</span>
+              <h4 class="ttl">应用管理</h4>
+              <p class="desc">安装、卸载、备份，应用信息一目了然</p>
+            </div>
+            <div class="sub-card">
+              <i data-lucide="monitor" class="lucide"></i>
+              <span class="nb-corner">03</span>
+              <h4 class="ttl">设备投屏</h4>
+              <p class="desc">低延迟实时投屏，支持触控和键鼠操作</p>
+            </div>
+            <div class="sub-card">
+              <i data-lucide="terminal" class="lucide"></i>
+              <span class="nb-corner">04</span>
+              <h4 class="ttl">命令交互</h4>
+              <p class="desc">adb/fastboot 命令可视化执行</p>
+            </div>
+            <div class="sub-card">
+              <i data-lucide="cpu" class="lucide"></i>
+              <span class="nb-corner">05</span>
+              <h4 class="ttl">镜像刷入</h4>
+              <p class="desc">Fastboot 镜像可视化刷入，安全便捷</p>
+            </div>
+            <div class="sub-card accent">
+              <i data-lucide="settings" class="lucide"></i>
+              <span class="nb-corner">06</span>
+              <h4 class="ttl">系统设置</h4>
+              <p class="desc">深度系统调试，开发者选项一键管理</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P4 · KPI Tower · 功能数据 ============ -->
+    <section class="slide" data-animate="tower-grow" data-layout="S06">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">CAPABILITY</div>
+          <div class="r">04 / 12</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:3vh">
+          <div>
+            <div class="t-cat" style="margin-bottom:1.4vh">METRICS</div>
+            <h2 class="h-xl-zh" style="font-size:min(5.8vw,10vh)">能力指标</h2>
+          </div>
+          <div class="bar-towers" style="margin-top:4vh">
+            <div class="bar-tower">
+              <div class="cap"><i data-lucide="zap" class="lucide"></i></div>
+              <div class="body-block h-1">
+                <span class="lbl">连接速度</span>
+                <span class="nb">&lt;1<span class="unit">s</span></span>
+                <span class="sub">秒级设备识别</span>
+              </div>
+            </div>
+            <div class="bar-tower">
+              <div class="cap"><i data-lucide="activity" class="lucide"></i></div>
+              <div class="body-block h-2">
+                <span class="lbl">投屏延迟</span>
+                <span class="nb">&lt;50<span class="unit">ms</span></span>
+                <span class="sub">极低延迟传输</span>
+              </div>
+            </div>
+            <div class="bar-tower">
+              <div class="cap"><i data-lucide="layers" class="lucide"></i></div>
+              <div class="body-block h-3">
+                <span class="lbl">功能模块</span>
+                <span class="nb">10+<span class="unit">个</span></span>
+                <span class="sub">全能管理工具</span>
+              </div>
+            </div>
+            <div class="bar-tower">
+              <div class="cap"><i data-lucide="download" class="lucide"></i></div>
+              <div class="body-block b-accent h-4">
+                <span class="lbl">免费开源</span>
+                <span class="nb">100<span class="unit">%</span></span>
+                <span class="sub">永久免费使用</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P5 · Image + Text · 架构概览 ============ -->
+    <section class="slide" data-animate="grid-reveal" data-layout="S22">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">ARCHITECTURE</div>
+          <div class="r">05 / 12</div>
+        </div>
+        <figure class="frame-img r-21x9" style="margin-bottom:3vh">
+          <img src="images/05-architecture.jpg" alt="系统架构" />
+        </figure>
+        <div class="image-hero-body" style="padding:0">
+          <div>
+            <div class="t-cat" style="margin-bottom:1.4vh">SYSTEM DESIGN</div>
+            <h2 class="h-xl-zh" style="font-size:min(4.6vw,8vh)">模块化架构设计</h2>
+            <p class="t-body" style="margin-top:2vh;max-width:50ch">基于现代桌面应用架构，采用分层设计模式。核心层处理设备通信协议，业务层封装管理逻辑，UI
+              层提供直观交互体验。</p>
+          </div>
+          <div class="image-hero-stats">
+            <div class="stat-card thin">
+              <span class="stat-label">跨平台</span>
+              <span class="stat-nb">3<span class="stat-unit">系统</span></span>
+              <span class="stat-note">Windows / macOS / Linux</span>
+            </div>
+            <div class="stat-card thin">
+              <span class="stat-label">连接方式</span>
+              <span class="stat-nb">2<span class="stat-unit">模式</span></span>
+              <span class="stat-note">USB / 无线 ADB</span>
+            </div>
+            <div class="stat-card thin accent-top">
+              <span class="stat-label">开源协议</span>
+              <span class="stat-nb" style="color:var(--accent)">MIT</span>
+              <span class="stat-note">自由使用与修改</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P6 · Duo Compare · 传统 vs ADMT ============ -->
+    <section class="slide" data-animate="duo-mirror" data-layout="S08">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">COMPARISON</div>
+          <div class="r">06 / 12</div>
+        </div>
+        <div class="duo-compare" style="margin-top:4vh">
+          <div class="col">
+            <div class="col-tag"><span class="num">A</span> 传统方式</div>
+            <h3 class="col-ttl">命令行操作</h3>
+            <p class="col-desc">记忆复杂命令参数，手动输入易出错，缺乏可视化反馈，学习成本高</p>
+            <ul class="col-list">
+              <li>adb 命令记忆困难</li>
+              <li>日志查看不便</li>
+              <li>应用管理繁琐</li>
+              <li>投屏配置复杂</li>
+            </ul>
+          </div>
+          <span class="vrule"></span>
+          <div class="col accent">
+            <div class="col-tag"><span class="num">B</span> ADMT</div>
+            <h3 class="col-ttl">可视化操作</h3>
+            <p class="col-desc">图形化界面直观操作，一键完成功能执行，实时反馈执行结果，零门槛上手</p>
+            <ul class="col-list">
+              <li>点击即执行</li>
+              <li>实时日志展示</li>
+              <li>批量应用管理</li>
+              <li>一键投屏连接</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P7 · Image + Text · 应用管理 ============ -->
+    <section class="slide" data-animate="grid-reveal" data-layout="S22">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">APP MANAGEMENT</div>
+          <div class="r">07 / 12</div>
+        </div>
+        <div class="swiss-img-split reverse" style="flex:1;margin-top:2vh">
+          <div class="swiss-img-copy">
+            <div class="t-cat">FEATURE HIGHLIGHT</div>
+            <h2 class="h-xl-zh" style="font-size:min(5.2vw,9vh)">全能应用管理</h2>
+            <div class="rule accent" style="margin:2vh 0"></div>
+            <div style="display:flex;flex-direction:column;gap:2vh">
+              <div>
+                <h4 class="t-h-prod" style="margin-bottom:.6vh">安装与卸载</h4>
+                <p class="t-body-sm">支持 APK 文件拖拽安装，批量卸载应用，释放存储空间</p>
+              </div>
+              <div>
+                <h4 class="t-h-prod" style="margin-bottom:.6vh">应用信息</h4>
+                <p class="t-body-sm">查看应用版本、权限、数据占用，导出应用安装包</p>
+              </div>
+              <div>
+                <h4 class="t-h-prod" style="margin-bottom:.6vh">活动管理</h4>
+                <p class="t-body-sm">启动应用组件，强制停止进程，清除应用数据</p>
+              </div>
+            </div>
+          </div>
+          <figure class="tile" style="align-self:center">
+            <div class="frame-img r-16x10">
+              <img src="images/07-appmanager.jpg" alt="应用管理界面" />
+            </div>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P8 · Three Layers · 核心优势 ============ -->
+    <section class="slide" data-animate="stack-reveal" data-layout="S05">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">ADVANTAGES</div>
+          <div class="r">08 / 12</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:3vh">
+          <div>
+            <div class="t-cat" style="margin-bottom:1.4vh">WHY ADMT</div>
+            <h2 class="h-xl-zh" style="font-size:min(5.8vw,10vh)">三大核心优势</h2>
+          </div>
+          <div class="stack-row" style="margin-top:2vh">
+            <div class="stack-block b-grey">
+              <span class="layer-nb">01</span>
+              <i data-lucide="shield-check" class="lucide"></i>
+              <h4 class="layer-ttl">安全可靠</h4>
+              <p class="layer-desc">开源代码可审计，本地操作无云端，设备数据完全掌控在自己手中</p>
+              <span class="layer-tag">Privacy First</span>
+            </div>
+            <div class="stack-block b-accent">
+              <span class="layer-nb">02</span>
+              <i data-lucide="gauge" class="lucide"></i>
+              <h4 class="layer-ttl">极致性能</h4>
+              <p class="layer-desc">原生应用架构，响应速度快，资源占用低，流畅管理多台设备</p>
+              <span class="layer-tag">High Performance</span>
+            </div>
+            <div class="stack-block b-grey">
+              <span class="layer-nb">03</span>
+              <i data-lucide="puzzle" class="lucide"></i>
+              <h4 class="layer-ttl">功能丰富</h4>
+              <p class="layer-desc">覆盖设备管理全场景，从日常调试到深度刷机，一站式解决方案</p>
+              <span class="layer-tag">All-in-One</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P9 · Image Hero · 投屏功能 ============ -->
+    <section class="slide" data-animate="image-reveal" data-layout="S22">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">SCREEN CASTING</div>
+          <div class="r">09 / 12</div>
+        </div>
+        <figure class="frame-img r-21x9" style="margin-bottom:3vh">
+          <img src="images/09-screencast.jpg" alt="设备投屏" />
+        </figure>
+        <div class="image-hero-body" style="padding:0">
+          <div>
+            <div class="t-cat" style="margin-bottom:1.4vh">LOW LATENCY</div>
+            <h2 class="h-xl-zh" style="font-size:min(4.6vw,8vh)">低延迟设备投屏</h2>
+            <p class="t-body" style="margin-top:2vh;max-width:50ch">基于 scrcpy
+              技术，实现毫秒级延迟的屏幕镜像。支持触控操作、键鼠映射、屏幕录制，让演示和调试更加高效。</p>
+          </div>
+          <div class="image-hero-stats">
+            <div class="stat-card thin">
+              <span class="stat-label">延迟</span>
+              <span class="stat-nb">&lt;50<span class="stat-unit">ms</span></span>
+              <span class="stat-note">近乎实时响应</span>
+            </div>
+            <div class="stat-card thin">
+              <span class="stat-label">分辨率</span>
+              <span class="stat-nb">4K<span class="stat-unit">支持</span></span>
+              <span class="stat-note">高清画质传输</span>
+            </div>
+            <div class="stat-card thin accent-top">
+              <span class="stat-label">帧率</span>
+              <span class="stat-nb">60<span class="stat-unit">fps</span></span>
+              <span class="stat-note">流畅视觉体验</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P10 · Horizontal Timeline · 使用流程 ============ -->
+    <section class="slide" data-animate="timeline-h" data-layout="S11">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">WORKFLOW</div>
+          <div class="r">10 / 12</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:3vh">
+          <div>
+            <div class="t-cat" style="margin-bottom:1.4vh">GET STARTED</div>
+            <h2 class="h-xl-zh" style="font-size:min(5.8vw,10vh)">三步开始使用</h2>
+          </div>
+          <div class="timeline-h" style="margin-top:auto;margin-bottom:auto">
+            <div class="tl-row">
+              <div class="th-node up">
+                <span class="dot"></span>
+                <div class="label">
+                  <span class="yr">STEP 01</span>
+                  <span class="name">下载安装</span>
+                  <span class="desc">官网下载对应系统版本</span>
+                </div>
+              </div>
+              <div class="th-node down accent">
+                <span class="dot"></span>
+                <div class="label">
+                  <span class="yr">STEP 02</span>
+                  <span class="name">连接设备</span>
+                  <span class="desc">USB 或无线 ADB 连接</span>
+                </div>
+              </div>
+              <div class="th-node up">
+                <span class="dot"></span>
+                <div class="label">
+                  <span class="yr">STEP 03</span>
+                  <span class="name">开始管理</span>
+                  <span class="desc">享受全能设备管理</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:center;margin-top:4vh">
+            <div class="callout"
+              style="max-width:60ch;text-align:center;border-left:none;border-top:3px solid var(--accent);padding-top:2vh">
+              <p class="t-body">无需复杂配置，开箱即用。支持 Windows、macOS、Linux 三大平台，让设备管理跨越系统边界。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P11 · Matrix · 用户场景 ============ -->
+    <section class="slide" data-animate="grid-reveal" data-layout="S15">
+      <div class="canvas-card">
+        <div class="chrome-min">
+          <div class="l">USE CASES</div>
+          <div class="r">11 / 12</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:3vh">
+          <div>
+            <div class="t-cat" style="margin-bottom:1.4vh">SCENARIOS</div>
+            <h2 class="h-xl-zh" style="font-size:min(5.8vw,10vh)">谁在使用 ADMT</h2>
+          </div>
+          <div class="sub-grid-3-2" style="margin-top:2vh">
+            <div class="sub-card">
+              <i data-lucide="code" class="lucide"></i>
+              <span class="nb-corner">01</span>
+              <h4 class="ttl">Android 开发者</h4>
+              <p class="desc">调试应用、查看日志、管理设备，提升开发效率</p>
+            </div>
+            <div class="sub-card">
+              <i data-lucide="test-tube" class="lucide"></i>
+              <span class="nb-corner">02</span>
+              <h4 class="ttl">测试工程师</h4>
+              <p class="desc">批量安装测试包，快速切换测试环境</p>
+            </div>
+            <div class="sub-card">
+              <i data-lucide="cpu" class="lucide"></i>
+              <span class="nb-corner">03</span>
+              <h4 class="ttl">极客玩家</h4>
+              <p class="desc">刷机、调试、优化，探索设备极限</p>
+            </div>
+            <div class="sub-card accent">
+              <i data-lucide="presentation" class="lucide"></i>
+              <span class="nb-corner">04</span>
+              <h4 class="ttl">产品经理</h4>
+              <p class="desc">投屏演示、截图反馈，高效沟通协作</p>
+            </div>
+            <div class="sub-card">
+              <i data-lucide="graduation-cap" class="lucide"></i>
+              <span class="nb-corner">05</span>
+              <h4 class="ttl">教育工作者</h4>
+              <p class="desc">教学演示、设备管理，课堂互动更便捷</p>
+            </div>
+            <div class="sub-card">
+              <i data-lucide="wrench" class="lucide"></i>
+              <span class="nb-corner">06</span>
+              <h4 class="ttl">技术支持</h4>
+              <p class="desc">远程协助、问题诊断，提升服务效率</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ P12 · Closing Manifesto · 收尾页 ============ -->
+    <section class="slide split" data-animate="split-statement" data-layout="S10">
+      <div class="canvas-card">
+        <div class="split-half">
+          <div class="half b-accent"
+            style="padding:5.6vh 3.6vw 4.4vh;justify-content:space-between;position:relative;overflow:hidden">
+            <canvas class="ascii-bg" aria-hidden="true"></canvas>
+            <div class="chrome-min" style="margin-bottom:0;position:relative;z-index:1">
+              <div class="l">12 / 12</div>
+              <div class="r">CLOSING</div>
+            </div>
+            <div data-anim="manifesto" style="display:flex;flex-direction:column;gap:2vh;position:relative;z-index:1">
+              <div class="t-meta" style="color:rgba(255,255,255,.78);letter-spacing:.22em;margin-bottom:1.6vh">MANIFESTO
+              </div>
+              <h2
+                style="font-family:var(--sans),var(--sans-zh);font-size:min(7vw,12vh);line-height:.94;letter-spacing:-.025em;font-weight:200;color:#fff">
+                让连接<br /><span style="font-style:italic;font-weight:300">更简单</span></h2>
+              <div
+                style="font-family:var(--sans),var(--sans-zh);font-size:max(14px,1vw);line-height:1.6;color:rgba(255,255,255,.82);font-weight:400;max-width:36ch;margin-top:1.4vh">
+                ADMT 致力于打造最优雅的 Android 设备管理体验，让技术回归简单。</div>
+            </div>
+            <div data-anim="signature"
+              style="display:flex;justify-content:space-between;align-items:end;border-top:1px solid rgba(255,255,255,.22);padding-top:2vh;position:relative;z-index:1">
+              <div class="t-meta" style="color:rgba(255,255,255,.62)">LACS Team</div>
+              <div class="t-meta" style="color:rgba(255,255,255,.62)">admt.lacs.cc</div>
+            </div>
+          </div>
+          <div class="half" style="padding:5.6vh 3.6vw 4.4vh;justify-content:space-between">
+            <div class="chrome-min">
+              <div class="l">TAKEAWAYS</div>
+              <div class="r">03 POINTS</div>
+            </div>
+            <div data-anim="rules" style="display:flex;flex-direction:column;gap:0">
+              <div
+                style="display:grid;grid-template-columns:auto 1fr;gap:2vw;align-items:start;padding:2.6vh 0;border-top:1px solid var(--border-subtle)">
+                <div
+                  style="font-family:var(--sans);font-weight:200;font-size:min(4.4vw,7.8vh);line-height:.9;color:var(--text-primary)">
+                  01</div>
+                <div>
+                  <h3
+                    style="font-family:var(--sans),var(--sans-zh);font-weight:400;font-size:max(18px,1.8vw);line-height:1.2;letter-spacing:-.015em;color:var(--text-primary);margin-bottom:1vh">
+                    全能管理</h3>
+                  <p
+                    style="font-family:var(--sans),var(--sans-zh);font-size:max(16px,.94vw);line-height:1.6;color:var(--text-secondary);font-weight:400">
+                    覆盖设备连接、应用管理、投屏调试、镜像刷入等全场景需求</p>
+                </div>
+              </div>
+              <div
+                style="display:grid;grid-template-columns:auto 1fr;gap:2vw;align-items:start;padding:2.6vh 0;border-top:1px solid var(--border-subtle)">
+                <div
+                  style="font-family:var(--sans);font-weight:200;font-size:min(4.4vw,7.8vh);line-height:.9;color:var(--text-primary)">
+                  02</div>
+                <div>
+                  <h3
+                    style="font-family:var(--sans),var(--sans-zh);font-weight:400;font-size:max(18px,1.8vw);line-height:1.2;letter-spacing:-.015em;color:var(--text-primary);margin-bottom:1vh">
+                    开源免费</h3>
+                  <p
+                    style="font-family:var(--sans),var(--sans-zh);font-size:max(16px,.94vw);line-height:1.6;color:var(--text-secondary);font-weight:400">
+                    MIT 协议开源，永久免费使用，社区驱动持续迭代</p>
+                </div>
+              </div>
+              <div
+                style="display:grid;grid-template-columns:auto 1fr;gap:2vw;align-items:start;padding:2.6vh 0;border-top:1px solid var(--border-subtle);border-bottom:2px solid var(--accent)">
+                <div
+                  style="font-family:var(--sans);font-weight:200;font-size:min(4.4vw,7.8vh);line-height:.9;color:var(--accent)">
+                  03</div>
+                <div>
+                  <h3
+                    style="font-family:var(--sans),var(--sans-zh);font-weight:400;font-size:max(18px,1.8vw);line-height:1.2;letter-spacing:-.015em;color:var(--accent);margin-bottom:1vh">
+                    立即体验</h3>
+                  <p
+                    style="font-family:var(--sans),var(--sans-zh);font-size:max(16px,.94vw);line-height:1.6;color:var(--text-secondary);font-weight:400">
+                    访问 admt.lacs.cc 下载，开启高效设备管理之旅</p>
+                </div>
+              </div>
+            </div>
+            <div data-anim="foot" class="t-meta" style="color:var(--text-helper);text-align:right">→ 完 · END OF
+              PRESENTATION</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="nav"></div>
+
+  <script src="./index.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>window.addEventListener('load', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });</script>
+</body>
+
+</html>

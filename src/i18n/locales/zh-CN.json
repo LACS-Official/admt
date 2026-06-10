@@ -32,7 +32,7 @@
     "official_website": "官方网站",
     "team_info": "开发团队信息",
     "team_name": "领创工作室 LACS",
-    "team_desc": "致力于为用户提供高质量的工具和技术解决方案，全网粉丝1w+",
+    "team_desc": "致力于为用户提供高质量的工具和技术解决方案",
     "official_group": "官方群聊",
     "our_products": "旗下工具",
     "contact_us": "联系方式",
@@ -187,7 +187,7 @@
     "device_not_connected": "设备未连接，无法执行重启操作"
   },
   "common": {
-    "confirm_reset":"确定要重置吗？",
+    "confirm_reset": "确定要重置吗？",
     "cancel": "取消",
     "think_again": "我再想想",
     "confirm_exit": "确认退出",
@@ -1076,7 +1076,7 @@
     "table_aria_label": "文件列表"
   },
   "app_manager": {
-    "ai_auditor_beta":"AI审计(Beta)",
+    "ai_auditor_beta": "AI审计(Beta)",
     "batch_ops": "批量操作",
     "card_title": "应用管理",
     "card_desc": "管理已安装的应用程序",
@@ -1544,7 +1544,6 @@
       "download_manager": "下载管理"
     }
   },
-
   "extended_features": {
     "tabs": {
       "tools": "扩展工具",

@@ -10,6 +10,9 @@ import {
   mergeClasses,
   Tooltip,
   Spinner,
+  Switch,
+  Checkbox,
+  Select,
 } from "@fluentui/react-components";
 import {
   Send24Regular,
@@ -24,6 +27,7 @@ import {
   PanelLeft24Regular,
   PanelRight24Regular,
   ArrowDownload24Regular,
+  Sparkle24Regular,
 } from "@fluentui/react-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -36,6 +40,9 @@ import { listen, emit } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useDeviceStore } from "../../stores/deviceStore";
+import { useDeviceService } from "../../services/deviceService";
+import { invoke } from "@tauri-apps/api/core";
 
 const useStyles = makeStyles({
   container: {
@@ -269,13 +276,67 @@ const useStyles = makeStyles({
       }
     },
     "& blockquote": {
-      borderLeft: `4px solid ${tokens.colorBrandForeground1}`,
+    borderLeft: `4px solid ${tokens.colorBrandForeground1}`,
       margin: "12px 0",
       paddingLeft: "16px",
       color: tokens.colorNeutralForeground2,
     }
   }
 });
+
+const AGENT_SYSTEM_PROMPT = `你是一个Android系统智能操作代理。你的主要任务是根据用户的输入，转换成对应的ADB或Fastboot命令。
+请检查设备状态，并在回答时，必须且只能输出严格的JSON格式，不要包含任何Markdown标记包裹（如 \`\`\`json ... \`\`\`），确保以下JSON结构完整：
+{
+  "thought": "对用户意图的理解和操作逻辑说明（中文）",
+  "danger_level": "low" | "medium" | "high",
+  "risk_warning": "针对此操作的安全风险提示，若无则为空字符串",
+  "actions": [
+    {
+      "type": "adb_shell" | "adb_command" | "fastboot",
+      "command": "具体执行的命令（去掉 'adb ' 或 'fastboot ' 前缀，例如 'shell pm list packages' 或 'reboot'，也不要加 '-s <serial>' 等序列号参数）",
+      "description": "该步骤的具体说明（如 '列出所有第三方应用'）"
+    }
+  ]
+}
+如果用户的输入不包含操作意图，或者不是一条能够转换为指令的操作（例如只是日常闲聊），请回复以下格式：
+{
+  "thought": "非操作意图，进入日常闲聊",
+  "danger_level": "low",
+  "risk_warning": "",
+  "actions": []
+}
+请确保你输出的仅仅是这段JSON，没有任何多余的Markdown标记或说明文字。`;
+
+const CHAT_SYSTEM_PROMPT = `你是一个资深的 Android 系统专家和玩机助手。你可以为用户解答关于 Android 系统特性、ADB 调试、刷机教程、Magisk/KernelSU root 权限管理等各类问题。请用友好、专业的中文回答。`;
+
+interface AgentAction {
+  type: "adb_shell" | "adb_command" | "fastboot";
+  command: string;
+  description: string;
+}
+
+interface AgentResponse {
+  thought: string;
+  danger_level: "low" | "medium" | "high";
+  risk_warning: string;
+  actions: AgentAction[];
+}
+
+const parseAgentResponse = (content: string): AgentResponse | null => {
+  let cleaned = content.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+  }
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === "object" && "thought" in parsed && Array.isArray(parsed.actions)) {
+      return parsed as AgentResponse;
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  return null;
+};
 
 const AIChatPanel: React.FC = () => {
   const styles = useStyles();
@@ -286,6 +347,10 @@ const AIChatPanel: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
+  const [checkedActions, setCheckedActions] = useState<Record<string, boolean[]>>({});
+  const [executingMsgId, setExecutingMsgId] = useState<string | null>(null);
+  const [executionLogs, setExecutionLogs] = useState<Record<string, string>>({});
+
   const { 
     conversations, 
     currentConversationId, 
@@ -293,9 +358,16 @@ const AIChatPanel: React.FC = () => {
     setCurrentConversation,
     createNewConversation,
     deleteConversation,
-    clearHistory
+    clearHistory,
+    isAgentMode,
+    setAgentMode,
+    aiPresets,
+    activePresetId,
+    applyPreset,
   } = useAIChatStore();
   const { setStatusBarMessage } = useAppStore();
+  const { selectedDevice } = useDeviceStore();
+  const { deviceService } = useDeviceService();
   
   const currentConversation = conversations.find(c => c.id === currentConversationId);
   const messages = React.useMemo(() => currentConversation?.messages || [], [currentConversation?.messages]);
@@ -347,7 +419,15 @@ const AIChatPanel: React.FC = () => {
         content: msg.content
       }));
 
-      const response = await aiService.chat([...chatHistory, { role: "user", content: userContent }]);
+      // Prepend dynamic system message
+      const systemMessage = isAgentMode ? AGENT_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT;
+      const finalMessages = [
+        { role: "system" as const, content: systemMessage },
+        ...chatHistory,
+        { role: "user" as const, content: userContent }
+      ];
+
+      const response = await aiService.chat(finalMessages);
 
       if (response.error) {
         throw new Error(response.error);
@@ -356,10 +436,216 @@ const AIChatPanel: React.FC = () => {
       addMessage(convId, { role: "assistant", content: response.content });
 
     } catch (error: any) {
-      logService.error("AI 请求失败", "AIChat", { error: error.message, category: "ai" });
+      logService.error("AI 聊天界面请求失败", "AIChat", { 
+        error: error.message, 
+        stack: error.stack,
+        isAgentMode,
+        conversationId: convId,
+        category: "ai" 
+      });
       addMessage(convId || "", { 
         role: "assistant", 
         content: `❌ 请求失败: ${error.message}\n\n建议检查：\n1. 网络连接是否正常\n2. API Key 及 Endpoint 是否正确\n3. 如果是本地模型，确保服务已开启` 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRunAgentCommands = async (msgId: string, agentData: AgentResponse) => {
+    if (!selectedDevice) {
+      setStatusBarMessage({
+        type: "error",
+        message: "未选中设备：请先在主界面或连接管理中选中一台 Android 设备"
+      });
+      setExecutionLogs(prev => ({
+        ...prev,
+        [msgId]: "❌ 执行失败: 未检测到已选中的 Android 设备，请连接并选择设备后重试。\n"
+      }));
+      return;
+    }
+
+    const currentChecked = checkedActions[msgId] || agentData.actions.map(() => true);
+    const actionsToRun = agentData.actions.filter((_, idx) => currentChecked[idx] !== false);
+
+    if (actionsToRun.length === 0) return;
+
+    setExecutingMsgId(msgId);
+    setExecutionLogs(prev => ({
+      ...prev,
+      [msgId]: `开始在设备 [${selectedDevice.serial}] 上执行指令...\n`
+    }));
+
+    try {
+      for (const action of actionsToRun) {
+        // 1. 打印当前步骤
+        setExecutionLogs(prev => ({
+          ...prev,
+          [msgId]: (prev[msgId] || "") + `⚙️ [安全校验] 正在校验: ${action.command} ...\n`
+        }));
+
+        // 2. 调用 Rust 后端进行安全检查
+        const safetyResult = await invoke<{ isSafe: boolean; dangerLevel: string; message: string }>(
+          "verify_command_safety",
+          { command: action.command }
+        );
+
+        if (!safetyResult.isSafe || safetyResult.dangerLevel === "blocked") {
+          setExecutionLogs(prev => ({
+            ...prev,
+            [msgId]: (prev[msgId] || "") + `🚨 [被拦截] 该命令为高危指令: ${action.command}\n原因: ${safetyResult.message}\n停止执行后续指令。\n`
+          }));
+          setStatusBarMessage({
+            type: "error",
+            message: `指令已被安全过滤器拦截: ${safetyResult.message}`
+          });
+          break;
+        }
+
+        if (safetyResult.dangerLevel === "warn") {
+          setExecutionLogs(prev => ({
+            ...prev,
+            [msgId]: (prev[msgId] || "") + `⚠️ [安全警告] ${safetyResult.message}\n`
+          }));
+        }
+
+        // 3. 执行指令
+        setExecutionLogs(prev => ({
+          ...prev,
+          [msgId]: (prev[msgId] || "") + `▶️ [正在执行] ${action.command} ...\n`
+        }));
+
+        const parts = action.command.trim().split(/\s+/);
+        const cmdName = parts[0];
+        const cmdArgs = parts.slice(1);
+        
+        let result;
+        if (action.type === "fastboot") {
+          result = await deviceService.executeFastbootCommand(
+            selectedDevice.serial,
+            cmdName,
+            cmdArgs,
+            30
+          );
+        } else {
+          result = await deviceService.executeAdbCommand(
+            selectedDevice.serial,
+            cmdName,
+            cmdArgs,
+            30
+          );
+        }
+
+        // 4. 输出命令结果
+        if (result.success) {
+          setExecutionLogs(prev => ({
+            ...prev,
+            [msgId]: (prev[msgId] || "") + `✅ [执行成功]\n${result.output || "(无输出)"}\n`
+          }));
+        } else {
+          setExecutionLogs(prev => ({
+            ...prev,
+            [msgId]: (prev[msgId] || "") + `❌ [执行失败]\n错误信息: ${result.error || "未知错误"}\n停止后续指令的执行。\n`
+          }));
+          setStatusBarMessage({
+            type: "error",
+            message: `执行指令失败: ${result.error || "未知错误"}`
+          });
+          break;
+        }
+      }
+    } catch (e: any) {
+      setExecutionLogs(prev => ({
+        ...prev,
+        [msgId]: (prev[msgId] || "") + `❌ [异常崩溃] 执行过程中遇到意外错误: ${e.message || String(e)}\n`
+      }));
+    } finally {
+      setExecutingMsgId(null);
+    }
+  };
+
+  const handleLogcatDiagnose = async () => {
+    if (!selectedDevice) {
+      setStatusBarMessage({
+        type: "error",
+        message: "未选中设备：请先在主界面或连接管理中选中一台 Android 设备"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    let convId = currentConversationId;
+    if (!convId) {
+      convId = createNewConversation();
+    }
+
+    addMessage(convId, { role: "user", content: "🔍 正在从手机抓取 Logcat 崩溃日志并进行诊断..." });
+
+    try {
+      logService.info("开始获取 Logcat 崩溃日志进行诊断", "AIChat", { category: "ai", device: selectedDevice.serial });
+      
+      const result = await deviceService.executeAdbCommand(
+        selectedDevice.serial,
+        "logcat",
+        ["-d", "-v", "threadtime", "*:E"]
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || "获取 logcat 失败");
+      }
+
+      let logcatOutput = result.output.trim();
+      
+      if (!logcatOutput) {
+        const fallbackResult = await deviceService.executeAdbCommand(
+          selectedDevice.serial,
+          "logcat",
+          ["-d", "-t", "100", "-v", "threadtime"]
+        );
+        if (fallbackResult.success) {
+          logcatOutput = fallbackResult.output.trim();
+        }
+      }
+
+      if (!logcatOutput) {
+        addMessage(convId, {
+          role: "assistant",
+          content: "ℹ️ 未在设备中检测到最近的 Crash 堆栈或错误日志 (Logcat 为空)。请确保手机中已发生过崩溃，或重新连接设备重试。"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const slicedLogs = logcatOutput.length > 8000 
+        ? "..." + logcatOutput.substring(logcatOutput.length - 8000)
+        : logcatOutput;
+
+      const prompt = `你是一个资深的 Android 系统调试专家。下面是来自选定设备 (${selectedDevice.properties?.brand || ""} ${selectedDevice.properties?.model || selectedDevice.serial}) 的最近 Logcat 错误日志。
+请分析并诊断该日志，定位任何潜在的闪退 (Crash)、内存泄漏 (Memory Leak)、系统挂死 (ANR) 或异常报错的原因，并给出针对性的排查和修复建议。
+如果日志中没有包含崩溃，请说明该日志体现的系统状态。
+
+---
+Logcat 错误日志:
+\`\`\`
+${slicedLogs}
+\`\`\``;
+
+      const response = await aiService.chat([
+        { role: "system", content: "你是一个资深的 Android 崩溃日志诊断专家。请仔细阅读 Logcat 日志，找出崩溃根源并给出修复方案。" },
+        { role: "user", content: prompt }
+      ]);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      addMessage(convId, { role: "assistant", content: response.content });
+
+    } catch (error: any) {
+      logService.error("Logcat 诊断失败", "AIChat", { error: error.message, category: "ai" });
+      addMessage(convId, {
+        role: "assistant",
+        content: `❌ Logcat 诊断请求失败: ${error.message}\n\n建议检查设备连接是否正常，或在设置中切换模型通道。`
       });
     } finally {
       setIsLoading(false);
@@ -507,27 +793,70 @@ const AIChatPanel: React.FC = () => {
 
       {/* Main Chat Area */}
     <div className={styles.chatArea}>
-        {currentConversationId ? (
-          <>
-            <div className={styles.chatHeader}>
-              <Text weight="semibold" className={styles.historyItemTitle}>
-                {currentConversation?.title}
-              </Text>
-              <Tooltip content={t("settings.ai_export_conversation")} relationship="label">
-                <Button 
-                  icon={<ArrowDownload24Regular />} 
-                  appearance="subtle"
-                  onClick={handleExportMarkdown}
-                  disabled={messages.length === 0}
-                />
-              </Tooltip>
+      <div className={styles.chatHeader}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
+          <Text weight="semibold" className={styles.historyItemTitle} style={{ flex: "none", maxWidth: "160px" }}>
+            {currentConversation?.title || "AI 玩机助手"}
+          </Text>
+          <Switch
+            label={isAgentMode ? "智能代理 (Agent)" : "常规问答 (Chat)"}
+            checked={isAgentMode}
+            onChange={(e, data) => setAgentMode(data.checked)}
+          />
+          {aiPresets.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "8px" }}>
+              <Text size={200} style={{ color: tokens.colorNeutralForeground4, whiteSpace: "nowrap" }}>方案:</Text>
+              <Select
+                value={activePresetId || ""}
+                onChange={(_, data) => {
+                  applyPreset(data.value);
+                  const selectedName = aiPresets.find(p => p.id === data.value)?.name || "自定义配置";
+                  setStatusBarMessage({
+                    type: "success",
+                    message: `当前 AI 方案已切换为: ${selectedName}`,
+                  });
+                }}
+                size="small"
+                style={{ width: "140px" }}
+              >
+                <option value="">-- 自定义配置 --</option>
+                {aiPresets.map(preset => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </Select>
             </div>
-            <div className={styles.messageList}>
+          )}
+        </div>
+        <Tooltip content={t("settings.ai_export_conversation")} relationship="label">
+          <Button 
+            icon={<ArrowDownload24Regular />} 
+            appearance="subtle"
+            onClick={handleExportMarkdown}
+            disabled={!currentConversationId || messages.length === 0}
+          />
+        </Tooltip>
+      </div>
+
+      {currentConversationId ? (
+        <>
+          <div className={styles.messageList}>
               {messages.length === 0 ? (
                 <div className={styles.emptyState}>
                   <Bot24Regular style={{ fontSize: '48px' }} />
                   <Text size={500}>有什么可以帮您的？</Text>
                   <Text align="center">您可以询问关于 Android 调试、刷机或者是 ADMT 工具的使用方法。</Text>
+                  {selectedDevice && (
+                    <Button 
+                      appearance="outline"
+                      icon={<Sparkle24Regular />}
+                      onClick={handleLogcatDiagnose}
+                      style={{ marginTop: '16px' }}
+                    >
+                      诊断当前设备 Logcat 崩溃
+                    </Button>
+                  )}
                 </div>
               ) : (
                 messages.map((msg) => (
@@ -549,70 +878,196 @@ const AIChatPanel: React.FC = () => {
                         styles.markdownWrapper
                       )}
                     >
-                      <ReactMarkdown 
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          code({ inline, className, children, ...props }: any) {
-                            const match = /language-(\w+)/.exec(className || "");
-                            const rawCode = String(children).replace(/\n$/, "");
-                            
-                            if (!inline && rawCode.length > 0) {
-                              const isCommand = match && ["bash", "sh", "batch", "powershell"].includes(match[1]) || rawCode.startsWith("adb ") || rawCode.startsWith("fastboot ");
-                              return (
-                                <div style={{ 
-                                  border: `1px solid ${tokens.colorNeutralStroke2}`, 
-                                  borderRadius: "6px", 
-                                  overflow: "hidden", 
-                                  margin: "8px 0" 
-                                }}>
-                                  <div style={{ 
-                                    display: "flex", 
-                                    justifyContent: "space-between", 
-                                    alignItems: "center", 
-                                    padding: "4px 8px", 
-                                    backgroundColor: tokens.colorNeutralBackground3,
-                                    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
-                                  }}>
-                                    <Text size={200} style={{ fontFamily: "monospace" }}>
-                                      {match ? match[1] : "code"}
-                                    </Text>
-                                    <div style={{ display: "flex", gap: "4px" }}>
-                                      <Tooltip content="复制完整代码" relationship="label">
-                                        <Button 
-                                          size="small" 
-                                          appearance="subtle" 
-                                          icon={<Copy24Regular style={{ fontSize: "16px" }} />} 
-                                          onClick={() => navigator.clipboard.writeText(rawCode)}
-                                        />
-                                      </Tooltip>
-                                      {isCommand && (
-                                        <Tooltip content="在命令行工具中运行" relationship="label">
-                                          <Button 
-                                            size="small" 
-                                            appearance="subtle" 
-                                            icon={<Play24Regular style={{ fontSize: "16px" }} />} 
-                                            onClick={() => handleRunCommand(rawCode)}
-                                          />
-                                        </Tooltip>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div style={{ padding: 0 }}>
-                                    <pre className={className} style={{ margin: 0, padding: "8px", overflowX: "auto" }}>
-                                      <code className={className} {...props}>
-                                        {children}
-                                      </code>
-                                    </pre>
+                      {(() => {
+                        if (msg.role !== "user") {
+                          const agentData = parseAgentResponse(msg.content);
+                          if (agentData) {
+                            return (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%", minWidth: "280px" }}>
+                                <div style={{ marginBottom: "4px" }}>
+                                  <Text weight="semibold">🤖 AI 的思考:</Text>
+                                  <div style={{ marginTop: "4px", color: tokens.colorNeutralForeground2, whiteSpace: "pre-wrap" }}>
+                                    {agentData.thought}
                                   </div>
                                 </div>
-                              );
-                            }
-                            return <code className={className} {...props}>{children}</code>;
+                                
+                                {agentData.risk_warning && (
+                                  <div style={{
+                                    padding: "10px 14px",
+                                    borderRadius: "6px",
+                                    backgroundColor: agentData.danger_level === "high" ? "#FDF2F2" : "#FFFBEB",
+                                    borderLeft: `4px solid ${agentData.danger_level === "high" ? "#EF4444" : "#F59E0B"}`,
+                                    color: agentData.danger_level === "high" ? "#9B1C1C" : "#92400E",
+                                    fontSize: "13px"
+                                  }}>
+                                    <Text weight="semibold">{agentData.danger_level === "high" ? "🚨 高危风险警告: " : "⚠️ 安全提示: "}</Text>
+                                    {agentData.risk_warning}
+                                  </div>
+                                )}
+
+                                {agentData.actions.length > 0 && (
+                                  <div style={{
+                                    border: `1px solid ${tokens.colorNeutralStroke2}`,
+                                    borderRadius: "8px",
+                                    backgroundColor: tokens.colorNeutralBackground2,
+                                    padding: "12px",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: "8px"
+                                  }}>
+                                    <Text weight="semibold" style={{ marginBottom: "4px" }}>拟执行操作指令清单:</Text>
+                                    {agentData.actions.map((action, actionIdx) => {
+                                      const isChecked = checkedActions[msg.id]?.[actionIdx] !== false;
+                                      return (
+                                        <div key={actionIdx} style={{
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          padding: "8px",
+                                          border: `1px solid ${tokens.colorNeutralStroke1}`,
+                                          borderRadius: "6px",
+                                          backgroundColor: tokens.colorNeutralBackground1,
+                                          gap: "4px"
+                                        }}>
+                                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                            <Checkbox
+                                              label={action.description}
+                                              checked={isChecked}
+                                              onChange={(e, data) => {
+                                                const currentChecked = checkedActions[msg.id] || agentData.actions.map(() => true);
+                                                const nextChecked = [...currentChecked];
+                                                nextChecked[actionIdx] = !!data.checked;
+                                                setCheckedActions({
+                                                  ...checkedActions,
+                                                  [msg.id]: nextChecked
+                                                });
+                                              }}
+                                            />
+                                            <span style={{
+                                              fontSize: "11px",
+                                              padding: "2px 6px",
+                                              borderRadius: "4px",
+                                              backgroundColor: action.type === "fastboot" ? "#E0F2FE" : "#F3F4F6",
+                                              color: action.type === "fastboot" ? "#0369A1" : "#374151"
+                                            }}>{action.type}</span>
+                                          </div>
+                                          <code style={{
+                                            display: "block",
+                                            padding: "4px 8px",
+                                            backgroundColor: tokens.colorNeutralBackground4,
+                                            borderRadius: "4px",
+                                            fontSize: "12px",
+                                            fontFamily: "monospace",
+                                            marginTop: "4px",
+                                            wordBreak: "break-all"
+                                          }}>{action.command}</code>
+                                        </div>
+                                      );
+                                    })}
+
+                                    <div style={{ display: "flex", gap: "10px", marginTop: "8px", alignItems: "center" }}>
+                                      <Button
+                                        appearance="primary"
+                                        icon={executingMsgId === msg.id ? <Spinner size="tiny" /> : <Play24Regular />}
+                                        onClick={() => handleRunAgentCommands(msg.id, agentData)}
+                                        disabled={executingMsgId !== null || agentData.actions.filter((_, idx) => checkedActions[msg.id]?.[idx] !== false).length === 0}
+                                      >
+                                        {executingMsgId === msg.id ? "正在执行..." : "一键执行选中指令"}
+                                      </Button>
+                                    </div>
+
+                                    {executionLogs[msg.id] && (
+                                      <div style={{
+                                        marginTop: "8px",
+                                        padding: "8px 12px",
+                                        backgroundColor: "#1E293B",
+                                        color: "#F8FAFC",
+                                        borderRadius: "6px",
+                                        fontFamily: "monospace",
+                                        fontSize: "12px",
+                                        maxHeight: "200px",
+                                        overflowY: "auto",
+                                        whiteSpace: "pre-wrap"
+                                      }}>
+                                        <div style={{ borderBottom: "1px solid #475569", paddingBottom: "4px", marginBottom: "4px", color: "#94A3B8", fontWeight: "bold" }}>
+                                          执行控制台日志:
+                                        </div>
+                                        {executionLogs[msg.id]}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
                           }
-                        }}
-                      >
-                        {msg.content}
-                      </ReactMarkdown>
+                        }
+                        
+                        return (
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              code({ inline, className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || "");
+                                const rawCode = String(children).replace(/\n$/, "");
+                                
+                                if (!inline && rawCode.length > 0) {
+                                  const isCommand = match && ["bash", "sh", "batch", "powershell"].includes(match[1]) || rawCode.startsWith("adb ") || rawCode.startsWith("fastboot ");
+                                  return (
+                                    <div style={{ 
+                                      border: `1px solid ${tokens.colorNeutralStroke2}`, 
+                                      borderRadius: "6px", 
+                                      overflow: "hidden", 
+                                      margin: "8px 0" 
+                                    }}>
+                                      <div style={{ 
+                                        display: "flex", 
+                                        justifyContent: "space-between", 
+                                        alignItems: "center", 
+                                        padding: "4px 8px", 
+                                        backgroundColor: tokens.colorNeutralBackground3,
+                                        borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
+                                      }}>
+                                        <Text size={200} style={{ fontFamily: "monospace" }}>
+                                          {match ? match[1] : "code"}
+                                        </Text>
+                                        <div style={{ display: "flex", gap: "4px" }}>
+                                          <Tooltip content="复制完整代码" relationship="label">
+                                            <Button 
+                                              size="small" 
+                                              appearance="subtle" 
+                                              icon={<Copy24Regular style={{ fontSize: "16px" }} />} 
+                                              onClick={() => navigator.clipboard.writeText(rawCode)}
+                                            />
+                                          </Tooltip>
+                                          {isCommand && (
+                                            <Tooltip content="在命令行工具中运行" relationship="label">
+                                              <Button 
+                                                size="small" 
+                                                appearance="subtle" 
+                                                icon={<Play24Regular style={{ fontSize: "16px" }} />} 
+                                                onClick={() => handleRunCommand(rawCode)}
+                                              />
+                                            </Tooltip>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div style={{ padding: 0 }}>
+                                        <pre className={className} style={{ margin: 0, padding: "8px", overflowX: "auto" }}>
+                                          <code className={className} {...props}>
+                                            {children}
+                                          </code>
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return <code className={className} {...props}>{children}</code>;
+                              }
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
+                        );
+                      })()}
                     </div>
                     
                     {/* Copy Button */}
@@ -646,6 +1101,17 @@ const AIChatPanel: React.FC = () => {
 
             <div className={styles.inputArea}>
               <div className={styles.inputWrapper}>
+                {selectedDevice && (
+                  <Tooltip content="抓取 Logcat 并诊断崩溃" relationship="label">
+                    <Button
+                      icon={<Sparkle24Regular />}
+                      appearance="outline"
+                      size="large"
+                      onClick={handleLogcatDiagnose}
+                      disabled={isLoading}
+                    />
+                  </Tooltip>
+                )}
                 <Textarea
                   ref={textareaRef}
                   className={styles.input}
