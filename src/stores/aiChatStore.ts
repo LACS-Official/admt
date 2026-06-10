@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { useAppStore } from "./appStore";
 
 export interface Message {
   id: string;
@@ -16,9 +17,22 @@ export interface Conversation {
   updatedAt: string;
 }
 
+export interface AIPreset {
+  id: string;
+  name: string;
+  provider: "openai" | "anthropic" | "google" | "local" | "zhipu" | "deepseek" | "groq" | "qwen" | "siliconflow" | "nvidia";
+  model: string;
+  apiKey: string;
+  endpoint: string;
+  temperature: number;
+}
+
 interface AIChatState {
   conversations: Conversation[];
   currentConversationId: string | null;
+  isAgentMode: boolean;
+  aiPresets: AIPreset[];
+  activePresetId: string | null;
   
   // Actions
   createNewConversation: () => string;
@@ -28,6 +42,13 @@ interface AIChatState {
   updateConversationTitle: (id: string, title: string) => void;
   clearHistory: () => void;
   subscribeToStorageChanges: () => () => void;
+  setAgentMode: (mode: boolean) => void;
+
+  // Preset Actions
+  savePreset: (preset: Omit<AIPreset, "id"> & { id?: string }) => string;
+  deletePreset: (id: string) => void;
+  applyPreset: (id: string) => void;
+  importPresets: (presets: AIPreset[]) => void;
 }
 
 let isSyncingFromStorage = false;
@@ -37,6 +58,11 @@ export const useAIChatStore = create<AIChatState>()(
     (set, get) => ({
       conversations: [],
       currentConversationId: null,
+      isAgentMode: false,
+      aiPresets: [],
+      activePresetId: null,
+
+      setAgentMode: (mode: boolean) => set({ isAgentMode: mode }),
 
       createNewConversation: () => {
         const id = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -99,12 +125,82 @@ export const useAIChatStore = create<AIChatState>()(
       updateConversationTitle: (id, title) => {
         set((state) => ({
           conversations: state.conversations.map((c) => 
-            c.id === id ? { ...c, title, updatedAt: new Date().toISOString() } : c
+             c.id === id ? { ...c, title, updatedAt: new Date().toISOString() } : c
           ),
         }));
       },
 
       clearHistory: () => set({ conversations: [], currentConversationId: null }),
+
+      savePreset: (presetData) => {
+        const id = presetData.id || `preset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newPreset: AIPreset = {
+          ...presetData,
+          id,
+        };
+        set((state) => {
+          const exists = state.aiPresets.some(p => p.id === id);
+          const aiPresets = exists
+            ? state.aiPresets.map(p => p.id === id ? newPreset : p)
+            : [...state.aiPresets, newPreset];
+          
+          // 如果当前保存的方案正好是正在使用的方案，则直接应用它（更新 appStore）
+          if (state.activePresetId === id) {
+            setTimeout(() => get().applyPreset(id), 0);
+          }
+
+          return { aiPresets };
+        });
+        return id;
+      },
+
+      deletePreset: (id) => {
+        set((state) => ({
+          aiPresets: state.aiPresets.filter(p => p.id !== id),
+          activePresetId: state.activePresetId === id ? null : state.activePresetId
+        }));
+      },
+
+      applyPreset: (id) => {
+        if (!id) {
+          set({ activePresetId: null });
+          return;
+        }
+        const state = get();
+        const preset = state.aiPresets.find(p => p.id === id);
+        if (preset) {
+          set({ activePresetId: id });
+          
+          // 同步到 useAppStore
+          const appStore = useAppStore.getState();
+          appStore.updateConfig({
+            ai: {
+              ...appStore.config.ai,
+              provider: preset.provider,
+              model: preset.model,
+              apiKey: preset.apiKey,
+              endpoint: preset.endpoint,
+              temperature: preset.temperature,
+            }
+          });
+          appStore.saveToDisk().catch(err => console.error("保存方案配置至磁盘失败:", err));
+        }
+      },
+
+      importPresets: (presets) => {
+        set((state) => {
+          const merged = [...state.aiPresets];
+          presets.forEach(p => {
+            const idx = merged.findIndex(item => item.id === p.id);
+            if (idx > -1) {
+              merged[idx] = p;
+            } else {
+              merged.push(p);
+            }
+          });
+          return { aiPresets: merged };
+        });
+      },
 
       subscribeToStorageChanges: () => {
         const handleStorageChange = (event: StorageEvent) => {
@@ -120,6 +216,15 @@ export const useAIChatStore = create<AIChatState>()(
               if (newState.state.currentConversationId !== currentState.currentConversationId) {
                 updates.currentConversationId = newState.state.currentConversationId;
               }
+              if (newState.state.isAgentMode !== currentState.isAgentMode) {
+                updates.isAgentMode = newState.state.isAgentMode;
+              }
+              if (JSON.stringify(newState.state.aiPresets) !== JSON.stringify(currentState.aiPresets)) {
+                updates.aiPresets = newState.state.aiPresets;
+              }
+              if (newState.state.activePresetId !== currentState.activePresetId) {
+                updates.activePresetId = newState.state.activePresetId;
+              }
 
               if (Object.keys(updates).length > 0) {
                 isSyncingFromStorage = true;
@@ -128,7 +233,7 @@ export const useAIChatStore = create<AIChatState>()(
                   isSyncingFromStorage = false;
                 }, 50);
                 // eslint-disable-next-line no-console
-                console.log('AI对话记录已从其他页面同步');
+                console.log('AI对话记录和配置方案已从其他页面同步');
               }
             } catch (error) {
               // eslint-disable-next-line no-console

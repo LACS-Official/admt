@@ -29,7 +29,7 @@ use crate::commands::{
     invalidate_device_cache, is_debug_mode, open_devtools, open_folder, read_json_file,
     read_resource_file, save_app_config, scan_devices, set_window_always_on_top, terminate_process,
     validate_activation_code_format, validate_local_activation_data, validate_security_config,
-    watch_config_file, write_json_file,
+    verify_command_safety, watch_config_file, write_json_file,
 };
 
 use crate::adb::app::app_management::*;
@@ -109,6 +109,7 @@ pub fn run() {
             get_resource_path,
             read_resource_file,
             execute_adb_command_with_path,
+            verify_command_safety,
             execute_fastboot_command,
             execute_fastboot_command_with_path,
             switch_ab_partition,

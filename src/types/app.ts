@@ -1,6 +1,6 @@
 export interface AIConfig {
   enabled: boolean;
-  provider: "openai" | "anthropic" | "google" | "local" | "zhipu";
+  provider: "openai" | "anthropic" | "google" | "local" | "zhipu" | "deepseek" | "groq" | "qwen" | "siliconflow" | "nvidia";
   model: string;
   apiKey: string;
   endpoint: string;

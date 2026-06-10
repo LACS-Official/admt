@@ -1,4 +1,5 @@
 pub mod adb_fastboot;
+pub mod ai;
 pub mod app;
 pub mod config;
 pub mod device;
@@ -7,6 +8,7 @@ pub mod fs;
 pub mod system;
 
 pub use adb_fastboot::*;
+pub use ai::*;
 pub use app::*;
 pub use config::*;
 pub use device::*;
