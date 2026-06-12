@@ -31,18 +31,20 @@ interface AIChatState {
   conversations: Conversation[];
   currentConversationId: string | null;
   isAgentMode: boolean;
+  isAutoExecute: boolean;
   aiPresets: AIPreset[];
   activePresetId: string | null;
   
   // Actions
   createNewConversation: () => string;
-  addMessage: (conversationId: string, message: Omit<Message, "id" | "timestamp">) => void;
+  addMessage: (conversationId: string, message: Omit<Message, "id" | "timestamp">) => string;
   deleteConversation: (id: string) => void;
   setCurrentConversation: (id: string | null) => void;
   updateConversationTitle: (id: string, title: string) => void;
   clearHistory: () => void;
   subscribeToStorageChanges: () => () => void;
   setAgentMode: (mode: boolean) => void;
+  setAutoExecute: (auto: boolean) => void;
 
   // Preset Actions
   savePreset: (preset: Omit<AIPreset, "id"> & { id?: string }) => string;
@@ -59,10 +61,12 @@ export const useAIChatStore = create<AIChatState>()(
       conversations: [],
       currentConversationId: null,
       isAgentMode: false,
+      isAutoExecute: false,
       aiPresets: [],
       activePresetId: null,
 
       setAgentMode: (mode: boolean) => set({ isAgentMode: mode }),
+      setAutoExecute: (auto: boolean) => set({ isAutoExecute: auto }),
 
       createNewConversation: () => {
         const id = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -111,6 +115,8 @@ export const useAIChatStore = create<AIChatState>()(
 
           return { conversations };
         });
+
+        return newMessage.id;
       },
 
       deleteConversation: (id) => {
@@ -218,6 +224,9 @@ export const useAIChatStore = create<AIChatState>()(
               }
               if (newState.state.isAgentMode !== currentState.isAgentMode) {
                 updates.isAgentMode = newState.state.isAgentMode;
+              }
+              if (newState.state.isAutoExecute !== currentState.isAutoExecute) {
+                updates.isAutoExecute = newState.state.isAutoExecute;
               }
               if (JSON.stringify(newState.state.aiPresets) !== JSON.stringify(currentState.aiPresets)) {
                 updates.aiPresets = newState.state.aiPresets;

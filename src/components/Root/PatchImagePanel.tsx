@@ -20,6 +20,7 @@ import { DeviceInfo } from "../../types/device";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
   container: {
@@ -68,6 +69,16 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState("");
   const [missingDependency, setMissingDependency] = useState<string | null>(null);
+
+  const navigationParams = useAppStore((state) => state.navigationParams);
+  const setNavigationParams = useAppStore((state) => state.setNavigationParams);
+
+  useEffect(() => {
+    if (navigationParams?.imagePath) {
+      setImagePath(navigationParams.imagePath);
+      setNavigationParams(undefined);
+    }
+  }, [navigationParams, setNavigationParams]);
 
   useEffect(() => {
     const unlisten = listen<{ status: string; progress: number }>("patch-progress", (event) => {

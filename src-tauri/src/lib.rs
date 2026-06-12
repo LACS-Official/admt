@@ -26,10 +26,11 @@ use crate::commands::{
     get_device_performance_info, get_device_properties, get_device_realtime_monitor_data,
     get_download_size, get_downloads_directory, get_file_hash, get_platform_info,
     get_resource_path, get_security_config, get_system_arch, get_window_always_on_top,
-    invalidate_device_cache, is_debug_mode, open_devtools, open_folder, read_json_file,
+    invalidate_device_cache, is_debug_mode, open_devtools, open_folder, read_chat_text_file, read_json_file,
     read_resource_file, save_app_config, scan_devices, set_window_always_on_top, terminate_process,
     validate_activation_code_format, validate_local_activation_data, validate_security_config,
-    verify_command_safety, watch_config_file, write_json_file,
+    verify_command_safety, watch_config_file, write_json_file, parse_local_rom,
+    extract_local_partition, parse_online_rom, extract_online_partition,
 };
 
 use crate::adb::app::app_management::*;
@@ -110,6 +111,7 @@ pub fn run() {
             read_resource_file,
             execute_adb_command_with_path,
             verify_command_safety,
+            read_chat_text_file,
             execute_fastboot_command,
             execute_fastboot_command_with_path,
             switch_ab_partition,
@@ -234,6 +236,10 @@ pub fn run() {
             get_device_partitions,
             backup_partition,
             export_apk,
+            parse_local_rom,
+            extract_local_partition,
+            parse_online_rom,
+            extract_online_partition,
         ])
         .setup(|_app| {
             // 初始化应用状态

@@ -84,25 +84,147 @@ struct NetworkCounters {
 static NETWORK_CACHE: Lazy<Mutex<HashMap<String, NetworkCounters>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
+fn normalize_temp(v: f64) -> f64 {
+    if v > 10000.0 {
+        v / 1000.0
+    } else if v > 1000.0 {
+        v / 100.0
+    } else if v > 100.0 {
+        v / 10.0
+    } else {
+        v
+    }
+}
+
 /// 获取实时监控数据
 #[tauri::command]
 pub async fn get_device_realtime_monitor_data(serial: String) -> Result<MonitorDataPoint> {
     let _start_time = std::time::Instant::now();
 
-    // 1. 批量采集基础硬件信息 (使用分隔符确保解析可靠性)
-    let batch_cmd = "echo '<<<STAT>>>'; cat /proc/stat; \
-        echo '<<<MEM>>>'; cat /proc/meminfo; \
-        echo '<<<NET>>>'; cat /proc/net/dev; \
-        echo '<<<FREQ>>>'; cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq; \
-        echo '<<<TEMP>>>'; cat /sys/class/thermal/thermal_zone0/temp; \
-        echo '<<<BTEMP>>>'; cat /sys/class/power_supply/battery/temp; \
-        echo '<<<BCAP>>>'; cat /sys/class/power_supply/battery/capacity; \
-        echo '<<<BCUR>>>'; cat /sys/class/power_supply/battery/current_now; \
-        echo '<<<BVOLT>>>'; cat /sys/class/power_supply/battery/voltage_now; \
-        echo '<<<GPU>>>'; cat /sys/class/kgsl/kgsl-3d0/gpubusy; \
-        echo '<<<GCLK>>>'; cat /sys/class/kgsl/kgsl-3d0/gpuclk; \
-        echo '<<<END>>>'"
-        .to_string();
+    // 1. 批量采集基础硬件信息 (使用分隔符确保解析可靠性，加入 su -c 自动提权读取)
+    let batch_cmd = r#"
+        cat_file() {
+            if [ -f "$1" ]; then
+                cat "$1" 2>/dev/null || su -c "cat '$1'" 2>/dev/null
+            fi
+        }
+        echo '<<<STAT>>>'
+        cat_file /proc/stat
+        
+        echo '<<<MEM>>>'
+        cat_file /proc/meminfo
+        
+        echo '<<<NET>>>'
+        cat_file /proc/net/dev
+        
+        echo '<<<FREQ>>>'
+        for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq; do
+            if [ -f "$f" ]; then
+                cat "$f" 2>/dev/null || su -c "cat '$f'" 2>/dev/null
+            fi
+        done
+        
+        echo '<<<TEMP>>>'
+        found=0
+        for z in $(ls -d /sys/class/thermal/thermal_zone* 2>/dev/null || su -c "ls -d /sys/class/thermal/thermal_zone*" 2>/dev/null); do
+            if [ -f "$z/temp" ] || [ -f "/sys/class/thermal/$(basename $z)/temp" ]; then
+                type=$(cat "$z/type" 2>/dev/null || su -c "cat '$z/type'" 2>/dev/null)
+                case "$type" in
+                    *cpu*|*CPU*|*tsens*|*soc*|*ap*|*bms*)
+                        cat "$z/temp" 2>/dev/null || su -c "cat '$z/temp'" 2>/dev/null
+                        found=1
+                        break
+                        ;;
+                esac
+            fi
+        done
+        if [ "$found" -eq 0 ]; then
+            cat_file /sys/class/thermal/thermal_zone0/temp
+        fi
+        
+        echo '<<<BTEMP>>>'
+        btemp=$(cat_file /sys/class/power_supply/battery/temp)
+        if [ -z "$btemp" ]; then
+            dumpsys battery 2>/dev/null | grep "  temperature:" | awk -F: '{print $2}' | tr -d ' '
+        else
+            echo "$btemp"
+        fi
+        
+        echo '<<<BCAP>>>'
+        bcap=$(cat_file /sys/class/power_supply/battery/capacity)
+        if [ -z "$bcap" ]; then
+            dumpsys battery 2>/dev/null | grep "  level:" | awk -F: '{print $2}' | tr -d ' '
+        else
+            echo "$bcap"
+        fi
+        
+        echo '<<<BCUR>>>'
+        bcur=""
+        for f in current_now current_avg; do
+            val=$(cat_file /sys/class/power_supply/battery/$f)
+            if [ ! -z "$val" ]; then
+                bcur="$val"
+                break
+            fi
+        done
+        if [ -z "$bcur" ]; then
+            bcur=$(cat_file /sys/class/power_supply/battery/BatteryAverageCurrent)
+        fi
+        if [ -z "$bcur" ] || [ "$bcur" = "0" ]; then
+            cmd_cur=$(cmd battery get -f current_now 2>/dev/null)
+            if [ ! -z "$cmd_cur" ] && [ "$cmd_cur" != "invalid" ]; then
+                bcur="$cmd_cur"
+            else
+                cmd_avg=$(cmd battery get -f current_average 2>/dev/null)
+                if [ ! -z "$cmd_avg" ] && [ "$cmd_avg" != "invalid" ]; then
+                    bcur="$cmd_avg"
+                fi
+            fi
+        fi
+        echo "$bcur"
+        
+        echo '<<<BVOLT>>>'
+        bvolt=$(cat_file /sys/class/power_supply/battery/voltage_now)
+        if [ -z "$bvolt" ]; then
+            dumpsys battery 2>/dev/null | grep "  voltage:" | awk -F: '{print $2}' | tr -d ' '
+        else
+            echo "$bvolt"
+        fi
+        
+        echo '<<<GPU>>>'
+        gpubusy=$(cat_file /sys/class/kgsl/kgsl-3d0/gpubusy)
+        if [ ! -z "$gpubusy" ]; then
+            echo "$gpubusy"
+        else
+            mali_busy=$(cat_file /sys/class/misc/mali0/device/utilization)
+            if [ ! -z "$mali_busy" ]; then
+                echo "$mali_busy"
+            fi
+        fi
+        
+        echo '<<<GCLK>>>'
+        gpuclk=$(cat_file /sys/class/kgsl/kgsl-3d0/gpuclk)
+        if [ ! -z "$gpuclk" ]; then
+            echo "$gpuclk"
+        else
+            gpuclk_df=$(cat_file /sys/class/kgsl/kgsl-3d0/devfreq/cur_freq)
+            if [ ! -z "$gpuclk_df" ]; then
+                echo "$gpuclk_df"
+            else
+                mali_clk=$(cat_file /sys/class/misc/mali0/device/clock)
+                if [ ! -z "$mali_clk" ]; then
+                    echo "$mali_clk"
+                else
+                    mali_clk_df=$(cat_file /sys/class/misc/mali0/device/cur_freq)
+                    if [ ! -z "$mali_clk_df" ]; then
+                        echo "$mali_clk_df"
+                    fi
+                fi
+            fi
+        fi
+        
+        echo '<<<END>>>'
+    "#.to_string();
 
     let serial_batch = serial.clone();
     let batch_task = tokio::spawn(async move {
@@ -174,28 +296,41 @@ pub async fn get_device_realtime_monitor_data(serial: String) -> Result<MonitorD
     let cpu_temp = sections
         .get("TEMP")
         .and_then(|s| s.trim().parse::<f64>().ok())
-        .map(|v| if v > 1000.0 { v / 1000.0 } else { v })
+        .map(normalize_temp)
         .unwrap_or(0.0);
+    let clean_parse_i32 = |s: &str| -> Option<i32> {
+        let first_line = s.lines().next()?.trim();
+        let cleaned: String = first_line.chars().filter(|c| c.is_ascii_digit() || *c == '-').collect();
+        cleaned.parse::<i32>().ok()
+    };
+
+    let clean_parse_f64 = |s: &str| -> Option<f64> {
+        let first_line = s.lines().next()?.trim();
+        let cleaned: String = first_line.chars().filter(|c| c.is_ascii_digit() || *c == '-' || *c == '.').collect();
+        cleaned.parse::<f64>().ok()
+    };
+
     let batt_temp = sections
         .get("BTEMP")
-        .and_then(|s| s.trim().parse::<f64>().ok())
-        .map(|v| v / 10.0)
+        .and_then(|s| clean_parse_f64(s))
+        .map(normalize_temp)
         .unwrap_or(0.0);
     let batt_level = sections
         .get("BCAP")
-        .and_then(|s| s.trim().parse::<i32>().ok())
+        .and_then(|s| clean_parse_i32(s))
         .unwrap_or(0);
     let current = sections
         .get("BCUR")
-        .and_then(|s| s.trim().parse::<f64>().ok())
+        .and_then(|s| clean_parse_f64(s))
         .unwrap_or(0.0);
     let voltage = sections
         .get("BVOLT")
-        .and_then(|s| s.trim().parse::<f64>().ok())
+        .and_then(|s| clean_parse_f64(s))
         .unwrap_or(0.0);
 
     let mut gpu_load = 0.0;
     if let Some(gpu_str) = sections.get("GPU") {
+        let gpu_str = gpu_str.trim().replace('%', "");
         let parts: Vec<&str> = gpu_str.split_whitespace().collect();
         if parts.len() == 2 {
             if let (Ok(busy), Ok(total)) = (parts[0].parse::<f64>(), parts[1].parse::<f64>()) {
@@ -203,12 +338,24 @@ pub async fn get_device_realtime_monitor_data(serial: String) -> Result<MonitorD
                     gpu_load = (busy / total * 100.0).clamp(0.0, 100.0);
                 }
             }
+        } else if parts.len() == 1 {
+            if let Ok(load) = parts[0].parse::<f64>() {
+                gpu_load = load.clamp(0.0, 100.0);
+            }
         }
     }
     let gpu_freq = sections
         .get("GCLK")
         .and_then(|s| s.trim().parse::<u64>().ok())
-        .map(|v| v / 1000000)
+        .map(|v| {
+            if v > 10_000_000 {
+                v / 1_000_000
+            } else if v > 10_000 {
+                v / 1_000
+            } else {
+                v
+            }
+        })
         .unwrap_or(0);
 
     let processes = match proc_task.await {
@@ -380,15 +527,24 @@ fn calculate_network_speed(serial: &str, output: &str) -> (f64, f64) {
     let mut rx_bytes = 0u64;
     let mut tx_bytes = 0u64;
 
-    // Parse /proc/net/dev
-    // Typical line: wlan0: 1234 56 0 0 0 0 0 0 4321 43 0 0 0 0 0 0
     for line in output.lines() {
-        if line.contains("wlan0") || line.contains("rmnet_data0") || line.contains("eth0") {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 10 {
-                // rx_bytes is index 1 (or 0 if split strictly, but first part is "iface:")
-                let r: u64 = parts[1].parse().unwrap_or(0);
-                let t: u64 = parts[9].parse().unwrap_or(0);
+        if let Some(pos) = line.find(':') {
+            let iface = line[..pos].trim();
+            // 过滤掉虚拟回环、隧道等无关网卡
+            if iface == "lo"
+                || iface.starts_with("sit")
+                || iface.starts_with("tun")
+                || iface.starts_with("ip6")
+                || iface.starts_with("dummy")
+            {
+                continue;
+            }
+
+            let data = &line[pos + 1..];
+            let parts: Vec<&str> = data.split_whitespace().collect();
+            if parts.len() >= 9 {
+                let r: u64 = parts[0].parse().unwrap_or(0);
+                let t: u64 = parts[8].parse().unwrap_or(0);
                 rx_bytes += r;
                 tx_bytes += t;
             }

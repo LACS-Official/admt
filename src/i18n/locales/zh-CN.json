@@ -425,6 +425,7 @@
     "tab_unlock": "解锁工具",
     "tab_image": "镜像刷入",
     "tab_rom": "线刷工具",
+    "tab_rom_manager": "ROM管理 & 解包",
     "no_device_title": "未检测到设备",
     "no_device_hint": "请确保设备已连接",
     "select_device_title": "请选择一个设备",
