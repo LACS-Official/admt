@@ -148,3 +148,33 @@ pub fn verify_command_safety(command: String) -> SafetyCheckResult {
         message: "".to_string(),
     }
 }
+
+/// 读取本地文本文件内容（限制最大 2MB，仅支持 UTF-8）
+#[tauri::command]
+pub fn read_chat_text_file(path: String) -> Result<String, String> {
+    use std::fs::File;
+    use std::io::Read;
+    
+    let path_buf = std::path::PathBuf::from(&path);
+    if !path_buf.exists() {
+        return Err("所选文件不存在，请检查路径。".to_string());
+    }
+    
+    let mut file = File::open(&path_buf).map_err(|e| format!("打开文件失败: {}", e))?;
+    let metadata = file.metadata().map_err(|e| format!("读取文件元数据失败: {}", e))?;
+    
+    // 2MB 大小限制
+    if metadata.len() > 2 * 1024 * 1024 {
+        return Err("文件过大，为了性能和AI交互体验，附件最大限制为 2MB。".to_string());
+    }
+    
+    let mut content = String::new();
+    file.read_to_string(&mut content).map_err(|e| {
+        format!(
+            "读取文件内容失败（仅支持 UTF-8 编码的文本文件，请勿上传二进制或音视频等非文本格式文件）: {}",
+            e
+        )
+    })?;
+    
+    Ok(content)
+}

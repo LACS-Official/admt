@@ -239,6 +239,7 @@
     "tab_unlock": "解鎖工具",
     "tab_image": "鏡像刷入",
     "tab_rom": "線刷工具",
+    "tab_rom_manager": "ROM管理 & 解壓",
     "no_device_title": "未檢測到設備",
     "no_device_hint": "請確保設備已連接",
     "select_device_title": "請選擇一個設備",

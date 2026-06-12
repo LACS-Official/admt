@@ -6,6 +6,7 @@ pub mod device;
 pub mod download;
 pub mod fs;
 pub mod system;
+pub mod rom;
 
 pub use adb_fastboot::*;
 pub use ai::*;
@@ -15,3 +16,4 @@ pub use device::*;
 pub use download::*;
 pub use fs::*;
 pub use system::*;
+pub use rom::*;

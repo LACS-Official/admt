@@ -28,6 +28,8 @@ import {
   PanelRight24Regular,
   ArrowDownload24Regular,
   Sparkle24Regular,
+  DocumentAdd24Regular,
+  DismissCircle24Regular,
 } from "@fluentui/react-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -37,7 +39,7 @@ import { useAppStore } from "../../stores/appStore";
 import { logService } from "../../services/logService";
 import { aiService } from "../../services/aiService";
 import { listen, emit } from "@tauri-apps/api/event";
-import { save } from "@tauri-apps/plugin-dialog";
+import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useDeviceStore } from "../../stores/deviceStore";
@@ -127,8 +129,11 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: "var(--colorNeutralBackground1)",
-    height: "50px",
+    minHeight: "50px",
+    height: "auto",
     flexShrink: 0,
+    flexWrap: "wrap",
+    rowGap: "8px",
   },
   messageList: {
     flex: 1,
@@ -213,6 +218,7 @@ const useStyles = makeStyles({
     flex: 1,
     minHeight: "40px",
     maxHeight: "150px",
+    overflow: "hidden",
   },
   emptyState: {
     flex: 1,
@@ -338,6 +344,12 @@ const parseAgentResponse = (content: string): AgentResponse | null => {
   return null;
 };
 
+interface AttachedFile {
+  name: string;
+  path: string;
+  content: string;
+}
+
 const AIChatPanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
@@ -350,6 +362,60 @@ const AIChatPanel: React.FC = () => {
   const [checkedActions, setCheckedActions] = useState<Record<string, boolean[]>>({});
   const [executingMsgId, setExecutingMsgId] = useState<string | null>(null);
   const [executionLogs, setExecutionLogs] = useState<Record<string, string>>({});
+  
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+
+  const handleUploadFile = async () => {
+    try {
+      const selected = await open({
+        multiple: true,
+        filters: [{
+          name: "文本文件",
+          extensions: ["txt", "log", "json", "xml", "prop", "cfg", "config", "ini", "sh", "bat", "yaml", "yml", "md"]
+        }]
+      });
+
+      if (selected) {
+        const paths = Array.isArray(selected) ? selected : [selected];
+        const loadedFiles: AttachedFile[] = [];
+
+        for (const path of paths) {
+          try {
+            const content = await invoke<string>("read_chat_text_file", { path });
+            const name = path.split(/[/\\]/).pop() || "未命名文件";
+            
+            if (attachedFiles.some(f => f.path === path) || loadedFiles.some(f => f.path === path)) {
+              continue;
+            }
+            
+            loadedFiles.push({ name, path, content });
+          } catch (err: any) {
+            setStatusBarMessage({
+              type: "error",
+              message: `读取文件失败: ${err || "未知错误"}`
+            });
+          }
+        }
+
+        if (loadedFiles.length > 0) {
+          setAttachedFiles(prev => [...prev, ...loadedFiles]);
+          setStatusBarMessage({
+            type: "success",
+            message: `成功添加 ${loadedFiles.length} 个文件附件`
+          });
+        }
+      }
+    } catch (e: any) {
+      setStatusBarMessage({
+        type: "error",
+        message: `选择文件失败: ${e.message || String(e)}`
+      });
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const { 
     conversations, 
@@ -361,6 +427,8 @@ const AIChatPanel: React.FC = () => {
     clearHistory,
     isAgentMode,
     setAgentMode,
+    isAutoExecute,
+    setAutoExecute,
     aiPresets,
     activePresetId,
     applyPreset,
@@ -395,15 +463,31 @@ const AIChatPanel: React.FC = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "40px";
       const scrollHeight = textareaRef.current.scrollHeight;
-      textareaRef.current.style.height = `${Math.min(Math.max(scrollHeight, 40), 150)}px`;
+      const targetHeight = Math.min(Math.max(scrollHeight, 40), 150);
+      textareaRef.current.style.height = `${targetHeight}px`;
+      
+      if (scrollHeight > 150) {
+        textareaRef.current.style.overflowY = "auto";
+      } else {
+        textareaRef.current.style.overflowY = "hidden";
+      }
+      textareaRef.current.style.overflowX = "hidden";
     }
   }, [inputValue]);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return;
 
-    const userContent = inputValue.trim();
+    let userContent = inputValue.trim();
+    if (attachedFiles.length > 0) {
+      const filesContext = attachedFiles.map(file => {
+        return `【上传的附件上下文】\n文件名: ${file.name}\n路径: ${file.path}\n内容:\n\`\`\`\n${file.content}\n\`\`\``;
+      }).join("\n\n");
+      userContent = `${filesContext}\n\n${userContent}`;
+    }
+
     setInputValue("");
+    setAttachedFiles([]);
     
     let convId = currentConversationId;
     if (!convId) {
@@ -433,7 +517,20 @@ const AIChatPanel: React.FC = () => {
         throw new Error(response.error);
       }
       
-      addMessage(convId, { role: "assistant", content: response.content });
+      const assistantMsgId = addMessage(convId, { role: "assistant", content: response.content });
+
+      if (isAgentMode && isAutoExecute) {
+        const agentData = parseAgentResponse(response.content);
+        if (agentData && agentData.actions && agentData.actions.length > 0) {
+          setCheckedActions(prev => ({
+            ...prev,
+            [assistantMsgId]: agentData.actions.map(() => true)
+          }));
+          setTimeout(() => {
+            handleRunAgentCommands(assistantMsgId, agentData);
+          }, 100);
+        }
+      }
 
     } catch (error: any) {
       logService.error("AI 聊天界面请求失败", "AIChat", { 
@@ -527,6 +624,22 @@ const AIChatPanel: React.FC = () => {
             cmdArgs,
             30
           );
+        } else if (action.type === "adb_shell") {
+          if (cmdName === "shell") {
+            result = await deviceService.executeAdbCommand(
+              selectedDevice.serial,
+              "shell",
+              cmdArgs,
+              30
+            );
+          } else {
+            result = await deviceService.executeAdbCommand(
+              selectedDevice.serial,
+              "shell",
+              parts,
+              30
+            );
+          }
         } else {
           result = await deviceService.executeAdbCommand(
             selectedDevice.serial,
@@ -551,6 +664,20 @@ const AIChatPanel: React.FC = () => {
             type: "error",
             message: `执行指令失败: ${result.error || "未知错误"}`
           });
+
+          // 如果开启了智能代理模式，自动启动自我纠错诊断与修复
+          if (isAgentMode) {
+            setExecutionLogs(prev => ({
+              ...prev,
+              [msgId]: (prev[msgId] || "") + `🤖 [自我纠错] 正在将错误报告自动反馈给 AI 助手进行诊断与修复方案生成...\n`
+            }));
+            const currentAction = action;
+            const currentError = result.error || "未知错误";
+            setTimeout(() => {
+              handleAutoDiagnoseAndFix(currentAction, currentError);
+            }, 500);
+          }
+
           break;
         }
       }
@@ -561,6 +688,68 @@ const AIChatPanel: React.FC = () => {
       }));
     } finally {
       setExecutingMsgId(null);
+    }
+  };
+
+  const handleAutoDiagnoseAndFix = async (failedAction: AgentAction, errorMsg: string) => {
+    const convId = useAIChatStore.getState().currentConversationId;
+    if (!convId) return;
+
+    setIsLoading(true);
+
+    const feedbackContent = `⚠️ [系统自动反馈] 指令执行失败！\n失败的指令: \`${failedAction.command}\`\n执行类型: \`${failedAction.type}\`\n错误信息: \`${errorMsg}\`\n\n请自我解析此错误，分析原因，并提供下一步的修复方案或可用的替代指令（如果有的话）。`;
+    
+    // 1. 将这条系统自动反馈的“错误信息”作为 user 消息添加到会话中
+    addMessage(convId, { role: "user", content: feedbackContent });
+
+    try {
+      // 2. 获取当前会话最新的完整历史
+      const targetConv = useAIChatStore.getState().conversations.find(c => c.id === convId);
+      const messageList = targetConv?.messages || [];
+      
+      const chatHistory = messageList.map(msg => ({
+        role: msg.role as "user" | "assistant" | "system",
+        content: msg.content
+      }));
+
+      // 3. 构建发送给 AI 的消息
+      const systemMessage = isAgentMode ? AGENT_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT;
+      const finalMessages = [
+        { role: "system" as const, content: systemMessage },
+        ...chatHistory
+      ];
+
+      // 4. 调用 AI
+      const response = await aiService.chat(finalMessages);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // 5. 将 AI 的诊断和纠错方案输出
+      const assistantMsgId = addMessage(convId, { role: "assistant", content: response.content });
+
+      // 6. 如果是 Agent 模式且是全自动执行，检测到新指令则触发自动执行！
+      if (isAgentMode && isAutoExecute) {
+        const agentData = parseAgentResponse(response.content);
+        if (agentData && agentData.actions && agentData.actions.length > 0) {
+          setCheckedActions(prev => ({
+            ...prev,
+            [assistantMsgId]: agentData.actions.map(() => true)
+          }));
+          setTimeout(() => {
+            handleRunAgentCommands(assistantMsgId, agentData);
+          }, 100);
+        }
+      }
+    } catch (e: any) {
+      logService.error("自动诊断与修复请求失败", "AIChat", { error: e.message, category: "ai" });
+      addMessage(convId, {
+        role: "assistant",
+        content: `❌ 自动错误反馈与诊断请求失败: ${e.message || String(e)}。建议您手动修改或执行替代指令。`
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -684,6 +873,73 @@ ${slicedLogs}
     }
   };
 
+  const handleExportAllConversations = async () => {
+    if (conversations.length === 0) return;
+    try {
+      const markdown = conversations.map(conv => {
+        const header = `# 对话: ${conv.title}\n创建时间: ${new Date(conv.createdAt).toLocaleString()}\n\n`;
+        const body = conv.messages.map(msg => {
+          const role = msg.role === "user" ? "用户" : "AI 助手";
+          const time = new Date(msg.timestamp).toLocaleString();
+          return `### ${role} (${time})\n\n${msg.content}\n\n---\n`;
+        }).join("\n");
+        return header + body;
+      }).join("\n\n========================================\n\n");
+
+      const filePath = await save({
+        filters: [{ name: "Markdown", extensions: ["md"] }],
+        defaultPath: `ADMT_AI_对话历史备份_${new Date().toLocaleDateString().replace(/[\/:]/g, "-")}.md`,
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, `# ADMT AI 助手完整对话备份\n备份时间: ${new Date().toLocaleString()}\n\n${markdown}`);
+        setStatusBarMessage({
+          type: "success",
+          message: "所有对话已成功合并导出",
+        });
+      }
+    } catch (error: any) {
+      logService.error("批量导出对话失败", "AIChat", { error: error.message, category: "ai" });
+      setStatusBarMessage({
+        type: "error",
+        message: `合并导出失败: ${error.message}`,
+      });
+    }
+  };
+
+  const handleDiagnoseCardClick = async (type: "logcat" | "anr" | "admt" | "flash") => {
+    let convId = currentConversationId;
+    if (!convId) {
+      convId = createNewConversation();
+    }
+
+    if (type === "logcat") {
+      if (!selectedDevice) {
+        setStatusBarMessage({
+          type: "error",
+          message: "未选中设备：请先在主界面或连接管理中选中一台 Android 设备"
+        });
+        return;
+      }
+      handleLogcatDiagnose();
+    } else if (type === "anr") {
+      setInputValue("🔍 请帮我诊断和分析手机中的 ANR (程序无响应) 故障。如果可以，请帮我列出如何获取 /data/anr/ 下的 Trace 文件，以及如何定位导致主线程卡死的具体原因。");
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    } else if (type === "admt") {
+      setInputValue("🔍 我遇到了玩机管家 (ADMT) 的报错或异常。请帮我分析该如何排查：\n1. ADB/Fastboot 驱动或可执行文件初始化失败；\n2. 设备连接不稳定或无法识别；\n3. 软件激活及网络接口问题。");
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    } else if (type === "flash") {
+      setInputValue("🔍 请帮我分析刷机/Root/刷写分区时遇到的失败日志。例如 Fastboot 报错、Magisk 补丁刷入失败、AB 分区切换后无法开机等情况，应该如何排查和恢复？");
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -716,120 +972,246 @@ ${slicedLogs}
     <div className={styles.container}>
       {/* Sidebar - History */}
       <div className={mergeClasses(styles.sidebar, isSidebarCollapsed && styles.sidebarCollapsed)}>
-        <div className={styles.sidebarHeader}>
-          <div className={styles.sidebarTitle}>
-            <Tooltip content={isSidebarCollapsed ? "展开侧边栏" : "收起侧边栏"} relationship="label">
+        {isSidebarCollapsed ? (
+          /* 折叠后的极简侧边栏 */
+          <div style={{ 
+            display: "flex", 
+            flexDirection: "column", 
+            alignItems: "center", 
+            gap: "20px", 
+            padding: "16px 0", 
+            height: "100%", 
+            boxSizing: "border-box" 
+          }}>
+            {/* 1. 展开按钮 */}
+            <Tooltip content="展开侧边栏" relationship="label">
               <Button 
-                icon={isSidebarCollapsed ? <PanelRight24Regular /> : <PanelLeft24Regular />} 
+                icon={<PanelRight24Regular />} 
                 appearance="subtle"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                onClick={() => setIsSidebarCollapsed(false)}
               />
             </Tooltip>
-            {!isSidebarCollapsed && <Text>对话历史</Text>}
+            
+            <Divider style={{ width: "60%" }} />
+
+            {/* 2. 新建会话 */}
+            <Tooltip content="新建会话" relationship="label">
+              <Button 
+                icon={<Add24Regular />} 
+                appearance="primary"
+                shape="circular"
+                size="large"
+                onClick={() => createNewConversation()}
+              />
+            </Tooltip>
+
+            {/* 3. 对话历史 (点击可展开查看列表) */}
+            <Tooltip content="查看对话历史列表" relationship="label">
+              <Button 
+                icon={<History24Regular />} 
+                appearance="subtle"
+                onClick={() => setIsSidebarCollapsed(false)}
+              />
+            </Tooltip>
+
+            {/* 垂直弹性占位 */}
+            <div style={{ flex: 1 }} />
+
+            {/* 4. 批量操作 (纯图标) */}
+            <Tooltip content="批量合并导出所有对话" relationship="label">
+              <Button 
+                icon={<ArrowDownload24Regular />} 
+                appearance="subtle"
+                onClick={handleExportAllConversations}
+                disabled={conversations.length === 0}
+              />
+            </Tooltip>
+
+            {/* 5. 一键清理 (纯图标) */}
+            <Tooltip content="清除所有历史记录" relationship="label">
+              <Button 
+                icon={<Delete24Regular style={{ color: conversations.length > 0 ? tokens.colorPaletteRedForeground1 : undefined }} />} 
+                appearance="subtle"
+                onClick={clearHistory}
+                disabled={conversations.length === 0}
+              />
+            </Tooltip>
           </div>
-          <Button 
-            icon={<Add24Regular />} 
-            appearance="primary"
-            onClick={() => createNewConversation()}
-            style={{ minWidth: isSidebarCollapsed ? "40px" : "auto" }}
-          >
-            {!isSidebarCollapsed && "新对话"}
-          </Button>
-        </div>
-        <Divider />
-        <div className={styles.historyList}>
-          {conversations.map((conv) => (
-            <div 
-              key={conv.id} 
-              className={mergeClasses(
-                styles.historyItem,
-                currentConversationId === conv.id && styles.historyItemActive
-              )}
-              onClick={() => setCurrentConversation(conv.id)}
-              style={{ justifyContent: isSidebarCollapsed ? "center" : "space-between" }}
-            >
-              {isSidebarCollapsed ? (
-                <Tooltip content={conv.title} relationship="label">
-                   <Chat24Regular />
+        ) : (
+          /* 展开时的四区分组排版 */
+          <>
+            <div className={styles.sidebarHeader} style={{ paddingBottom: "8px" }}>
+              <div className={styles.sidebarTitle}>
+                <Tooltip content="收起侧边栏" relationship="label">
+                  <Button 
+                    icon={<PanelLeft24Regular />} 
+                    appearance="subtle"
+                    onClick={() => setIsSidebarCollapsed(true)}
+                  />
                 </Tooltip>
-              ) : (
-                <>
-                  <div className={styles.historyItemTitle}>{conv.title}</div>
-                  <Tooltip content="删除" relationship="label">
-                    <Button 
-                      size="small" 
-                      appearance="subtle" 
-                      icon={<Delete24Regular />} 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteConversation(conv.id);
-                      }}
-                    />
-                  </Tooltip>
-                </>
-              )}
+                <Text weight="bold">AI 助手</Text>
+              </div>
             </div>
-          ))}
-          {conversations.length === 0 && (
-            <div style={{ padding: '20px', textAlign: 'center', color: tokens.colorNeutralForeground4 }}>
-              暂无历史记录
+            <Divider />
+
+            <div style={{ padding: "8px 8px 0 8px", display: "flex", flexDirection: "column", gap: "14px", flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+              {/* 1. 会话管理 */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <Text size={100} style={{ color: tokens.colorNeutralForeground4, paddingLeft: "8px", fontWeight: "bold", letterSpacing: "0.5px" }}>
+                  会话管理
+                </Text>
+                <Button 
+                  icon={<Add24Regular />} 
+                  appearance="primary"
+                  onClick={() => createNewConversation()}
+                  style={{ width: "100%", justifyContent: "flex-start" }}
+                >
+                  新建会话
+                </Button>
+              </div>
+
+              {/* 2. 会话列表 */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1, minHeight: 0 }}>
+                <Text size={100} style={{ color: tokens.colorNeutralForeground4, paddingLeft: "8px", fontWeight: "bold", letterSpacing: "0.5px" }}>
+                  最近会话
+                </Text>
+                <div className={styles.historyList} style={{ maxHeight: "calc(100vh - 360px)", overflowY: "auto" }}>
+                  {conversations.map((conv) => (
+                    <div 
+                      key={conv.id} 
+                      className={mergeClasses(
+                        styles.historyItem,
+                        currentConversationId === conv.id && styles.historyItemActive
+                      )}
+                      onClick={() => setCurrentConversation(conv.id)}
+                      style={{ justifyContent: "space-between", padding: "6px 8px" }}
+                    >
+                      <div className={styles.historyItemTitle} style={{ fontSize: "13px" }}>{conv.title}</div>
+                      <Tooltip content="删除会话" relationship="label">
+                        <Button 
+                          size="small" 
+                          appearance="subtle" 
+                          icon={<Delete24Regular style={{ fontSize: "14px" }} />} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteConversation(conv.id);
+                          }}
+                        />
+                      </Tooltip>
+                    </div>
+                  ))}
+                  {conversations.length === 0 && (
+                    <div style={{ padding: '20px 8px', textAlign: 'center', color: tokens.colorNeutralForeground4, fontSize: "12px" }}>
+                      暂无历史记录
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. 批量操作 */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <Text size={100} style={{ color: tokens.colorNeutralForeground4, paddingLeft: "8px", fontWeight: "bold", letterSpacing: "0.5px" }}>
+                  批量操作
+                </Text>
+                <Button 
+                  icon={<ArrowDownload24Regular />} 
+                  appearance="subtle"
+                  onClick={handleExportAllConversations}
+                  disabled={conversations.length === 0}
+                  style={{ width: "100%", justifyContent: "flex-start", paddingLeft: "12px" }}
+                >
+                  批量导出对话
+                </Button>
+              </div>
+
+              {/* 4. 系统清理 (回收站分区) */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingBottom: "12px" }}>
+                <Text size={100} style={{ color: tokens.colorNeutralForeground4, paddingLeft: "8px", fontWeight: "bold", letterSpacing: "0.5px" }}>
+                  系统清理
+                </Text>
+                <Button 
+                  icon={<Delete24Regular style={{ color: conversations.length > 0 ? tokens.colorPaletteRedForeground1 : undefined }} />} 
+                  appearance="subtle"
+                  onClick={clearHistory}
+                  disabled={conversations.length === 0}
+                  style={{ 
+                    width: "100%", 
+                    justifyContent: "flex-start", 
+                    paddingLeft: "12px",
+                    color: conversations.length > 0 ? tokens.colorPaletteRedForeground1 : undefined
+                  }}
+                >
+                  清除所有记录
+                </Button>
+              </div>
             </div>
-          )}
-        </div>
-        <Divider />
-        <div style={{ padding: '8px' }}>
-          <Tooltip content={isSidebarCollapsed ? "清除对话历史" : ""} relationship="label">
-            <Button 
-              icon={<Delete24Regular />} 
-              appearance="subtle" 
-              style={{ width: '100%', minWidth: isSidebarCollapsed ? "40px" : "auto" }}
-              onClick={clearHistory}
-            >
-              {!isSidebarCollapsed && "清除所有记录"}
-            </Button>
-          </Tooltip>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Main Chat Area */}
     <div className={styles.chatArea}>
       <div className={styles.chatHeader}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0, flexWrap: "wrap", rowGap: "8px" }}>
           <Text weight="semibold" className={styles.historyItemTitle} style={{ flex: "none", maxWidth: "160px" }}>
             {currentConversation?.title || "AI 玩机助手"}
           </Text>
-          <Switch
-            label={isAgentMode ? "智能代理 (Agent)" : "常规问答 (Chat)"}
-            checked={isAgentMode}
-            onChange={(e, data) => setAgentMode(data.checked)}
-          />
-          {aiPresets.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "8px" }}>
-              <Text size={200} style={{ color: tokens.colorNeutralForeground4, whiteSpace: "nowrap" }}>方案:</Text>
-              <Select
-                value={activePresetId || ""}
-                onChange={(_, data) => {
-                  applyPreset(data.value);
-                  const selectedName = aiPresets.find(p => p.id === data.value)?.name || "自定义配置";
-                  setStatusBarMessage({
-                    type: "success",
-                    message: `当前 AI 方案已切换为: ${selectedName}`,
-                  });
-                }}
-                size="small"
-                style={{ width: "140px" }}
-              >
-                <option value="">-- 自定义配置 --</option>
-                {aiPresets.map(preset => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
+          
+          {/* AI助手控制台控件组 */}
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "8px", 
+            backgroundColor: tokens.colorNeutralBackground2, 
+            border: `1px solid ${tokens.colorNeutralStroke2}`,
+            borderRadius: "6px",
+            padding: "4px 8px",
+            height: "32px",
+            boxSizing: "border-box"
+          }}>
+            <Switch
+              label={isAgentMode ? "智能代理" : "常规问答"}
+              checked={isAgentMode}
+              onChange={(e, data) => setAgentMode(data.checked)}
+              style={{ margin: 0 }}
+            />
+            {isAgentMode && <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2 }} />}
+            {isAgentMode && (
+              <Switch
+                label={isAutoExecute ? "自动执行" : "手动审核"}
+                checked={isAutoExecute}
+                onChange={(e, data) => setAutoExecute(data.checked)}
+                style={{ margin: 0 }}
+              />
+            )}
+            {aiPresets.length > 0 && <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2 }} />}
+            {aiPresets.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Select
+                  value={activePresetId || ""}
+                  onChange={(_, data) => {
+                    applyPreset(data.value);
+                    const selectedName = aiPresets.find(p => p.id === data.value)?.name || "自定义配置";
+                    setStatusBarMessage({
+                      type: "success",
+                      message: `当前 AI 方案已切换为: ${selectedName}`,
+                    });
+                  }}
+                  size="small"
+                  style={{ width: "115px", height: "24px", minWidth: "80px" }}
+                >
+                  <option value="">-- 自定义配置 --</option>
+                  {aiPresets.map(preset => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+          </div>
         </div>
-        <Tooltip content={t("settings.ai_export_conversation")} relationship="label">
+        <Tooltip content="导出当前对话为 Markdown 格式" relationship="label">
           <Button 
             icon={<ArrowDownload24Regular />} 
             appearance="subtle"
@@ -843,20 +1225,158 @@ ${slicedLogs}
         <>
           <div className={styles.messageList}>
               {messages.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <Bot24Regular style={{ fontSize: '48px' }} />
-                  <Text size={500}>有什么可以帮您的？</Text>
-                  <Text align="center">您可以询问关于 Android 调试、刷机或者是 ADMT 工具的使用方法。</Text>
-                  {selectedDevice && (
-                    <Button 
-                      appearance="outline"
-                      icon={<Sparkle24Regular />}
-                      onClick={handleLogcatDiagnose}
-                      style={{ marginTop: '16px' }}
+                <div className={styles.emptyState} style={{ padding: "32px 16px", maxWidth: "680px", margin: "auto" }}>
+                  <Bot24Regular style={{ fontSize: '56px', color: tokens.colorBrandForeground1, marginBottom: "8px" }} />
+                  <Text size={500} weight="semibold">有什么可以帮您的？</Text>
+                  <Text align="center" style={{ color: tokens.colorNeutralForeground3, maxWidth: "420px", marginTop: "4px" }}>
+                    您可以询问关于 Android 调试、系统刷机、或者下方列出的快捷管家诊断。
+                  </Text>
+                  
+                  {/* 2x2 快捷诊断卡片组 */}
+                  <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "1fr 1fr", 
+                    gap: "14px", 
+                    marginTop: "28px", 
+                    width: "100%", 
+                    boxSizing: "border-box"
+                  }}>
+                    {/* 卡片 1: Logcat 崩溃 */}
+                    <div 
+                      onClick={() => handleDiagnoseCardClick("logcat")}
+                      style={{
+                        padding: "16px",
+                        border: `1px solid ${tokens.colorNeutralStroke2}`,
+                        borderRadius: "8px",
+                        backgroundColor: tokens.colorNeutralBackground1,
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        textAlign: "left",
+                        gap: "6px",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = tokens.colorBrandStroke1;
+                        e.currentTarget.style.backgroundColor = tokens.colorNeutralBackground1Hover;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = tokens.colorNeutralStroke2;
+                        e.currentTarget.style.backgroundColor = tokens.colorNeutralBackground1;
+                      }}
                     >
-                      诊断当前设备 Logcat 崩溃
-                    </Button>
-                  )}
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Sparkle24Regular style={{ color: tokens.colorBrandForeground1 }} />
+                        <Text weight="semibold">Logcat 崩溃诊断</Text>
+                      </div>
+                      <Text size={100} style={{ color: tokens.colorNeutralForeground4, lineHeight: "1.4" }}>
+                        自动抓取手机的最新错误和 Crash 日志，并由 AI 进行故障分析。
+                      </Text>
+                    </div>
+
+                    {/* 卡片 2: ANR 分析 */}
+                    <div 
+                      onClick={() => handleDiagnoseCardClick("anr")}
+                      style={{
+                        padding: "16px",
+                        border: `1px solid ${tokens.colorNeutralStroke2}`,
+                        borderRadius: "8px",
+                        backgroundColor: tokens.colorNeutralBackground1,
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        textAlign: "left",
+                        gap: "6px",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = tokens.colorBrandStroke1;
+                        e.currentTarget.style.backgroundColor = tokens.colorNeutralBackground1Hover;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = tokens.colorNeutralStroke2;
+                        e.currentTarget.style.backgroundColor = tokens.colorNeutralBackground1;
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <History24Regular style={{ color: "#EAB308" }} />
+                        <Text weight="semibold">ANR 无响应分析</Text>
+                      </div>
+                      <Text size={100} style={{ color: tokens.colorNeutralForeground4, lineHeight: "1.4" }}>
+                        排查手机界面冻结、无响应故障，获取 traces 日志定位分析。
+                      </Text>
+                    </div>
+
+                    {/* 卡片 3: ADMT 报错解析 */}
+                    <div 
+                      onClick={() => handleDiagnoseCardClick("admt")}
+                      style={{
+                        padding: "16px",
+                        border: `1px solid ${tokens.colorNeutralStroke2}`,
+                        borderRadius: "8px",
+                        backgroundColor: tokens.colorNeutralBackground1,
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        textAlign: "left",
+                        gap: "6px",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = tokens.colorBrandStroke1;
+                        e.currentTarget.style.backgroundColor = tokens.colorNeutralBackground1Hover;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = tokens.colorNeutralStroke2;
+                        e.currentTarget.style.backgroundColor = tokens.colorNeutralBackground1;
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Bot24Regular style={{ color: "#3B82F6" }} />
+                        <Text weight="semibold">管家运行诊断</Text>
+                      </div>
+                      <Text size={100} style={{ color: tokens.colorNeutralForeground4, lineHeight: "1.4" }}>
+                        排查管家驱动初始化异常、设备连接不畅或激活服务连通失败。
+                      </Text>
+                    </div>
+
+                    {/* 卡片 4: 刷机日志排查 */}
+                    <div 
+                      onClick={() => handleDiagnoseCardClick("flash")}
+                      style={{
+                        padding: "16px",
+                        border: `1px solid ${tokens.colorNeutralStroke2}`,
+                        borderRadius: "8px",
+                        backgroundColor: tokens.colorNeutralBackground1,
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        textAlign: "left",
+                        gap: "6px",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = tokens.colorBrandStroke1;
+                        e.currentTarget.style.backgroundColor = tokens.colorNeutralBackground1Hover;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = tokens.colorNeutralStroke2;
+                        e.currentTarget.style.backgroundColor = tokens.colorNeutralBackground1;
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Play24Regular style={{ color: "#10B981" }} />
+                        <Text weight="semibold">刷机日志排查</Text>
+                      </div>
+                      <Text size={100} style={{ color: tokens.colorNeutralForeground4, lineHeight: "1.4" }}>
+                        针对 Fastboot 分区写入报错、Rom 升级失效及开机环等进行排障。
+                      </Text>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 messages.map((msg) => (
@@ -1100,6 +1620,44 @@ ${slicedLogs}
             </div>
 
             <div className={styles.inputArea}>
+              {attachedFiles.length > 0 && (
+                <div style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginBottom: "8px",
+                  padding: "4px 0"
+                }}>
+                  {attachedFiles.map((file, idx) => (
+                    <div key={idx} style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 10px",
+                      backgroundColor: tokens.colorNeutralBackground3,
+                      border: `1px solid ${tokens.colorNeutralStroke1}`,
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                    }}>
+                      <span style={{
+                        maxWidth: "180px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis"
+                      }} title={file.path}>
+                        📎 {file.name}
+                      </span>
+                      <Button
+                        size="small"
+                        appearance="subtle"
+                        icon={<DismissCircle24Regular style={{ fontSize: "14px" }} />}
+                        onClick={() => handleRemoveFile(idx)}
+                        style={{ minWidth: "20px", height: "20px", padding: 0 }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className={styles.inputWrapper}>
                 {selectedDevice && (
                   <Tooltip content="抓取 Logcat 并诊断崩溃" relationship="label">
@@ -1112,27 +1670,43 @@ ${slicedLogs}
                     />
                   </Tooltip>
                 )}
+                <Tooltip content="添加文本/日志文件附件 (限制 2MB)" relationship="label">
+                  <Button
+                    icon={<DocumentAdd24Regular />}
+                    appearance="outline"
+                    size="large"
+                    onClick={handleUploadFile}
+                    disabled={isLoading}
+                  />
+                </Tooltip>
                 <Textarea
                   ref={textareaRef}
                   className={styles.input}
-                  placeholder="输入消息，Enter 发送，Shift+Enter 换行"
+                  placeholder="向 AI 玩机助手提问，或上传日志文件进行分析..."
                   value={inputValue}
                   onChange={(e, data) => setInputValue(data.value)}
                   onKeyDown={handleKeyPress}
                   size="large"
                   resize="none"
-                  style={{ minHeight: '40px', overflowY: 'auto' }}
+                  style={{ minHeight: '40px' }}
+                  textarea={{
+                    style: {
+                      overflowX: "hidden",
+                      overflowY: "hidden",
+                    }
+                  }}
                 />
                 <Button 
                   icon={<Send24Regular />} 
                   appearance="primary" 
                   size="large"
                   onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isLoading}
+                  disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
                 />
               </div>
-              <div className={styles.footer}>
-                AI 助手是由大语言模型驱动的，可能会产生错误。
+              <div className={styles.footer} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
+                <span>AI 助手是由大语言模型驱动的，可能会产生错误。</span>
+                <span style={{ opacity: 0.8 }}>Enter 发送 / Shift + Enter 换行</span>
               </div>
             </div>
           </>

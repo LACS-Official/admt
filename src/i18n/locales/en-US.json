@@ -333,6 +333,16 @@
     "selinux_enforcing": "Enforcing",
     "selinux_mode_desc": "Switch SELinux operation mode (Enforcing/Permissive)"
   },
+  "flash": {
+    "tab_unlock": "Unlock Tools",
+    "tab_image": "Image Flashing",
+    "tab_rom": "Fastboot Flashing",
+    "tab_rom_manager": "ROM Manager & Extractor",
+    "no_device_title": "No Device Detected",
+    "no_device_hint": "Please ensure the device is connected",
+    "select_device_title": "Please select a device",
+    "select_device_hint": "Select the device to operate from the device info page"
+  },
   "unlock": {
     "no_device_title": "No Device Detected",
     "no_device_hint": "Please ensure the device is connected and USB debugging is enabled",

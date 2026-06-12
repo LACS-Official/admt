@@ -10,12 +10,14 @@ import {
   LockOpen24Regular,
   Flash24Regular,
   Code24Regular,
+  Archive24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
 import ImageFlashCard from "../Tools/ImageFlashCard";
 import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
+import { RomManagerCard } from "./RomManagerCard";
 import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
@@ -177,7 +179,8 @@ const useStyles = makeStyles({
 type FlashZoneView =
   | "unlock-tools"
   | "image-flash"
-  | "xiaomi-flash";
+  | "xiaomi-flash"
+  | "rom-manager";
 
 const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -222,6 +225,11 @@ const FlashZonePanel: React.FC = () => {
       label: t("flash.tab_rom"),
       icon: <Flash24Regular />,
     },
+    {
+      id: "rom-manager" as FlashZoneView,
+      label: t("flash.tab_rom_manager"),
+      icon: <Archive24Regular />,
+    },
   ];
 
   const renderContent = () => {
@@ -247,6 +255,8 @@ const FlashZonePanel: React.FC = () => {
         ) : (
           <XiaomiFlashCard device={null as any} onFastbootRequired={triggerOverlay} />
         );
+      case "rom-manager":
+        return <RomManagerCard />;
       default:
         return deviceToUse ? (
           <XiaomiUnlockCard device={deviceToUse} />

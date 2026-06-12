@@ -31,6 +31,7 @@ import {
 import { OnlineSoftware, DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 import { logService } from '../../services/logService';
+import { useAppStore } from '../../stores/appStore';
 
 const useStyles = makeStyles({
   dialogContent: {
@@ -156,6 +157,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   onDownload,
 }) => {
   const styles = useStyles();
+  const { setStatusBarMessage } = useAppStore();
   const [detailData, setDetailData] = useState<OnlineSoftware | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -316,7 +318,16 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
 
   //使用appfun下载
   const OpenWithAppfun = () => {
-    openUrl(`https://www.appfun.fun/software/${currentData.id}`);
+    const url = `https://www.appfun.fun/software/${currentData.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setStatusBarMessage({
+        type: "success",
+        message: "链接已复制到剪贴板！正在尝试打开浏览器，若未成功打开请手动粘贴访问。"
+      });
+    }).catch((err) => {
+      console.error("复制到剪贴板失败:", err);
+    });
+    openUrl(url);
   };
 
   const currentData = detailData || software;
