@@ -177,9 +177,8 @@ pub async fn get_security_config() -> Result<SecurityConfig> {
     let config = SecurityConfig {
         api_base_url: "https://api-g.lacs.cc".to_string(),
         app_id: "wanjiguanjia-desktop-v1.0.0".to_string(),
-        app_secret: "wjgj_2024_secure_app_secret_key_for_user_behavior_stats".to_string(),
-        signature_secret: "signature_secret_2024_wanjiguanjia_user_behavior_api_protection"
-            .to_string(),
+        app_secret: std::env::var("APP_SECRET").unwrap_or_else(|_| "default_app_secret".to_string()),
+        signature_secret: std::env::var("SIGNATURE_SECRET").unwrap_or_else(|_| "default_signature_secret".to_string()),
         enable_signature: !is_debug,
         enable_strict_user_agent: !is_debug,
         app_version: "1.0.0".to_string(),
