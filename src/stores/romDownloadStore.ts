@@ -37,7 +37,7 @@ const initialState: RomDownloadState & {
   downloading: false,
   downloadProgress: 0,
   currentDownload: null,
-  token: 'G4MJAYg33CQT',
+  token: import.meta.env.VITE_ROM_TOKEN || '',
   manualDeviceInfo: { deviceName: '' },
   isManualDeviceMode: false,
 };

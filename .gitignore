@@ -10,6 +10,10 @@ build/
 node_modules/
 jiaoben/
 output/
+output/*
+**/output/
+out/
+bin/
 
 # Environment variables
 .env
@@ -110,3 +114,13 @@ user-data/
 cache/
 build.log
 src-tauri/target
+
+# Security & Private Credentials Protection
+*.key
+*.pem
+*.pfx
+*.p12
+*.keystore
+*.jks
+tauri.key
+.env*.local
