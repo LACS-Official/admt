@@ -25,6 +25,11 @@ English | [简体中文](./README.md)
 
 ## 💡 About
 
+> 💬 **A Message from the Developers**:
+> Over the past year, ADMT has been fully maintained and continuously crafted for free by the **LACS Studio** team, empowering tens of thousands of Android enthusiasts.
+> Today, to express our deepest gratitude to our community and to give this project even greater vitality, we are thrilled to announce that **ADMT is officially 100% open source**!
+> We believe open source is not just code sharing, but passing along a shared passion. We hope ADMT serves as your standard toolbox, and we warmly welcome developers around the world to build a more powerful ecosystem with us!
+
 **ADMT (Android Device Management Tools)** is a modern desktop management suite for Android devices. Powered by **Rust + Tauri v2**, ADMT uses 80% less memory than traditional Electron apps and launches instantly. Designed for Android power users, developers, enthusiasts, and everyday users alike.
 
 ---
