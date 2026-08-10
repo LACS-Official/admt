@@ -1,6 +1,6 @@
 <div align="center">
 
-# 玩机管家 (ADMT - Android Device Management Tools)
+# 玩机管家 (ADMT - Android Device Management Tool)
 
 **基于 Tauri v2 + React 打造的高性能跨平台 Android 设备全能管理工具**
 
@@ -50,13 +50,13 @@
 
 ## ⚖️ 性能对比
 
-| 特性 / 指标 | 传统 Electron 软件 | 纯命令行工具 (ADB CLI) | **玩机管家 (ADMT)** |
-| :--- | :--- | :--- | :--- |
-| **内存占用 (RAM)** | ~300MB - 800MB | ~10MB | **~40MB - 90MB** ⚡ |
-| **安装包体积** | ~120MB+ | ~5MB | **~15MB - 25MB** 📦 |
-| **GUI 可视化** | ✅ 有 | ❌ 无 (纯命令行) | **✅ 现代化 Fluent UI 界面** |
-| **无线 ADB / 投屏** | 需配置或付费 | 需手动敲复杂命令 | **✅ 一键自动连接/低延迟投屏** |
-| **AI 错误诊断** | ❌ 无 | ❌ 无 | **✅ 内置智能 AI 助手** |
+| 特性 / 指标         | 传统 Electron 软件 | 纯命令行工具 (ADB CLI) | **玩机管家 (ADMT)**            |
+| :------------------ | :----------------- | :--------------------- | :----------------------------- |
+| **内存占用 (RAM)**  | ~300MB - 800MB     | ~10MB                  | **~40MB - 90MB** ⚡            |
+| **安装包体积**      | ~120MB+            | ~5MB                   | **~15MB - 25MB** 📦            |
+| **GUI 可视化**      | ✅ 有              | ❌ 无 (纯命令行)       | **✅ 现代化 Fluent UI 界面**   |
+| **无线 ADB / 投屏** | 需配置或付费       | 需手动敲复杂命令       | **✅ 一键自动连接/低延迟投屏** |
+| **AI 错误诊断**     | ❌ 无              | ❌ 无                  | **✅ 内置智能 AI 助手**        |
 
 ---
 
@@ -73,6 +73,7 @@
 ### 预备环境
 
 在开始之前，请确保您的开发环境中已安装：
+
 1. **Node.js** (v18+ 推荐) 与 **npm**
 2. **Rust** 编译环境 (`rustc` 及 `cargo`)
 3. 各平台对应的 Tauri 构建依赖（参考 [Tauri 官方安装指南](https://tauri.app/v1/guides/getting-started/prerequisites)）
@@ -80,23 +81,27 @@
 ### 运行与构建
 
 1. **克隆仓库**
+
    ```bash
    git clone https://github.com/LACS-Official/admt.git
    cd admt
    ```
 
 2. **安装依赖**
+
    ```bash
    npm install
    ```
 
 3. **配置环境变量（可选）**
    复制 `.env.example` 为 `.env` 并调整接口配置：
+
    ```bash
    cp .env.example .env
    ```
 
 4. **启动开发环境**
+
    ```bash
    npm run tauri:dev
    ```
