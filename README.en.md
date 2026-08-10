@@ -4,12 +4,20 @@
 
 **A high-performance, cross-platform Android device management tool built with Tauri v2 + React.**
 
+🌐 **Official Website**: [https://admt.lacs.cc](https://admt.lacs.cc)
+
 English | [简体中文](./README.md)
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC107.svg?logo=tauri)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6.svg?logo=typescript)](https://www.typescriptlang.org/)
+
+<br />
+
+<p align="center">
+  <img src="./public/github/bg.png" alt="ADMT Project Preview" width="100%" />
+</p>
 
 </div>
 
