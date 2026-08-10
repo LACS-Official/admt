@@ -1,0 +1,338 @@
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  position: relative;
+}
+
+/* 全局极其淡的水印 */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 999999;
+  opacity: 0.023;
+  background-image: url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='200' y='200' fill='gray' font-family='Segoe UI, Microsoft YaHei' font-size='24' text-anchor='middle' transform='rotate(-30, 200, 200)'%3E玩机管家 admt.lacs.cc%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+#root {
+  height: 100%;
+  position: relative; /* Ensure absolute children position relative to root */
+  isolation: isolate; /* Create new stacking context */
+  overflow: hidden; /* Prevent blur overflow */
+}
+
+/* 自定义背景功能 */
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--colorNeutralBackground2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--colorNeutralStroke1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--colorNeutralStroke1Hover);
+}
+
+/* 紧凑模式下的额外样式 */
+.compact-layout {
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-md: 8px;
+  --spacing-lg: 12px;
+  --spacing-xl: 16px;
+}
+
+/* 自定义动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* 工具类 */
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* 无选择文本 */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 拖拽区域 */
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* 状态指示器 */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.status-connected {
+  background-color: var(--colorPaletteGreenBackground3);
+}
+
+.status-disconnected {
+  background-color: var(--colorPaletteRedBackground3);
+}
+
+.status-warning {
+  background-color: var(--colorPaletteYellowBackground3);
+}
+
+/* 卡片阴影效果 */
+.card-shadow {
+  box-shadow: var(--shadow4);
+  border: 1px solid var(--colorNeutralStroke2);
+}
+
+.card-shadow:hover {
+  box-shadow: var(--shadow8);
+  border-color: var(--colorNeutralStroke1);
+}
+
+/* 安全防护相关样式 */
+.security-protected {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+}
+
+/* 安全警告覆盖层 */
+.security-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999;
+  color: white;
+  font-size: 24px;
+  text-align: center;
+}
+
+/* 禁用开发者工具时的样式 */
+.devtools-disabled {
+  pointer-events: none;
+}
+
+/* 安全测试区域样式 */
+.security-test-area {
+  border: 2px dashed var(--colorNeutralStroke2);
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--colorNeutralBackground2);
+  text-align: center;
+  margin: 8px 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.security-test-area:hover {
+  border-color: var(--colorBrandStroke1);
+  background: var(--colorBrandBackground2);
+}
+
+/* 防止右键菜单样式 */
+.no-context-menu {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* 安全状态指示器 */
+.security-status-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.security-status-indicator::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--colorPaletteGreenBackground3);
+  animation: pulse 2s infinite;
+}
+
+.security-status-indicator.disabled::before {
+  background: var(--colorPaletteRedBackground3);
+}
+
+.security-status-indicator.warning::before {
+  background: var(--colorPaletteYellowBackground3);
+}
+
+/* 启动优化相关样式 */
+.startup-optimized {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* 预加载状态指示 */
+.preload-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  padding: 8px 12px;
+  background: var(--colorNeutralBackground2);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--colorNeutralForeground2);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+/* 性能模式指示器 */
+[data-performance-mode="low"] .performance-indicator::after {
+  content: "🐌";
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+  font-size: 16px;
+  opacity: 0.5;
+}
+
+/* 全局组件圆角与透明度覆盖 - 现已对接主题系统 */
+.fui-Card {
+  border-radius: var(--borderRadiusLarge) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  background-color: rgba(255, 255, 255, 0.72) !important; /* 浅色模式透明底 */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fui-FluentProvider--dark .fui-Card {
+  background-color: rgba(30, 30, 30, 0.72) !important; /* 深色模式透明底 */
+}
+
+.fui-Dropdown,
+.fui-Dropdown > button,
+.fui-Listbox,
+.fui-Button,
+.fui-Input,
+.fui-Input > input,
+.fui-Textarea,
+.fui-Textarea > textarea {
+  border-radius: var(--borderRadiusMedium) !important;
+}
+
+/* 紧凑模式下的全局微调 */
+.fui-FluentProvider--compact {
+  /* 重写 Fluent UI 令牌 */
+  --spacingHorizontalXS: 2px;
+  --spacingHorizontalS: 4px;
+  --spacingHorizontalSNudge: 6px;
+  --spacingHorizontalM: 8px;
+  --spacingHorizontalL: 12px;
+  --spacingHorizontalXL: 16px;
+  --spacingHorizontalXXL: 24px;
+
+  --spacingVerticalXS: 2px;
+  --spacingVerticalS: 4px;
+  --spacingVerticalSNudge: 6px;
+  --spacingVerticalM: 8px;
+  --spacingVerticalL: 12px;
+  --spacingVerticalXL: 16px;
+  --spacingVerticalXXL: 24px;
+  --spacingVerticalXXXL: 32px;
+
+  /* 自定义全局变量，供非 Fluent 组件使用 */
+  --spacing-xs: 2px;
+  --spacing-sm: 4px;
+  --spacing-md: 8px;
+  --spacing-lg: 12px;
+  --spacing-xl: 16px;
+}

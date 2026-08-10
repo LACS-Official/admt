@@ -1,0 +1,86 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": [
+    "main",
+    "command-line",
+    "logs",
+    "device-selection",
+    "ai-chat"
+  ],
+  "permissions": [
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
+    "core:default",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unminimize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-is-always-on-top",
+    "core:window:allow-set-focus",
+    "core:window:allow-is-focused",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-start-dragging",
+    "core:window:allow-create",
+    "core:webview:allow-create-webview-window",
+    "shell:allow-open",
+    "shell:default",
+    "shell:allow-spawn",
+    "opener:default",
+    "process:default",
+    "dialog:allow-open",
+    "dialog:allow-message",
+    "dialog:allow-save",
+    "fs:allow-read-dir",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-resource-write",
+    "fs:allow-resource-write-recursive",
+    "fs:allow-resource-read",
+    "fs:allow-resource-read-recursive",
+    "fs:allow-exists",
+    "fs:allow-read-file",
+    "fs:allow-read-text-file",
+    "fs:allow-write-file",
+    "fs:allow-write-text-file",
+    "fs:allow-mkdir",
+    "fs:allow-remove",
+    "fs:allow-copy-file",
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$APP/**" }, { "path": "$DOCUMENT/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "$APP/**" }, { "path": "$DOCUMENT/**" }]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "$APP/**" }, { "path": "$DOCUMENT/**" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$DOCUMENT/**" }]
+    },
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api-g.lacs.cc/**" },
+        { "url": "https://api.openai.com/**" },
+        { "url": "https://api.anthropic.com/**" },
+        { "url": "https://generativelanguage.googleapis.com/**" },
+        { "url": "https://integrate.api.nvidia.com/**" },
+        { "url": "http://localhost:**" },
+        { "url": "http://127.0.0.1:**" }
+      ]
+    }
+  ]
+}

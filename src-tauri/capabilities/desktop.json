@@ -1,0 +1,25 @@
+{
+  "identifier": "desktop-capability",
+  "platforms": [
+    "macOS",
+    "windows",
+    "linux"
+  ],
+  "windows": [
+    "main",
+    "command-line",
+    "logs",
+    "device-selection"
+  ],
+  "permissions": [
+    "autostart:default",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-focus",
+    "core:window:allow-center",
+    "core:webview:allow-create-webview-window"
+  ]
+}

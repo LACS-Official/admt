@@ -1,0 +1,173 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "玩机管家",
+  "version": "1.5.0",
+  "identifier": "com.lacs.admt",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:2935",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "玩机管家",
+        "width": 1024,
+        "height": 768,
+        "minWidth": 1024,
+        "minHeight": 768,
+        "maxWidth": 1600,
+        "maxHeight": 1200,
+        "resizable": true,
+        "fullscreen": false,
+        "maximizable": true,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "dragDropEnabled": false
+      },
+      {
+        "label": "command-line",
+        "title": "玩机管家 - 命令行",
+        "url": "index.html",
+        "width": 900,
+        "height": 700,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "maximizable": true,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false,
+        "dragDropEnabled": false
+      },
+      {
+        "label": "logs",
+        "title": "玩机管家 - 日志",
+        "url": "index.html",
+        "width": 900,
+        "height": 700,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "maximizable": true,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false,
+        "dragDropEnabled": false
+      },
+      {
+        "label": "device-selection",
+        "title": "玩机管家 - 设备选择",
+        "url": "index.html",
+        "width": 500,
+        "height": 450,
+        "minWidth": 400,
+        "minHeight": 300,
+        "resizable": true,
+        "fullscreen": false,
+        "maximizable": true,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": false,
+        "theme": "Light",
+        "visible": false,
+        "dragDropEnabled": false
+      },
+      {
+        "label": "ai-chat",
+        "title": "玩机管家 - AI 助手",
+        "url": "index.html",
+        "width": 900,
+        "height": 700,
+        "minWidth": 600,
+        "minHeight": 500,
+        "resizable": true,
+        "fullscreen": false,
+        "maximizable": true,
+        "center": true,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "theme": "Light",
+        "visible": false,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' blob: tauri:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: asset:; font-src 'self' data: asset:; media-src 'self' blob: asset: data:"
+    }
+  },
+  "plugins": {
+    "http": null,
+    "shell": {
+      "open": true
+    },
+    "dialog": null,
+    "fs": {
+      "requireLiteralLeadingDot": false
+    },
+    "opener": null
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/64x64.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ],
+    "category": "Utility",
+    "shortDescription": "Android设备跨平台全能管家",
+    "longDescription": "玩机管家是一个现代化的Android设备跨平台全能管家，提供设备信息查看、文件管理、ADB工具、应用管理等功能。",
+    "copyright": "Copyright © 2020-2026 领创工作室. All rights reserved.",
+    "externalBin": [],
+    "resources": [
+      "tools/adb-bin",
+      "tools/lacs",
+      "tools/scrcpy",
+      "config",
+      "resource"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      },
+      "wix": {
+        "language": "zh-CN",
+        "template": null,
+        "fragmentPaths": [],
+        "componentGroupRefs": [],
+        "componentRefs": [],
+        "featureGroupRefs": [],
+        "featureRefs": [],
+        "mergeRefs": []
+      },
+      "nsis": {
+        "displayLanguageSelector": true,
+        "languages": [
+          "SimpChinese",
+          "TradChinese",
+          "English"
+        ],
+        "headerImage": null,
+        "sidebarImage": null,
+        "installerIcon": null,
+        "installMode": "perMachine"
+      }
+    }
+  }
+}
