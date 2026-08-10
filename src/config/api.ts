@@ -116,7 +116,7 @@ export const getApiBaseUrl = () => {
   const envBaseUrl = getEnvVar('VITE_API_BASE_URL');
   
   // 优先使用环境变量配置
-  if (envBaseUrl && envBaseUrl !== 'https://api-g.lacs.cc') {
+  if (envBaseUrl) {
     console.log(`🔧 使用环境变量API地址: ${envBaseUrl}`);
     return envBaseUrl;
   }

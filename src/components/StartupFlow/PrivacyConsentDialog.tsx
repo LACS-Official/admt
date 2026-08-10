@@ -740,12 +740,12 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                         transition={{ delay: 0.1 }}
                       >
                         <Text className={styles.sponsorshipTitle} block>
-                          注意！使用本软件需要诚信捐赠￥6元+
+                          支持开源！自愿赞助（金额不限）
                         </Text>
                         <Text className={styles.sponsorshipDescription} block>
-                          玩机管家是一款由<b>领创工作室</b> 维护的免费项目
+                          玩机管家是一款由<b>领创工作室</b> 维护的开源免费项目
                           我们的目标是为 Android
-                          玩家提供强大、简洁、优雅的调试工具箱。
+                          玩家与开发者提供强大、简洁、优雅的调试工具箱。
                         </Text>
                       </motion.div>
                       <motion.div
@@ -760,17 +760,17 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                           block
                           style={{ marginBottom: "8px" }}
                         >
-                          请确保您已有捐赠意愿，这不是一种购买行为
+                          开源项目，完全免费使用
                         </Text>
                         <Text
                           block
                           style={{ color: tokens.colorNeutralForeground2 }}
                         >
-                          采取诚信付款机制，付款后将获得使用权
+                          本软件完全开源免费，自愿捐赠金额不限。
                           <br />
-                          <b>若有捐赠意愿但暂无捐赠能力，可以暂不捐赠</b>
+                          <b>所有捐赠资金将用于维护开源项目、服务器运营与软件迭代</b>
                           <br />
-                          待有能力那天再来捐赠即可
+                          无需捐赠也可免费使用所有功能
                         </Text>
                       </motion.div>
                       <motion.div
@@ -837,7 +837,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                             onClick={handleFinalAccept}
                             icon={<CheckmarkCircle24Regular />}
                           >
-                            我已诚信付款，进入应用
+                            我已了解，进入应用
                           </Button>
                         </div>
                       </div>

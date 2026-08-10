@@ -1,13 +1,13 @@
 // 自动生成的版本常量文件
-// 生成时间: 2026-06-12T09:42:51.446Z
+// 生成时间: 2026-08-10T20:11:00.000Z
 
 export const VERSION_INFO = {
-  version: '1.4.1',
-  buildNumber: 4,
-  versionName: '1.4.1',
-  releaseDate: '2025-11-20',
-  buildDate: '2026-06-12T09:42:51.446Z',
-  environment: 'development'
+  version: '1.5.0',
+  buildNumber: 5,
+  versionName: '1.5.0',
+  releaseDate: '2026-08-10',
+  buildDate: '2026-08-10T20:11:00.000Z',
+  environment: 'production'
 };
 
 export const APP_CONFIG = {

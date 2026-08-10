@@ -365,6 +365,7 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
     officialGroup: "https://www.lacs.cc/contact#qun-group",
     contact: "https://www.lacs.cc/contact",
     donate: "https://www.lacs.cc/donate",
+    githubRepo: "https://github.com/LACS-Official/admt",
   };
 
   
@@ -515,6 +516,14 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
           </div>
 
           <div className={styles.socialGrid}>
+            <Button 
+              className={styles.socialButton}
+              appearance="outline"
+              icon={<Code24Regular />}
+              onClick={() => openUrl(links.githubRepo)}
+            >
+              {t('settings.github_repo', 'GitHub 仓库')}
+            </Button>
             <Button 
               className={styles.socialButton}
               appearance="outline"

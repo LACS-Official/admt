@@ -42,14 +42,14 @@ export interface AuthUtilsInstance {
  */
 export class AuthUtils {
   private static config: AuthConfig = {
-    // 用户行为统计专用API密钥
-    apiKey: '7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e',
-    appId: 'wanjiguanjia-desktop-v1.0.0',
-    appSecret: 'wjgj_2024_secure_app_secret_key_for_user_behavior_stats',
-    enableSignature: true
+    // 用户行为统计专用API密钥（从环境变量获取）
+    apiKey: import.meta.env.VITE_STATS_API_KEY || '',
+    appId: import.meta.env.VITE_APP_ID || 'wanjiguanjia-desktop-v1.0.0',
+    appSecret: import.meta.env.VITE_APP_SECRET || '',
+    enableSignature: import.meta.env.VITE_ENABLE_SIGNATURE !== 'false'
   }
 
-  private static signatureSecret = 'signature_secret_2024_wanjiguanjia_user_behavior_api_protection'
+  private static signatureSecret = import.meta.env.VITE_SIGNATURE_SECRET || ''
 
   /**
    * 设置JWT令牌

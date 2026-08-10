@@ -1,21 +1,23 @@
 {
-  "version": "1.4.1",
-  "buildNumber": 4,
-  "versionName": "1.4.1",
-  "releaseDate": "2025-11-20",
+  "version": "1.5.0",
+  "buildNumber": 5,
+  "versionName": "1.5.0",
+  "releaseDate": "2026-08-10",
   "description": "统一版本管理配置文件",
   "changelog": [
-    "修复了一些已知问题",
-    "添加了新的功能",
-    "优化了性能"
+    "开源准备：切换开源许可证为 Apache License 2.0",
+    "安全脱敏：完成硬编码凭证脱敏与环境变量解耦",
+    "规则升级：明确软件开源免费与自愿捐赠原则",
+    "关于页面：新增 GitHub 官方开源仓库跳转链接",
+    "文档美化：新增性能对比矩阵与项目路线图 Roadmap"
   ],
   "environments": {
     "development": {
-      "version": "1.2.0-dev",
+      "version": "1.5.0-dev",
       "enableDebug": true
     },
     "production": {
-      "version": "1.2.0",
+      "version": "1.5.0",
       "enableDebug": false
     }
   },
