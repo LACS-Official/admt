@@ -4,12 +4,20 @@
 
 **基于 Tauri v2 + React 打造的高性能跨平台 Android 设备全能管理工具**
 
+🌐 **官方网站**: [https://admt.lacs.cc](https://admt.lacs.cc)
+
 [English](./README.en.md) | 简体中文
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC107.svg?logo=tauri)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6.svg?logo=typescript)](https://www.typescriptlang.org/)
+
+<br />
+
+<p align="center">
+  <img src="./public/github/bg.png" alt="玩机管家 ADMT 界面与架构背景图" width="100%" />
+</p>
 
 </div>
 
@@ -44,15 +52,6 @@
 | **GUI 可视化** | ✅ 有 | ❌ 无 (纯命令行) | **✅ 现代化 Fluent UI 界面** |
 | **无线 ADB / 投屏** | 需配置或付费 | 需手动敲复杂命令 | **✅ 一键自动连接/低延迟投屏** |
 | **AI 错误诊断** | ❌ 无 | ❌ 无 | **✅ 内置智能 AI 助手** |
-
----
-
-## 🗺️ 项目路线图 (Roadmap)
-
-- [x] **v1.4**：升级至 Tauri v2 架构，集成 Scrcpy 高帧率投屏与 AI 诊断
-- [ ] **v1.5**：支持 Wi-Fi 无线 ADB 自动局域网广播搜寻与快速配对
-- [ ] **v1.6**：多设备并行监控与批量 APK 跨设备一键分发
-- [ ] **v2.0**：扩展 iOS 设备基础协议与数据备份支持
 
 ---
 
