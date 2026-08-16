@@ -341,13 +341,13 @@ const OnlineResourcesPanel: React.FC = () => {
 
 
   const categories = [
-    { value: 'ADMT', label: t('online_resources.categories.all') },
-    { value: '脚本', label: t('online_resources.categories.scripts') },
-    { value: '驱动', label: t('online_resources.categories.drivers') },
-    { value: '设置文件', label: t('online_resources.categories.settings') },
-    { value: 'RootApp', label: t('online_resources.categories.root_apps') },
-    { value: '小米解锁', label: t('online_resources.categories.xiaomi_unlock') },
-    { value: '其它', label: t('online_resources.categories.other') },
+    { value: 'ADMT', label: t('online_resources.categories.all', '全部资源') },
+    { value: '脚本', label: t('online_resources.categories.scripts', '实用脚本') },
+    { value: '驱动', label: t('online_resources.categories.drivers', '驱动工具') },
+    { value: '设置文件', label: t('online_resources.categories.settings', '系统设置') },
+    { value: 'RootApp', label: t('online_resources.categories.root_apps', 'Root 专区') },
+    { value: '小米解锁', label: t('online_resources.categories.xiaomi_unlock', '小米解锁') },
+    { value: '其它', label: t('online_resources.categories.other', '其它资源') },
   ];
 
   return (

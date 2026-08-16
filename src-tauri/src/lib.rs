@@ -9,6 +9,7 @@ mod download_manager;
 mod downloads;
 mod error;
 mod fastboot;
+mod mcp;
 mod root;
 mod sys;
 mod system_features;
@@ -240,6 +241,10 @@ pub fn run() {
             extract_local_partition,
             parse_online_rom,
             extract_online_partition,
+            // MCP 本地服务命令
+            mcp::start_mcp_server,
+            mcp::stop_mcp_server,
+            mcp::get_mcp_server_status,
         ])
         .setup(|_app| {
             // 初始化应用状态

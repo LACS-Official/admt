@@ -13,6 +13,14 @@ import {
   Switch,
   Checkbox,
   Select,
+  Badge,
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Input,
 } from "@fluentui/react-components";
 import {
   Send24Regular,
@@ -30,6 +38,11 @@ import {
   Sparkle24Regular,
   DocumentAdd24Regular,
   DismissCircle24Regular,
+  Wrench24Regular,
+  Server24Regular,
+  Checkmark24Regular,
+  Open24Regular,
+  Dismiss24Regular,
 } from "@fluentui/react-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -38,6 +51,8 @@ import { useAIChatStore } from "../../stores/aiChatStore";
 import { useAppStore } from "../../stores/appStore";
 import { logService } from "../../services/logService";
 import { aiService } from "../../services/aiService";
+import { useMcpStore, ADMT_BUILTIN_MCP_TOOLS, PRESET_AI_SKILLS, AISkillResource, McpToolDefinition } from "../../stores/mcpStore";
+import { executeMcpTool } from "../../services/mcpExecutor";
 import { listen, emit } from "@tauri-apps/api/event";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -365,6 +380,64 @@ const AIChatPanel: React.FC = () => {
   
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
 
+  // Skills 与 MCP 工具调用状态
+  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
+  const [isMcpToolModalOpen, setIsMcpToolModalOpen] = useState(false);
+  const [isAutoMcpEnabled, setIsAutoMcpEnabled] = useState(true);
+  const [activeSkillPrompt, setActiveSkillPrompt] = useState<string | null>(null);
+
+  const [selectedMcpTool, setSelectedMcpTool] = useState<McpToolDefinition>(ADMT_BUILTIN_MCP_TOOLS[0]);
+  const [mcpParamInputs, setMcpParamInputs] = useState<Record<string, string>>({
+    command: "getprop ro.product.model",
+    target: "system",
+    query: "Android Magisk Root 教程",
+    url: "https://github.com",
+    filter: "all",
+  });
+  const [mcpTestResult, setMcpTestResult] = useState<any>(null);
+  const [isTestingMcp, setIsTestingMcp] = useState(false);
+
+  const handleApplySkill = (skill: AISkillResource, mode: "system" | "input") => {
+    if (mode === "system") {
+      setActiveSkillPrompt(skill.systemPrompt);
+      setStatusBarMessage({
+        type: "success",
+        message: `已将【${skill.title}】注入为当前会话专属 System 专家设定`,
+      });
+      setIsSkillsModalOpen(false);
+    } else {
+      setInputValue((prev) => (prev ? `${prev}\n\n${skill.systemPrompt}` : skill.systemPrompt));
+      setIsSkillsModalOpen(false);
+      if (textareaRef.current) textareaRef.current.focus();
+    }
+  };
+
+  const handleRunManualMcpTool = async () => {
+    if (!selectedMcpTool) return;
+    setIsTestingMcp(true);
+    try {
+      const args: Record<string, any> = { ...mcpParamInputs };
+      const res = await executeMcpTool(selectedMcpTool.name, args);
+      setMcpTestResult(res);
+      setStatusBarMessage({
+        type: res.success ? "success" : "warning",
+        message: res.success ? `MCP 工具【${selectedMcpTool.name}】执行成功` : `MCP 工具执行报错: ${res.error}`,
+      });
+    } catch (e: any) {
+      setMcpTestResult({ success: false, error: e.message || String(e) });
+    } finally {
+      setIsTestingMcp(false);
+    }
+  };
+
+  const handleInsertMcpResultToChat = () => {
+    if (!mcpTestResult || !selectedMcpTool) return;
+    const resultSnippet = `【手动调用 MCP 工具结果】\n工具名: \`${selectedMcpTool.name}\`\n输出内容:\n\`\`\`json\n${JSON.stringify(mcpTestResult, null, 2)}\n\`\`\``;
+    setInputValue((prev) => (prev ? `${prev}\n\n${resultSnippet}` : resultSnippet));
+    setIsMcpToolModalOpen(false);
+    if (textareaRef.current) textareaRef.current.focus();
+  };
+
   const handleUploadFile = async () => {
     try {
       const selected = await open({
@@ -503,8 +576,12 @@ const AIChatPanel: React.FC = () => {
         content: msg.content
       }));
 
-      // Prepend dynamic system message
-      const systemMessage = isAgentMode ? AGENT_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT;
+      // Prepend dynamic system message with Skills & Auto MCP tools injection
+      let systemMessage = activeSkillPrompt || (isAgentMode ? AGENT_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT);
+      if (isAutoMcpEnabled) {
+        const mcpToolsDesc = ADMT_BUILTIN_MCP_TOOLS.map(t => `- ${t.name}: ${t.description}`).join("\n");
+        systemMessage += `\n\n【已协同接入的 MCP 工具能力】\n${mcpToolsDesc}\n如果用户需要执行 ADB、查询设备、截图或调用系统工具，请在回答中给出明确的指导与执行步骤。`;
+      }
       const finalMessages = [
         { role: "system" as const, content: systemMessage },
         ...chatHistory,
@@ -1184,6 +1261,13 @@ ${slicedLogs}
                 style={{ margin: 0 }}
               />
             )}
+            <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2 }} />
+            <Switch
+              label="MCP智能协同"
+              checked={isAutoMcpEnabled}
+              onChange={(e, data) => setIsAutoMcpEnabled(data.checked)}
+              style={{ margin: 0 }}
+            />
             {aiPresets.length > 0 && <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2 }} />}
             {aiPresets.length > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -1670,6 +1754,26 @@ ${slicedLogs}
                     />
                   </Tooltip>
                 )}
+                <Tooltip content="AI Skills 专家提示词库" relationship="label">
+                  <Button
+                    icon={<Sparkle24Regular />}
+                    appearance="outline"
+                    size="large"
+                    onClick={() => setIsSkillsModalOpen(true)}
+                  >
+                    Skills 专家
+                  </Button>
+                </Tooltip>
+                <Tooltip content="MCP 工具箱 (手动调试与调用)" relationship="label">
+                  <Button
+                    icon={<Server24Regular />}
+                    appearance="outline"
+                    size="large"
+                    onClick={() => setIsMcpToolModalOpen(true)}
+                  >
+                    MCP 工具
+                  </Button>
+                </Tooltip>
                 <Tooltip content="添加文本/日志文件附件 (限制 2MB)" relationship="label">
                   <Button
                     icon={<DocumentAdd24Regular />}
@@ -1725,8 +1829,212 @@ ${slicedLogs}
           </div>
         )}
       </div>
+
+      {/* Skills 专家库弹窗 (二级弹窗) */}
+      <Dialog open={isSkillsModalOpen} onOpenChange={(_, data) => !data.open && setIsSkillsModalOpen(false)}>
+        <DialogSurface style={{ maxWidth: "720px", width: "90vw" }}>
+          <DialogBody>
+            <DialogTitle
+              action={
+                <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setIsSkillsModalOpen(false)} />
+              }
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Sparkle24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+                <span>AI Skills 专家提示词与领域模型库</span>
+              </div>
+            </DialogTitle>
+
+            <DialogContent style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "8px", maxHeight: "480px", overflowY: "auto" }}>
+              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                选择专业领域的 System Prompt 预设，深度增强 AI 在救砖、模块开发、逆向分析等复杂场景的解答专业度：
+              </Text>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                {PRESET_AI_SKILLS.map((skill) => (
+                  <div
+                    key={skill.id}
+                    style={{
+                      padding: "14px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--colorNeutralStroke2)",
+                      backgroundColor: "var(--colorNeutralBackground2)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Text weight="bold" size={300}>
+                        {skill.title}
+                      </Text>
+                      <Badge size="small" appearance="tint" color="brand">
+                        {skill.category}
+                      </Badge>
+                    </div>
+                    <Text size={200} style={{ color: "var(--colorNeutralForeground3)", lineHeight: "1.4" }}>
+                      {skill.description}
+                    </Text>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                      {skill.tags.map((t, idx) => (
+                        <span key={idx} style={{ fontSize: "11px", padding: "1px 6px", background: "var(--colorNeutralBackground3)", borderRadius: "4px" }}>
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", marginTop: "auto", paddingTop: "6px" }}>
+                      <Button size="small" appearance="primary" onClick={() => handleApplySkill(skill, "system")}>
+                        注入为系统设定
+                      </Button>
+                      <Button size="small" appearance="secondary" onClick={() => handleApplySkill(skill, "input")}>
+                        插入输入框
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DialogContent>
+
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsSkillsModalOpen(false)}>
+                关闭
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* MCP 工具箱手动调用弹窗 (二级弹窗) */}
+      <Dialog open={isMcpToolModalOpen} onOpenChange={(_, data) => !data.open && setIsMcpToolModalOpen(false)}>
+        <DialogSurface style={{ maxWidth: "760px", width: "90vw" }}>
+          <DialogBody>
+            <DialogTitle
+              action={
+                <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setIsMcpToolModalOpen(false)} />
+              }
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Server24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+                <span>MCP 工具箱 (手动测试与执行)</span>
+              </div>
+            </DialogTitle>
+
+            <DialogContent style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "8px" }}>
+              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                支持在无需 AI 触发的情况下，手动选择已注册的 MCP 工具并传参执行，实时验证返回数据或直接带入对话：
+              </Text>
+
+              {/* 工具选择 */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {ADMT_BUILTIN_MCP_TOOLS.map((t) => (
+                  <Button
+                    key={t.name}
+                    size="small"
+                    appearance={selectedMcpTool?.name === t.name ? "primary" : "secondary"}
+                    onClick={() => {
+                      setSelectedMcpTool(t);
+                      setMcpTestResult(null);
+                    }}
+                  >
+                    ⚡ {t.name}
+                  </Button>
+                ))}
+              </div>
+
+              {selectedMcpTool && (
+                <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--colorNeutralBackground2)", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div>
+                    <strong>工具说明：</strong> {selectedMcpTool.description}
+                  </div>
+
+                  {selectedMcpTool.name === "admt_execute_adb" && (
+                    <div>
+                      <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>ADB Shell 指令 (无需输入 adb)：</label>
+                      <Input
+                        value={mcpParamInputs.command || ""}
+                        onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, command: d.value }))}
+                        placeholder="例如 getprop ro.product.model 或 pm list packages"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  )}
+
+                  {selectedMcpTool.name === "admt_reboot_device" && (
+                    <div>
+                      <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>重启目标模式 (Target)：</label>
+                      <Select
+                        value={mcpParamInputs.target || "system"}
+                        onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, target: d.value }))}
+                      >
+                        <option value="system">重启至系统 (System)</option>
+                        <option value="recovery">重启至 Recovery</option>
+                        <option value="bootloader">重启至 Bootloader (Fastboot)</option>
+                        <option value="edl">重启至 9008 (EDL)</option>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedMcpTool.name === "admt_list_packages" && (
+                    <div>
+                      <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>过滤分类：</label>
+                      <Select
+                        value={mcpParamInputs.filter || "all"}
+                        onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, filter: d.value }))}
+                      >
+                        <option value="all">所有应用 (All)</option>
+                        <option value="third_party">第三方用户应用 (3rd-party)</option>
+                        <option value="system">系统内置应用 (System)</option>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <Button
+                      appearance="primary"
+                      disabled={isTestingMcp}
+                      icon={isTestingMcp ? <Spinner size="tiny" /> : <Play24Regular />}
+                      onClick={handleRunManualMcpTool}
+                    >
+                      {isTestingMcp ? "正在执行..." : "立即测试执行"}
+                    </Button>
+                    {mcpTestResult && (
+                      <Button appearance="secondary" onClick={handleInsertMcpResultToChat}>
+                        📋 将输出结果带入对话
+                      </Button>
+                    )}
+                  </div>
+
+                  {mcpTestResult && (
+                    <div
+                      style={{
+                        padding: "10px",
+                        borderRadius: "6px",
+                        backgroundColor: "#1e293b",
+                        color: "#f8fafc",
+                        fontFamily: "Consolas, monospace",
+                        fontSize: "12px",
+                        whiteSpace: "pre-wrap",
+                        maxHeight: "180px",
+                        overflowY: "auto",
+                      }}
+                    >
+                      {JSON.stringify(mcpTestResult, null, 2)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsMcpToolModalOpen(false)}>
+                关闭
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };
 
 export default AIChatPanel;
+

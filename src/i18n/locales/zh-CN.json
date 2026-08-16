@@ -135,6 +135,7 @@
     "system_zone": "系统专区",
     "flash_zone": "刷机专区",
     "online_resources": "在线资源",
+    "plugin_system": "插件系统",
     "root_zone": "Root专区",
     "extended_features": "扩展功能",
     "settings": "软件设置"
@@ -1525,27 +1526,6 @@
     "confirm_stop_desc": "批处理脚本正在执行中，强制停止可能会导致设备处于不稳定状态。\n\n您确定要停止当前的执行过程吗？",
     "confirm_stop_btn": "确认停止"
   },
-  "online_resources": {
-    "search_placeholder": "搜索软件名称或描述...",
-    "search_button": "搜索",
-    "categories": {
-      "all": "全部",
-      "scripts": "脚本",
-      "drivers": "驱动",
-      "settings": "设置",
-      "root_apps": "RootApp",
-      "xiaomi_unlock": "小米解锁",
-      "other": "其它"
-    },
-    "error_getting_software": "获取软件列表失败",
-    "loading_software": "正在加载软件列表...",
-    "no_software_available": "暂无可用的软件资源",
-    "tabs": {
-      "software_store": "软件商店",
-      "rom_download": "ROM下载",
-      "download_manager": "下载管理"
-    }
-  },
   "extended_features": {
     "tabs": {
       "tools": "扩展工具",
@@ -1678,5 +1658,117 @@
     "upload_kb": "上传(KB/s)",
     "gpu_load": "GPU负载(%)",
     "gpu_freq": "GPU频率(MHz)"
+  },
+  "online_resources": {
+    "search_placeholder": "搜索软件名称、功能或描述...",
+    "search_button": "搜索软件",
+    "categories": {
+      "all": "全部资源",
+      "scripts": "实用脚本",
+      "drivers": "驱动工具",
+      "settings": "系统设置",
+      "root_apps": "Root 工具",
+      "xiaomi_unlock": "小米解锁",
+      "other": "其它资源"
+    },
+    "error_getting_software": "获取在线软件列表失败",
+    "loading_software": "正在加载在线软件资源...",
+    "no_software_available": "暂无可用的软件资源",
+    "tabs": {
+      "software_store": "软件商店",
+      "plugin_store": "插件商店",
+      "ai_resources": "AI 资源 (Skills / MCP)",
+      "download_manager": "下载管理"
+    },
+    "plugin_store": {
+      "title": "ADMT 插件应用商店",
+      "subtitle": "探索官方与社区开发者精心打造的玩机与深度定制扩展插件",
+      "search_placeholder": "搜索插件名称、作者或功能标签...",
+      "categories": {
+        "all": "全部插件",
+        "flash": "刷机与救砖",
+        "tuning": "系统调优",
+        "tools": "实用工具",
+        "ai": "AI 赋能",
+        "ui": "界面与投屏"
+      },
+      "install": "在线安装",
+      "installed": "已安装",
+      "installing": "安装中...",
+      "view_details": "查看详情",
+      "author": "作者",
+      "version": "版本",
+      "rating": "评分",
+      "downloads": "下载量",
+      "permissions_required": "所需权限",
+      "install_success": "插件已成功安装并启用！",
+      "installed_notice": "该插件已在您的插件系统中就绪"
+    },
+    "ai_resources": {
+      "title": "AI 技能库与 MCP 扩展中心",
+      "subtitle": "专为 Android 玩机、底层逆向、救砖调优打造的 Prompt Skills 与 MCP 连接协议",
+      "tab_skills": "AI 技能模板 (Skills)",
+      "tab_mcp": "MCP 协议扩展 (MCP Servers)",
+      "copy_prompt": "复制 Prompt",
+      "copied": "已复制到剪贴板",
+      "export_prompt": "导出 .md 文件",
+      "recommended_models": "推荐模型",
+      "config_title": "客户端 MCP 配置",
+      "copy_config": "复制客户端配置",
+      "setup_guide": "接入指引"
+    }
+  },
+  "plugin_system": {
+    "title": "插件生态系统",
+    "subtitle": "模块化扩展 ADMT 玩机能力，支持第三方插件、本地与在线安装",
+    "tabs": {
+      "installed": "已安装插件",
+      "import_install": "导入与安装",
+      "dev_docs": "开发文档",
+      "publish_docs": "上架与发布"
+    },
+    "installed": {
+      "empty_title": "暂无已安装插件",
+      "empty_desc": "前往“插件商店”或“导入与安装”体验更多强大插件",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "run_action": "启动功能",
+      "settings": "插件设置",
+      "uninstall": "卸载插件",
+      "confirm_uninstall": "确定要卸载该插件吗？",
+      "uninstall_success": "插件卸载成功"
+    },
+    "import": {
+      "local_title": "本地安装插件",
+      "local_desc": "支持导入 .admt-plugin / .zip / manifest.json 本地插件包",
+      "drag_or_click": "点击或拖拽插件包到此处进行安装",
+      "online_title": "远程在线导入",
+      "online_desc": "从 Git 仓库或远程清单 URL 直接安装",
+      "url_placeholder": "https://github.com/user/plugin-repo 或 manifest.json 链接",
+      "install_btn": "解析并安装",
+      "permission_review": "插件权限安全审查",
+      "permission_review_desc": "该插件申请了以下系统特权，请仔细确认来源安全：",
+      "confirm_install": "确认安装并信任"
+    },
+    "docs": {
+      "dev_title": "ADMT 插件开发全景指南",
+      "publish_title": "ADMT 插件上架与审核规范",
+      "download_template": "下载开发工程模板",
+      "copy_code": "复制代码"
+    }
+  },
+  "mcp": {
+    "server_title": "ADMT MCP 本地服务端 (Model Context Protocol)",
+    "server_desc": "开启后，本软件将作为标准 MCP Server 运行，外部 AI（如 Cursor、Claude Desktop、Antigravity、Windsurf 等）可直接调用 ADMT 的设备管理、ADB、Fastboot 与系统控制工具。",
+    "status_running": "MCP 服务运行中",
+    "status_stopped": "MCP 服务已停止",
+    "start_server": "开启 MCP 服务",
+    "stop_server": "停止 MCP 服务",
+    "port": "服务端口 (Port)",
+    "allow_device_commands": "允许 AI 执行设备调试与 ADB 命令",
+    "allow_file_ops": "允许 AI 进行文件拉取与推送",
+    "tools_list_title": "已暴露的 MCP 工具列表",
+    "client_config_title": "外部 AI 客户端快速配置",
+    "copy_config": "复制配置代码"
   }
 }

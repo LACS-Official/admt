@@ -25,6 +25,7 @@ import {
   Home24Regular,
   Icons24Regular,
   Notepad24Regular,
+  AppsAddIn24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
@@ -41,6 +42,7 @@ import AdbZonePanel from "../AdbTools/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
 import OnlineZonePanel from "../OnlineResources/OnlineZonePanel";
+import PluginSystemPanel from "../PluginSystem/PluginSystemPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
@@ -663,6 +665,11 @@ const MainContent: React.FC = () => {
       icon: <CloudArrowDown24Regular />,
     },
     {
+      id: "plugin-system" as AppView,
+      label: t("sidebar.plugin_system", "插件系统"),
+      icon: <AppsAddIn24Regular />,
+    },
+    {
       id: "settings" as AppView,
       label: t("sidebar.settings"),
       icon: <Settings24Regular />,
@@ -1248,6 +1255,8 @@ const MainContent: React.FC = () => {
         return <ExtendedFeaturesPanel />;
       case "online-resources":
         return <OnlineZonePanel />;
+      case "plugin-system":
+        return <PluginSystemPanel />;
       case "settings":
         return <SettingsPanel />;
       default:

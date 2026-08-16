@@ -13,6 +13,8 @@ import {
   Button,
   Spinner,
   Divider,
+  Badge,
+  Tooltip,
 } from "@fluentui/react-components";
 import {
   Bot24Regular,
@@ -25,12 +27,19 @@ import {
   Add24Regular,
   Eye24Regular,
   EyeOff24Regular,
+  Server24Regular,
+  Copy24Regular,
+  Checkmark24Regular,
+  Play24Regular,
+  Stop24Regular,
+  ShieldCheckmark24Regular,
 } from "@fluentui/react-icons";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { useAppStore } from "../../stores/appStore";
 import { useAIChatStore } from "../../stores/aiChatStore";
+import { useMcpStore, ADMT_BUILTIN_MCP_TOOLS } from "../../stores/mcpStore";
 import { useTranslation } from "react-i18next";
 import logService from "../../services/logService";
 
@@ -42,10 +51,23 @@ const useStyles = makeStyles({
   },
   content: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "1.1fr 0.9fr",
     gap: "20px",
-    maxWidth: "1000px",
+    maxWidth: "1100px",
     margin: "0 auto",
+    "@media (max-width: 860px)": {
+      gridTemplateColumns: "1fr",
+    },
+  },
+  leftColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  rightColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
   },
   card: {
     height: "fit-content",
@@ -103,11 +125,117 @@ const AISettingsPanel: React.FC = () => {
     applyPreset,
     importPresets,
   } = useAIChatStore();
+  const {
+    config: mcpConfig,
+    status: mcpStatus,
+    updateConfig: updateMcpConfig,
+    startServer: startMcpServer,
+    stopServer: stopMcpServer,
+  } = useMcpStore();
 
   const [newPresetName, setNewPresetName] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [selectedMcpClient, setSelectedMcpClient] = useState<"cursor" | "claudeDesktop" | "antigravity" | "windsurf">("cursor");
+  const [isCopiedMcp, setIsCopiedMcp] = useState(false);
+
+  const handleToggleMcpServer = async (checked: boolean) => {
+    if (checked) {
+      const ok = await startMcpServer();
+      if (ok) {
+        setStatusBarMessage({
+          type: "success",
+          message: `ADMT MCP 本地服务已启动 (端口 ${mcpConfig.port})`,
+        });
+      } else {
+        setStatusBarMessage({
+          type: "error",
+          message: "ADMT MCP 本地服务启动失败",
+        });
+      }
+    } else {
+      await stopMcpServer();
+      setStatusBarMessage({
+        type: "info",
+        message: "ADMT MCP 本地服务已停止",
+      });
+    }
+  };
+
+  const getMcpClientSnippet = () => {
+    const port = mcpConfig.port || 39860;
+    const host = mcpConfig.host || "127.0.0.1";
+    const sseUrl = `http://${host}:${port}/sse`;
+
+    switch (selectedMcpClient) {
+      case "cursor":
+        return JSON.stringify(
+          {
+            mcpServers: {
+              "admt-manager": {
+                url: sseUrl,
+              },
+            },
+          },
+          null,
+          2
+        );
+      case "claudeDesktop":
+        return JSON.stringify(
+          {
+            mcpServers: {
+              "admt-manager": {
+                url: sseUrl,
+              },
+            },
+          },
+          null,
+          2
+        );
+      case "antigravity":
+        return JSON.stringify(
+          {
+            mcpServers: {
+              "admt-manager": {
+                url: sseUrl,
+              },
+            },
+          },
+          null,
+          2
+        );
+      case "windsurf":
+        return JSON.stringify(
+          {
+            mcpServers: {
+              "admt-manager": {
+                serverUrl: sseUrl,
+              },
+            },
+          },
+          null,
+          2
+        );
+    }
+  };
+
+  const handleCopyMcpConfig = async () => {
+    try {
+      await navigator.clipboard.writeText(getMcpClientSnippet());
+      setIsCopiedMcp(true);
+      setTimeout(() => setIsCopiedMcp(false), 2000);
+      setStatusBarMessage({
+        type: "success",
+        message: "MCP 客户端配置代码已复制到剪贴板",
+      });
+    } catch {
+      setStatusBarMessage({
+        type: "error",
+        message: "复制失败，请手动选择复制",
+      });
+    }
+  };
 
   const fetchAvailableModels = async () => {
     const { provider, apiKey, endpoint } = config.ai || {};
@@ -435,239 +563,330 @@ const AISettingsPanel: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        {/* AI 服务设置 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Bot24Regular />}
-            header={<Text weight="semibold">{t("settings.ai_settings")}</Text>}
-            description={
-              <Text size={200} className={styles.description}>
-                配置人工智能玩机助手的服务通道、模型与 API 密钥。
-              </Text>
-            }
-          />
+        {/* 左侧列：AI 服务基本设置 + MCP 服务小卡片 */}
+        <div className={styles.leftColumn}>
+          {/* 1. AI 服务基本设置 */}
+          <Card className={styles.card}>
+            <CardHeader
+              image={<Bot24Regular />}
+              header={<Text weight="semibold">{t("settings.ai_settings")}</Text>}
+              description={
+                <Text size={200} className={styles.description}>
+                  配置人工智能玩机助手的服务通道、模型与 API 密钥。
+                </Text>
+              }
+            />
 
-          <div className={styles.cardContent}>
-            {/* 提供商 */}
-            <Field label={t("settings.ai_provider")}>
-              <Select
-                value={config.ai?.provider ?? "openai"}
-                onChange={(_, data) =>
-                  handleAIUpdate({
-                    provider: data.value as any,
-                    endpoint:
-                      data.value === "openai"
-                        ? "https://api.openai.com/v1"
-                        : data.value === "anthropic"
-                          ? "https://api.anthropic.com/v1"
-                          : data.value === "google"
-                            ? "https://generativelanguage.googleapis.com"
-                            : data.value === "zhipu"
-                              ? "https://open.bigmodel.cn/api/paas/v4"
-                              : data.value === "deepseek"
-                                ? "https://api.deepseek.com/v1"
-                                : data.value === "groq"
-                                  ? "https://api.groq.com/openai/v1"
-                                  : data.value === "qwen"
-                                    ? "https://dashscope.aliyuncs.com/compatible-mode/v1"
-                                    : data.value === "siliconflow"
-                                      ? "https://api.siliconflow.cn/v1"
-                                      : data.value === "nvidia"
-                                        ? "https://integrate.api.nvidia.com/v1"
-                                        : config.ai?.endpoint ?? "",
-                  })
-                }
+            <div className={styles.cardContent}>
+              {/* 提供商 */}
+              <Field label={t("settings.ai_provider")}>
+                <Select
+                  value={config.ai?.provider ?? "openai"}
+                  onChange={(_, data) =>
+                    handleAIUpdate({
+                      provider: data.value as any,
+                      endpoint:
+                        data.value === "openai"
+                          ? "https://api.openai.com/v1"
+                          : data.value === "anthropic"
+                            ? "https://api.anthropic.com/v1"
+                            : data.value === "google"
+                              ? "https://generativelanguage.googleapis.com"
+                              : data.value === "zhipu"
+                                ? "https://open.bigmodel.cn/api/paas/v4"
+                                : data.value === "deepseek"
+                                  ? "https://api.deepseek.com/v1"
+                                  : data.value === "groq"
+                                    ? "https://api.groq.com/openai/v1"
+                                    : data.value === "qwen"
+                                      ? "https://dashscope.aliyuncs.com/compatible-mode/v1"
+                                      : data.value === "siliconflow"
+                                        ? "https://api.siliconflow.cn/v1"
+                                        : data.value === "nvidia"
+                                          ? "https://integrate.api.nvidia.com/v1"
+                                          : config.ai?.endpoint ?? "",
+                    })
+                  }
+                >
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="google">Google (Gemini)</option>
+                  <option value="local">Local (Ollama/LM Studio)</option>
+                  <option value="zhipu">智谱AI (GLM)</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="groq">Groq</option>
+                  <option value="qwen">阿里通义千问 (Qwen)</option>
+                  <option value="siliconflow">硅基流动 (SiliconFlow)</option>
+                  <option value="nvidia">英伟达(Nvidia)</option>
+                </Select>
+              </Field>
+
+              {/* 模型名称 */}
+              <Field 
+                label={t("settings.ai_model")}
+                validationMessage={availableModels.length > 0 ? `已成功获取并加载 ${availableModels.length} 个可用模型联想词` : undefined}
+                validationState={availableModels.length > 0 ? "success" : "none"}
               >
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic (Claude)</option>
-                <option value="google">Google (Gemini)</option>
-                <option value="local">Local (Ollama/LM Studio)</option>
-                <option value="zhipu">智谱AI (GLM)</option>
-                <option value="deepseek">DeepSeek</option>
-                <option value="groq">Groq</option>
-                <option value="qwen">阿里通义千问 (Qwen)</option>
-                <option value="siliconflow">硅基流动 (SiliconFlow)</option>
-                <option value="nvidia">英伟达(Nvidia)</option>
-              </Select>
-            </Field>
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  <Input
+                    className={styles.input}
+                    value={config.ai?.model ?? ""}
+                    onChange={(_, data) => handleAIUpdate({ model: data.value })}
+                    placeholder="gpt-3.5-turbo, claude-3-sonnet..."
+                    list="ai-models-list"
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    onClick={fetchAvailableModels}
+                    disabled={isFetchingModels}
+                    icon={isFetchingModels ? <Spinner size="tiny" /> : undefined}
+                  >
+                    {isFetchingModels ? "正在加载..." : "获取可用模型"}
+                  </Button>
+                </div>
+                <datalist id="ai-models-list">
+                  {availableModels.map(m => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+              </Field>
 
-            {/* 模型名称 */}
-            <Field 
-              label={t("settings.ai_model")}
-              validationMessage={availableModels.length > 0 ? `已成功获取并加载 ${availableModels.length} 个可用模型联想词` : undefined}
-              validationState={availableModels.length > 0 ? "success" : "none"}
-            >
-              <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+              {/* API Key */}
+              <Field label={t("settings.ai_api_key")}>
+                <Input
+                  type={showApiKey ? "text" : "password"}
+                  className={styles.input}
+                  value={config.ai?.apiKey ?? ""}
+                  onChange={(_, data) => handleAIUpdate({ apiKey: data.value })}
+                  placeholder="sk-..."
+                  contentAfter={
+                    <Button
+                      appearance="subtle"
+                      icon={showApiKey ? <EyeOff24Regular /> : <Eye24Regular />}
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    />
+                  }
+                />
+              </Field>
+
+              {/* Endpoint */}
+              <Field label={t("settings.ai_endpoint")}>
                 <Input
                   className={styles.input}
-                  value={config.ai?.model ?? ""}
-                  onChange={(_, data) => handleAIUpdate({ model: data.value })}
-                  placeholder="gpt-3.5-turbo, claude-3-sonnet..."
-                  list="ai-models-list"
-                  style={{ flex: 1 }}
+                  value={config.ai?.endpoint ?? ""}
+                  onChange={(_, data) => handleAIUpdate({ endpoint: data.value })}
+                  placeholder="https://api.openai.com/v1"
                 />
+              </Field>
+
+              {/* 测试连接 & 保存配置 */}
+              <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
                 <Button
-                  onClick={fetchAvailableModels}
-                  disabled={isFetchingModels}
-                  icon={isFetchingModels ? <Spinner size="tiny" /> : undefined}
+                  appearance="primary"
+                  onClick={handleTestConnection}
+                  disabled={testStatus.type === "loading"}
+                  icon={testStatus.type === "loading" ? <Spinner size="tiny" /> : undefined}
+                  style={{ flex: 1 }}
                 >
-                  {isFetchingModels ? "正在加载..." : "获取可用模型"}
+                  {testStatus.type === "loading" ? t("settings.ai_testing") : t("settings.ai_test_connection")}
+                </Button>
+
+                <Button
+                  appearance="primary"
+                  onClick={handleSaveConfig}
+                  disabled={isSaving || testStatus.type === "loading"}
+                  icon={isSaving ? <Spinner size="tiny" /> : <Save24Regular />}
+                  style={{ flex: 1 }}
+                >
+                  {isSaving ? t("settings.ai_saving") : t("settings.ai_save_config")}
                 </Button>
               </div>
-              <datalist id="ai-models-list">
-                {availableModels.map(m => (
-                  <option key={m} value={m} />
-                ))}
-              </datalist>
-            </Field>
-
-            {/* API Key */}
-            <Field label={t("settings.ai_api_key")}>
-              <Input
-                type={showApiKey ? "text" : "password"}
-                className={styles.input}
-                value={config.ai?.apiKey ?? ""}
-                onChange={(_, data) => handleAIUpdate({ apiKey: data.value })}
-                placeholder="sk-..."
-                contentAfter={
-                  <Button
-                    appearance="subtle"
-                    icon={showApiKey ? <EyeOff24Regular /> : <Eye24Regular />}
-                    onClick={() => setShowApiKey(!showApiKey)}
-                  />
-                }
-              />
-            </Field>
-
-            {/* Endpoint */}
-            <Field label={t("settings.ai_endpoint")}>
-              <Input
-                className={styles.input}
-                value={config.ai?.endpoint ?? ""}
-                onChange={(_, data) => handleAIUpdate({ endpoint: data.value })}
-                placeholder="https://api.openai.com/v1"
-              />
-            </Field>
-
-            {/* 测试连接 & 保存配置 */}
-            <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
-              <Button
-                appearance="primary"
-                onClick={handleTestConnection}
-                disabled={testStatus.type === "loading"}
-                icon={testStatus.type === "loading" ? <Spinner size="tiny" /> : undefined}
-                style={{ flex: 1 }}
-              >
-                {testStatus.type === "loading" ? t("settings.ai_testing") : t("settings.ai_test_connection")}
-              </Button>
-
-              <Button
-                appearance="primary"
-                onClick={handleSaveConfig}
-                disabled={isSaving || testStatus.type === "loading"}
-                icon={isSaving ? <Spinner size="tiny" /> : <Save24Regular />}
-                style={{ flex: 1 }}
-              >
-                {isSaving ? t("settings.ai_saving") : t("settings.ai_save_config")}
-              </Button>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        {/* AI 方案管理 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Wand24Regular />}
-            header={<Text weight="semibold">AI 方案配置管理</Text>}
-            description={
-              <Text size={200} className={styles.description}>
-                管理、导入、导出多套大模型配置方案，方便快捷切换。
-              </Text>
-            }
-          />
+          {/* 2. ADMT 本地 MCP 服务小卡片 (紧凑样式) */}
+          <Card className={styles.card} style={{ padding: "14px 18px", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Server24Regular style={{ color: "var(--colorBrandForeground1)", fontSize: "20px" }} />
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Text weight="semibold" size={300}>
+                      ADMT 本地 MCP 服务端
+                    </Text>
+                    <Badge size="small" appearance="tint" color={mcpStatus.isRunning ? "success" : "subtle"}>
+                      {mcpStatus.isRunning ? "运行中 (SSE)" : "未启动"}
+                    </Badge>
+                  </div>
+                  <Text size={100} style={{ color: "var(--colorNeutralForeground3)" }}>
+                    {mcpStatus.isRunning
+                      ? `已挂载 8 项工具，正在监听: http://${mcpConfig.host}:${mcpConfig.port}/sse`
+                      : "开启后外部 AI (Cursor / Claude / Antigravity) 可直接调用本软件控制设备"}
+                  </Text>
+                </div>
+              </div>
 
-          <div className={styles.cardContent}>
-            {/* 加载/选择方案 */}
-            <Field label="当前生效方案">
-              <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+              <Switch
+                checked={mcpStatus.isRunning}
+                onChange={(_, data) => handleToggleMcpServer(data.checked)}
+              />
+            </div>
+
+            <Divider style={{ margin: "2px 0" }} />
+
+            {/* 紧凑参数与权限行 */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>端口:</Text>
+                  <Input
+                    type="number"
+                    size="small"
+                    value={String(mcpConfig.port || 39860)}
+                    onChange={(_, data) => updateMcpConfig({ port: parseInt(data.value, 10) || 39860 })}
+                    disabled={mcpStatus.isRunning}
+                    style={{ width: "90px" }}
+                  />
+                </div>
+
+                <Switch
+                  size="small"
+                  label="允许 ADB 指令"
+                  checked={mcpConfig.allowDeviceCommands}
+                  onChange={(_, data) => updateMcpConfig({ allowDeviceCommands: data.checked })}
+                />
+
+                <Switch
+                  size="small"
+                  label="允许文件传输"
+                  checked={mcpConfig.allowFileOperations}
+                  onChange={(_, data) => updateMcpConfig({ allowFileOperations: data.checked })}
+                />
+              </div>
+
+              {/* 快速复制客户端配置 */}
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <Select
-                  value={activePresetId || ""}
-                  onChange={(_, data) => {
-                    if (data.value) {
-                      applyPreset(data.value);
-                      setStatusBarMessage({
-                        type: "success",
-                        message: `已切换至方案: ${aiPresets.find(p => p.id === data.value)?.name}`,
-                      });
-                    }
-                  }}
-                  style={{ flex: 1 }}
+                  size="small"
+                  value={selectedMcpClient}
+                  onChange={(_, data) => setSelectedMcpClient(data.value as any)}
+                  style={{ width: "120px" }}
                 >
-                  <option value="">-- 未使用方案 (自定义配置) --</option>
-                  {aiPresets.map(preset => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.name} ({preset.provider})
-                    </option>
-                  ))}
+                  <option value="cursor">Cursor</option>
+                  <option value="claudeDesktop">Claude Desktop</option>
+                  <option value="antigravity">Antigravity</option>
+                  <option value="windsurf">Windsurf</option>
                 </Select>
-                {activePresetId && (
-                  <Button
-                    icon={<Delete24Regular />}
-                    appearance="subtle"
-                    onClick={() => {
-                      const name = aiPresets.find(p => p.id === activePresetId)?.name;
-                      deletePreset(activePresetId);
-                      setStatusBarMessage({
-                        type: "info",
-                        message: `已删除方案: ${name}`,
-                      });
-                    }}
-                  />
-                )}
-              </div>
-            </Field>
-
-            {/* 另存为新方案 */}
-            <Field label="将当前参数另存为新方案">
-              <div style={{ display: "flex", gap: "10px", width: "100%" }}>
-                <Input
-                  value={newPresetName}
-                  onChange={(_, data) => setNewPresetName(data.value)}
-                  placeholder="输入新方案名称（例如：ChatGPT-4o白嫖版）"
-                  style={{ flex: 1 }}
-                />
                 <Button
-                  icon={<Add24Regular />}
-                  onClick={handleSaveAsPreset}
-                  disabled={!newPresetName.trim()}
+                  size="small"
+                  appearance="secondary"
+                  icon={isCopiedMcp ? <Checkmark24Regular /> : <Copy24Regular />}
+                  onClick={handleCopyMcpConfig}
                 >
-                  保存方案
+                  {isCopiedMcp ? "已复制" : "复制 MCP 配置"}
                 </Button>
               </div>
-            </Field>
-
-            <Divider />
-
-            {/* 导入与导出 */}
-            <div style={{ display: "flex", gap: "12px" }}>
-              <Button
-                icon={<ArrowUpload24Regular />}
-                onClick={handleImportPresets}
-                style={{ flex: 1 }}
-              >
-                导入方案 (JSON)
-              </Button>
-              <Button
-                icon={<ArrowDownload24Regular />}
-                onClick={handleExportPresets}
-                style={{ flex: 1 }}
-                disabled={aiPresets.length === 0}
-              >
-                导出方案 (JSON)
-              </Button>
             </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
+
+        {/* 右侧列：AI 方案配置管理 */}
+        <div className={styles.rightColumn}>
+          {/* 3. AI 方案配置管理 */}
+          <Card className={styles.card}>
+            <CardHeader
+              image={<Wand24Regular />}
+              header={<Text weight="semibold">AI 方案配置管理</Text>}
+              description={
+                <Text size={200} className={styles.description}>
+                  管理、导入、导出多套大模型配置方案，方便快捷切换。
+                </Text>
+              }
+            />
+
+            <div className={styles.cardContent}>
+              {/* 加载/选择方案 */}
+              <Field label="当前生效方案">
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  <Select
+                    value={activePresetId || ""}
+                    onChange={(_, data) => {
+                      if (data.value) {
+                        applyPreset(data.value);
+                        setStatusBarMessage({
+                          type: "success",
+                          message: `已切换至方案: ${aiPresets.find(p => p.id === data.value)?.name}`,
+                        });
+                      }
+                    }}
+                    style={{ flex: 1 }}
+                  >
+                    <option value="">-- 未使用方案 (自定义配置) --</option>
+                    {aiPresets.map(preset => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.name} ({preset.provider})
+                      </option>
+                    ))}
+                  </Select>
+                  {activePresetId && (
+                    <Button
+                      icon={<Delete24Regular />}
+                      appearance="subtle"
+                      onClick={() => {
+                        const name = aiPresets.find(p => p.id === activePresetId)?.name;
+                        deletePreset(activePresetId);
+                        setStatusBarMessage({
+                          type: "info",
+                          message: `已删除方案: ${name}`,
+                        });
+                      }}
+                    />
+                  )}
+                </div>
+              </Field>
+
+              {/* 另存为新方案 */}
+              <Field label="将当前参数另存为新方案">
+                <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                  <Input
+                    value={newPresetName}
+                    onChange={(_, data) => setNewPresetName(data.value)}
+                    placeholder="输入新方案名称（例如：ChatGPT-4o白嫖版）"
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    icon={<Add24Regular />}
+                    onClick={handleSaveAsPreset}
+                    disabled={!newPresetName.trim()}
+                  >
+                    保存方案
+                  </Button>
+                </div>
+              </Field>
+
+              <Divider />
+
+              {/* 导入与导出 */}
+              <div style={{ display: "flex", gap: "12px" }}>
+                <Button
+                  icon={<ArrowUpload24Regular />}
+                  onClick={handleImportPresets}
+                  style={{ flex: 1 }}
+                >
+                  导入方案 (JSON)
+                </Button>
+                <Button
+                  icon={<ArrowDownload24Regular />}
+                  onClick={handleExportPresets}
+                  style={{ flex: 1 }}
+                  disabled={aiPresets.length === 0}
+                >
+                  导出方案 (JSON)
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

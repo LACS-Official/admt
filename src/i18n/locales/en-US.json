@@ -126,6 +126,7 @@
     "system_zone": "System Zone",
     "flash_zone": "Flash Zone",
     "online_resources": "Online Resources",
+    "plugin_system": "Plugin System",
     "root_zone": "Root Zone",
     "settings": "Settings"
   },
@@ -998,5 +999,103 @@
     "upload_kb": "Upload (KB/s)",
     "gpu_load": "GPU Load (%)",
     "gpu_freq": "GPU Freq (MHz)"
+  },
+  "online_resources": {
+    "tabs": {
+      "software_store": "Software Store",
+      "plugin_store": "Plugin Store",
+      "ai_resources": "AI Resources (Skills / MCP)",
+      "download_manager": "Download Manager"
+    },
+    "plugin_store": {
+      "title": "ADMT Plugin Store",
+      "subtitle": "Discover extensions crafted by official and community developers",
+      "search_placeholder": "Search plugins, authors, or tags...",
+      "categories": {
+        "all": "All Plugins",
+        "flash": "Flashing & Rescue",
+        "tuning": "System Tuning",
+        "tools": "Utilities",
+        "ai": "AI Powered",
+        "ui": "UI & Screen"
+      },
+      "install": "Install Online",
+      "installed": "Installed",
+      "installing": "Installing...",
+      "view_details": "View Details",
+      "author": "Author",
+      "version": "Version",
+      "rating": "Rating",
+      "downloads": "Downloads",
+      "permissions_required": "Permissions",
+      "install_success": "Plugin successfully installed!",
+      "installed_notice": "Ready in Plugin System"
+    },
+    "ai_resources": {
+      "title": "AI Skills & MCP Hub",
+      "subtitle": "Tailored prompt skills & MCP server protocols for Android developers",
+      "tab_skills": "AI Prompt Skills",
+      "tab_mcp": "MCP Servers",
+      "copy_prompt": "Copy Prompt",
+      "copied": "Copied to clipboard",
+      "export_prompt": "Export .md",
+      "recommended_models": "Recommended Models",
+      "config_title": "Client MCP Config",
+      "copy_config": "Copy Config",
+      "setup_guide": "Setup Guide"
+    }
+  },
+  "plugin_system": {
+    "title": "Plugin Ecosystem",
+    "subtitle": "Modular extensions for ADMT with local, online, and developer support",
+    "tabs": {
+      "installed": "Installed Plugins",
+      "import_install": "Import & Install",
+      "dev_docs": "Developer Guide",
+      "publish_docs": "Publishing Guide"
+    },
+    "installed": {
+      "empty_title": "No Plugins Installed",
+      "empty_desc": "Visit Plugin Store or Import & Install to get started",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "run_action": "Launch",
+      "settings": "Settings",
+      "uninstall": "Uninstall",
+      "confirm_uninstall": "Are you sure you want to uninstall this plugin?",
+      "uninstall_success": "Plugin uninstalled successfully"
+    },
+    "import": {
+      "local_title": "Local Plugin Package",
+      "local_desc": "Supports .admt-plugin / .zip / manifest.json",
+      "drag_or_click": "Click or drag plugin package here to install",
+      "online_title": "Remote Online Install",
+      "online_desc": "Install directly from Git repository or manifest URL",
+      "url_placeholder": "https://github.com/user/plugin-repo or manifest URL",
+      "install_btn": "Parse & Install",
+      "permission_review": "Permission Security Review",
+      "permission_review_desc": "This plugin requests the following system privileges:",
+      "confirm_install": "Confirm & Trust"
+    },
+    "docs": {
+      "dev_title": "ADMT Plugin Development Guide",
+      "publish_title": "ADMT Plugin Submission & Review",
+      "download_template": "Download Project Boilerplate",
+      "copy_code": "Copy Code"
+    }
+  },
+  "mcp": {
+    "server_title": "ADMT MCP Local Server (Model Context Protocol)",
+    "server_desc": "Turn ADMT into a standard MCP Server so external AI tools (Cursor, Claude Desktop, Antigravity, Windsurf) can call device control and ADB tools directly.",
+    "status_running": "MCP Server Running",
+    "status_stopped": "MCP Server Stopped",
+    "start_server": "Start MCP Server",
+    "stop_server": "Stop MCP Server",
+    "port": "Port",
+    "allow_device_commands": "Allow AI to execute device ADB commands",
+    "allow_file_ops": "Allow AI file pull/push operations",
+    "tools_list_title": "Exposed MCP Tools",
+    "client_config_title": "Quick Client Setup",
+    "copy_config": "Copy Config Snippet"
   }
 }

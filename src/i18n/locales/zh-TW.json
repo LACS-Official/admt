@@ -1346,5 +1346,113 @@
       "fb_unlock_critical": "解鎖刷寫權限",
       "fb_lock_critical": "鎖定刷寫權限"
     }
+  },
+  "sidebar": {
+    "home": "主頁中心",
+    "system_zone": "系統專區",
+    "flash_zone": "刷機專區",
+    "online_resources": "線上資源",
+    "plugin_system": "外掛系統",
+    "root_zone": "Root專區",
+    "extended_features": "擴充功能",
+    "settings": "軟體設定"
+  },
+  "online_resources": {
+    "tabs": {
+      "software_store": "軟體商店",
+      "plugin_store": "外掛商店",
+      "ai_resources": "AI 資源 (Skills / MCP)",
+      "download_manager": "下載管理"
+    },
+    "plugin_store": {
+      "title": "ADMT 外掛應用商店",
+      "subtitle": "探索官方與社群開發者精心打造的玩機與深度客製化擴充外掛",
+      "search_placeholder": "搜尋外掛名稱、作者或功能標籤...",
+      "categories": {
+        "all": "全部外掛",
+        "flash": "刷機與救磚",
+        "tuning": "系統調優",
+        "tools": "實用工具",
+        "ai": "AI 賦能",
+        "ui": "介面與投影"
+      },
+      "install": "線上安裝",
+      "installed": "已安裝",
+      "installing": "安裝中...",
+      "view_details": "查看詳情",
+      "author": "作者",
+      "version": "版本",
+      "rating": "評分",
+      "downloads": "下載量",
+      "permissions_required": "所需權限",
+      "install_success": "外掛已成功安裝並啟用！",
+      "installed_notice": "該外掛已在您的外掛系統中就緒"
+    },
+    "ai_resources": {
+      "title": "AI 技能庫與 MCP 擴充中心",
+      "subtitle": "專為 Android 玩機、底層逆向、救磚調優打造的 Prompt Skills 與 MCP 連線協定",
+      "tab_skills": "AI 技能範本 (Skills)",
+      "tab_mcp": "MCP 協定擴充 (MCP Servers)",
+      "copy_prompt": "複製 Prompt",
+      "copied": "已複製到剪貼簿",
+      "export_prompt": "匯出 .md 檔案",
+      "recommended_models": "推薦模型",
+      "config_title": "用戶端 MCP 設定",
+      "copy_config": "複製用戶端設定",
+      "setup_guide": "接入指引"
+    }
+  },
+  "plugin_system": {
+    "title": "外掛生態系統",
+    "subtitle": "模組化擴充 ADMT 玩機能力，支援第三方外掛、本機與線上安裝",
+    "tabs": {
+      "installed": "已安裝外掛",
+      "import_install": "匯入與安裝",
+      "dev_docs": "開發文件",
+      "publish_docs": "上架與發布"
+    },
+    "installed": {
+      "empty_title": "暫無已安裝外掛",
+      "empty_desc": "前往「外掛商店」或「匯入與安裝」體驗更多強大外掛",
+      "enabled": "已啟用",
+      "disabled": "已禁用",
+      "run_action": "啟動功能",
+      "settings": "外掛設定",
+      "uninstall": "解除安裝",
+      "confirm_uninstall": "確定要解除安裝該外掛嗎？",
+      "uninstall_success": "外掛解除安裝成功"
+    },
+    "import": {
+      "local_title": "本機安裝外掛",
+      "local_desc": "支援匯入 .admt-plugin / .zip / manifest.json 本機外掛包",
+      "drag_or_click": "點選或拖曳外掛包到此處進行安裝",
+      "online_title": "遠端線上匯入",
+      "online_desc": "從 Git 倉庫或遠端清單 URL 直接安裝",
+      "url_placeholder": "https://github.com/user/plugin-repo 或 manifest.json 連結",
+      "install_btn": "解析並安裝",
+      "permission_review": "外掛權限安全審查",
+      "permission_review_desc": "該外掛申請了以下系統特權，請仔細確認來源安全：",
+      "confirm_install": "確認安裝並信任"
+    },
+    "docs": {
+      "dev_title": "ADMT 外掛開發全景指南",
+      "publish_title": "ADMT 外掛上架與審核規範",
+      "download_template": "下載開發工程範本",
+      "copy_code": "複製代碼"
+    }
+  },
+  "mcp": {
+    "server_title": "ADMT MCP 本機伺服端 (Model Context Protocol)",
+    "server_desc": "開啟後，本軟體將作為標準 MCP Server 運行，外部 AI（如 Cursor、Claude Desktop、Antigravity、Windsurf 等）可以直接調用 ADMT 的設備管理、ADB、Fastboot 與系統控制工具。",
+    "status_running": "MCP 服務運行中",
+    "status_stopped": "MCP 服務已停止",
+    "start_server": "開啟 MCP 服務",
+    "stop_server": "停止 MCP 服務",
+    "port": "服務埠 (Port)",
+    "allow_device_commands": "允許 AI 執行設備偵錯與 ADB 指令",
+    "allow_file_ops": "允許 AI 進行檔案拉取與推送",
+    "tools_list_title": "已暴露的 MCP 工具列表",
+    "client_config_title": "外部 AI 用戶端快速設定",
+    "copy_config": "複製設定代碼"
   }
 }

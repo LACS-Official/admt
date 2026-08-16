@@ -28,6 +28,15 @@ export interface AppConfig {
   cpuMonitorInterval: number;
   autoScreenMirror: boolean;
   ai: AIConfig;
+  mcpServer?: {
+    enabled: boolean;
+    port: number;
+    host: string;
+    authToken?: string;
+    autoStart: boolean;
+    allowDeviceCommands: boolean;
+    allowFileOperations: boolean;
+  };
 }
 
 export interface AppState {
@@ -45,6 +54,7 @@ export type AppView =
   | "device-management"
   | "extended-features"
   | "online-resources"
+  | "plugin-system"
   | "settings"
   | "demo"
   | "root"

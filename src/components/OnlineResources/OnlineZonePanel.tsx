@@ -11,12 +11,18 @@ import {
 } from "@fluentui/react-components";
 import {
   CloudArrowUp24Regular,
+  Apps24Regular,
+  Brain24Regular,
+  ArrowDownload24Regular,
+  Sparkle24Regular,
+  Server24Regular,
 } from "@fluentui/react-icons";
 import { DownloadManagerPanel } from "./DownloadManagerPanel";
 import OnlineResourcesPanel from "./OnlineResourcesPanel";
+import PluginStorePanel from "./PluginStorePanel";
+import SkillsResourcesPanel from "./SkillsResourcesPanel";
+import McpResourcesPanel from "./McpResourcesPanel";
 import { onlineResourcesService } from '../../services/onlineResourcesService';
-
-
 
 const useStyles = makeStyles({
   container: {
@@ -34,7 +40,6 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
     borderRadius: "6px",
     padding: "4px 8px",
-    //居中显示
     display: "flex",
     alignItems: "center",
     "& .fui-TabList": {
@@ -136,7 +141,7 @@ const useStyles = makeStyles({
   },
 });
 
-type FlashZoneView =  "online-resources" | "rom-download" | "download-manager";
+type FlashZoneView = "online-resources" | "plugin-store" | "skills-resources" | "mcp-resources" | "download-manager";
 
 const OnlineZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -168,30 +173,48 @@ const OnlineZonePanel: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-
-
   const tabs = [
     {
       id: "online-resources" as FlashZoneView,
-      label: t('online_resources.tabs.software_store'),
+      label: t('online_resources.tabs.software_store', '软件商店'),
       icon: <CloudArrowUp24Regular />,
     },
     {
+      id: "plugin-store" as FlashZoneView,
+      label: t('online_resources.tabs.plugin_store', '插件商店'),
+      icon: <Apps24Regular />,
+    },
+    {
+      id: "skills-resources" as FlashZoneView,
+      label: "AI Skills 技能库",
+      icon: <Sparkle24Regular />,
+    },
+    {
+      id: "mcp-resources" as FlashZoneView,
+      label: "MCP 服务与工具",
+      icon: <Server24Regular />,
+    },
+    {
       id: "download-manager" as FlashZoneView,
-      label: t('online_resources.tabs.download_manager'),
-      icon: <CloudArrowUp24Regular />,
+      label: t('online_resources.tabs.download_manager', '下载管理'),
+      icon: <ArrowDownload24Regular />,
     },
   ];
 
   const renderContent = () => {
-
     switch (currentView) {
       case "online-resources":
         return <OnlineResourcesPanel />;
+      case "plugin-store":
+        return <PluginStorePanel />;
+      case "skills-resources":
+        return <SkillsResourcesPanel />;
+      case "mcp-resources":
+        return <McpResourcesPanel />;
       case "download-manager":
-        return <DownloadManagerPanel onBack={() => {}}/>;
+        return <DownloadManagerPanel onBack={() => setCurrentView("online-resources")}/>;
       default:
-       return <OnlineResourcesPanel />;
+        return <OnlineResourcesPanel />;
     }
   };
 
