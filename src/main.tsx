@@ -11,18 +11,12 @@ import {
 import App from "./App";
 import { useAppStore } from "./stores/appStore";
 import { useThemeStore } from "./stores/themeStore";
-import { activationService } from "./services/activationService";
 import { useStartupFlowStore } from "./stores/startupFlowStore";
 import {
   usePrivacyConsentStore,
   shouldShowPrivacyConsent,
 } from "./stores/privacyConsentStore";
 import "./styles/global.css";
-import "./styles/startup-animations.css";
-
-// 导入安全保护模块，确保在应用启动时加载
-import "./utils/securityProtection";
-import "./utils/devtools";
 import i18n from "./i18n/config";
 
 // 在应用启动时清除 localStorage 中的 token
@@ -163,7 +157,6 @@ function AppWithTheme() {
     followSystemTheme,
     updateThemeBasedOnSystem,
   } = useThemeStore();
-  const [, setIsActivationValid] = useState(true);
   const [, setHasAcceptedTerms] = useState(true);
   const { setCurrentPhase } = useStartupFlowStore();
   const {
@@ -189,29 +182,6 @@ function AppWithTheme() {
       i18n.changeLanguage(config.language);
     }
   }, [config.language]);
-
-  useEffect(() => {
-    const checkActivationStatus = () => {
-      try {
-        const activationStatus = activationService.checkActivationStatus();
-        if (activationStatus.isExpired || activationStatus.needsActivation) {
-          setIsActivationValid(false);
-          setCurrentPhase("activation-verification");
-          if (activationStatus.isExpired) {
-            activationService.handleExpiredActivation();
-          }
-        } else {
-          setIsActivationValid(true);
-        }
-      } catch (_error) {
-        setIsActivationValid(false);
-        setCurrentPhase("activation-verification");
-      }
-    };
-    checkActivationStatus();
-    const intervalId = setInterval(checkActivationStatus, 5000); // 降低频率以优化性能
-    return () => clearInterval(intervalId);
-  }, [setCurrentPhase]);
 
   useEffect(() => {
     const checkTermsAcceptance = () => {

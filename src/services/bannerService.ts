@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 轮播图服务
  * 负责从 API 获取和管理轮播图数据
  */
@@ -29,20 +29,20 @@ export class BannerService {
   public async getBanners(websiteId: number = 2): Promise<Banner[]> {
     // 1. 检查合并请求
     if (this.pendingRequest) {
-      console.log('🎠 轮播图请求已在进行中，合并请求');
+      console.log(' 轮播图请求已在进行中，合并请求');
       return this.pendingRequest;
     }
 
     // 2. 检查缓存
     if (this.cache && (Date.now() - this.cache.timestamp < this.CACHE_TTL)) {
-      console.log('🎠 使用缓存的轮播图数据');
+      console.log(' 使用缓存的轮播图数据');
       return this.cache.data;
     }
 
     // 3. 执行请求
     this.pendingRequest = (async () => {
       try {
-        console.log(`🎠 开始获取轮播图列表 (Website ID: ${websiteId})...`);
+        console.log(` 开始获取轮播图列表 (Website ID: ${websiteId})...`);
 
         const endpoint = `https://api-g.lacs.cc/api/websites/${websiteId}/banners`;
 
@@ -85,14 +85,14 @@ export class BannerService {
           .filter(banner => banner.isActive !== false)
           .sort((a, b) => a.displayOrder - b.displayOrder);
 
-        console.log(`✅ 成功获取 ${activeBanners.length} 个轮播图`);
+        console.log(` 成功获取 ${activeBanners.length} 个轮播图`);
         
         // 存入缓存
         this.cache = { data: activeBanners, timestamp: Date.now() };
         return activeBanners;
 
       } catch (error) {
-        console.error('❌ 获取轮播图失败:', error);
+        console.error(' 获取轮播图失败:', error);
         return [];
       } finally {
         this.pendingRequest = null;

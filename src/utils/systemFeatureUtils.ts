@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 系统功能工具模块
  * 提供系统托盘和开机自启动功能的工具函数和错误处理
  */
@@ -285,7 +285,7 @@ export class SystemFeatureRecovery {
    */
   static async repairSystemTray(): Promise<SystemFeatureResult> {
     try {
-      console.log('🔧 正在修复系统托盘...');
+      console.log(' 正在修复系统托盘...');
       
       // 先清理现有状态
       await systemTrayService().cleanup();
@@ -321,7 +321,7 @@ export class SystemFeatureRecovery {
    */
   static async repairAutoStart(): Promise<SystemFeatureResult> {
     try {
-      console.log('🔧 正在修复开机自启动...');
+      console.log(' 正在修复开机自启动...');
       
       const success = await autoStartService.repairAutoStart();
       
@@ -382,17 +382,17 @@ export class SystemFeatureStatusChecker {
     
     // 系统托盘状态
     if (status.tray.success) {
-      report += `✅ 系统托盘: ${status.tray.data ? '支持' : '不支持'}\n`;
+      report += ` 系统托盘: ${status.tray.data ? '支持' : '不支持'}\n`;
     } else {
-      report += `❌ 系统托盘: 检查失败 - ${status.tray.error?.message}\n`;
+      report += ` 系统托盘: 检查失败 - ${status.tray.error?.message}\n`;
     }
     
     // 开机自启动状态
     if (status.autoStart.success) {
       const autoStartData = status.autoStart.data;
-      report += `✅ 开机自启动: ${autoStartData?.isEnabled ? '已启用' : '未启用'} (${autoStartData?.method || 'unknown'})\n`;
+      report += ` 开机自启动: ${autoStartData?.isEnabled ? '已启用' : '未启用'} (${autoStartData?.method || 'unknown'})\n`;
     } else {
-      report += `❌ 开机自启动: 检查失败 - ${status.autoStart.error?.message}\n`;
+      report += ` 开机自启动: 检查失败 - ${status.autoStart.error?.message}\n`;
     }
     
     report += '\n报告生成时间: ' + new Date().toLocaleString();

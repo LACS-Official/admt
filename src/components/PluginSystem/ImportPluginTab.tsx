@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   makeStyles,
   shorthands,
@@ -293,7 +293,7 @@ const ImportPluginTab: React.FC<Props> = ({ onInstallSuccess }) => {
               marginTop: "auto",
             }}
           >
-            💡 提示：仅支持安装符合 ADMT 插件标准规范且包含完整 <code>manifest.json</code> 的开源仓库。
+             提示：仅支持安装符合 ADMT 插件标准规范且包含完整 <code>manifest.json</code> 的开源仓库。
           </div>
         </div>
       </div>

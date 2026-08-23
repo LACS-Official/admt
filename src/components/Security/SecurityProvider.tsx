@@ -1,4 +1,4 @@
-import React, { useEffect, useState, createContext, useContext } from 'react';
+﻿import React, { useEffect, useState, createContext, useContext } from 'react';
 import { securityProtection } from '../../utils/securityProtection';
 
 interface SecurityContextType {
@@ -39,8 +39,8 @@ export const SecurityProvider: React.FC<SecurityProviderProps> = ({
   useEffect(() => {
     // 在开发环境下输出提示信息
     if (isDev) {
-      console.log('🔧 开发环境：安全保护功能已自动禁用');
-      console.log('📝 如需测试安全功能，请在生产环境下运行');
+      console.log(' 开发环境：安全保护功能已自动禁用');
+      console.log(' 如需测试安全功能，请在生产环境下运行');
     }
 
     // 设置保护状态

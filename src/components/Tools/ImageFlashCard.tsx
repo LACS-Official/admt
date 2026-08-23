@@ -36,6 +36,7 @@ import { useDeviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "react-i18next";
+import { verifySecurityAction } from "../Common/SecurityVerificationDialog";
 
 
 const useStyles = makeStyles({
@@ -330,6 +331,11 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
 
   const handleFlashConfirm = async () => {
     if (!device || !selectedFilePath || !selectedPartition) return;
+
+    const passed = await verifySecurityAction("fastbootFlash", `Fastboot 分区刷入 (${selectedPartition})`);
+    if (!passed) {
+      return;
+    }
     
     setShowConfirmDialog(false);
     setIsFlashing(true);

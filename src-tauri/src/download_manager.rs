@@ -1,4 +1,4 @@
-use crate::error::{AdmtError, Result};
+﻿use crate::error::{AdmtError, Result};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -59,7 +59,7 @@ impl DownloadManager {
                     let test_file = downloads_dir.join(".write_test");
                     if fs::File::create(&test_file).is_ok() {
                         let _ = fs::remove_file(test_file);
-                        log::info!("🎯 使用可写的应用目录下载路径: {}", downloads_dir.display());
+                        log::info!(" 使用可写的应用目录下载路径: {}", downloads_dir.display());
                         return Ok(downloads_dir);
                     }
                 }
@@ -71,7 +71,7 @@ impl DownloadManager {
             let admt_dir = user_download_dir.join("ADMT");
             if let Ok(_) = fs::create_dir_all(&admt_dir) {
                 log::info!(
-                    "🎯 应用目录不可写，回退到系统下载目录: {}",
+                    " 应用目录不可写，回退到系统下载目录: {}",
                     admt_dir.display()
                 );
                 return Ok(admt_dir);
@@ -84,7 +84,7 @@ impl DownloadManager {
             .unwrap_or_else(|| std::env::temp_dir().join("admt_downloads"));
 
         let _ = fs::create_dir_all(&fallback_dir);
-        log::info!("🎯 使用最终回退下载目录: {}", fallback_dir.display());
+        log::info!(" 使用最终回退下载目录: {}", fallback_dir.display());
         Ok(fallback_dir)
     }
 
@@ -100,7 +100,7 @@ impl DownloadManager {
         // 2. 检查是否需要解压
         if self.is_archive_file(&downloaded_file) {
             println!(
-                "🗜️ 检测到压缩文件，开始自动解压: {}",
+                " 检测到压缩文件，开始自动解压: {}",
                 downloaded_file.display()
             );
             let extract_dir = self
@@ -109,16 +109,16 @@ impl DownloadManager {
 
             // 3. 生成配置文件
             if let Some(openname) = &request.openname {
-                println!("📝 生成配置文件: {}", openname);
+                println!(" 生成配置文件: {}", openname);
                 self.create_config_file(&extract_dir, openname)?;
             }
 
             // 4. 保留原压缩文件（根据用户要求）
-            println!("✅ 解压完成，保留原压缩文件: {}", downloaded_file.display());
+            println!(" 解压完成，保留原压缩文件: {}", downloaded_file.display());
 
             Ok(extract_dir)
         } else {
-            println!("📄 非压缩文件，无需解压: {}", downloaded_file.display());
+            println!(" 非压缩文件，无需解压: {}", downloaded_file.display());
             Ok(downloaded_file.parent().unwrap().to_path_buf())
         }
     }
@@ -165,11 +165,11 @@ impl DownloadManager {
 
         // 确保下载目录存在
         if let Some(parent) = file_path.parent() {
-            println!("📁 创建下载目录: {}", parent.display());
+            println!(" 创建下载目录: {}", parent.display());
             fs::create_dir_all(parent).map_err(|e| AdmtError::Io(e.to_string()))?;
         }
 
-        println!("📁 创建下载文件: {}", file_path.display());
+        println!(" 创建下载文件: {}", file_path.display());
         let mut file = fs::File::create(&file_path).map_err(|e| AdmtError::Io(e.to_string()))?;
 
         let mut downloaded = 0u64;
@@ -239,7 +239,7 @@ impl DownloadManager {
         };
         let _ = app_handle.emit("download-progress", &progress);
 
-        println!("✅ 文件下载完成: {}", file_path.display());
+        println!(" 文件下载完成: {}", file_path.display());
         Ok(file_path)
     }
 
@@ -346,13 +346,13 @@ impl DownloadManager {
 
     /// 解压7Z文件
     async fn extract_7z(&self, archive_path: &Path, extract_dir: &Path) -> Result<()> {
-        println!("🗜️ 开始解压7z文件: {}", archive_path.display());
+        println!(" 开始解压7z文件: {}", archive_path.display());
 
         // 使用sevenz_rust的decompress_file函数进行解压
         sevenz_rust::decompress_file(archive_path, extract_dir)
             .map_err(|e| AdmtError::ExtractionError(format!("7z文件解压失败: {}", e)))?;
 
-        println!("✅ 7z文件解压完成");
+        println!(" 7z文件解压完成");
         Ok(())
     }
 

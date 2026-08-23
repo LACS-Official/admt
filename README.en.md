@@ -1,10 +1,10 @@
 <div align="center">
 
-# 📱 Android Device Management Tool (ADMT / 玩机管家)
+#  Android Device Management Tool (ADMT / 玩机管家)
 
 **A High-Performance, Modern, Cross-Platform Android Device Management Suite Built with Tauri v2 + React**
 
-🌐 **Official Website**: [https://admt.lacs.cc](https://admt.lacs.cc)
+ **Official Website**: [https://admt.lacs.cc](https://admt.lacs.cc)
 
 English | [简体中文](./README.md)
 
@@ -24,9 +24,9 @@ English | [简体中文](./README.md)
 
 ---
 
-## 💡 About & Open Source Statement
+##  About & Open Source Statement
 
-> 💬 **A Message from the Developers**:
+>  **A Message from the Developers**:
 > Over the past year, ADMT has been fully maintained and continuously crafted for free by the **LACS Studio** team, empowering thousands of Android power users, developers, and enthusiasts through countless nights of flashing and debugging. Today, to express our deepest gratitude to our user community and to give this project even greater vitality, we are thrilled to announce that **ADMT (Android Device Management Tool) is officially 100% open source**!
 > We firmly believe that "Open source is not just code sharing, but passing along a shared passion." We hope ADMT serves as the ultimate desktop toolkit for all Android power users, developers, and enthusiasts worldwide!
 
@@ -36,7 +36,7 @@ Whether you need wireless ADB debugging without cables, Scrcpy low-latency high-
 
 ---
 
-## 🏗️ Architecture & Component Overview
+##  Architecture & Component Overview
 
 ADMT adopts a modular, componentized responsive frontend architecture powered by **React 18 + Fluent UI** for modern desktop ergonomics, interacting with native APIs, ADB daemons, and Scrcpy binaries via **Rust / Tauri v2 IPC Commands**.
 
@@ -61,7 +61,7 @@ ADMT adopts a modular, componentized responsive frontend architecture powered by
 
 ---
 
-## 🧩 Comprehensive Component & Feature Breakdown
+##  Comprehensive Component & Feature Breakdown
 
 This section provides an in-depth breakdown of every UI component and feature module within ADMT, detailing core responsibilities, operational paths, and underlying logic alongside feature screenshots.
 
@@ -249,7 +249,7 @@ Dedicated panel for Bootloader unlocking, partition image flashing, vendor tools
 
 ---
 
-## 📖 Component File Dictionary & Index Table
+##  Component File Dictionary & Index Table
 
 The following table provides a complete index of frontend component files mapped to backend bridge APIs:
 
@@ -279,7 +279,7 @@ The following table provides a complete index of frontend component files mapped
 
 ---
 
-## ⚡ Native Rust Backend Commands & IPC Mapping
+##  Native Rust Backend Commands & IPC Mapping
 
 The native Rust backend implements high-performance IPC commands. The table below maps core Rust Commands to Frontend Service calls:
 
@@ -304,7 +304,7 @@ The native Rust backend implements high-performance IPC commands. The table belo
 
 ---
 
-## 🛠️ Advanced Flashing & Troubleshooting Guide
+##  Advanced Flashing & Troubleshooting Guide
 
 #### 1. Boot Image Extraction & Root Patching
 1. Use the "Online Resource Center" to download official fastboot ROM or OTA packages matching your device firmware.
@@ -323,21 +323,21 @@ The native Rust backend implements high-performance IPC commands. The table belo
 
 ---
 
-## ⚖️ Performance Benchmarks & Comparison
+##  Performance Benchmarks & Comparison
 
 | Metric / Feature | Traditional Electron Apps | ADB CLI | **ADMT (Tauri v2 + Rust)** |
 | :--- | :--- | :--- | :--- |
-| **RAM Usage** | ~300MB - 800MB | ~10MB | **~40MB - 90MB** ⚡ |
-| **Package Installer Size** | ~120MB - 250MB | ~5MB - 10MB | **~15MB - 25MB** 📦 |
-| **Cold Launch Time** | 3 - 8 Seconds | Instant | **< 0.8 Seconds** 🚀 |
-| **GUI Interface** | ✅ Yes | ❌ No (CLI only) | **✅ Modern Fluent UI** |
-| **Wireless ADB / Mirroring**| Paid or Complex Setup | Manual Commands | **✅ One-Click Auto Connect** |
-| **AI Error Diagnostics** | ❌ No | ❌ No | **✅ Built-in Multi-LLM AI Assistant** |
-| **Cross-Platform Support**| Windows / macOS | Windows / Mac / Linux | **✅ Windows / macOS / Linux** |
+| **RAM Usage** | ~300MB - 800MB | ~10MB | **~40MB - 90MB**  |
+| **Package Installer Size** | ~120MB - 250MB | ~5MB - 10MB | **~15MB - 25MB**  |
+| **Cold Launch Time** | 3 - 8 Seconds | Instant | **< 0.8 Seconds**  |
+| **GUI Interface** |  Yes |  No (CLI only) | ** Modern Fluent UI** |
+| **Wireless ADB / Mirroring**| Paid or Complex Setup | Manual Commands | ** One-Click Auto Connect** |
+| **AI Error Diagnostics** |  No |  No | ** Built-in Multi-LLM AI Assistant** |
+| **Cross-Platform Support**| Windows / macOS | Windows / Mac / Linux | ** Windows / macOS / Linux** |
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+##  Tech Stack & Architecture
 
 - **Frontend Interface**:
   - **UI Framework**: React 18, TypeScript 5.6
@@ -358,7 +358,7 @@ The native Rust backend implements high-performance IPC commands. The table belo
 
 ---
 
-## 🚀 Developer Guide & Build Steps
+##  Developer Guide & Build Steps
 
 ### 1. Prerequisites
 
@@ -412,7 +412,7 @@ Installers are generated in `src-tauri/target/release/bundle/`.
 
 ---
 
-## 📁 Directory Structure Map
+##  Directory Structure Map
 
 ```text
 admt/
@@ -466,7 +466,7 @@ admt/
 
 ---
 
-## ❓ FAQ & Troubleshooting
+##  FAQ & Troubleshooting
 
 #### Q1: ADMT shows "No Device Connected" after plugging in my phone via USB?
 1. Ensure "Developer Options" and "USB Debugging" are turned ON in Android settings.
@@ -486,21 +486,21 @@ admt/
 
 ---
 
-## 🤝 Community & Contributing
+##  Community & Contributing
 
 We warmly welcome developers, power users, and designers to join the ADMT open-source community!
 
 Ways to contribute:
-- 🐛 **Submit Bug Reports**: Describe issues and device models in GitHub Issues.
-- 💡 **Propose Feature Requests**: Tell us what tools or workflows you'd like to see.
-- 📝 **Improve Documentation & Translations**: Help refine component guides or translate ADMT into more languages.
-- 🔀 **Submit Pull Requests**: Clone the repo, implement fixes/features, and open a PR.
+-  **Submit Bug Reports**: Describe issues and device models in GitHub Issues.
+-  **Propose Feature Requests**: Tell us what tools or workflows you'd like to see.
+-  **Improve Documentation & Translations**: Help refine component guides or translate ADMT into more languages.
+-  **Submit Pull Requests**: Clone the repo, implement fixes/features, and open a PR.
 
 Please refer to [.github/CONTRIBUTING.md](./.github/CONTRIBUTING.md) for contribution guidelines before submitting code.
 
 ---
 
-## 📄 License & Attribution
+##  License & Attribution
 
 This project is open-source under the [Apache License 2.0](./LICENSE).
 
@@ -511,7 +511,7 @@ This project is open-source under the [Apache License 2.0](./LICENSE).
 
 <div align="center">
 
-**If ADMT helps you with Android device management, flashing, or development, please consider giving us a ⭐️ Star on GitHub!**
+**If ADMT helps you with Android device management, flashing, or development, please consider giving us a Star on GitHub!**
 
 **Thank you to all developers and enthusiasts for your support!**
 

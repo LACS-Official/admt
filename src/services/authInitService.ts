@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tauri应用认证系统初始化服务
  * 负责在应用启动时初始化认证系统，包括设备指纹生成、JWT令牌获取等
  */
@@ -46,7 +46,7 @@ export class AuthInitService {
    * 初始化认证系统
    */
   async initialize(): Promise<AuthInitStatus> {
-    console.log('🔐 开始初始化认证系统...')
+    console.log(' 开始初始化认证系统...')
 
     try {
       // 1. 初始化安全配置
@@ -62,11 +62,11 @@ export class AuthInitService {
       await this.initializeJwtToken()
 
       this.initStatus.isInitialized = true
-      console.log('✅ 认证系统初始化成功')
+      console.log(' 认证系统初始化成功')
 
       return this.initStatus
     } catch (error) {
-      console.error('❌ 认证系统初始化失败:', error)
+      console.error(' 认证系统初始化失败:', error)
       this.initStatus.error = error instanceof Error ? error.message : String(error)
       throw error
     }
@@ -76,7 +76,7 @@ export class AuthInitService {
    * 初始化安全配置
    */
   private async initializeSecurityConfig(): Promise<void> {
-    console.log('📋 初始化安全配置...')
+    console.log(' 初始化安全配置...')
 
     try {
       const configManager = SecurityConfigManager.getInstance()
@@ -89,9 +89,9 @@ export class AuthInitService {
       }
 
       this.initStatus.hasValidConfig = true
-      console.log('✅ 安全配置初始化成功')
+      console.log(' 安全配置初始化成功')
     } catch (error) {
-      console.error('❌ 安全配置初始化失败:', error)
+      console.error(' 安全配置初始化失败:', error)
       throw new Error(`Failed to initialize security config: ${error}`)
     }
   }
@@ -100,7 +100,7 @@ export class AuthInitService {
    * 初始化设备指纹
    */
   private async initializeDeviceFingerprint(): Promise<void> {
-    console.log('🔍 生成设备指纹...')
+    console.log(' 生成设备指纹...')
 
     try {
       const fingerprint = await invoke<string>('get_device_fingerprint')
@@ -109,9 +109,9 @@ export class AuthInitService {
       }
 
       this.initStatus.hasDeviceFingerprint = true
-      console.log('✅ 设备指纹生成成功:', fingerprint.substring(0, 16) + '...')
+      console.log(' 设备指纹生成成功:', fingerprint.substring(0, 16) + '...')
     } catch (error) {
-      console.error('❌ 设备指纹生成失败:', error)
+      console.error(' 设备指纹生成失败:', error)
       throw new Error(`Failed to generate device fingerprint: ${error}`)
     }
   }
@@ -120,15 +120,15 @@ export class AuthInitService {
    * 初始化认证工具
    */
   private async initializeAuthUtils(): Promise<void> {
-    console.log('🛠️ 初始化认证工具...')
+    console.log(' 初始化认证工具...')
 
     try {
       const authUtils = AuthUtils.getInstance()
       await authUtils.initialize()
 
-      console.log('✅ 认证工具初始化成功')
+      console.log(' 认证工具初始化成功')
     } catch (error) {
-      console.error('❌ 认证工具初始化失败:', error)
+      console.error(' 认证工具初始化失败:', error)
       throw new Error(`Failed to initialize auth utils: ${error}`)
     }
   }
@@ -137,7 +137,7 @@ export class AuthInitService {
    * 初始化JWT令牌
    */
   private async initializeJwtToken(): Promise<void> {
-    console.log('🎫 获取JWT令牌...')
+    console.log(' 获取JWT令牌...')
 
     try {
       const authUtils = AuthUtils.getInstance()
@@ -148,9 +148,9 @@ export class AuthInitService {
       }
 
       this.initStatus.hasJwtToken = true
-      console.log('✅ JWT令牌获取成功')
+      console.log(' JWT令牌获取成功')
     } catch (error) {
-      console.error('❌ JWT令牌获取失败:', error)
+      console.error(' JWT令牌获取失败:', error)
       throw new Error(`Failed to obtain JWT token: ${error}`)
     }
   }
@@ -205,15 +205,15 @@ export class AuthInitService {
    * 刷新认证状态
    */
   async refreshAuth(): Promise<void> {
-    console.log('🔄 刷新认证状态...')
+    console.log(' 刷新认证状态...')
 
     try {
       const authUtils = AuthUtils.getInstance()
       await authUtils.refreshToken()
 
-      console.log('✅ 认证状态刷新成功')
+      console.log(' 认证状态刷新成功')
     } catch (error) {
-      console.error('❌ 认证状态刷新失败:', error)
+      console.error(' 认证状态刷新失败:', error)
       throw error
     }
   }

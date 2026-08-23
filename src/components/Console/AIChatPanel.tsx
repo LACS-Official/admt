@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+﻿import React, { useState, useRef, useEffect } from "react";
 import {
   makeStyles,
   tokens,
@@ -619,7 +619,7 @@ const AIChatPanel: React.FC = () => {
       });
       addMessage(convId || "", { 
         role: "assistant", 
-        content: `❌ 请求失败: ${error.message}\n\n建议检查：\n1. 网络连接是否正常\n2. API Key 及 Endpoint 是否正确\n3. 如果是本地模型，确保服务已开启` 
+        content: ` 请求失败: ${error.message}\n\n建议检查：\n1. 网络连接是否正常\n2. API Key 及 Endpoint 是否正确\n3. 如果是本地模型，确保服务已开启` 
       });
     } finally {
       setIsLoading(false);
@@ -634,7 +634,7 @@ const AIChatPanel: React.FC = () => {
       });
       setExecutionLogs(prev => ({
         ...prev,
-        [msgId]: "❌ 执行失败: 未检测到已选中的 Android 设备，请连接并选择设备后重试。\n"
+        [msgId]: " 执行失败: 未检测到已选中的 Android 设备，请连接并选择设备后重试。\n"
       }));
       return;
     }
@@ -655,7 +655,7 @@ const AIChatPanel: React.FC = () => {
         // 1. 打印当前步骤
         setExecutionLogs(prev => ({
           ...prev,
-          [msgId]: (prev[msgId] || "") + `⚙️ [安全校验] 正在校验: ${action.command} ...\n`
+          [msgId]: (prev[msgId] || "") + ` [安全校验] 正在校验: ${action.command} ...\n`
         }));
 
         // 2. 调用 Rust 后端进行安全检查
@@ -667,7 +667,7 @@ const AIChatPanel: React.FC = () => {
         if (!safetyResult.isSafe || safetyResult.dangerLevel === "blocked") {
           setExecutionLogs(prev => ({
             ...prev,
-            [msgId]: (prev[msgId] || "") + `🚨 [被拦截] 该命令为高危指令: ${action.command}\n原因: ${safetyResult.message}\n停止执行后续指令。\n`
+            [msgId]: (prev[msgId] || "") + ` [被拦截] 该命令为高危指令: ${action.command}\n原因: ${safetyResult.message}\n停止执行后续指令。\n`
           }));
           setStatusBarMessage({
             type: "error",
@@ -679,14 +679,14 @@ const AIChatPanel: React.FC = () => {
         if (safetyResult.dangerLevel === "warn") {
           setExecutionLogs(prev => ({
             ...prev,
-            [msgId]: (prev[msgId] || "") + `⚠️ [安全警告] ${safetyResult.message}\n`
+            [msgId]: (prev[msgId] || "") + ` [安全警告] ${safetyResult.message}\n`
           }));
         }
 
         // 3. 执行指令
         setExecutionLogs(prev => ({
           ...prev,
-          [msgId]: (prev[msgId] || "") + `▶️ [正在执行] ${action.command} ...\n`
+          [msgId]: (prev[msgId] || "") + `▶ [正在执行] ${action.command} ...\n`
         }));
 
         const parts = action.command.trim().split(/\s+/);
@@ -730,12 +730,12 @@ const AIChatPanel: React.FC = () => {
         if (result.success) {
           setExecutionLogs(prev => ({
             ...prev,
-            [msgId]: (prev[msgId] || "") + `✅ [执行成功]\n${result.output || "(无输出)"}\n`
+            [msgId]: (prev[msgId] || "") + ` [执行成功]\n${result.output || "(无输出)"}\n`
           }));
         } else {
           setExecutionLogs(prev => ({
             ...prev,
-            [msgId]: (prev[msgId] || "") + `❌ [执行失败]\n错误信息: ${result.error || "未知错误"}\n停止后续指令的执行。\n`
+            [msgId]: (prev[msgId] || "") + ` [执行失败]\n错误信息: ${result.error || "未知错误"}\n停止后续指令的执行。\n`
           }));
           setStatusBarMessage({
             type: "error",
@@ -746,7 +746,7 @@ const AIChatPanel: React.FC = () => {
           if (isAgentMode) {
             setExecutionLogs(prev => ({
               ...prev,
-              [msgId]: (prev[msgId] || "") + `🤖 [自我纠错] 正在将错误报告自动反馈给 AI 助手进行诊断与修复方案生成...\n`
+              [msgId]: (prev[msgId] || "") + ` [自我纠错] 正在将错误报告自动反馈给 AI 助手进行诊断与修复方案生成...\n`
             }));
             const currentAction = action;
             const currentError = result.error || "未知错误";
@@ -761,7 +761,7 @@ const AIChatPanel: React.FC = () => {
     } catch (e: any) {
       setExecutionLogs(prev => ({
         ...prev,
-        [msgId]: (prev[msgId] || "") + `❌ [异常崩溃] 执行过程中遇到意外错误: ${e.message || String(e)}\n`
+        [msgId]: (prev[msgId] || "") + ` [异常崩溃] 执行过程中遇到意外错误: ${e.message || String(e)}\n`
       }));
     } finally {
       setExecutingMsgId(null);
@@ -774,7 +774,7 @@ const AIChatPanel: React.FC = () => {
 
     setIsLoading(true);
 
-    const feedbackContent = `⚠️ [系统自动反馈] 指令执行失败！\n失败的指令: \`${failedAction.command}\`\n执行类型: \`${failedAction.type}\`\n错误信息: \`${errorMsg}\`\n\n请自我解析此错误，分析原因，并提供下一步的修复方案或可用的替代指令（如果有的话）。`;
+    const feedbackContent = ` [系统自动反馈] 指令执行失败！\n失败的指令: \`${failedAction.command}\`\n执行类型: \`${failedAction.type}\`\n错误信息: \`${errorMsg}\`\n\n请自我解析此错误，分析原因，并提供下一步的修复方案或可用的替代指令（如果有的话）。`;
     
     // 1. 将这条系统自动反馈的“错误信息”作为 user 消息添加到会话中
     addMessage(convId, { role: "user", content: feedbackContent });
@@ -823,7 +823,7 @@ const AIChatPanel: React.FC = () => {
       logService.error("自动诊断与修复请求失败", "AIChat", { error: e.message, category: "ai" });
       addMessage(convId, {
         role: "assistant",
-        content: `❌ 自动错误反馈与诊断请求失败: ${e.message || String(e)}。建议您手动修改或执行替代指令。`
+        content: ` 自动错误反馈与诊断请求失败: ${e.message || String(e)}。建议您手动修改或执行替代指令。`
       });
     } finally {
       setIsLoading(false);
@@ -845,7 +845,7 @@ const AIChatPanel: React.FC = () => {
       convId = createNewConversation();
     }
 
-    addMessage(convId, { role: "user", content: "🔍 正在从手机抓取 Logcat 崩溃日志并进行诊断..." });
+    addMessage(convId, { role: "user", content: " 正在从手机抓取 Logcat 崩溃日志并进行诊断..." });
 
     try {
       logService.info("开始获取 Logcat 崩溃日志进行诊断", "AIChat", { category: "ai", device: selectedDevice.serial });
@@ -876,7 +876,7 @@ const AIChatPanel: React.FC = () => {
       if (!logcatOutput) {
         addMessage(convId, {
           role: "assistant",
-          content: "ℹ️ 未在设备中检测到最近的 Crash 堆栈或错误日志 (Logcat 为空)。请确保手机中已发生过崩溃，或重新连接设备重试。"
+          content: "ℹ 未在设备中检测到最近的 Crash 堆栈或错误日志 (Logcat 为空)。请确保手机中已发生过崩溃，或重新连接设备重试。"
         });
         setIsLoading(false);
         return;
@@ -911,7 +911,7 @@ ${slicedLogs}
       logService.error("Logcat 诊断失败", "AIChat", { error: error.message, category: "ai" });
       addMessage(convId, {
         role: "assistant",
-        content: `❌ Logcat 诊断请求失败: ${error.message}\n\n建议检查设备连接是否正常，或在设置中切换模型通道。`
+        content: ` Logcat 诊断请求失败: ${error.message}\n\n建议检查设备连接是否正常，或在设置中切换模型通道。`
       });
     } finally {
       setIsLoading(false);
@@ -1000,17 +1000,17 @@ ${slicedLogs}
       }
       handleLogcatDiagnose();
     } else if (type === "anr") {
-      setInputValue("🔍 请帮我诊断和分析手机中的 ANR (程序无响应) 故障。如果可以，请帮我列出如何获取 /data/anr/ 下的 Trace 文件，以及如何定位导致主线程卡死的具体原因。");
+      setInputValue(" 请帮我诊断和分析手机中的 ANR (程序无响应) 故障。如果可以，请帮我列出如何获取 /data/anr/ 下的 Trace 文件，以及如何定位导致主线程卡死的具体原因。");
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
     } else if (type === "admt") {
-      setInputValue("🔍 我遇到了玩机管家 (ADMT) 的报错或异常。请帮我分析该如何排查：\n1. ADB/Fastboot 驱动或可执行文件初始化失败；\n2. 设备连接不稳定或无法识别；\n3. 软件激活及网络接口问题。");
+      setInputValue(" 我遇到了玩机管家 (ADMT) 的报错或异常。请帮我分析该如何排查：\n1. ADB/Fastboot 驱动或可执行文件初始化失败；\n2. 设备连接不稳定或无法识别；\n3. 软件激活及网络接口问题。");
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
     } else if (type === "flash") {
-      setInputValue("🔍 请帮我分析刷机/Root/刷写分区时遇到的失败日志。例如 Fastboot 报错、Magisk 补丁刷入失败、AB 分区切换后无法开机等情况，应该如何排查和恢复？");
+      setInputValue(" 请帮我分析刷机/Root/刷写分区时遇到的失败日志。例如 Fastboot 报错、Magisk 补丁刷入失败、AB 分区切换后无法开机等情况，应该如何排查和恢复？");
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
@@ -1489,7 +1489,7 @@ ${slicedLogs}
                             return (
                               <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%", minWidth: "280px" }}>
                                 <div style={{ marginBottom: "4px" }}>
-                                  <Text weight="semibold">🤖 AI 的思考:</Text>
+                                  <Text weight="semibold"> AI 的思考:</Text>
                                   <div style={{ marginTop: "4px", color: tokens.colorNeutralForeground2, whiteSpace: "pre-wrap" }}>
                                     {agentData.thought}
                                   </div>
@@ -1504,7 +1504,7 @@ ${slicedLogs}
                                     color: agentData.danger_level === "high" ? "#9B1C1C" : "#92400E",
                                     fontSize: "13px"
                                   }}>
-                                    <Text weight="semibold">{agentData.danger_level === "high" ? "🚨 高危风险警告: " : "⚠️ 安全提示: "}</Text>
+                                    <Text weight="semibold">{agentData.danger_level === "high" ? " 高危风险警告: " : " 安全提示: "}</Text>
                                     {agentData.risk_warning}
                                   </div>
                                 )}
@@ -1729,7 +1729,7 @@ ${slicedLogs}
                         overflow: "hidden",
                         textOverflow: "ellipsis"
                       }} title={file.path}>
-                        📎 {file.name}
+                         {file.name}
                       </span>
                       <Button
                         size="small"
@@ -1935,7 +1935,7 @@ ${slicedLogs}
                       setMcpTestResult(null);
                     }}
                   >
-                    ⚡ {t.name}
+                     {t.name}
                   </Button>
                 ))}
               </div>
@@ -1998,7 +1998,7 @@ ${slicedLogs}
                     </Button>
                     {mcpTestResult && (
                       <Button appearance="secondary" onClick={handleInsertMcpResultToChat}>
-                        📋 将输出结果带入对话
+                         将输出结果带入对话
                       </Button>
                     )}
                   </div>

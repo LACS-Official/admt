@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+﻿import React, { useState, useCallback, useEffect } from "react";
 import {
   makeStyles,
   Text,
@@ -693,8 +693,8 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
         const loadTime = Date.now() - startTime;
 
         // 调试输出：查看返回的应用数据结构
-        console.log("📱 获取到的应用数据样本:", installedApps.slice(0, 3));
-        console.log("📱 第一个应用的详细信息:", installedApps[0]);
+        console.log(" 获取到的应用数据样本:", installedApps.slice(0, 3));
+        console.log(" 第一个应用的详细信息:", installedApps[0]);
 
         // 转换字段名格式（从snake_case到camelCase）并创建应用对象数组
         const appsWithVersion: InstalledApp[] = installedApps.map(
@@ -855,7 +855,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
 
           // 调试信息：打印当前批次加载的应用
           console.log(
-            `📦 加载第 ${batchIndex + 1} 批应用，数量: ${appsWithVersion.length}`,
+            ` 加载第 ${batchIndex + 1} 批应用，数量: ${appsWithVersion.length}`,
             appsWithVersion.map((app) => app.packageName),
           );
 
@@ -873,7 +873,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
           });
 
           // 调试信息：打印当前进度
-          console.log(`📊 当前进度: ${allApps.length}/${totalApps}`);
+          console.log(` 当前进度: ${allApps.length}/${totalApps}`);
 
           // 优化：减少延迟时间，提高响应速度
           // 只在需要时添加延迟，第一批立即显示，后续批次适当延迟
@@ -1154,7 +1154,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
           }
         } catch (error) {
           failCount++;
-          results.push(`✗ ${packageName}: ${error}`);
+          results.push(` ${packageName}: ${error}`);
         }
       }
 
@@ -1178,7 +1178,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
         items: results.map((result, index) => ({
           id: `${Date.now()}_${index}`,
           name: packageNames[index],
-          status: result.startsWith("✓") ? "success" : "failed",
+          status: result.startsWith("") ? "success" : "failed",
           message: result,
         })),
         startTime: new Date().toISOString(),
@@ -1258,12 +1258,12 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
           } else {
             failCount++;
             results.push(
-              `✗ ${packageName}: ${result.output || result.error || t("app_manager.operation_fail")}`,
+              ` ${packageName}: ${result.output || result.error || t("app_manager.operation_fail")}`,
             );
           }
         } catch (error) {
           failCount++;
-          results.push(`✗ ${packageName}: ${error}`);
+          results.push(` ${packageName}: ${error}`);
         }
       }
 
@@ -1287,7 +1287,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
         items: results.map((result, index) => ({
           id: `${Date.now()}_${index}`,
           name: packageNames[index],
-          status: result.startsWith("✓") ? "success" : "failed",
+          status: result.startsWith("") ? "success" : "failed",
           message: result,
         })),
         startTime: new Date().toISOString(),
@@ -1367,12 +1367,12 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
           } else {
             failCount++;
             results.push(
-              `✗ ${packageName}: ${result.output || result.error || t("app_manager.stop_fail")}`,
+              ` ${packageName}: ${result.output || result.error || t("app_manager.stop_fail")}`,
             );
           }
         } catch (error) {
           failCount++;
-          results.push(`✗ ${packageName}: ${error}`);
+          results.push(` ${packageName}: ${error}`);
         }
       }
 
@@ -1396,7 +1396,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
         items: results.map((result, index) => ({
           id: `${Date.now()}_${index}`,
           name: packageNames[index],
-          status: result.startsWith("✓") ? "success" : "failed",
+          status: result.startsWith("") ? "success" : "failed",
           message: result,
         })),
         startTime: new Date().toISOString(),
@@ -1459,7 +1459,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
         } catch (error: any) {
           failCount++;
           results.push(
-            `✗ ${packageName}: ${error.message || t("app_manager.operation_fail")}`,
+            ` ${packageName}: ${error.message || t("app_manager.operation_fail")}`,
           );
         }
       }
@@ -1484,7 +1484,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
         items: results.map((result, index) => ({
           id: `${Date.now()}_${index}`,
           name: packageNames[index],
-          status: result.startsWith("✓") ? "success" : "failed",
+          status: result.startsWith("") ? "success" : "failed",
           message: result,
         })),
         startTime: new Date().toISOString(),
@@ -1650,12 +1650,12 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
           } else {
             failCount++;
             results.push(
-              `✗ ${packageName}: ${result.output || result.error || t("app_manager.clear_data_fail")}`,
+              ` ${packageName}: ${result.output || result.error || t("app_manager.clear_data_fail")}`,
             );
           }
         } catch (error) {
           failCount++;
-          results.push(`✗ ${packageName}: ${error}`);
+          results.push(` ${packageName}: ${error}`);
         }
       }
 
@@ -1679,7 +1679,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
         items: results.map((result, index) => ({
           id: `${Date.now()}_${index}`,
           name: packageNames[index],
-          status: result.startsWith("✓") ? "success" : "failed",
+          status: result.startsWith("") ? "success" : "failed",
           message: result,
         })),
         startTime: new Date().toISOString(),
@@ -2426,7 +2426,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
                 size={200}
                 style={{ color: "var(--colorPaletteRedForeground1)" }}
               >
-                ⚠️ {t("app_manager.uninstall_warning")}
+                 {t("app_manager.uninstall_warning")}
               </Text>
             </DialogBody>
           </DialogContent>

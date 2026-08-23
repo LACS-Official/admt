@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 用户使用数据追踪服务
  * 根据API使用指南实现用户行为统计功能
  * 仅在用户同意隐私政策后发送数据
@@ -84,36 +84,36 @@ export class UsageTrackingService {
       const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
       const label = getCurrentWebviewWindow().label;
       if (label !== 'main') {
-        console.log(`🚫 非主窗口 (${label})，跳过数据统计上传`);
+        console.log(` 非主窗口 (${label})，跳过数据统计上传`);
         return;
       }
 
-      console.log('🚀 trackMainPageEntry 方法被调用');
+      console.log(' trackMainPageEntry 方法被调用');
 
       // 检查是否已初始化
       if (!this.isInitialized) {
-        console.log('🔧 服务未初始化，开始初始化...');
+        console.log(' 服务未初始化，开始初始化...');
         await this.initialize();
       } else {
-        console.log('✅ 服务已初始化');
+        console.log(' 服务已初始化');
       }
 
       // 检查本会话是否已经发送过数据
       if (this.hasTrackedThisSession || this.isTrackingInProgress) {
-        console.log('📊 数据发送已完成或正在进行中，跳过本次请求');
+        console.log(' 数据发送已完成或正在进行中，跳过本次请求');
         return;
       }
 
       // 检查用户是否同意隐私政策
       const canCollect = this.canCollectData();
       if (!canCollect) {
-        console.log('🚫 用户未同意数据收集，跳过使用数据发送');
+        console.log(' 用户未同意数据收集，跳过使用数据发送');
         return;
       } else {
-        console.log('✅ 用户已同意数据收集，继续发送...');
+        console.log(' 用户已同意数据收集，继续发送...');
       }
 
-      console.log('📊 开始发送用户使用数据...');
+      console.log(' 开始发送用户使用数据...');
 
       // 获取安全配置
       const securityConfig = SecurityConfigManager.getInstance();
@@ -121,14 +121,14 @@ export class UsageTrackingService {
       // 确保安全配置已初始化
       try {
         await securityConfig.initialize();
-        console.log('✅ 安全配置初始化成功');
+        console.log(' 安全配置初始化成功');
       } catch (error) {
-        console.error('❌ 安全配置初始化失败:', error);
+        console.error(' 安全配置初始化失败:', error);
         throw error;
       }
 
       const config = securityConfig.getConfig();
-      console.log('📋 获取到安全配置:', {
+      console.log(' 获取到安全配置:', {
         api_base_url: config.api_base_url,
         software_id: config.software_id,
         app_version: config.app_version
@@ -144,7 +144,7 @@ export class UsageTrackingService {
       };
 
       // 发送数据到API
-      console.log('📤 准备发送使用数据:', {
+      console.log(' 准备发送使用数据:', {
         softwareId: usageData.softwareId,
         softwareName: usageData.softwareName,
         softwareVersion: usageData.softwareVersion,
@@ -158,16 +158,16 @@ export class UsageTrackingService {
 
         if (success) {
           this.hasTrackedThisSession = true;
-          console.log('✅ 用户使用数据发送成功，会话状态已更新');
+          console.log(' 用户使用数据发送成功，会话状态已更新');
         } else {
-          console.warn('⚠️ 用户使用数据发送失败，但不影响应用正常使用');
+          console.warn(' 用户使用数据发送失败，但不影响应用正常使用');
         }
       } finally {
         this.isTrackingInProgress = false;
       }
 
     } catch (error) {
-      console.error('❌ 追踪主页面进入失败:', error);
+      console.error(' 追踪主页面进入失败:', error);
       // 不抛出错误，避免影响应用正常功能
     }
   }
@@ -196,7 +196,7 @@ export class UsageTrackingService {
     // 检查是否允许收集用户行为数据
     const canCollectBehavior = privacyStore.canCollectUserBehavior();
 
-    console.log('🔍 详细的数据收集权限检查:', {
+    console.log(' 详细的数据收集权限检查:', {
       privacyStatus,
       hasConsent,
       canCollectBehavior,
@@ -213,8 +213,8 @@ export class UsageTrackingService {
     try {
       const endpoint = '/api/user-behavior/usage';
 
-      console.log('📤 发送使用数据到端点:', endpoint);
-      console.log('📊 使用数据:', {
+      console.log(' 发送使用数据到端点:', endpoint);
+      console.log(' 使用数据:', {
         softwareId: data.softwareId,
         softwareName: data.softwareName,
         softwareVersion: data.softwareVersion,
@@ -241,7 +241,7 @@ export class UsageTrackingService {
         throw new Error(response.error || '服务器返回错误');
       }
 
-      console.log('✅ 使用数据发送成功:', response.data?.message || '成功');
+      console.log(' 使用数据发送成功:', response.data?.message || '成功');
 
       // 记录请求时间用于频率限制
       this.recordRequestTime('usage');
@@ -249,7 +249,7 @@ export class UsageTrackingService {
       return true;
 
     } catch (error) {
-      console.error('❌ 发送使用数据失败:', error);
+      console.error(' 发送使用数据失败:', error);
       return false;
     }
   }
@@ -259,24 +259,24 @@ export class UsageTrackingService {
    */
   private async generateDeviceFingerprint(): Promise<void> {
     try {
-      console.log('🔑 开始生成设备指纹...');
+      console.log(' 开始生成设备指纹...');
       // 调用Tauri命令获取设备指纹
       const fingerprint: DetailedDeviceFingerprint = await invoke('get_detailed_device_fingerprint');
       this.deviceFingerprint = fingerprint.fingerprint;
 
-      console.log('🔑 设备指纹生成成功:', this.deviceFingerprint.substring(0, 8) + '...');
-      console.log('🔑 设备指纹详细信息:', {
+      console.log(' 设备指纹生成成功:', this.deviceFingerprint.substring(0, 8) + '...');
+      console.log(' 设备指纹详细信息:', {
         os: fingerprint.os,
         arch: fingerprint.arch,
         hostname: fingerprint.hostname,
         timestamp: fingerprint.timestamp
       });
     } catch (error) {
-      console.error('❌ 生成设备指纹失败:', error);
-      console.log('🔄 尝试使用备用方案生成设备指纹...');
+      console.error(' 生成设备指纹失败:', error);
+      console.log(' 尝试使用备用方案生成设备指纹...');
       // 使用备用方案生成简单指纹
       this.deviceFingerprint = this.generateFallbackFingerprint();
-      console.log('🔑 使用备用设备指纹:', this.deviceFingerprint.substring(0, 8) + '...');
+      console.log(' 使用备用设备指纹:', this.deviceFingerprint.substring(0, 8) + '...');
     }
   }
 
@@ -321,7 +321,7 @@ export class UsageTrackingService {
   public resetSession(): void {
     this.sessionId = this.generateSessionId();
     this.hasTrackedThisSession = false;
-    console.log('🔄 会话状态已重置');
+    console.log(' 会话状态已重置');
   }
 
   /**

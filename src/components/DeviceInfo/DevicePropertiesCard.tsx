@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   makeStyles,
   Card,
@@ -221,7 +221,7 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
       securityInfo.push({
         property: t('device_info.bootloader'),
         value: props.bootloaderLocked ? t('device_info.locked') : t('device_info.unlocked'),
-        icon: props.bootloaderLocked ? "🔒" : "🔓"
+        icon: props.bootloaderLocked ? "" : ""
       });
     }
     if (props.verifiedBootState) securityInfo.push({ property: t('device_overview.verified_boot'), value: props.verifiedBootState });
@@ -230,21 +230,21 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
       securityInfo.push({
         property: t('device_overview.debug_mode'),
         value: props.debuggable ? t('device_overview.enabled') : t('device_overview.disabled'),
-        icon: props.debuggable ? "✅" : "❌"
+        icon: props.debuggable ? "" : ""
       });
     }
     if (props.secure !== undefined) {
       securityInfo.push({
         property: t('device_overview.secure_mode'),
         value: props.secure ? t('device_overview.enabled') : t('device_overview.disabled'),
-        icon: props.secure ? "✅" : "❌"
+        icon: props.secure ? "" : ""
       });
     }
     if (props.adbSecure !== undefined) {
       securityInfo.push({
         property: t('device_overview.adb_secure'),
         value: props.adbSecure ? t('device_overview.enabled') : t('device_overview.disabled'),
-        icon: props.adbSecure ? "✅" : "❌"
+        icon: props.adbSecure ? "" : ""
       });
     }
     if (securityInfo.length > 0) {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   makeStyles,
   shorthands,
@@ -224,10 +224,10 @@ export const McpResourcesPanel: React.FC = () => {
           className={styles.subTabList}
         >
           <Tab value="tools" icon={<Wrench24Regular />}>
-            🛠️ ADMT 核心 MCP 工具能力 (8 项工具)
+             ADMT 核心 MCP 工具能力 (8 项工具)
           </Tab>
           <Tab value="servers" icon={<Globe24Regular />}>
-            🌐 主流开源 MCP 服务商 (8 个服务生态)
+             主流开源 MCP 服务商 (8 个服务生态)
           </Tab>
         </TabList>
       </div>

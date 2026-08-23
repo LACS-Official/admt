@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+﻿import { useEffect, useState, useCallback, useRef } from "react";
 import { useAppStore } from "../stores/appStore";
 import { useStartupFlowStore } from "../stores/startupFlowStore";
 import { usePrivacyConsentStore } from "../stores/privacyConsentStore";
@@ -50,61 +50,25 @@ export const useAppStartup = () => {
   const adbInitRef = useRef(false);
   const completionRef = useRef(false); // 保护完成回调只执行一次
 
-  // 禁用F5刷新功能
+  // 禁用 Webview 刷新快捷键（保留桌面体验）
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // 禁用F5刷新和Ctrl+R刷新
-      if (event.key === 'F5' || (event.ctrlKey && event.key === 'r') ||
-        (event.ctrlKey && event.shiftKey && event.key === 'R')) {
+      if (event.key === 'F5' || (event.ctrlKey && (event.key === 'r' || event.key === 'R'))) {
         event.preventDefault();
         event.stopPropagation();
-        logService.info('用户尝试刷新页面，已被拦截', 'App');
-        return;
-      }
-
-      // 禁用F3和F7以及其他功能键
-      if (event.key.startsWith('F') && event.key.length >= 2 && event.key.length <= 3) {
-        const fKeyNum = parseInt(event.key.substring(1));
-        // 禁用F1-F12所有功能键（除了F5，因为上面已经处理）
-        if (fKeyNum >= 1 && fKeyNum <= 12 && fKeyNum !== 5) {
-          // 特别处理F3和F7
-          if (fKeyNum === 3 || fKeyNum === 7) {
-            event.preventDefault();
-            event.stopPropagation();
-            logService.info(`用户尝试使用F${fKeyNum}快捷键，已被拦截`, 'App');
-            return;
-          }
-
-          // 其他F键也在这里统一处理
-          event.preventDefault();
-          event.stopPropagation();
-          logService.info(`用户尝试使用F${fKeyNum}快捷键，已被拦截`, 'App');
-          return;
-        }
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('keydown', handleKeyDown, true);
-
     return () => {
-      document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, []);
 
-  // 监听启动流程状态变化
-  useEffect(() => {
-    if (currentPhase === 'activation-verification' && !showStartupFlow) {
-      console.log('🔄 检测到需要激活验证，重新显示启动流程');
-      setShowStartupFlow(true);
-    }
-  }, [currentPhase, showStartupFlow]);
-
   // 监听应用退出状态
   useEffect(() => {
     if (shouldExitApp) {
-      console.log('⚠️ 用户拒绝同意必要条款，应用将退出');
+      console.log(' 用户拒绝同意必要条款，应用将退出');
       handleStartupFlowError('用户拒绝同意必要条款，应用将退出');
     }
   }, [shouldExitApp]);
@@ -123,11 +87,11 @@ export const useAppStartup = () => {
             deviceService.resetConnectionState();
             const hasUpdate = versionCheckResult?.hasUpdate;
             if (currentPhase !== 'version-check' || !hasUpdate) {
-              console.log('✅ 允许进入主页面');
+              console.log(' 允许进入主页面');
               setShowStartupFlow(false);
               completeStartup();
             } else {
-              console.log('⚠️ 检测到新版本，停留在版本检查阶段，不进入主页面');
+              console.log(' 检测到新版本，停留在版本检查阶段，不进入主页面');
             }
           }, 500);
         }, 1000);
@@ -143,7 +107,7 @@ export const useAppStartup = () => {
     initializationRef.current = true;
 
     try {
-      console.log('🚀 初始化启动流程...');
+      console.log(' 初始化启动流程...');
       startPreload();
 
       // 并行执行初始化任务
@@ -151,24 +115,24 @@ export const useAppStartup = () => {
         // 预加载资源
         (async () => {
           try {
-            console.log('📦 预加载资源...');
+            console.log(' 预加载资源...');
             await preloadService.preloadEssentialResources();
             preloadRef.current = true;
-            console.log('✅ 资源预加载完成');
+            console.log(' 资源预加载完成');
           } catch (error) {
-            console.error('❌ 资源预加载失败:', error);
+            console.error(' 资源预加载失败:', error);
           }
         })(),
 
         // 安全配置初始化
         (async () => {
           try {
-            console.log('🔒 初始化安全配置...');
+            console.log(' 初始化安全配置...');
             await SecurityConfigManager.initialize();
             securityConfigRef.current = true;
-            console.log('✅ 安全配置初始化完成');
+            console.log(' 安全配置初始化完成');
           } catch (error) {
-            console.error('❌ 安全配置初始化失败:', error);
+            console.error(' 安全配置初始化失败:', error);
             throw new Error('安全配置初始化失败，无法继续启动');
           }
         })(),
@@ -176,12 +140,12 @@ export const useAppStartup = () => {
         // 版本检查
         (async () => {
           try {
-            console.log('🔍 检查应用版本...');
+            console.log(' 检查应用版本...');
             await unifiedVersionService.checkVersionSync();
             versionCheckRef.current = true;
-            console.log('✅ 版本检查完成');
+            console.log(' 版本检查完成');
           } catch (error) {
-            console.error('❌ 版本检查失败:', error);
+            console.error(' 版本检查失败:', error);
           }
         })(),
 
@@ -189,17 +153,17 @@ export const useAppStartup = () => {
         // ADB工具初始化
         (async () => {
           try {
-            console.log('🔧 初始化ADB工具...');
+            console.log(' 初始化ADB工具...');
             await adbToolsManager.initialize();
             adbInitRef.current = true;
-            console.log('✅ ADB工具初始化完成');
+            console.log(' ADB工具初始化完成');
 
             // 加载ADB命令配置
-            console.log('📜 加载ADB命令配置...');
+            console.log(' 加载ADB命令配置...');
             await useConfigStore.getState().loadAdbCommands();
-            console.log('✅ ADB命令配置加载完成');
+            console.log(' ADB命令配置加载完成');
           } catch (error) {
-            console.error('❌ ADB工具初始化失败:', error);
+            console.error(' ADB工具初始化失败:', error);
           }
         })(),
 
@@ -212,25 +176,25 @@ export const useAppStartup = () => {
         throw new Error('安全配置初始化失败，无法继续启动');
       }
 
-      console.log('🎯 启动流程初始化完成');
+      console.log(' 启动流程初始化完成');
 
       // 根据当前状态决定进入哪个阶段
       if (!hasCompletedPrivacySetup) {
-        console.log('📋 需要完成隐私政策设置，进入隐私政策同意阶段');
+        console.log(' 需要完成隐私政策设置，进入隐私政策同意阶段');
         setCurrentPhase('privacy-consent');
       } else {
         // 检查版本是否最新
-        console.log('🔄 检查版本是否最新...');
+        console.log(' 检查版本是否最新...');
         try {
           const versionCheckResult = await unifiedVersionService.checkForUpdates();
           setVersionCheckResult(versionCheckResult);
           setVersionCheckCompleted(true);
 
           if (!versionCheckResult.hasUpdate) {
-            console.log('✅ 版本已是最新，所有检查通过，进入主应用');
+            console.log(' 版本已是最新，所有检查通过，进入主应用');
             handleStartupFlowComplete();
           } else {
-            console.log('⚠️ 检测到新版本，进入版本检查阶段');
+            console.log(' 检测到新版本，进入版本检查阶段');
             setCurrentPhase('version-check');
             // 不再继续执行后续流程，用户必须处理更新
             // 确保不会调用 handleStartupFlowComplete
@@ -239,8 +203,8 @@ export const useAppStartup = () => {
             return;
           }
         } catch (error) {
-          console.error('❌ 版本检查失败:', error);
-          console.log('⚠️ 版本检查失败，进入版本检查阶段');
+          console.error(' 版本检查失败:', error);
+          console.log(' 版本检查失败，进入版本检查阶段');
           setCurrentPhase('version-check');
           // 不再继续执行后续流程，用户必须处理版本检查问题
           // 确保不会调用 handleStartupFlowComplete
@@ -248,7 +212,7 @@ export const useAppStartup = () => {
         }
       }
     } catch (error) {
-      console.error('❌ 启动流程初始化失败:', error);
+      console.error(' 启动流程初始化失败:', error);
       handleStartupFlowError(`启动流程初始化失败: ${error}`);
     }
   }, [
@@ -277,10 +241,10 @@ export const useAppStartup = () => {
 
       // 启动流程彻底完成后，再开启设备扫描，并给予一定的缓冲时间
       if (config.autoDetectDevices) {
-        console.log('🔍 启动流程彻底完成，开启设备扫描...');
+        console.log(' 启动流程彻底完成，开启设备扫描...');
         deviceService.startScanning(config.scanInterval, 2000);
       } else {
-        console.log('🔍 自动检测设备已禁用，跳过开启扫描');
+        console.log(' 自动检测设备已禁用，跳过开启扫描');
       }
     }, 1000);
 
@@ -319,7 +283,7 @@ export const useAppStartup = () => {
   const handleActivationSuccess = useCallback((activationStatus: any) => {
     console.log('激活验证成功:', activationStatus);
 
-    console.log('🔄 激活成功后检查版本是否最新...');
+    console.log(' 激活成功后检查版本是否最新...');
     unifiedVersionService.checkForUpdates()
       .then((versionCheckResult) => {
         setVersionCheckResult(versionCheckResult);
@@ -329,20 +293,20 @@ export const useAppStartup = () => {
           // 如果用户已经完成了所有设置（在隐私政策页面已经全部同意），则直接进入主应用
           const privacyState = usePrivacyConsentStore.getState();
           if (privacyState.hasAcceptedDataCollection && privacyState.hasCompletedPrivacySetup) {
-            console.log('✅ 用户已完成所有隐私和数据设置，直接进入主应用');
+            console.log(' 用户已完成所有隐私和数据设置，直接进入主应用');
             handleStartupFlowComplete();
           } else {
-            console.log('✅ 版本已是最新，进入数据收集同意阶段');
+            console.log(' 版本已是最新，进入数据收集同意阶段');
             setCurrentPhase('data-collection');
           }
         } else {
-          console.log('⚠️ 检测到新版本，进入版本检查阶段');
+          console.log(' 检测到新版本，进入版本检查阶段');
           setCurrentPhase('version-check');
         }
       })
       .catch((error) => {
-        console.error('❌ 版本检查失败:', error);
-        console.log('⚠️ 版本检查失败，进入版本检查阶段');
+        console.error(' 版本检查失败:', error);
+        console.log(' 版本检查失败，进入版本检查阶段');
         setCurrentPhase('version-check');
       });
 
@@ -357,7 +321,7 @@ export const useAppStartup = () => {
     // 检查激活状态，如果已激活（Stubbed服务总是返回true）则跳过激活验证阶段
     const status = activationService.checkActivationStatus();
     if (status.isActivated && !status.isExpired) {
-      console.log('✅ 检测到已激活状态，直接跳过激活验证阶段');
+      console.log(' 检测到已激活状态，直接跳过激活验证阶段');
       handleActivationSuccess(status);
     } else {
       setCurrentPhase('activation-verification');
@@ -366,7 +330,7 @@ export const useAppStartup = () => {
 
   // 处理数据收集同意
   const handleDataCollectionConsent = useCallback((consent: boolean) => {
-    console.log(`📊 用户数据收集同意: ${consent ? '同意' : '拒绝'}`);
+    console.log(` 用户数据收集同意: ${consent ? '同意' : '拒绝'}`);
 
     unifiedVersionService.checkForUpdates()
       .then((versionCheckResult) => {
@@ -374,18 +338,18 @@ export const useAppStartup = () => {
         setVersionCheckCompleted(true);
 
         if (!versionCheckResult.hasUpdate) {
-          console.log('✅ 版本已是最新，所有检查通过，进入主应用');
+          console.log(' 版本已是最新，所有检查通过，进入主应用');
           handleStartupFlowComplete();
         } else {
-          console.log('⚠️ 检测到新版本，进入版本检查阶段');
+          console.log(' 检测到新版本，进入版本检查阶段');
           setCurrentPhase('version-check');
           // 不再继续执行后续流程，用户必须处理更新
           // 这里不需要return，因为已经设置了phase，后续流程会被阻止
         }
       })
       .catch((error) => {
-        console.error('❌ 版本检查失败:', error);
-        console.log('⚠️ 版本检查失败，进入版本检查阶段');
+        console.error(' 版本检查失败:', error);
+        console.log(' 版本检查失败，进入版本检查阶段');
         setCurrentPhase('version-check');
         // 不再继续执行后续流程，用户必须处理版本检查问题
         // 这里不需要return，因为已经设置了phase，后续流程会被阻止

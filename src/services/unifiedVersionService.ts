@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 统一版本检测服务
  * 解决开发板和发布版版本检测不一致问题
  */
@@ -80,7 +80,7 @@ class VersionCheckMonitor {
 
     // 开发环境输出详细日志
     if (import.meta.env.DEV) {
-      console.log(`📊 版本检测监控 [${event}]:`, data);
+      console.log(` 版本检测监控 [${event}]:`, data);
     }
 
     // 保持最近100条记录

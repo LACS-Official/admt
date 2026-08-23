@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import {
   makeStyles,
   shorthands,
@@ -278,9 +278,9 @@ const PluginStorePanel: React.FC = () => {
 
   const categories = [
     { id: "all", label: t("online_resources.plugin_store.categories.all", "全部插件"), icon: <Apps24Regular /> },
-    { id: "life", label: "🛋️ 生活助手", icon: <Globe24Regular /> },
-    { id: "dev", label: "🛠️ 开发利器", icon: <Code24Regular /> },
-    { id: "common", label: "📦 常用工具", icon: <Wrench24Regular /> },
+    { id: "life", label: " 生活助手", icon: <Globe24Regular /> },
+    { id: "dev", label: " 开发利器", icon: <Code24Regular /> },
+    { id: "common", label: " 常用工具", icon: <Wrench24Regular /> },
     { id: "flash", label: t("online_resources.plugin_store.categories.flash", "刷机救砖"), icon: <Flash24Regular /> },
     { id: "tuning", label: t("online_resources.plugin_store.categories.tuning", "系统调优"), icon: <TopSpeed24Regular /> },
     { id: "ai", label: t("online_resources.plugin_store.categories.ai", "AI 赋能"), icon: <Sparkle24Regular /> },

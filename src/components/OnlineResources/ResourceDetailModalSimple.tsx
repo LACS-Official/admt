@@ -1,5 +1,4 @@
-
-/*
+﻿/*
 在线资源-资源详情弹窗页面
 */
 import React, { useState, useEffect } from 'react';
@@ -17,18 +16,19 @@ import {
   DialogContent,
   DialogActions,
   Spinner,
+  Badge,
 } from '@fluentui/react-components';
 import {
   ArrowDownload24Regular,
   Apps24Regular,
   Info20Regular,
+  Play24Regular,
+  FolderOpen24Regular,
 } from '@fluentui/react-icons';
 import { 
-    mergeClasses,
     shorthands,
-    ProgressBar 
 } from '@fluentui/react-components';
-import { OnlineSoftware, DownloadTask } from '../../types/app';
+import { OnlineSoftware } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 import { logService } from '../../services/logService';
 import { useAppStore } from '../../stores/appStore';
@@ -68,7 +68,10 @@ const useStyles = makeStyles({
     fontWeight: '500',
   },
   downloadButton: {
-    minWidth: '140px',
+    minWidth: '130px',
+  },
+  launchButton: {
+    minWidth: '130px',
   },
   loadingContainer: {
     display: 'flex',
@@ -84,7 +87,7 @@ const useStyles = makeStyles({
     lineHeight: '1.6',
   },
   dialogSurface: {
-    maxWidth: '560px',
+    maxWidth: '580px',
     width: '100%',
     maxHeight: '90vh',
     display: 'flex',
@@ -125,6 +128,19 @@ const useStyles = makeStyles({
     color: 'var(--colorNeutralForeground3)', 
     fontSize: '13px',
     lineHeight: '1.4',
+  },
+  executableCard: {
+    backgroundColor: 'var(--colorNeutralBackground3)',
+    ...shorthands.padding('12px'),
+    ...shorthands.borderRadius('8px'),
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  executableHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   }
 });
 
@@ -133,12 +149,10 @@ const openUrl = (url: string) => {
   import('@tauri-apps/plugin-shell').then(({ open }) => {
     open(url).catch((error) => {
       logService.error(`打开外部链接失败: ${url}`, '在线资源UI', { error: String(error) });
-      // 如果 Tauri shell 插件不可用，使用 window.open
       window.open(url, '_blank');
     });
   }).catch((err) => {
     logService.error('加载 shell 插件失败', '在线资源UI', { error: String(err) });
-    // 如果 Tauri shell 插件不可用，使用 window.open
     window.open(url, '_blank');
   });
 };
@@ -161,6 +175,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   const [detailData, setDetailData] = useState<OnlineSoftware | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<{
     isDownloaded: boolean;
     filePath?: string;
@@ -206,7 +221,6 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     const limitInfo = onlineResourcesService.canStartDownload();
     setDownloadLimitInfo(limitInfo);
 
-    // 如果有冷却时间，启动倒计时
     if (!limitInfo.canDownload && limitInfo.remainingTime && limitInfo.remainingTime > 0) {
       startCooldownTimer(limitInfo.remainingTime);
     }
@@ -225,7 +239,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
       if (remainingTime <= 0) {
         clearInterval(timer);
         setCooldownTimer(null);
-        checkDownloadLimits(); // 重新检查限制
+        checkDownloadLimits();
       } else {
         setDownloadLimitInfo(prev => ({
           ...prev,
@@ -238,7 +252,6 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     setCooldownTimer(timer);
   };
 
-  // 当弹窗打开时获取详细信息和下载状态
   useEffect(() => {
     if (isOpen && software.id) {
       fetchSoftwareDetail();
@@ -247,22 +260,22 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     }
   }, [isOpen, software.id]);
 
-  // 当详细信息加载完成后重新检查下载状态
   useEffect(() => {
     if (detailData) {
       checkDownloadStatus();
     }
   }, [detailData]);
 
-  // 定期检查下载限制（每5秒检查一次）
   useEffect(() => {
     if (isOpen) {
-      const interval = setInterval(checkDownloadLimits, 5000);
+      const interval = setInterval(() => {
+        checkDownloadLimits();
+        checkDownloadStatus();
+      }, 4000);
       return () => clearInterval(interval);
     }
   }, [isOpen]);
 
-  // 清理定时器
   useEffect(() => {
     return () => {
       if (cooldownTimer) {
@@ -275,7 +288,6 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   const handleDownload = async (_forceRedownload = false) => {
     const currentData = detailData || software;
 
-    // 检查下载限制
     const limitCheck = onlineResourcesService.canStartDownload();
     if (!limitCheck.canDownload) {
       logService.warning(`下载受限: ${limitCheck.reason}`, '在线资源UI');
@@ -286,19 +298,14 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
       setIsDownloading(true);
       try {
         const taskId = await onDownload(currentData);
+        console.log(' 下载任务已启动:', taskId);
 
-        // 显示下载成功消息
-        console.log('✅ 下载任务已启动:', taskId);
-
-        // 重新检查下载状态和限制
         setTimeout(() => {
           checkDownloadStatus();
           checkDownloadLimits();
         }, 1000);
-
       } catch (error) {
-        console.error('❌ 下载失败:', error);
-        // 可以在这里显示错误消息
+        console.error(' 下载失败:', error);
       } finally {
         setIsDownloading(false);
       }
@@ -316,7 +323,45 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     }
   };
 
-  //使用appfun下载
+  // 运行启动程序
+  const handleLaunchExecutable = async () => {
+    if (!downloadStatus.filePath) {
+      setStatusBarMessage({
+        type: "warning",
+        message: "尚未找到已下载文件，请先下载此资源",
+      });
+      return;
+    }
+
+    setIsLaunching(true);
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const res = await invoke<string>('launch_software_resource', {
+        path: downloadStatus.filePath,
+        openname: currentData.openname || null,
+      });
+
+      setStatusBarMessage({
+        type: "success",
+        message: res || `已成功启动 ${currentData.openname || currentData.name}`,
+      });
+      await logService.info(`已在弹窗内成功启动程序: ${currentData.name}`, '在线资源UI', {
+        path: downloadStatus.filePath,
+        openname: currentData.openname,
+      });
+    } catch (error: any) {
+      const errStr = error?.message || String(error);
+      setStatusBarMessage({
+        type: "error",
+        message: `启动失败: ${errStr}`,
+      });
+      await logService.error(`启动程序异常: ${currentData.name}`, '在线资源UI', { error: errStr });
+    } finally {
+      setIsLaunching(false);
+    }
+  };
+
+  // 使用appfun下载
   const OpenWithAppfun = () => {
     const url = `https://www.appfun.fun/software/${currentData.id}`;
     navigator.clipboard.writeText(url).then(() => {
@@ -345,7 +390,14 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <Text size={400} weight="semibold">资源：{currentData.name}</Text>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Text size={400} weight="semibold">资源：{currentData.name}</Text>
+                {downloadStatus.isDownloaded && (
+                  <Badge color="success" appearance="tint" size="small">
+                    已就绪
+                  </Badge>
+                )}
+              </div>
               <Caption1 style={{ color: 'var(--colorNeutralForeground3)' }}>
                 {currentData.category || '软件资源'} • v{currentData.currentVersion}
               </Caption1>
@@ -381,6 +433,44 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                   </Text>
                 </div>
               </div>
+
+              {/* 启动信息与快速启动卡片 */}
+              {currentData.openname && (
+                <>
+                  <Divider />
+                  <div>
+                    <Subtitle1 style={{ marginBottom: '8px', display: 'block', fontWeight: '600' }}>
+                      启动程序 / 执行入口
+                    </Subtitle1>
+                    <div className={styles.executableCard}>
+                      <div className={styles.executableHeader}>
+                        <div className={styles.infoItem}>
+                          <Caption1 className={styles.infoLabel}>执行文件名</Caption1>
+                          <Text className={styles.infoValue} weight="semibold">{currentData.openname}</Text>
+                        </div>
+                        {downloadStatus.isDownloaded ? (
+                          <Button
+                            appearance="primary"
+                            size="small"
+                            icon={isLaunching ? <Spinner size="tiny" /> : <Play24Regular />}
+                            onClick={handleLaunchExecutable}
+                            disabled={isLaunching || !downloadStatus.filePath}
+                          >
+                            {isLaunching ? "正在启动..." : "直接运行"}
+                          </Button>
+                        ) : (
+                          <Badge color="warning" appearance="tint">
+                            未下载
+                          </Badge>
+                        )}
+                      </div>
+                      <Caption1 style={{ color: 'var(--colorNeutralForeground3)' }}>
+                         提示：下载解压后，可在此弹窗或下载管理中直接一键启动该程序。
+                      </Caption1>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* 软件描述 */}
               {currentData.description && (
@@ -426,26 +516,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                 </>
               )}
 
-              {/* 启动信息 - 条件隐藏 */}
-              {currentData.openname && (
-                <>
-                  <Divider />
-                  <div>
-                    <Subtitle1 style={{ marginBottom: '8px', display: 'block', fontWeight: '600' }}>开发者备注 / 启动项</Subtitle1>
-                    <div style={{ backgroundColor: 'var(--colorNeutralBackground3)', padding: '12px', borderRadius: '8px' }}>
-                      <div className={styles.infoItem}>
-                        <Caption1 className={styles.infoLabel}>执行入口</Caption1>
-                        <Text className={styles.infoValue}>{currentData.openname}</Text>
-                      </div>
-                      <Caption1 style={{ color: 'var(--colorNeutralForeground3)', marginTop: '8px', display: 'block' }}>
-                        💡 提示：下载并自动解压后，该文件通常位于软件根目录下。
-                      </Caption1>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* 底部警告框 - 降噪移位 */}
+              {/* 底部警告框 */}
               <div className={styles.warningBox}>
                 <Info20Regular style={{ color: 'var(--colorNeutralForeground3)', marginTop: '2px' }} />
                 <div className={styles.warningText}>
@@ -483,19 +554,28 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             <>
               <Button
                 appearance="outline"
+                icon={<FolderOpen24Regular />}
                 onClick={() => downloadStatus.filePath && handleOpenFolder(downloadStatus.filePath)}
                 disabled={!downloadStatus.filePath}
               >
-                打开文件位置
+                打开位置
               </Button>
               <Button
-                appearance="primary"
+                appearance="subtle"
                 icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
                 onClick={() => handleDownload(true)}
                 disabled={isDownloading || !currentData.latestDownloadUrl || !downloadLimitInfo.canDownload}
-                className={styles.downloadButton}
               >
-                {isDownloading ? '重新下载中...' : '重新下载'}
+                重新下载
+              </Button>
+              <Button
+                appearance="primary"
+                icon={isLaunching ? <Spinner size="tiny" /> : <Play24Regular />}
+                onClick={handleLaunchExecutable}
+                disabled={isLaunching || !downloadStatus.filePath}
+                className={styles.launchButton}
+              >
+                {isLaunching ? '正在启动...' : `运行程序${currentData.openname ? ` (${currentData.openname})` : ''}`}
               </Button>
             </>
           ) : (

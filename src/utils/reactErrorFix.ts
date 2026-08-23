@@ -1,4 +1,4 @@
-/**
+﻿/**
  * React错误修复工具
  * 解决React项目中的常见错误问题
  */
@@ -17,7 +17,7 @@ export class ReactHookValidator {
    */
   static validateHookUsage(componentName: string, hookName: string, isInComponent: boolean) {
     if (!isInComponent) {
-      const violation = `❌ Hook规则违反: ${hookName} 在 ${componentName} 中被调用在组件外部`;
+      const violation = ` Hook规则违反: ${hookName} 在 ${componentName} 中被调用在组件外部`;
       this.violations.push(violation);
       console.error(violation);
       return false;
@@ -110,7 +110,7 @@ export class SecurityInitializationManager {
     }
 
     if (SecurityConfigManager.getInstance().isConfigInitialized()) {
-      console.log('✅ SecurityConfigManager 已经初始化');
+      console.log(' SecurityConfigManager 已经初始化');
       return Promise.resolve();
     }
 
@@ -128,7 +128,7 @@ export class SecurityInitializationManager {
 
   private static async performInitialization(): Promise<void> {
     try {
-      console.log('🔐 开始安全配置初始化...');
+      console.log(' 开始安全配置初始化...');
       
       const securityConfig = SecurityConfigManager.getInstance();
       await securityConfig.initialize();
@@ -137,12 +137,12 @@ export class SecurityInitializationManager {
       const dataTransmissionService = SecureDataTransmissionService.getInstance();
       await dataTransmissionService.initialize();
       
-      console.log('✅ 安全配置和数据传输服务初始化完成');
+      console.log(' 安全配置和数据传输服务初始化完成');
     } catch (error) {
-      console.error('❌ 安全配置初始化失败:', error);
+      console.error(' 安全配置初始化失败:', error);
       
       // 提供降级方案
-      console.log('🔄 尝试降级初始化...');
+      console.log(' 尝试降级初始化...');
       await this.fallbackInitialization();
     }
   }
@@ -162,13 +162,13 @@ export class SecurityInitializationManager {
         software_id: 1
       };
 
-      console.log('⚠️ 使用默认安全配置');
+      console.log(' 使用默认安全配置');
       
       // 这里可以设置一个标志，表示使用的是降级配置
       (window as any).__ADMT_FALLBACK_CONFIG__ = true;
       
     } catch (fallbackError) {
-      console.error('❌ 降级初始化也失败:', fallbackError);
+      console.error(' 降级初始化也失败:', fallbackError);
       throw new Error('安全配置初始化完全失败');
     }
   }
@@ -263,7 +263,7 @@ export class ReactErrorFixer {
 
     try {
       // 1. 检查React版本一致性
-      console.log('🔍 检查React版本一致性...');
+      console.log(' 检查React版本一致性...');
       const versionCheck = await ReactDependencyChecker.checkReactVersions();
       if (!versionCheck.isConsistent) {
         results.versionCheck = false;
@@ -271,7 +271,7 @@ export class ReactErrorFixer {
       }
 
       // 2. 初始化安全配置
-      console.log('🔐 初始化安全配置...');
+      console.log(' 初始化安全配置...');
       try {
         await SecurityInitializationManager.safeInitialize();
       } catch (error) {
@@ -289,9 +289,9 @@ export class ReactErrorFixer {
       const success = results.hookValidation && results.versionCheck && results.securityInit;
       
       if (success) {
-        console.log('✅ 所有React错误检查通过');
+        console.log(' 所有React错误检查通过');
       } else {
-        console.warn('⚠️ 发现React错误问题:', issues);
+        console.warn(' 发现React错误问题:', issues);
       }
 
       return { success, results, issues };
@@ -313,7 +313,7 @@ export class ReactErrorFixer {
    * 自动修复已知问题
    */
   static async autoFix(): Promise<void> {
-    console.log('🔧 开始自动修复React错误...');
+    console.log(' 开始自动修复React错误...');
     
     try {
       // 清除Hook违规记录
@@ -322,9 +322,9 @@ export class ReactErrorFixer {
       // 确保安全配置初始化
       await SecurityInitializationManager.safeInitialize();
       
-      console.log('✅ 自动修复完成');
+      console.log(' 自动修复完成');
     } catch (error) {
-      console.error('❌ 自动修复失败:', error);
+      console.error(' 自动修复失败:', error);
       throw error;
     }
   }

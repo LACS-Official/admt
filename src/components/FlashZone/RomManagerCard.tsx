@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -504,7 +504,7 @@ export const RomManagerCard: React.FC = () => {
                       <Text className={styles.partitionName}>{part.name}</Text>
                       {isCommonPartition(part.name) && (
                         <Badge appearance="filled" color="success" size="small">
-                          ✨ 推荐
+                           推荐
                         </Badge>
                       )}
                     </div>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 设备连接追踪服务
  * 根据API使用指南实现设备连接统计功能
  * 无需API Key认证，实现IP级别频率限制
@@ -68,15 +68,15 @@ export class DeviceConnectionTrackingService {
     }
 
     try {
-      console.log('🔧 初始化设备连接追踪服务...');
+      console.log(' 初始化设备连接追踪服务...');
       
       // 生成设备指纹
       await this.generateDeviceFingerprint();
       
       this.isInitialized = true;
-      console.log('✅ 设备连接追踪服务初始化完成');
+      console.log(' 设备连接追踪服务初始化完成');
     } catch (error) {
-      console.error('❌ 设备连接追踪服务初始化失败:', error);
+      console.error(' 设备连接追踪服务初始化失败:', error);
       throw error;
     }
   }
@@ -93,13 +93,13 @@ export class DeviceConnectionTrackingService {
 
       // 检查用户是否同意隐私政策
       if (!this.canCollectData()) {
-        console.log('🚫 用户未同意数据收集，跳过设备连接记录');
+        console.log(' 用户未同意数据收集，跳过设备连接记录');
         return;
       }
 
       // 检查该设备是否已在此会话中成功上报
       if (this.reportedSerials.has(connectionData.deviceSerial)) {
-        console.log(`📊 设备 ${connectionData.deviceSerial} 已在此会话中成功上报，跳过重复访问`);
+        console.log(` 设备 ${connectionData.deviceSerial} 已在此会话中成功上报，跳过重复访问`);
         return;
       }
 
@@ -109,7 +109,7 @@ export class DeviceConnectionTrackingService {
         return;
       }
 
-      console.log('📊 开始记录设备连接...', connectionData.deviceSerial);
+      console.log(' 开始记录设备连接...', connectionData.deviceSerial);
 
       // 获取安全配置
       const securityConfig = SecurityConfigManager.getInstance();
@@ -128,13 +128,13 @@ export class DeviceConnectionTrackingService {
       if (success) {
         this.lastRequestTime = Date.now();
         this.reportedSerials.add(connectionData.deviceSerial); // 标记为已成功上报
-        console.log('✅ 设备连接记录发送成功');
+        console.log(' 设备连接记录发送成功');
       } else {
-        console.warn('⚠️ 设备连接记录发送失败，但不影响应用正常使用');
+        console.warn(' 设备连接记录发送失败，但不影响应用正常使用');
       }
 
     } catch (error) {
-      console.error('❌ 记录设备连接失败:', error);
+      console.error(' 记录设备连接失败:', error);
       // 不抛出错误，避免影响应用正常功能
     }
   }
@@ -154,7 +154,7 @@ export class DeviceConnectionTrackingService {
     // 检查是否允许收集设备数据
     const canCollectDevice = privacyStore.canCollectDeviceData();
 
-    console.log('🔍 设备连接数据收集权限检查:', {
+    console.log(' 设备连接数据收集权限检查:', {
       hasConsent,
       canCollectDevice,
       canCollect: hasConsent && canCollectDevice
@@ -190,7 +190,7 @@ export class DeviceConnectionTrackingService {
       const isDev = import.meta.env.DEV;
       const environment = isDev ? 'development' : 'production';
       
-      console.log(`🚀 [设备连接统计] 环境: ${environment}, 请求: POST ${endpoint}`);
+      console.log(` [设备连接统计] 环境: ${environment}, 请求: POST ${endpoint}`);
 
       // 根据API文档，只发送必需的字段
       const apiData = {
@@ -199,8 +199,8 @@ export class DeviceConnectionTrackingService {
         userDeviceFingerprint: data.userDeviceFingerprint
       };
 
-      console.log('📤 发送设备连接数据到端点:', endpoint);
-      console.log('📊 连接数据:', {
+      console.log(' 发送设备连接数据到端点:', endpoint);
+      console.log(' 连接数据:', {
         deviceSerial: apiData.deviceSerial,
         softwareId: apiData.softwareId,
         userDeviceFingerprint: apiData.userDeviceFingerprint.substring(0, 8) + '...'
@@ -232,12 +232,12 @@ export class DeviceConnectionTrackingService {
         throw new Error(response.error || '服务器返回错误');
       }
 
-      console.log(`✅ [设备连接统计] 请求成功`);
-      console.log('✅ 设备连接数据发送成功:', response.data?.message || '成功');
+      console.log(` [设备连接统计] 请求成功`);
+      console.log(' 设备连接数据发送成功:', response.data?.message || '成功');
       return true;
 
     } catch (error) {
-      console.error('❌ 发送设备连接数据失败:', error);
+      console.error(' 发送设备连接数据失败:', error);
       return false;
     }
   }
@@ -251,12 +251,12 @@ export class DeviceConnectionTrackingService {
       const fingerprint: DetailedDeviceFingerprint = await invoke('get_detailed_device_fingerprint');
       this.deviceFingerprint = fingerprint.fingerprint;
       
-      console.log('🔑 设备指纹生成成功:', this.deviceFingerprint.substring(0, 8) + '...');
+      console.log(' 设备指纹生成成功:', this.deviceFingerprint.substring(0, 8) + '...');
     } catch (error) {
-      console.error('❌ 生成设备指纹失败:', error);
+      console.error(' 生成设备指纹失败:', error);
       // 使用备用方案生成简单指纹
       this.deviceFingerprint = this.generateFallbackFingerprint();
-      console.log('🔑 使用备用设备指纹:', this.deviceFingerprint.substring(0, 8) + '...');
+      console.log(' 使用备用设备指纹:', this.deviceFingerprint.substring(0, 8) + '...');
     }
   }
 
@@ -304,7 +304,7 @@ export class DeviceConnectionTrackingService {
    */
   public resetRateLimit(): void {
     this.lastRequestTime = 0;
-    console.log('🔄 频率限制已重置');
+    console.log(' 频率限制已重置');
   }
 }
 

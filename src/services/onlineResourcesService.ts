@@ -1,4 +1,4 @@
-import { OnlineSoftware, OnlineSoftwareResponse, DownloadTask } from '../types/app';
+﻿import { OnlineSoftware, OnlineSoftwareResponse, DownloadTask } from '../types/app';
 import { tauriHttpService } from './tauriHttpService';
 import { logService } from './logService';
 
@@ -83,7 +83,7 @@ class OnlineResourcesService {
       }
 
       const endpoint = `/app/software?${queryParams.toString()}`;
-      console.log('🔍 获取在线软件列表:', endpoint);
+      console.log(' 获取在线软件列表:', endpoint);
 
       const response = await tauriHttpService.get(endpoint);
 
@@ -116,11 +116,11 @@ class OnlineResourcesService {
         pagination: pagination,
       };
 
-      console.log('✅ 获取软件列表成功:', result.data.length, '个软件');
+      console.log(' 获取软件列表成功:', result.data.length, '个软件');
       return result;
 
     } catch (error) {
-      console.error('❌ 获取软件列表失败:', error);
+      console.error(' 获取软件列表失败:', error);
       return {
         success: false,
         data: [],
@@ -193,7 +193,7 @@ class OnlineResourcesService {
       await this.ensureInitialized();
 
       const endpoint = `/app/software/id/${id}`;
-      console.log('🔍 获取软件详情:', endpoint);
+      console.log(' 获取软件详情:', endpoint);
 
       const response = await tauriHttpService.get(endpoint);
 
@@ -310,7 +310,7 @@ class OnlineResourcesService {
       this.downloadTasks.set(taskId, downloadTask);
       this.persistTasks();
 
-      logService.info(`🚀 开始下载并解析在线资源: ${software.name}`, '在线资源服务');
+      logService.info(` 开始下载并解析在线资源: ${software.name}`, '在线资源服务');
 
       // 监听下载进度事件
       await this.setupDownloadProgressListener(taskId);
@@ -332,11 +332,11 @@ class OnlineResourcesService {
         this.lastDownloadTime = Date.now();
       }
 
-      logService.info(`✅ 资源下载并解压完成: ${software.name}`, '在线资源服务');
+      logService.info(` 资源下载并解压完成: ${software.name}`, '在线资源服务');
       return taskId;
 
     } catch (error) {
-      logService.error(`❌ 下载资源失败: ${software.name}`, '在线资源服务', { error: error instanceof Error ? error.message : String(error) });
+      logService.error(` 下载资源失败: ${software.name}`, '在线资源服务', { error: error instanceof Error ? error.message : String(error) });
 
       throw error;
     }
@@ -423,7 +423,7 @@ class OnlineResourcesService {
       progressUnlisten();
       cancelUnlisten();
 
-      logService.info(`✅ 下载完成: ${task.fileName}`, '在线资源服务');
+      logService.info(` 下载完成: ${task.fileName}`, '在线资源服务');
 
     } catch (error) {
       // 下载失败
@@ -433,7 +433,7 @@ class OnlineResourcesService {
       this.downloadTasks.set(task.id, task);
       this.persistTasks();
 
-      logService.error(`❌ 下载失败: ${task.fileName}`, '在线资源服务', { error: task.error });
+      logService.error(` 下载失败: ${task.fileName}`, '在线资源服务', { error: task.error });
       throw error;
     }
   }
@@ -511,7 +511,7 @@ class OnlineResourcesService {
           // 仅在关键状态切换时记录日志
           const prevTask = this.downloadTasks.get(taskId);
           if (prevTask && prevTask.status !== task.status) {
-            logService.info(`📦 资源状态变更 [${task.softwareName}]: ${this.getStatusText(task.status)}`, '在线资源服务');
+            logService.info(` 资源状态变更 [${task.softwareName}]: ${this.getStatusText(task.status)}`, '在线资源服务');
           }
 
           this.downloadTasks.set(taskId, task);
@@ -557,7 +557,7 @@ class OnlineResourcesService {
     if (task && task.status === 'downloading') {
       task.status = 'paused';
       this.downloadTasks.set(taskId, task);
-      logService.info(`⏸️ 下载已暂停: ${task.fileName}`, '在线资源服务');
+      logService.info(`⏸ 下载已暂停: ${task.fileName}`, '在线资源服务');
     }
   }
 
@@ -569,7 +569,7 @@ class OnlineResourcesService {
     if (task && task.status === 'paused') {
       task.status = 'downloading';
       this.downloadTasks.set(taskId, task);
-      logService.info(`▶️ 下载已恢复: ${task.fileName}`, '在线资源服务');
+      logService.info(`▶ 下载已恢复: ${task.fileName}`, '在线资源服务');
     }
   }
 
@@ -583,7 +583,7 @@ class OnlineResourcesService {
         // 调用Tauri后端取消下载或解压
         const { invoke } = await import('@tauri-apps/api/core');
         await invoke('cancel_download_or_extract', { taskId });
-        logService.info(`❌ 下载/解压已取消: ${task.fileName}`, '在线资源服务');
+        logService.info(` 下载/解压已取消: ${task.fileName}`, '在线资源服务');
       } catch (error) {
         logService.error(`调用取消命令失败: ${task.fileName}`, '在线资源服务', { error });
       }
@@ -666,7 +666,7 @@ class OnlineResourcesService {
       const { invoke } = await import('@tauri-apps/api/core');
       return await invoke('get_downloads_directory');
     } catch (error) {
-      console.error('❌ 获取下载目录失败:', error);
+      console.error(' 获取下载目录失败:', error);
       return '';
     }
   }
@@ -679,7 +679,7 @@ class OnlineResourcesService {
       const { invoke } = await import('@tauri-apps/api/core');
       return await invoke('cleanup_downloads', { olderThanDays });
     } catch (error) {
-      console.error('❌ 清理下载文件失败:', error);
+      console.error(' 清理下载文件失败:', error);
       return 0;
     }
   }

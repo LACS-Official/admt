@@ -1,12 +1,12 @@
-/**
+﻿/**
  * 系统功能模块
  * 包含系统托盘和开机自启动的简化实现
  */
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
-use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 #[cfg(target_os = "windows")]
 use winreg::{enums::*, RegKey};
@@ -45,7 +45,7 @@ pub struct AutoStartStatus {
 pub async fn set_window_close_behavior(minimize_to_tray: bool) -> Result<(), String> {
     MINIMIZE_TO_TRAY.store(minimize_to_tray, Ordering::Relaxed);
     println!(
-        "✅ 窗口关闭行为已设置: {}",
+        " 窗口关闭行为已设置: {}",
         if minimize_to_tray {
             "最小化到托盘"
         } else {
@@ -70,7 +70,7 @@ pub async fn get_window_close_behavior() -> Result<bool, String> {
 // 全局状态：托盘是否已创建
 static TRAY_CREATED: AtomicBool = AtomicBool::new(false);
 
-/// 创建系统托盘（简化版本）
+/// 创建系统托盘
 #[tauri::command]
 pub async fn create_system_tray<R: Runtime>(
     _app: AppHandle<R>,
@@ -80,10 +80,9 @@ pub async fn create_system_tray<R: Runtime>(
 ) -> Result<(), String> {
     let app = _app.clone();
 
-    // 检查是否已经创建过托盘
-    if TRAY_CREATED.load(Ordering::Relaxed) {
-        println!("⚠️ 托盘已存在，跳过重复创建");
-        return Ok(());
+    // 如果已存在旧托盘，先隐藏旧托盘
+    if let Some(old_tray) = app.tray_by_id("main-tray") {
+        let _ = old_tray.set_visible(false);
     }
 
     // 构建菜单
@@ -91,13 +90,14 @@ pub async fn create_system_tray<R: Runtime>(
         let menu = Menu::new(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
 
         for it in items {
-            if it.label == "-" {
+            if it.label == "-" || it.id.starts_with("separator") {
                 let separator = PredefinedMenuItem::separator(&app)
                     .map_err(|e| format!("Failed to create separator: {}", e))?;
                 menu.append(&separator)
                     .map_err(|e| format!("Failed to append separator: {}", e))?;
             } else {
-                let item = MenuItem::new(&app, &it.label, true, None::<&str>)
+                let is_enabled = it.enabled.unwrap_or(true);
+                let item = MenuItem::with_id(&app, &it.id, &it.label, is_enabled, None::<&str>)
                     .map_err(|e| format!("Failed to create menu item: {}", e))?;
                 menu.append(&item)
                     .map_err(|e| format!("Failed to append menu item: {}", e))?;
@@ -106,7 +106,7 @@ pub async fn create_system_tray<R: Runtime>(
         menu
     } else {
         let menu = Menu::new(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
-        let show_item = MenuItem::new(&app, "显示窗口", true, None::<&str>)
+        let show_item = MenuItem::with_id(&app, "show", "显示主窗口", true, None::<&str>)
             .map_err(|e| format!("Failed to create show item: {}", e))?;
         menu.append(&show_item)
             .map_err(|e| format!("Failed to append show item: {}", e))?;
@@ -114,7 +114,7 @@ pub async fn create_system_tray<R: Runtime>(
             .map_err(|e| format!("Failed to create separator: {}", e))?;
         menu.append(&separator)
             .map_err(|e| format!("Failed to append separator: {}", e))?;
-        let exit_item = MenuItem::new(&app, "退出应用", true, None::<&str>)
+        let exit_item = MenuItem::with_id(&app, "exit", "退出玩机管家", true, None::<&str>)
             .map_err(|e| format!("Failed to create exit item: {}", e))?;
         menu.append(&exit_item)
             .map_err(|e| format!("Failed to append exit item: {}", e))?;
@@ -122,13 +122,41 @@ pub async fn create_system_tray<R: Runtime>(
     };
 
     // 构建托盘
-    let mut builder = TrayIconBuilder::new()
+    let mut builder = TrayIconBuilder::with_id("main-tray")
         .menu(&menu_result)
+        .show_menu_on_left_click(false)
+        .on_menu_event(move |app_handle, event| {
+            let id_str = event.id().as_ref().to_string();
+            println!(" 托盘菜单项点击: {}", id_str);
+            let _ = app_handle.emit("tray-menu-click", &id_str);
+
+            if id_str == "show" || id_str == "custom-显示窗口" {
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.unminimize();
+                    let _ = window.set_focus();
+                }
+            } else if id_str == "exit" || id_str == "custom-退出应用" {
+                std::process::exit(0);
+            }
+        })
         .on_tray_icon_event(move |tray, event| {
             let app = tray.app_handle();
             match event {
-                TrayIconEvent::Click { .. } | TrayIconEvent::DoubleClick { .. } => {
-                    let _ = app.emit("tray-icon-click", "click");
+                TrayIconEvent::Click {
+                    button,
+                    button_state,
+                    ..
+                } => {
+                    // 仅当左键点击释放时唤出/切换主窗口，右键由系统原生弹出菜单
+                    if button == MouseButton::Left && button_state == MouseButtonState::Up {
+                        let _ = app.emit("tray-icon-click", "click");
+                    }
+                }
+                TrayIconEvent::DoubleClick { button, .. } => {
+                    if button == MouseButton::Left {
+                        let _ = app.emit("tray-icon-click", "double-click");
+                    }
                 }
                 _ => {}
             }
@@ -136,6 +164,8 @@ pub async fn create_system_tray<R: Runtime>(
 
     if let Some(tt) = tooltip {
         builder = builder.tooltip(tt);
+    } else {
+        builder = builder.tooltip("玩机管家 (ADMT)");
     }
 
     let _tray = builder
@@ -145,19 +175,7 @@ pub async fn create_system_tray<R: Runtime>(
     // 标记托盘已创建
     TRAY_CREATED.store(true, Ordering::Relaxed);
 
-    // 监听菜单事件，向前端派发事件
-    let app_for_menu = app.clone();
-    app_for_menu.on_menu_event(move |app_handle, event| {
-        let id_str = match event.id().as_ref() {
-            "显示窗口" => "show".to_string(),
-            "退出应用" => "exit".to_string(),
-            other => format!("custom-{}", other),
-        };
-        // 将菜单点击通过事件发送给前端
-        let _ = app_handle.emit("tray-menu-click", id_str);
-    });
-
-    println!("✅ 系统托盘已创建");
+    println!(" 系统托盘已成功创建并挂载");
     Ok(())
 }
 
@@ -165,7 +183,7 @@ pub async fn create_system_tray<R: Runtime>(
 #[tauri::command]
 pub async fn setup_tray_event_listener<R: Runtime>(_app: AppHandle<R>) -> Result<(), String> {
     // 事件监听在 create_system_tray 中构建托盘时已设置，这里返回成功
-    println!("✅ 托盘事件监听器设置完成");
+    println!(" 托盘事件监听器设置完成");
     Ok(())
 }
 
@@ -177,7 +195,7 @@ pub async fn update_tray_menu<R: Runtime>(
 ) -> Result<(), String> {
     // 在 Tauri 2.x 中，托盘菜单更新需要重新创建托盘
     // 这里提供一个简化的实现
-    println!("✅ 托盘菜单更新完成（需要重新创建托盘以更新菜单）");
+    println!(" 托盘菜单更新完成（需要重新创建托盘以更新菜单）");
     Ok(())
 }
 
@@ -189,7 +207,7 @@ pub async fn update_tray_icon<R: Runtime>(
 ) -> Result<(), String> {
     // 可根据需要实现从路径读取图标并更新
     // 暂不实现具体图标替换逻辑，保留占位
-    println!("✅ 托盘图标更新完成");
+    println!(" 托盘图标更新完成");
     Ok(())
 }
 
@@ -201,7 +219,7 @@ pub async fn update_tray_tooltip<R: Runtime>(
 ) -> Result<(), String> {
     // 在 Tauri 2.x 中，托盘提示文本更新需要重新创建托盘
     // 这里提供一个简化的实现
-    println!("✅ 托盘提示文本更新完成（需要重新创建托盘以更新提示）");
+    println!(" 托盘提示文本更新完成（需要重新创建托盘以更新提示）");
     Ok(())
 }
 
@@ -214,15 +232,12 @@ pub async fn is_system_tray_supported() -> Result<bool, String> {
 
 /// 销毁系统托盘
 #[tauri::command]
-pub async fn destroy_system_tray<R: Runtime>(_app: AppHandle<R>) -> Result<(), String> {
-    if TRAY_CREATED.load(Ordering::Relaxed) {
-        println!("🗑️ 正在销毁系统托盘");
-        TRAY_CREATED.store(false, Ordering::Relaxed);
-        println!("✅ 系统托盘已销毁");
-    } else {
-        println!("ℹ️ 没有找到需要销毁的托盘实例");
+pub async fn destroy_system_tray<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    if let Some(tray) = app.tray_by_id("main-tray") {
+        let _ = tray.set_visible(false);
     }
-
+    TRAY_CREATED.store(false, Ordering::Relaxed);
+    println!(" 系统托盘已销毁");
     Ok(())
 }
 
@@ -418,7 +433,7 @@ async fn enable_windows_auto_start(config: AutoStartConfig) -> Result<bool, Stri
         .set_value(&config.app_name, &command)
         .map_err(|e| format!("Failed to set registry value: {}", e))?;
 
-    println!("✅ Windows 自启动已启用: {}", command);
+    println!(" Windows 自启动已启用: {}", command);
     Ok(true)
 }
 
@@ -434,7 +449,7 @@ async fn disable_windows_auto_start(app_name: String) -> Result<bool, String> {
 
     match run_key.delete_value(&app_name) {
         Ok(_) => {
-            println!("✅ Windows 自启动已禁用");
+            println!(" Windows 自启动已禁用");
             Ok(true)
         }
         Err(e) => {
@@ -507,7 +522,7 @@ async fn enable_linux_auto_start(config: AutoStartConfig) -> Result<bool, String
 
     std::fs::write(&path, content).map_err(|e| format!("Failed to write desktop file: {}", e))?;
 
-    println!("✅ Linux 自启已启用: {}", path.display());
+    println!(" Linux 自启已启用: {}", path.display());
     Ok(true)
 }
 
@@ -516,7 +531,7 @@ async fn disable_linux_auto_start(app_name: String) -> Result<bool, String> {
     let path = get_linux_autostart_path(&app_name)?;
     if path.exists() {
         std::fs::remove_file(&path).map_err(|e| format!("Failed to remove desktop file: {}", e))?;
-        println!("✅ Linux 自启已禁用");
+        println!(" Linux 自启已禁用");
     }
     Ok(true)
 }

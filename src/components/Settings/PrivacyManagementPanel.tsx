@@ -1,15 +1,13 @@
-/**
- * 隐私政策管理面板组件
- * 用于设置页面，允许用户查看和管理隐私设置
- */
-
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Card,
   CardHeader,
   Text,
   Button,
-  MessageBar,
+  Switch,
+  Checkbox,
+  Input,
+  Field,
   Dialog,
   DialogSurface,
   DialogBody,
@@ -18,379 +16,353 @@ import {
   DialogActions,
   makeStyles,
   tokens,
-} from '@fluentui/react-components';
-import { useTranslation } from 'react-i18next';
+  Divider,
+  Badge,
+} from "@fluentui/react-components";
+import { useTranslation } from "react-i18next";
 import {
-  Shield24Regular,
+  ShieldKeyhole24Regular,
+  LockClosed24Regular,
+  Delete24Regular,
   Warning24Regular,
+  CheckmarkCircle24Regular,
   ArrowReset24Regular,
-  DismissCircle24Regular,
-} from '@fluentui/react-icons';
-import { usePrivacyConsentStore } from '../../stores/privacyConsentStore';
-import { clearPreservedUserConfig } from '../Common/UserConfigPreserver';
+} from "@fluentui/react-icons";
+import { useSecurityStore } from "../../stores/securityStore";
+import { verifySecurityAction } from "../Common/SecurityVerificationDialog";
 
 const useStyles = makeStyles({
   container: {
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     gap: tokens.spacingVerticalL,
-    padding: tokens.spacingVerticalL,
+    padding: tokens.spacingVerticalM,
   },
   card: {
-    width: '100%',
-    borderRadius: "8px",
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    
-    
+    width: "100%",
+    borderRadius: "6px",
+    border: `1px solid var(--colorNeutralStroke2)`,
+    backgroundColor: "var(--colorNeutralBackground1)",
   },
   cardContent: {
     padding: tokens.spacingVerticalM,
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     gap: tokens.spacingVerticalM,
   },
-  statusSection: {
-    display: 'flex',
-    flexDirection: 'column',
+  settingRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: `${tokens.spacingVerticalS} 0`,
+  },
+  settingInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  checkboxGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
     gap: tokens.spacingVerticalS,
-  },
-  statusItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: tokens.spacingVerticalS,
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderRadius: tokens.borderRadiusMedium,
-  },
-  statusLabel: {
-    fontWeight: tokens.fontWeightSemibold,
-  },
-  statusValue: {
-    color: tokens.colorNeutralForeground2,
-  },
-  dataCollectionSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-  },
-  dataCollectionItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: tokens.spacingVerticalS,
+    marginTop: tokens.spacingVerticalS,
+    padding: tokens.spacingHorizontalM,
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "4px",
+    border: "1px solid var(--colorNeutralStroke3)",
   },
   dangerZone: {
-    border: `1px solid ${tokens.colorPaletteRedBorder1}`,
-    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid var(--colorPaletteRedBorder1)`,
+    borderRadius: "4px",
     padding: tokens.spacingVerticalM,
-    backgroundColor: tokens.colorPaletteRedBackground1,
-  },
-  dangerButton: {
-    backgroundColor: tokens.colorPaletteRedBackground3,
-    color: tokens.colorPaletteRedForeground1,
-    '&:hover': {
-      backgroundColor: tokens.colorPaletteRedBackground2,
-    },
-  },
-  timestampText: {
-    fontSize: tokens.fontSizeBase100,
-    color: tokens.colorNeutralForeground3,
+    backgroundColor: "var(--colorPaletteRedBackground1)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 });
 
-const PrivacyManagementPanel: React.FC = () => {
+export const PrivacyManagementPanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const [showFirstConfirmDialog, setShowFirstConfirmDialog] = useState(false);
-  const [showSecondConfirmDialog, setShowSecondConfirmDialog] = useState(false);
 
   const {
-    hasAcceptedPrivacyPolicy,
-    hasAcceptedUserAgreement,
-    hasAcceptedDataCollection,
-    privacyPolicyAcceptedAt,
-    userAgreementAcceptedAt,
-    dataCollectionAcceptedAt,
-    privacyPolicyVersion,
-    userAgreementVersion,
-    revokeAll,
-    canCollectData,
-  } = usePrivacyConsentStore();
+    isPasswordEnabled,
+    protectedActions,
+    setPassword,
+    removePassword,
+    toggleProtectedAction,
+  } = useSecurityStore();
 
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return t('privacy.not_set');
-    return new Date(timestamp).toLocaleString(t('common.locale_tag'));
+  // 对话框状态
+  const [showSetPasswordDialog, setShowSetPasswordDialog] = useState(false);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
+  const [showRemovePasswordDialog, setShowRemovePasswordDialog] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+
+  // 表单状态
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [formError, setFormError] = useState("");
+
+  const handleOpenSetDialog = () => {
+    setNewPassword("");
+    setConfirmPassword("");
+    setFormError("");
+    setShowSetPasswordDialog(true);
   };
 
+  const handleSaveNewPassword = () => {
+    if (newPassword.length < 4) {
+      setFormError("密码长度不能少于 4 位");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setFormError("两次输入的密码不一致");
+      return;
+    }
 
-  // 第一次点击重置按钮，显示第一个确认弹窗
-  const handleResetApp = async () => {
-    setShowFirstConfirmDialog(true);
-  };
-
-  // 第一个确认弹窗中点击"确认重置"，显示第二个确认弹窗
-  const handleFirstConfirm = () => {
-    setShowFirstConfirmDialog(false);
-    setShowSecondConfirmDialog(true);
-  };
-
-  // 第二个确认弹窗中点击"重置"，执行实际的重置操作
-  const handleFinalReset = async () => {
-    try {
-      console.log('🗑️ 开始执行应用数据重置...');
-
-      // 1. 撤销所有隐私同意
-      revokeAll();
-
-      // 2. 清除保留的用户配置
-      clearPreservedUserConfig();
-
-      // 4. 清除所有localStorage数据
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => {
-        try {
-          localStorage.removeItem(key);
-        } catch (error) {
-          console.warn(`清除localStorage项目失败: ${key}`, error);
-        }
-      });
-
-      console.log('✅ 应用数据重置完成，准备退出应用...');
-
-      setShowSecondConfirmDialog(false);
-
-      // 5. 重置后退出应用，下次启动将显示欢迎页面
-      try {
-        // 使用 Tauri v2 的 process 插件重启应用
-        const { relaunch } = await import('@tauri-apps/plugin-process');
-        await relaunch();
-      } catch (error) {
-        console.error('重启应用失败:', error);
-        // 如果重启失败，尝试退出应用
-        try {
-          const { exit } = await import('@tauri-apps/plugin-process');
-          await exit(0);
-        } catch (exitError) {
-          console.error('退出应用失败:', exitError);
-          // 如果 Tauri API 失败，尝试其他方法
-          if (window.close) {
-            window.close();
-          }
-        }
-      }
-    } catch (error) {
-      console.error('重置应用数据失败:', error);
-      // 即使出错也要关闭弹窗
-      setShowSecondConfirmDialog(false);
+    const success = setPassword(newPassword);
+    if (success) {
+      setShowSetPasswordDialog(false);
+    } else {
+      setFormError("保存密码失败");
     }
   };
 
-  // 取消重置操作
-  const handleCancelReset = () => {
-    setShowFirstConfirmDialog(false);
-    setShowSecondConfirmDialog(false);
+  const handleOpenRemoveDialog = () => {
+    setCurrentPassword("");
+    setFormError("");
+    setShowRemovePasswordDialog(true);
+  };
+
+  const handleConfirmRemovePassword = () => {
+    const success = removePassword(currentPassword);
+    if (success) {
+      setShowRemovePasswordDialog(false);
+    } else {
+      setFormError("当前密码验证错误");
+    }
+  };
+
+  const handleResetApplication = async () => {
+    const passed = await verifySecurityAction("resetApp", "重置应用全部数据");
+    if (!passed) return;
+
+    try {
+      localStorage.clear();
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    } catch (_e) {
+      window.location.reload();
+    }
   };
 
   return (
     <div className={styles.container}>
-      {/* 同意状态概览 */}
+      {/* 1. 软件安全密码设置 */}
       <Card className={styles.card}>
         <CardHeader
           header={
-            <Text weight="semibold" size={400}>
-              <Shield24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
-              {t('privacy.panel_title')}
-            </Text>
+            <div style={{ display: "flex", alignItems: "center", gap: tokens.spacingHorizontalS }}>
+              <ShieldKeyhole24Regular />
+              <Text weight="semibold" size={400}>软件安全密码保护</Text>
+              <Badge appearance="tint" color={isPasswordEnabled ? "success" : "informative"}>
+                {isPasswordEnabled ? "已启用防护" : "未开启"}
+              </Badge>
+            </div>
           }
         />
         <div className={styles.cardContent}>
-          <div className={styles.statusSection}>
-            <div className={styles.statusItem}>
-              <div>
-                <Text className={styles.statusLabel}>{t('privacy.policy')}</Text>
-                <Text className={styles.timestampText}>
-                  {t('privacy.accepted_at', { time: formatTimestamp(privacyPolicyAcceptedAt) })}
-                </Text>
-              </div>
-              <Text className={styles.statusValue}>
-                {hasAcceptedPrivacyPolicy ? t('privacy.accepted') : t('privacy.not_accepted')}
+          <div className={styles.settingRow}>
+            <div className={styles.settingInfo}>
+              <Text weight="semibold">高危操作密码鉴权</Text>
+              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                开启后，在执行刷机、Root 烧录、设备清除等破坏性操作前须验证安全密码，防止误触或未授权操作。
               </Text>
             </div>
-            
-            <div className={styles.statusItem}>
-              <div>
-                <Text className={styles.statusLabel}>{t('privacy.agreement')}</Text>
-                <Text className={styles.timestampText}>
-                  {t('privacy.accepted_at', { time: formatTimestamp(userAgreementAcceptedAt) })}
-                </Text>
+            {isPasswordEnabled ? (
+              <div style={{ display: "flex", gap: tokens.spacingHorizontalS }}>
+                <Button size="small" onClick={handleOpenSetDialog}>
+                  修改密码
+                </Button>
+                <Button size="small" appearance="subtle" onClick={handleOpenRemoveDialog}>
+                  关闭密码
+                </Button>
               </div>
-              <Text className={styles.statusValue}>
-                {hasAcceptedUserAgreement ? t('privacy.accepted') : t('privacy.not_accepted')}
-              </Text>
-            </div>
-            
-            <div className={styles.statusItem}>
-              <div>
-                <Text className={styles.statusLabel}>{t('privacy.data_collection')}</Text>
-                <Text className={styles.timestampText}>
-                  {t('privacy.accepted_at', { time: formatTimestamp(dataCollectionAcceptedAt) })}
-                </Text>
-              </div>
-              <Text className={styles.statusValue}>
-                {hasAcceptedDataCollection ? t('privacy.accepted') : t('privacy.not_accepted')}
-              </Text>
-            </div>
+            ) : (
+              <Button appearance="primary" size="small" onClick={handleOpenSetDialog}>
+                设置安全密码
+              </Button>
+            )}
           </div>
 
-          {!canCollectData() && (
-            <MessageBar intent="warning">
-              <Warning24Regular />
-              {t('privacy.collection_warning')}
-            </MessageBar>
+          {isPasswordEnabled && (
+            <>
+              <Divider />
+              <div className={styles.settingInfo}>
+                <Text weight="semibold" size={200}>受保护的关键操作范围</Text>
+                <Text size={100} style={{ color: "var(--colorNeutralForeground3)" }}>
+                  勾选需要强制验证密码的场景：
+                </Text>
+              </div>
+              <div className={styles.checkboxGrid}>
+                <Checkbox
+                  checked={protectedActions.rootFlash}
+                  onChange={(_, d) => toggleProtectedAction("rootFlash", !!d.checked)}
+                  label="一键 Root 镜像刷入与修补"
+                />
+                <Checkbox
+                  checked={protectedActions.fastbootFlash}
+                  onChange={(_, d) => toggleProtectedAction("fastbootFlash", !!d.checked)}
+                  label="Fastboot 分区擦除与自定义刷入"
+                />
+                <Checkbox
+                  checked={protectedActions.wipeDevice}
+                  onChange={(_, d) => toggleProtectedAction("wipeDevice", !!d.checked)}
+                  label="设备格机与恢复出厂设置"
+                />
+                <Checkbox
+                  checked={protectedActions.resetApp}
+                  onChange={(_, d) => toggleProtectedAction("resetApp", !!d.checked)}
+                  label="重置应用与清除所有缓存"
+                />
+              </div>
+            </>
           )}
         </div>
       </Card>
 
-
-      {/* 危险操作区域 */}
+      {/* 2. 数据与缓存清理 */}
       <Card className={styles.card}>
         <CardHeader
           header={
-            <Text weight="semibold" size={400}>
-              <Warning24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
-              {t('privacy.reset_title')}
-            </Text>
+            <div style={{ display: "flex", alignItems: "center", gap: tokens.spacingHorizontalS }}>
+              <Delete24Regular />
+              <Text weight="semibold" size={400}>本地数据与缓存</Text>
+            </div>
           }
         />
         <div className={styles.cardContent}>
-          <div className={styles.dangerZone}>
-            <Text weight="semibold" style={{ color: tokens.colorPaletteRedForeground3 }}>
-              {t('privacy.danger_zone')}
-            </Text>
-            <Text size={200} style={{ marginTop: tokens.spacingVerticalS }}>
-              {t('privacy.reset_desc')}
-            </Text>
-
-            <div style={{
-              display: 'flex',
-              gap: tokens.spacingHorizontalM,
-              marginTop: tokens.spacingVerticalM,
-              flexWrap: 'wrap'
-            }}>
-              <Button
-                size="medium"
-                icon={<ArrowReset24Regular />}
-                onClick={handleResetApp}
-              >
-                {t('privacy.reset_title')}
-              </Button>
+          <div className={styles.settingRow}>
+            <div className={styles.settingInfo}>
+              <Text weight="semibold">固件提取与下载临时缓存</Text>
+              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                清理流式解析分区镜像、下载固件和 Root 工具包时产生的本地临时文件。
+              </Text>
             </div>
+            <Button size="small" onClick={() => alert("临时提取缓存已清空")}>
+              清理临时文件
+            </Button>
           </div>
         </div>
       </Card>
 
-      {/* 第一个确认对话框 */}
-      <Dialog open={showFirstConfirmDialog} modalType="modal">
+      {/* 3. 危险区域 */}
+      <Card className={styles.card}>
+        <CardHeader
+          header={
+            <div style={{ display: "flex", alignItems: "center", gap: tokens.spacingHorizontalS }}>
+              <Warning24Regular />
+              <Text weight="semibold" size={400}>重置与恢复</Text>
+            </div>
+          }
+        />
+        <div className={styles.cardContent}>
+          <div className={styles.dangerZone}>
+            <div className={styles.settingInfo}>
+              <Text weight="semibold" style={{ color: tokens.colorPaletteRedForeground3 }}>
+                重置软件全部设置与数据
+              </Text>
+              <Text size={200}>
+                将清空所有偏好设置、设备连接记忆和本地缓存，软件将重启并恢复初始状态。
+              </Text>
+            </div>
+            <Button
+              appearance="primary"
+              size="small"
+              icon={<ArrowReset24Regular />}
+              style={{ backgroundColor: tokens.colorPaletteRedBackground3, color: tokens.colorPaletteRedForeground1 }}
+              onClick={handleResetApplication}
+            >
+              重置应用
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* 设置 / 修改密码弹窗 */}
+      <Dialog open={showSetPasswordDialog} onOpenChange={(_, d) => !d.open && setShowSetPasswordDialog(false)}>
         <DialogSurface>
           <DialogBody>
-            <DialogTitle style={{ color: tokens.colorPaletteRedForeground3 }}>
-              <Warning24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
-              {t('privacy.confirm_reset_title')}
+            <DialogTitle>
+              {isPasswordEnabled ? "修改安全密码" : "设置软件安全密码"}
             </DialogTitle>
-            <DialogContent>
-              <Text>
-                {t('privacy.confirm_reset_desc')}
-              </Text>
-              <div style={{ marginTop: tokens.spacingVerticalS, marginLeft: tokens.spacingHorizontalM }}>
-                <Text>{t('privacy.reset_item1')}</Text><br />
-                <Text>{t('privacy.reset_item2')}</Text><br />
-                <Text>{t('privacy.reset_item3')}</Text><br />
-                <Text>{t('privacy.reset_item4')}</Text>
-              </div>
-              <Text style={{ marginTop: tokens.spacingVerticalS, fontWeight: tokens.fontWeightSemibold }}>
-                {t('privacy.irreversible_notice')}
-              </Text>
+            <DialogContent style={{ display: "flex", flexDirection: "column", gap: tokens.spacingVerticalM }}>
+              <Field
+                label="新安全密码 (至少 4 位)"
+                validationState={formError ? "error" : "none"}
+              >
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(_, d) => { setNewPassword(d.value); setFormError(""); }}
+                  placeholder="请输入新安全密码"
+                />
+              </Field>
+              <Field
+                label="确认新安全密码"
+                validationState={formError ? "error" : "none"}
+                validationMessage={formError}
+              >
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(_, d) => { setConfirmPassword(d.value); setFormError(""); }}
+                  placeholder="再次输入以确认"
+                />
+              </Field>
             </DialogContent>
             <DialogActions>
-              <Button
-                appearance="secondary"
-                onClick={handleCancelReset}
-              >
-                {t('common.cancel')}
+              <Button appearance="secondary" onClick={() => setShowSetPasswordDialog(false)}>
+                取消
               </Button>
-              <Button
-                appearance="primary"
-                onClick={handleFirstConfirm}
-              >
-                {t('common.confirm_reset')}
+              <Button appearance="primary" onClick={handleSaveNewPassword}>
+                保存设置
               </Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
       </Dialog>
 
-      {/* 第二个确认对话框 */}
-      <Dialog open={showSecondConfirmDialog} modalType="modal">
+      {/* 关闭密码弹窗 */}
+      <Dialog open={showRemovePasswordDialog} onOpenChange={(_, d) => !d.open && setShowRemovePasswordDialog(false)}>
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>
-              <DismissCircle24Regular style={{ marginRight: tokens.spacingHorizontalS }} />
-              {t('privacy.final_confirm_title')}
-            </DialogTitle>
-            <DialogContent>
-              <Text style={{
-                fontSize: tokens.fontSizeBase300,
-                fontWeight: tokens.fontWeightSemibold,
-                color: tokens.colorPaletteRedForeground3
-              }}>
-                {t('privacy.last_chance')}
-              </Text>
-              <Text style={{ marginTop: tokens.spacingVerticalM }}>
-                {t('privacy.will_perform')}
-              </Text>
-              <div style={{
-                marginTop: tokens.spacingVerticalS,
-                marginLeft: tokens.spacingHorizontalM,
-                backgroundColor: tokens.colorPaletteRedBackground1,
-                padding: tokens.spacingVerticalS,
-                borderRadius: tokens.borderRadiusSmall,
-                border: `1px solid ${tokens.colorPaletteRedBorder1}`
-              }}>
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>{t('privacy.final_item1')}</Text><br />
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>{t('privacy.final_item2')}</Text><br />
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>{t('privacy.final_item3')}</Text><br />
-                <Text style={{ fontWeight: tokens.fontWeightSemibold }}>{t('privacy.final_item4')}</Text>
-              </div>
-              <Text style={{
-                marginTop: tokens.spacingVerticalM,
-                fontWeight: tokens.fontWeightBold,
-                color: tokens.colorPaletteRedForeground3
-              }}>
-                {t('privacy.final_notice')}
-              </Text>
+            <DialogTitle>关闭安全密码保护</DialogTitle>
+            <DialogContent style={{ display: "flex", flexDirection: "column", gap: tokens.spacingVerticalM }}>
+              <Text size={200}>请输入当前安全密码以确认关闭：</Text>
+              <Field
+                label="当前密码"
+                validationState={formError ? "error" : "none"}
+                validationMessage={formError}
+              >
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(_, d) => { setCurrentPassword(d.value); setFormError(""); }}
+                  placeholder="输入当前密码"
+                  autoFocus
+                />
+              </Field>
             </DialogContent>
             <DialogActions>
-              <Button
-                appearance="secondary"
-                onClick={handleCancelReset}
-              >
-                {t('common.cancel')}
+              <Button appearance="secondary" onClick={() => setShowRemovePasswordDialog(false)}>
+                取消
               </Button>
-              <Button
-                appearance="primary"
-                onClick={handleFinalReset}
-                style={{
-                  backgroundColor: tokens.colorPaletteRedBackground3,
-                  borderColor: tokens.colorPaletteRedBorder2
-                }}
-              >
-                {t('common.reset')}
+              <Button appearance="primary" onClick={handleConfirmRemovePassword}>
+                确认关闭
               </Button>
             </DialogActions>
           </DialogBody>

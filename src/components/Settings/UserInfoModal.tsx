@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 用户信息弹窗组件
  * 显示激活码信息、过期时间，并提供删除本地激活数据的功能
  */
@@ -222,7 +222,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
     setError(null);
 
     try {
-      console.log('🗑️ 开始删除本地激活数据...');
+      console.log(' 开始删除本地激活数据...');
 
       // 清除本地激活数据
       activationService.clearActivationData();
@@ -249,7 +249,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
       // 重置启动流程状态，强制重新检查
       setCurrentPhase('first-launch-detection');
 
-      console.log('✅ 本地激活数据已清除，正在重新检查激活状态...');
+      console.log(' 本地激活数据已清除，正在重新检查激活状态...');
 
       // 短暂延迟后跳转到激活页面，确保状态更新完成
       setTimeout(() => {
@@ -262,7 +262,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
         setDeleteSuccess(false);
         setActivationInfo(null);
 
-        console.log('🔄 已跳转到激活页面');
+        console.log(' 已跳转到激活页面');
       }, 100);
 
     } catch (err) {
@@ -312,7 +312,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
     // 关闭弹窗
     setIsOpen(false);
 
-    console.log('🔄 未找到激活信息，自动跳转到激活页面');
+    console.log(' 未找到激活信息，自动跳转到激活页面');
   };
 
   // 渲染激活信息内容

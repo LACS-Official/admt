@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 安全数据传输服务
  * 负责在数据传输过程中确保敏感信息的安全，包括数据加密、脱敏处理等
  */
@@ -73,9 +73,9 @@ export class SecureDataTransmissionService {
       this.encryptionKey = this.deriveEncryptionKey(config.signature_secret)
       this.isInitialized = true
 
-      console.log('✅ 安全数据传输服务初始化成功')
+      console.log(' 安全数据传输服务初始化成功')
     } catch (error) {
-      console.error('❌ 安全数据传输服务初始化失败:', error)
+      console.error(' 安全数据传输服务初始化失败:', error)
       throw error
     }
   }
@@ -206,7 +206,7 @@ export class SecureDataTransmissionService {
         body = JSON.stringify(data)
       }
 
-      console.log(`🌐 发送${method}请求到: ${url}`)
+      console.log(` 发送${method}请求到: ${url}`)
 
       const response = await fetch(url, {
         method,
@@ -219,11 +219,11 @@ export class SecureDataTransmissionService {
       }
 
       const result = await response.json()
-      console.log('✅ 请求成功:', { endpoint, status: response.status })
+      console.log(' 请求成功:', { endpoint, status: response.status })
 
       return result
     } catch (error) {
-      console.error('❌ 安全请求失败:', error)
+      console.error(' 安全请求失败:', error)
       throw error
     }
   }

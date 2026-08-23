@@ -1,4 +1,4 @@
-/*
+﻿/*
 在线资源-下载管理卡片页面
 */
 import React, { useState, useEffect } from 'react';
@@ -262,19 +262,19 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
       // 监听下载进度事件
       const unlisten = await listen('download-progress', (event: any) => {
         const progressData = event.payload;
-        console.log('📊 收到下载进度更新:', progressData);
+        console.log(' 收到下载进度更新:', progressData);
 
         // 重新加载任务列表以获取最新进度
         const updatedTasks = onlineResourcesService.getAllDownloadTasks();
         setTasks(updatedTasks);
       });
 
-      console.log('✅ 下载进度监听器设置成功');
+      console.log(' 下载进度监听器设置成功');
 
       // 返回清理函数
       return unlisten;
     } catch (error) {
-      console.error('❌ 设置下载进度监听器失败:', error);
+      console.error(' 设置下载进度监听器失败:', error);
       return () => { }; // 返回空的清理函数
     }
   };
@@ -373,7 +373,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
           gap: '8px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#F57F17', fontWeight: '600' }}>💡 提示：</span>
+            <span style={{ color: '#F57F17', fontWeight: '600' }}> 提示：</span>
             <span style={{ color: '#5D4037', fontSize: '14px' }}>若下载资源失败或错误，请在指定资源详情弹窗内点击“使用Appfun下载”进行资源获取</span>
           </div>
           <Button 
@@ -454,7 +454,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) =
 
                 await invoke('open_folder', { path: targetDir });
               } catch (error) {
-                console.error('❌ 打开下载目录失败:', error);
+                console.error(' 打开下载目录失败:', error);
               }
             }
           }}
@@ -536,7 +536,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
       if (task.status === 'completed' && task.filePath) {
         const { invoke } = await import('@tauri-apps/api/core');
         await invoke('delete_file', { path: task.filePath });
-        console.log('✅ 已删除文件:', task.filePath);
+        console.log(' 已删除文件:', task.filePath);
       }
 
       // 从下载管理器中移除任务
@@ -547,6 +547,25 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
     }
   };
 
+  // 运行程序
+  const handleLaunch = async () => {
+    try {
+      if (task.filePath) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('launch_software_resource', {
+          path: task.filePath,
+          openname: task.openname || null,
+        });
+        await logService.info(`已启动程序: ${task.softwareName}`, '下载管理', {
+          path: task.filePath,
+          openname: task.openname,
+        });
+      }
+    } catch (error) {
+      logService.error('启动程序失败', '下载管理', { error: String(error) });
+    }
+  };
+
   // 打开文件位置
   const handleOpenFileLocation = async () => {
     try {
@@ -554,7 +573,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
         const { invoke } = await import('@tauri-apps/api/core');
         // 提取文件所在目录路径
         const filePath = task.filePath;
-        const dirPath = filePath.substring(0, filePath.lastIndexOf('\\'));
+        const dirPath = filePath.substring(0, filePath.lastIndexOf('\\')) || filePath;
         await invoke('open_folder', { path: dirPath });
         await logService.info(`已打开文件位置: ${dirPath}`, '下载管理', { softwareName: task.softwareName });
       }
@@ -686,6 +705,9 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, styles }) => {
 
         {task.status === 'completed' && (
           <>
+            <Tooltip content="运行启动程序" relationship="label">
+              <Button size="small" appearance="subtle" icon={<Play24Regular />} onClick={handleLaunch} />
+            </Tooltip>
             <Tooltip content="打开文件位置" relationship="label">
               <Button size="small" appearance="subtle" icon={<Folder24Regular />} onClick={handleOpenFileLocation} />
             </Tooltip>

@@ -1,4 +1,4 @@
-import { PluginStoreItem } from "../types/plugin";
+﻿import { PluginStoreItem } from "../types/plugin";
 
 // 统一 Fluent UI 风格的内嵌 HTML GUI 样式基础
 const baseHtmlStyle = `
@@ -204,7 +204,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">📦 快递物流全网查询助手 <span class="badge">生活必备</span></div>
+      <div class="header-title"> 快递物流全网查询助手 <span class="badge">生活必备</span></div>
       <div style="font-size:12px; color:var(--text-secondary);">支持全国 50+ 主流快递公司</div>
     </div>
     
@@ -212,7 +212,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
       <div class="form-row">
         <input id="expressCode" type="text" placeholder="请输入快递单号（如 SF1348827492819 / 786283748291）" />
         <select id="carrierSelect" style="width: 160px;">
-          <option value="auto">⚡ 自动智能识别</option>
+          <option value="auto"> 自动智能识别</option>
           <option value="sf">顺丰速运 (SF)</option>
           <option value="zt">中通快递 (ZTO)</option>
           <option value="yt">圆通速递 (YTO)</option>
@@ -308,7 +308,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">☀️ 实时天气与空气质量看板 <span class="badge">生活气象</span></div>
+      <div class="header-title"> 实时天气与空气质量看板 <span class="badge">生活气象</span></div>
       <div class="form-row" style="margin:0;">
         <select id="citySelect" onchange="updateWeather()" style="width:140px;">
           <option value="beijing">北京 (Beijing)</option>
@@ -340,7 +340,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
     </div>
 
     <div class="card">
-      <strong style="font-size:13px;">📅 未来 5 天天气趋势</strong>
+      <strong style="font-size:13px;"> 未来 5 天天气趋势</strong>
       <div id="forecastList" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-top:12px; text-align:center;">
       </div>
     </div>
@@ -348,12 +348,12 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 
   <script>
     const data = {
-      beijing: { name: '北京', temp: '23°C', cond: '晴 · 东北风', aqi: '36 优', hum: '42%', wind: '2级', uv: '中等', fc: ['周一 23°/14° ☀️', '周二 25°/15° ⛅', '周三 22°/13° 🌧️', '周四 24°/16° ☀️', '周五 26°/17° ⛅'] },
-      shanghai: { name: '上海', temp: '27°C', cond: '多云 · 东南风', aqi: '45 优', hum: '68%', wind: '3级', uv: '强', fc: ['周一 27°/21° ⛅', '周二 28°/22° ⛅', '周三 26°/20° 🌧️', '周四 29°/23° ☀️', '周五 30°/24° ☀️'] },
-      guangzhou: { name: '广州', temp: '30°C', cond: '雷阵雨 · 微风', aqi: '28 优', hum: '82%', wind: '2级', uv: '中等', fc: ['周一 30°/24° ⛈️', '周二 31°/25° 🌧️', '周三 32°/26° ⛅', '周四 33°/26° ☀️', '周五 32°/25° ⛅'] },
-      shenzhen: { name: '深圳', temp: '29°C', cond: '阴天局部小雨', aqi: '22 优', hum: '78%', wind: '3级', uv: '弱', fc: ['周一 29°/24° 🌦️', '周二 30°/25° ⛅', '周三 31°/26° ☀️', '周四 31°/25° ☀️', '周五 30°/24° ⛅'] },
-      chengdu: { name: '成都', temp: '22°C', cond: '阴天微凉', aqi: '48 优', hum: '72%', wind: '1级', uv: '弱', fc: ['周一 22°/16° ☁️', '周二 24°/17° ⛅', '周三 21°/15° 🌧️', '周四 23°/16° ☁️', '周五 25°/18° ⛅'] },
-      hangzhou: { name: '杭州', temp: '26°C', cond: '多云转晴', aqi: '40 优', hum: '65%', wind: '2级', uv: '中等', fc: ['周一 26°/19° ⛅', '周二 27°/20° ☀️', '周三 25°/18° 🌧️', '周四 28°/21° ☀️', '周五 29°/22° ☀️'] }
+      beijing: { name: '北京', temp: '23°C', cond: '晴 · 东北风', aqi: '36 优', hum: '42%', wind: '2级', uv: '中等', fc: ['周一 23°/14° ', '周二 25°/15° ', '周三 22°/13° ', '周四 24°/16° ', '周五 26°/17° '] },
+      shanghai: { name: '上海', temp: '27°C', cond: '多云 · 东南风', aqi: '45 优', hum: '68%', wind: '3级', uv: '强', fc: ['周一 27°/21° ', '周二 28°/22° ', '周三 26°/20° ', '周四 29°/23° ', '周五 30°/24° '] },
+      guangzhou: { name: '广州', temp: '30°C', cond: '雷阵雨 · 微风', aqi: '28 优', hum: '82%', wind: '2级', uv: '中等', fc: ['周一 30°/24° ', '周二 31°/25° ', '周三 32°/26° ', '周四 33°/26° ', '周五 32°/25° '] },
+      shenzhen: { name: '深圳', temp: '29°C', cond: '阴天局部小雨', aqi: '22 优', hum: '78%', wind: '3级', uv: '弱', fc: ['周一 29°/24° ', '周二 30°/25° ', '周三 31°/26° ', '周四 31°/25° ', '周五 30°/24° '] },
+      chengdu: { name: '成都', temp: '22°C', cond: '阴天微凉', aqi: '48 优', hum: '72%', wind: '1级', uv: '弱', fc: ['周一 22°/16° ', '周二 24°/17° ', '周三 21°/15° ', '周四 23°/16° ', '周五 25°/18° '] },
+      hangzhou: { name: '杭州', temp: '26°C', cond: '多云转晴', aqi: '40 优', hum: '65%', wind: '2级', uv: '中等', fc: ['周一 26°/19° ', '周二 27°/20° ', '周三 25°/18° ', '周四 28°/21° ', '周五 29°/22° '] }
     };
 
     function updateWeather() {
@@ -408,7 +408,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">💱 全球汇率实时极速换算器 <span class="badge">外汇牌价</span></div>
+      <div class="header-title"> 全球汇率实时极速换算器 <span class="badge">外汇牌价</span></div>
       <div style="font-size:12px; color:var(--text-secondary);">基准参考：中国外汇交易中心</div>
     </div>
 
@@ -418,12 +418,12 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
         <div class="form-row">
           <input type="number" id="baseAmount" value="100" oninput="calculateRates()" style="font-size:16px; font-weight:bold;" />
           <select id="baseCurrency" onchange="calculateRates()" style="width:140px; font-weight:bold;">
-            <option value="CNY">🇨🇳 人民币 CNY</option>
-            <option value="USD">🇺🇸 美元 USD</option>
-            <option value="EUR">🇪🇺 欧元 EUR</option>
-            <option value="JPY">🇯🇵 日元 JPY</option>
-            <option value="HKD">🇭🇰 港币 HKD</option>
-            <option value="GBP">🇬🇧 英镑 GBP</option>
+            <option value="CNY"> 人民币 CNY</option>
+            <option value="USD"> 美元 USD</option>
+            <option value="EUR"> 欧元 EUR</option>
+            <option value="JPY"> 日元 JPY</option>
+            <option value="HKD"> 港币 HKD</option>
+            <option value="GBP"> 英镑 GBP</option>
           </select>
         </div>
       </div>
@@ -450,16 +450,16 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
     };
 
     const currencyNames = {
-      CNY: '🇨🇳 人民币 (Chinese Yuan)',
-      USD: '🇺🇸 美元 (US Dollar)',
-      EUR: '🇪🇺 欧元 (Euro)',
-      JPY: '🇯🇵 日元 (Japanese Yen)',
-      HKD: '🇭🇰 港币 (Hong Kong Dollar)',
-      GBP: '🇬🇧 英镑 (British Pound)',
-      KRW: '🇰🇷 韩元 (South Korean Won)',
-      AUD: '🇦🇺 澳元 (Australian Dollar)',
-      CAD: '🇨🇦 加元 (Canadian Dollar)',
-      SGD: '🇸🇬 新加坡元 (Singapore Dollar)'
+      CNY: ' 人民币 (Chinese Yuan)',
+      USD: ' 美元 (US Dollar)',
+      EUR: ' 欧元 (Euro)',
+      JPY: ' 日元 (Japanese Yen)',
+      HKD: ' 港币 (Hong Kong Dollar)',
+      GBP: ' 英镑 (British Pound)',
+      KRW: ' 韩元 (South Korean Won)',
+      AUD: ' 澳元 (Australian Dollar)',
+      CAD: ' 加元 (Canadian Dollar)',
+      SGD: ' 新加坡元 (Singapore Dollar)'
     };
 
     function calculateRates() {
@@ -524,16 +524,16 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
     </div>
 
     <div class="card">
-      <strong style="display:block; margin-bottom:10px;">📌 我的重要倒计时与纪念日：</strong>
+      <strong style="display:block; margin-bottom:10px;"> 我的重要倒计时与纪念日：</strong>
       <div id="countdownList"></div>
     </div>
   </div>
 
   <script>
     let events = [
-      { title: '💰 本月发薪日 (15号)', date: new Date(new Date().getFullYear(), new Date().getMonth() + (new Date().getDate() > 15 ? 1 : 0), 15).toISOString().slice(0,10) },
-      { title: '🎉 2027 新年元旦', date: '2027-01-01' },
-      { title: '🚀 ADMT 玩机管家新版本发布日', date: new Date(Date.now() + 12 * 86400000).toISOString().slice(0,10) }
+      { title: ' 本月发薪日 (15号)', date: new Date(new Date().getFullYear(), new Date().getMonth() + (new Date().getDate() > 15 ? 1 : 0), 15).toISOString().slice(0,10) },
+      { title: ' 2027 新年元旦', date: '2027-01-01' },
+      { title: ' ADMT 玩机管家新版本发布日', date: new Date(Date.now() + 12 * 86400000).toISOString().slice(0,10) }
     ];
 
     function renderEvents() {
@@ -597,7 +597,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">🔲 全能二维码与条形码生成器 <span class="badge">实用工具</span></div>
+      <div class="header-title"> 全能二维码与条形码生成器 <span class="badge">实用工具</span></div>
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 240px; gap:16px;">
@@ -605,9 +605,9 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
         <div class="form-group">
           <label>二维码内容类型：</label>
           <div class="btn-group" style="margin-bottom:8px;">
-            <button class="secondary" onclick="setPreset('url')">🌐 网址链接</button>
-            <button class="secondary" onclick="setPreset('wifi')">📶 Wi-Fi 快速连接</button>
-            <button class="secondary" onclick="setPreset('text')">📝 纯文本</button>
+            <button class="secondary" onclick="setPreset('url')"> 网址链接</button>
+            <button class="secondary" onclick="setPreset('wifi')"> Wi-Fi 快速连接</button>
+            <button class="secondary" onclick="setPreset('text')"> 纯文本</button>
           </div>
           <textarea id="qrInput" rows="4" placeholder="请输入需要生成二维码的文本或 URL" oninput="generateQR()">https://github.com/LACS-Official/admt</textarea>
         </div>
@@ -626,7 +626,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 
       <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;">
         <div id="qrcodeCanvas" style="padding:10px; background:#fff; border-radius:8px; border:1px solid var(--border);"></div>
-        <button style="width:100%;" onclick="copyOrSave()">📋 复制二维码内容</button>
+        <button style="width:100%;" onclick="copyOrSave()"> 复制二维码内容</button>
       </div>
     </div>
   </div>
@@ -694,10 +694,10 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">⚙️ 正则表达式可视化调试器 <span class="badge">开发利器</span></div>
+      <div class="header-title"> 正则表达式可视化调试器 <span class="badge">开发利器</span></div>
       <div class="btn-group">
         <select id="presetRegex" onchange="applyPreset()" style="width:170px;">
-          <option value="">📚 常用正则模板...</option>
+          <option value=""> 常用正则模板...</option>
           <option value="phone">中国手机号 (11位)</option>
           <option value="email">电子邮箱 Email</option>
           <option value="ipv4">IPv4 地址</option>
@@ -806,7 +806,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">🔐 多功能编解码与加密工具箱 <span class="badge">全能开发</span></div>
+      <div class="header-title"> 多功能编解码与加密工具箱 <span class="badge">全能开发</span></div>
     </div>
 
     <div class="tab-nav">
@@ -825,7 +825,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
       <div class="btn-group" style="margin-bottom:12px;">
         <button id="btnAction1" onclick="handleAction(1)">格式化 JSON</button>
         <button id="btnAction2" class="secondary" onclick="handleAction(2)">压缩为单行</button>
-        <button class="secondary" onclick="copyResult()">📋 复制输出</button>
+        <button class="secondary" onclick="copyResult()"> 复制输出</button>
       </div>
 
       <div class="form-group">
@@ -1024,7 +1024,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">🚀 API REST 接口测试与 cURL 转换器 <span class="badge">接口调试</span></div>
+      <div class="header-title"> API REST 接口测试与 cURL 转换器 <span class="badge">接口调试</span></div>
     </div>
 
     <div class="card">
@@ -1036,7 +1036,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
           <option value="DELETE">DELETE</option>
         </select>
         <input type="text" id="reqUrl" value="https://httpbin.org/get" placeholder="https://api.example.com/v1/resource" />
-        <button onclick="sendReq()">🚀 发送请求</button>
+        <button onclick="sendReq()"> 发送请求</button>
       </div>
 
       <div class="form-group">
@@ -1053,7 +1053,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
     <div class="card">
       <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
         <strong>等效 cURL 命令行：</strong>
-        <button class="secondary" style="padding:2px 8px; font-size:11px;" onclick="copyCurl()">📋 复制 cURL</button>
+        <button class="secondary" style="padding:2px 8px; font-size:11px;" onclick="copyCurl()"> 复制 cURL</button>
       </div>
       <div id="curlSnippet" class="result-box" style="margin-bottom:12px;"></div>
 
@@ -1136,7 +1136,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">📱 Android 屏幕 DPI 与分辨率换算器 <span class="badge">安卓开发</span></div>
+      <div class="header-title"> Android 屏幕 DPI 与分辨率换算器 <span class="badge">安卓开发</span></div>
     </div>
 
     <div class="card">
@@ -1227,7 +1227,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">🖼️ 图片极速压缩与 WebP 格式转换器 <span class="badge">本地安全</span></div>
+      <div class="header-title"> 图片极速压缩与 WebP 格式转换器 <span class="badge">本地安全</span></div>
       <div style="font-size:12px; color:var(--text-secondary);">100% 纯本地离线处理</div>
     </div>
 
@@ -1256,7 +1256,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
     <div class="card" id="outputCard" style="display:none;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <strong id="sizeComparison">原始大小: 0 KB -> 压缩后: 0 KB (-0%)</strong>
-        <a id="downloadBtn" class="button" style="text-decoration:none; padding:6px 12px; border-radius:6px; background:var(--brand); color:#fff; font-size:12px;" download="compressed.webp">💾 下载压缩后的图片</a>
+        <a id="downloadBtn" class="button" style="text-decoration:none; padding:6px 12px; border-radius:6px; background:var(--brand); color:#fff; font-size:12px;" download="compressed.webp"> 下载压缩后的图片</a>
       </div>
       <div style="text-align:center;">
         <img id="previewImg" style="max-width:100%; max-height:260px; border-radius:6px; border:1px solid var(--border);" />
@@ -1336,7 +1336,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">📋 极简快捷剪贴板与常用短语 <span class="badge">效率百宝箱</span></div>
+      <div class="header-title"> 极简快捷剪贴板与常用短语 <span class="badge">效率百宝箱</span></div>
     </div>
 
     <div class="card">
@@ -1348,24 +1348,24 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
     </div>
 
     <div class="card">
-      <strong style="display:block; margin-bottom:10px;">⚡ 点击一键复制到剪贴板：</strong>
+      <strong style="display:block; margin-bottom:10px;"> 点击一键复制到剪贴板：</strong>
       <div id="snippetsContainer"></div>
     </div>
   </div>
 
   <script>
     let list = [
-      { title: '🔋 查看电池详细健康状态', content: 'adb shell dumpsys battery' },
-      { title: '📱 查看当前前台应用包名与 Activity', content: 'adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp"' },
-      { title: '🔄 重启进入 Bootloader (Fastboot)', content: 'adb reboot bootloader' },
-      { title: '📦 列出所有第三方已安装应用', content: 'adb shell pm list packages -3' },
-      { title: '🛡️ 检查 SELinux 当前工作模式', content: 'adb shell getenforce' }
+      { title: ' 查看电池详细健康状态', content: 'adb shell dumpsys battery' },
+      { title: ' 查看当前前台应用包名与 Activity', content: 'adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp"' },
+      { title: ' 重启进入 Bootloader (Fastboot)', content: 'adb reboot bootloader' },
+      { title: ' 列出所有第三方已安装应用', content: 'adb shell pm list packages -3' },
+      { title: ' 检查 SELinux 当前工作模式', content: 'adb shell getenforce' }
     ];
 
     function renderList() {
       const box = document.getElementById('snippetsContainer');
       box.innerHTML = list.map((item, idx) => 
-        '<div class="snippet-item"><div><strong>' + item.title + '</strong><div style="font-size:12px; color:var(--brand); font-family:Consolas, monospace; margin-top:2px;">' + item.content + '</div></div><div class="btn-group"><button style="padding:4px 10px; font-size:12px;" onclick="copyText(\\'' + encodeURIComponent(item.content) + '\\')">📋 复制</button><button class="secondary" style="padding:4px 8px; font-size:12px;" onclick="delItem(' + idx + ')">×</button></div></div>'
+        '<div class="snippet-item"><div><strong>' + item.title + '</strong><div style="font-size:12px; color:var(--brand); font-family:Consolas, monospace; margin-top:2px;">' + item.content + '</div></div><div class="btn-group"><button style="padding:4px 10px; font-size:12px;" onclick="copyText(\\'' + encodeURIComponent(item.content) + '\\')"> 复制</button><button class="secondary" style="padding:4px 8px; font-size:12px;" onclick="delItem(' + idx + ')">×</button></div></div>'
       ).join('');
     }
 
@@ -1422,13 +1422,13 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">🛑 本地网络端口占用查询与管理 <span class="badge">系统辅助</span></div>
+      <div class="header-title"> 本地网络端口占用查询与管理 <span class="badge">系统辅助</span></div>
     </div>
 
     <div class="card">
       <div class="form-row">
         <input type="number" id="portInput" value="8080" placeholder="请输入端口号（如 8080 / 3000 / 5173）" />
-        <button onclick="checkPort()">🔍 查询端口占用与解决方案</button>
+        <button onclick="checkPort()"> 查询端口占用与解决方案</button>
       </div>
     </div>
 
@@ -1444,7 +1444,7 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
         <div id="cmdKill" class="result-box">taskkill /F /PID 12345</div>
       </div>
 
-      <button onclick="copyKillCmd()">📋 复制快速清理单行脚本</button>
+      <button onclick="copyKillCmd()"> 复制快速清理单行脚本</button>
     </div>
   </div>
 
@@ -1496,15 +1496,15 @@ export const BUILTIN_ADMT_PLUGINS: PluginStoreItem[] = [
 <body>
   <div class="app-container">
     <div class="header-bar">
-      <div class="header-title">🎲 高强度随机密码与秘钥生成器 <span class="badge">安全密码</span></div>
+      <div class="header-title"> 高强度随机密码与秘钥生成器 <span class="badge">安全密码</span></div>
     </div>
 
     <div class="card">
       <div class="pwd-display" id="pwdResult">Ab7#k9$mQ2!wX8&z</div>
 
       <div class="btn-group" style="justify-content:center; margin-bottom:16px;">
-        <button onclick="generatePwd()">⚡ 重新生成</button>
-        <button class="secondary" onclick="copyPwd()">📋 复制密码</button>
+        <button onclick="generatePwd()"> 重新生成</button>
+        <button class="secondary" onclick="copyPwd()"> 复制密码</button>
       </div>
 
       <div class="form-group">

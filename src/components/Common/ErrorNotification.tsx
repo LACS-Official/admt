@@ -1,4 +1,4 @@
-import { Text, MessageBar } from "@fluentui/react-components";
+﻿import { Text, MessageBar } from "@fluentui/react-components";
 import { useAppStyles } from "../../styles/appStyles";
 
 interface ErrorNotificationProps {
@@ -14,7 +14,7 @@ export const ErrorNotification = ({ error, countdown }: ErrorNotificationProps) 
       {/* 顶部标题区域 */}
       <div className={styles.errorHeader}>
         <div className={styles.errorHeaderContent}>
-          <Text className={styles.errorTitle}>⚠️ 启动失败</Text>
+          <Text className={styles.errorTitle}> 启动失败</Text>
           <Text className={styles.errorSubtitle}>应用程序在启动过程中遇到了问题</Text>
         </div>
       </div>

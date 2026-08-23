@@ -1,4 +1,4 @@
-import { StructuredLogEntry, LogFilter, LogStats, LogLevel, LogCategory } from './logTypes';
+﻿import { StructuredLogEntry, LogFilter, LogStats, LogLevel, LogCategory } from './logTypes';
 
 export class LogUtils {
   static filterLogs(logs: StructuredLogEntry[], filter?: LogFilter): StructuredLogEntry[] {
@@ -95,15 +95,15 @@ export class LogUtils {
 
   static getCategoryIcon(category: LogCategory): string {
     const icons = {
-      device: '📱',
-      firmware: '💾',
-      system: '⚙️',
-      user: '👤',
-      network: '🌐',
-      security: '🔒',
-      ai: '🤖'
+      device: '',
+      firmware: '',
+      system: '',
+      user: '',
+      network: '',
+      security: '',
+      ai: ''
     };
-    return icons[category] || '📝';
+    return icons[category] || '';
   }
 
   static isRecentLog(timestamp: string, minutes: number = 5): boolean {

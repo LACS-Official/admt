@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tauri应用安全配置管理
  * 负责管理API密钥、JWT密钥等敏感信息的安全存储和访问
  */
@@ -63,15 +63,15 @@ export class SecurityConfigManager {
         this.validateConfig(config);
         this.config = config;
         this.isInitialized = true;
-        console.log('✅ 安全配置初始化成功');
+        console.log(' 安全配置初始化成功');
       } catch (error) {
         const isNotTauri = error instanceof Error && 
           (error.message.includes('window.__TAURI_IPC__') || error.message.includes('not found'));
         
         if (isNotTauri) {
-          console.log('🔄 非Tauri环境，使用默认配置...');
+          console.log(' 非Tauri环境，使用默认配置...');
         } else {
-          console.warn('⚠️ 获取安全配置失败 (可能在开发环境):', error);
+          console.warn(' 获取安全配置失败 (可能在开发环境):', error);
         }
         
         await this.initializeWithDefaults();

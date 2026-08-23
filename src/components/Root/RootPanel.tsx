@@ -21,6 +21,7 @@ import { useDeviceStore } from "../../stores/deviceStore";
 import PatchImagePanel from './PatchImagePanel';
 import ModulePanel from './ModulePanel';
 import AdvancedSettingsPanel from './AdvancedSettingsPanel';
+import OneClickRootPanel from './OneClickRootPanel';
 import { DeviceInfo } from '../../types/device';
 
 const useStyles = makeStyles({
@@ -150,13 +151,13 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "patch-image" | "module-management" | "advanced-settings";
+type AdbZoneView = "one-click-root" | "patch-image" | "module-management" | "advanced-settings";
 
 const RootPanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
-  const [currentView, setCurrentView] = useState<AdbZoneView>("patch-image");
+  const [currentView, setCurrentView] = useState<AdbZoneView>("one-click-root");
   const [showOverlay, setShowOverlay] = useState(false);
   
   const isNoDevice = !selectedDevice || devices.filter(d => d.connected).length === 0;
@@ -167,7 +168,7 @@ const RootPanel: React.FC = () => {
     }
   }, [isNoDevice]);
 
-  const handleContentClick = (e: React.MouseEvent) => {
+  const handleContentClick = (_e: React.MouseEvent) => {
     if (isNoDevice && !showOverlay) {
       setShowOverlay(true);
     }
@@ -175,24 +176,31 @@ const RootPanel: React.FC = () => {
 
   const tabs = [
     {
+      id: "one-click-root" as AdbZoneView,
+      label: "一键 Root",
+      icon: <Play24Regular />,
+    },
+    {
       id: "patch-image" as AdbZoneView,
-      label: t('root.tab_patch'),
+      label: t('root.tab_patch', '镜像修补'),
       icon: <Code24Regular />,
     },
     {
       id: "module-management" as AdbZoneView,
-      label: t('root.tab_module'),
+      label: t('root.tab_module', '模块管理'),
       icon: <Apps24Regular />,
     },
     {
       id: "advanced-settings" as AdbZoneView,
-      label: t('root.tab_settings'),
+      label: t('root.tab_settings', '高级设置'),
       icon: <Settings24Regular />,
     },
   ];
 
   const renderContent = (device: DeviceInfo | null) => {
     switch (currentView) {
+      case "one-click-root":
+        return <OneClickRootPanel device={device} />;
       case "patch-image":
         return <PatchImagePanel device={device} />;
       case "module-management":
@@ -200,7 +208,7 @@ const RootPanel: React.FC = () => {
       case "advanced-settings":
         return <AdvancedSettingsPanel device={device} />;
       default:
-        return <PatchImagePanel device={device} />;
+        return <OneClickRootPanel device={device} />;
     }
   };
 

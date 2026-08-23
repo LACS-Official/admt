@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 版本检测诊断服务
  * 专门分析开发版和发布版在版本检测功能上的差异
  */
@@ -68,7 +68,7 @@ class VersionDetectionDiagnosticService {
    * 执行完整的版本检测诊断
    */
   async runFullDiagnostic(): Promise<VersionDetectionDiagnostic> {
-    console.log('🔍 开始版本检测诊断...');
+    console.log(' 开始版本检测诊断...');
     
     // 重置状态
     this.issues = [];
@@ -101,7 +101,7 @@ class VersionDetectionDiagnosticService {
     
     const summary = this.generateSummary();
     
-    console.log('✅ 版本检测诊断完成');
+    console.log(' 版本检测诊断完成');
     
     return {
       environment,
@@ -118,7 +118,7 @@ class VersionDetectionDiagnosticService {
    * 测试环境配置
    */
   private async testEnvironmentConfiguration() {
-    console.log('🔧 测试环境配置...');
+    console.log(' 测试环境配置...');
     
     // 检查环境变量
     const envTests = [
@@ -171,7 +171,7 @@ class VersionDetectionDiagnosticService {
    * 测试网络连接
    */
   private async testNetworkConnectivity() {
-    console.log('🌐 测试网络连接...');
+    console.log(' 测试网络连接...');
     
     const testUrls = [
       'https://api-g.lacs.cc',
@@ -237,7 +237,7 @@ class VersionDetectionDiagnosticService {
    * 测试Tauri权限
    */
   private async testTauriPermissions() {
-    console.log('🔐 测试Tauri权限...');
+    console.log(' 测试Tauri权限...');
     
     const permissions = [
       {
@@ -325,7 +325,7 @@ class VersionDetectionDiagnosticService {
    * 测试API端点
    */
   private async testApiEndpoints() {
-    console.log('🔌 测试API端点...');
+    console.log(' 测试API端点...');
     
     const apiUrl = 'https://api-g.lacs.cc/app/software/id/1';
     
@@ -390,7 +390,7 @@ class VersionDetectionDiagnosticService {
    * 测试版本获取
    */
   private async testVersionRetrieval() {
-    console.log('📋 测试版本获取...');
+    console.log(' 测试版本获取...');
     
     const versionSources = [
       {
@@ -451,7 +451,7 @@ class VersionDetectionDiagnosticService {
    * 测试CSP策略
    */
   private async testCSPPolicy() {
-    console.log('🛡️ 测试CSP策略...');
+    console.log(' 测试CSP策略...');
     
     // 检查是否能够进行外部请求
     try {
@@ -482,15 +482,15 @@ class VersionDetectionDiagnosticService {
     const warningIssues = this.issues.filter(i => i.category === 'warning');
     
     if (criticalIssues.length > 0) {
-      recommendations.push('🚨 立即修复关键问题以恢复版本检测功能');
-      recommendations.push('📋 按优先级处理以下关键问题：');
+      recommendations.push(' 立即修复关键问题以恢复版本检测功能');
+      recommendations.push(' 按优先级处理以下关键问题：');
       criticalIssues.forEach((issue, index) => {
         recommendations.push(`   ${index + 1}. ${issue.component}: ${issue.solution}`);
       });
     }
     
     if (warningIssues.length > 0) {
-      recommendations.push('⚠️ 建议修复以下警告问题以提高稳定性：');
+      recommendations.push(' 建议修复以下警告问题以提高稳定性：');
       warningIssues.forEach((issue, index) => {
         recommendations.push(`   ${index + 1}. ${issue.component}: ${issue.solution}`);
       });
@@ -498,12 +498,12 @@ class VersionDetectionDiagnosticService {
     
     // 环境特定建议
     if (import.meta.env.MODE === 'production') {
-      recommendations.push('🏭 生产环境特别建议：');
+      recommendations.push(' 生产环境特别建议：');
       recommendations.push('   • 确保所有环境变量在 .env.production 中正确配置');
       recommendations.push('   • 验证签名密钥和安全配置');
       recommendations.push('   • 检查网络防火墙和代理设置');
     } else {
-      recommendations.push('🔧 开发环境建议：');
+      recommendations.push(' 开发环境建议：');
       recommendations.push('   • 使用 npm run diagnose-version 定期检查版本检测状态');
       recommendations.push('   • 确保开发环境网络可以访问 api-g.lacs.cc');
     }

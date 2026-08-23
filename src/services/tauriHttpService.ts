@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tauri HTTP 服务
  * 使用 @tauri-apps/plugin-http 绕过 WebView CORS 限制
  * 专门处理 api-g.lacs.cc 的 API 请求
@@ -85,7 +85,7 @@ export class TauriHttpService {
     
     for (let attempt = 0; attempt <= retryCount; attempt++) {
       try {
-        console.log(`🔄 发起 HTTP 请求: ${method} ${url} (尝试 ${attempt + 1}/${retryCount + 1})`);
+        console.log(` 发起 HTTP 请求: ${method} ${url} (尝试 ${attempt + 1}/${retryCount + 1})`);
 
         const response = await fetch(url, requestConfig);
         
@@ -106,7 +106,7 @@ export class TauriHttpService {
           data = responseText;
         }
 
-        console.log(`✅ HTTP 请求成功: ${method} ${url} (status: ${response.status}, dataType: ${typeof data})`);
+        console.log(` HTTP 请求成功: ${method} ${url} (status: ${response.status}, dataType: ${typeof data})`);
 
         // 返回标准化响应
         return {
@@ -118,7 +118,7 @@ export class TauriHttpService {
       } catch (error) {
         lastError = error as Error;
         
-        console.warn(`⚠️ HTTP 请求失败 (尝试 ${attempt + 1}/${retryCount + 1}): ${method} ${url} - ${lastError.message}, willRetry: ${attempt < retryCount}`);
+        console.warn(` HTTP 请求失败 (尝试 ${attempt + 1}/${retryCount + 1}): ${method} ${url} - ${lastError.message}, willRetry: ${attempt < retryCount}`);
 
         // 如果不是最后一次尝试，等待后重试
         if (attempt < retryCount) {
@@ -130,7 +130,7 @@ export class TauriHttpService {
     // 所有重试都失败了
     const errorMessage = lastError?.message || '未知网络错误';
     
-    console.error(`❌ HTTP 请求最终失败: ${method} ${url} - ${errorMessage}, totalAttempts: ${retryCount + 1}`);
+    console.error(` HTTP 请求最终失败: ${method} ${url} - ${errorMessage}, totalAttempts: ${retryCount + 1}`);
 
     return {
       success: false,
@@ -203,7 +203,7 @@ export class TauriHttpService {
       });
       return response.success;
     } catch (error) {
-      console.warn('⚠️ 健康检查失败:', (error as Error).message);
+      console.warn(' 健康检查失败:', (error as Error).message);
       return false;
     }
   }
@@ -213,7 +213,7 @@ export class TauriHttpService {
    */
   public setBaseUrl(baseUrl: string): void {
     this.baseUrl = baseUrl;
-    console.log('🔧 更新 HTTP 服务基础 URL:', baseUrl);
+    console.log(' 更新 HTTP 服务基础 URL:', baseUrl);
   }
 
   /**
@@ -235,23 +235,23 @@ export class TauriHttpService {
    */
   public async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
     try {
-      console.log('🔍 开始测试网络连接...');
+      console.log(' 开始测试网络连接...');
       
       // 测试基本的网络连接
       const testUrl = `${this.baseUrl}/app/software/id/1`;
-      console.log('🌐 测试URL:', testUrl);
+      console.log(' 测试URL:', testUrl);
       
       const response = await fetch(testUrl, {
         method: 'GET',
         headers: getDefaultHeaders()
       });
       
-      console.log('📡 响应状态:', response.status, response.statusText);
-      console.log('📋 响应头:', Object.fromEntries(response.headers.entries()));
+      console.log(' 响应状态:', response.status, response.statusText);
+      console.log(' 响应头:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
         const data = await response.text();
-        console.log('✅ 网络连接测试成功');
+        console.log(' 网络连接测试成功');
         return {
           success: true,
           message: '网络连接正常',
@@ -263,7 +263,7 @@ export class TauriHttpService {
           }
         };
       } else {
-        console.warn('⚠️ 服务器返回错误状态:', response.status);
+        console.warn(' 服务器返回错误状态:', response.status);
         return {
           success: false,
           message: `服务器返回错误: ${response.status} ${response.statusText}`,
@@ -271,7 +271,7 @@ export class TauriHttpService {
         };
       }
     } catch (error) {
-      console.error('❌ 网络连接测试失败:', error);
+      console.error(' 网络连接测试失败:', error);
       const errorMessage = error instanceof Error ? error.message : '未知错误';
       
       // 分析错误类型

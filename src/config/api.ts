@@ -1,4 +1,4 @@
-/**
+﻿/**
  * API配置文件
  * 管理所有API相关的配置信息
  */
@@ -117,13 +117,13 @@ export const getApiBaseUrl = () => {
   
   // 优先使用环境变量配置
   if (envBaseUrl) {
-    console.log(`🔧 使用环境变量API地址: ${envBaseUrl}`);
+    console.log(` 使用环境变量API地址: ${envBaseUrl}`);
     return envBaseUrl;
   }
   
   // 降级逻辑
   const baseUrl = isDev ? API_CONFIG.DEV_BASE_URL : API_CONFIG.BASE_URL;
-  console.log(`🔧 使用默认API地址: ${baseUrl} (isDev: ${isDev})`);
+  console.log(` 使用默认API地址: ${baseUrl} (isDev: ${isDev})`);
   return baseUrl;
 };
 
@@ -132,17 +132,17 @@ export const getSoftwareId = () => {
   const envSoftwareId = getEnvNumber('VITE_SOFTWARE_ID', 0);
   
   if (envSoftwareId > 0) {
-    console.log(`🔧 使用环境变量软件ID: ${envSoftwareId}`);
+    console.log(` 使用环境变量软件ID: ${envSoftwareId}`);
     return envSoftwareId;
   }
   
   // 发行版必须有明确的软件ID
   if (!import.meta.env.DEV && API_CONFIG.SOFTWARE_ID <= 0) {
-    console.error('❌ 生产环境缺少有效的VITE_SOFTWARE_ID配置');
+    console.error(' 生产环境缺少有效的VITE_SOFTWARE_ID配置');
     throw new Error('Production build requires valid VITE_SOFTWARE_ID');
   }
   
-  console.log(`🔧 使用默认软件ID: ${API_CONFIG.SOFTWARE_ID}`);
+  console.log(` 使用默认软件ID: ${API_CONFIG.SOFTWARE_ID}`);
   return API_CONFIG.SOFTWARE_ID;
 };
 

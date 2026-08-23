@@ -1,4 +1,4 @@
-use crate::cache::{log_tool_paths, verify_tool_paths};
+﻿use crate::cache::{log_tool_paths, verify_tool_paths};
 use crate::error::AdmtError;
 use chrono::{Duration, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -492,9 +492,9 @@ pub async fn verify_tools_integrity() -> Result<bool> {
     let is_valid = verify_tool_paths();
 
     if is_valid {
-        log::info!("✅ All tools are properly configured and accessible");
+        log::info!(" All tools are properly configured and accessible");
     } else {
-        log::error!("❌ Some tools are missing or inaccessible");
+        log::error!(" Some tools are missing or inaccessible");
     }
 
     Ok(is_valid)

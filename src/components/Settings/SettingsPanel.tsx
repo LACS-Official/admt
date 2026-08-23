@@ -129,7 +129,7 @@ const tabs = [
   },
   {
     id: "privacy" as SettingsView,
-    label: "settings.tabs.privacy",
+    label: "settings.tabs.privacy_security",
     icon: <Shield24Regular />,
   },
   {
@@ -176,7 +176,7 @@ const SettingsPanel: React.FC = () => {
         >
           {tabs.map((tab) => (
             <Tab key={tab.id} value={tab.id} icon={tab.icon}>
-              {t(tab.label)}
+              {tab.id === "privacy" ? "隐私安全" : t(tab.label)}
             </Tab>
           ))}
         </TabList>

@@ -277,12 +277,11 @@ body::after {
 
 /* 性能模式指示器 */
 [data-performance-mode="low"] .performance-indicator::after {
-  content: "🐌";
+  content: "";
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 10000;
-  font-size: 16px;
   opacity: 0.5;
 }
 

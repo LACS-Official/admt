@@ -42,6 +42,163 @@ pub async fn open_folder(path: String) -> Result<()> {
     Ok(())
 }
 
+/// 启动/运行已下载的软件资源启动程序
+#[tauri::command]
+pub async fn launch_software_resource(
+    path: String,
+    openname: Option<String>,
+) -> Result<String> {
+    log::info!(
+        "[launch_software_resource] path: {}, openname: {:?}",
+        path,
+        openname
+    );
+
+    let base_path = std::path::Path::new(&path);
+    if !base_path.exists() {
+        return Err(AdmtError::FileNotFound {
+            path: path.clone(),
+        });
+    }
+
+    let mut target_exe: Option<std::path::PathBuf> = None;
+
+    if base_path.is_file() {
+        target_exe = Some(base_path.to_path_buf());
+    } else if base_path.is_dir() {
+        // 1. 如果提供了 openname，先匹配 openname
+        if let Some(ref name) = openname {
+            let clean_name = name.trim();
+            if !clean_name.is_empty() {
+                let direct = base_path.join(clean_name);
+                if direct.exists() {
+                    target_exe = Some(direct);
+                } else if let Ok(entries) = std::fs::read_dir(base_path) {
+                    for entry in entries.flatten() {
+                        let sub_direct = entry.path().join(clean_name);
+                        if sub_direct.exists() {
+                            target_exe = Some(sub_direct);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. 尝试读取 lacs_config.json
+        if target_exe.is_none() {
+            let config_path = base_path.join("lacs_config.json");
+            if config_path.exists() {
+                if let Ok(content) = std::fs::read_to_string(&config_path) {
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                        if let Some(cfg_openname) = val.get("openname").and_then(|v| v.as_str()) {
+                            let p = base_path.join(cfg_openname);
+                            if p.exists() {
+                                target_exe = Some(p);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. 自动探测目录下的可执行文件 (.exe, .bat, .cmd)
+        if target_exe.is_none() {
+            if let Ok(entries) = std::fs::read_dir(base_path) {
+                let mut candidates = Vec::new();
+                for entry in entries.flatten() {
+                    let p = entry.path();
+                    if p.is_file() {
+                        if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                            let ext_lower = ext.to_lowercase();
+                            if ext_lower == "exe" || ext_lower == "bat" || ext_lower == "cmd" {
+                                candidates.push(p);
+                            }
+                        }
+                    }
+                }
+                // 优先排除 uninstall/unins
+                if let Some(primary) = candidates.iter().find(|p| {
+                    let file_stem = p
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("")
+                        .to_lowercase();
+                    !file_stem.contains("unins") && !file_stem.contains("uninstall")
+                }) {
+                    target_exe = Some(primary.clone());
+                } else if !candidates.is_empty() {
+                    target_exe = Some(candidates[0].clone());
+                }
+            }
+        }
+    }
+
+    let exe_path = match target_exe {
+        Some(p) => p,
+        None => {
+            // 如果未找到具体可执行文件，打开安装目录
+            #[cfg(target_os = "windows")]
+            {
+                std::process::Command::new("explorer")
+                    .arg(base_path)
+                    .spawn()
+                    .map_err(|e| AdmtError::Process(e.to_string()))?;
+            }
+            return Ok(format!("已为您打开软件目录: {}", base_path.display()));
+        }
+    };
+
+    let working_dir = exe_path.parent().unwrap_or(base_path);
+
+    #[cfg(target_os = "windows")]
+    {
+        let ext = exe_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        if ext == "bat" || ext == "cmd" || ext == "exe" || ext == "msi" {
+            std::process::Command::new("cmd")
+                .args(["/C", "start", ""])
+                .arg(&exe_path)
+                .current_dir(working_dir)
+                .spawn()
+                .map_err(|e| AdmtError::Process(format!("启动程序失败: {}", e)))?;
+        } else {
+            std::process::Command::new("explorer")
+                .arg(&exe_path)
+                .spawn()
+                .map_err(|e| AdmtError::Process(format!("打开文件失败: {}", e)))?;
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&exe_path)
+            .current_dir(working_dir)
+            .spawn()
+            .map_err(|e| AdmtError::Process(format!("启动程序失败: {}", e)))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&exe_path)
+            .current_dir(working_dir)
+            .spawn()
+            .map_err(|e| AdmtError::Process(format!("启动程序失败: {}", e)))?;
+    }
+
+    let exe_name = exe_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("程序");
+    Ok(format!("已启动启动程序: {}", exe_name))
+}
+
 /// 检查文件是否存在
 #[tauri::command]
 pub async fn check_file_exists(path: String) -> Result<bool> {

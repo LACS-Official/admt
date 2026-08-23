@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 隐私政策同意状态管理
  * 管理用户对隐私政策、用户协议和数据收集的同意状态
  */
@@ -128,7 +128,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           privacyPolicyRevokedAt: undefined,
           privacyPolicyVersion: PRIVACY_POLICY_VERSION,
         });
-        console.log('✅ 用户已同意隐私政策');
+        console.log(' 用户已同意隐私政策');
       },
 
       acceptUserAgreement: () => {
@@ -139,7 +139,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           userAgreementRevokedAt: undefined,
           userAgreementVersion: USER_AGREEMENT_VERSION,
         });
-        console.log('✅ 用户已同意用户协议');
+        console.log(' 用户已同意用户协议');
       },
 
       acceptDataCollection: () => {
@@ -157,7 +157,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
             performanceMetrics: false,
           },
         });
-        console.log('✅ 用户已同意数据收集');
+        console.log(' 用户已同意数据收集');
       },
 
       // 撤销操作
@@ -168,7 +168,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           privacyPolicyRevokedAt: now,
           shouldExitApp: true,
         });
-        console.log('❌ 用户已撤销隐私政策同意');
+        console.log(' 用户已撤销隐私政策同意');
       },
 
       revokeUserAgreement: () => {
@@ -178,7 +178,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           userAgreementRevokedAt: now,
           shouldExitApp: true,
         });
-        console.log('❌ 用户已撤销用户协议同意');
+        console.log(' 用户已撤销用户协议同意');
       },
 
       revokeDataCollection: () => {
@@ -189,21 +189,21 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           dataCollectionTypes: { ...defaultDataCollectionTypes },
           shouldExitApp: true,
         });
-        console.log('❌ 用户已撤销数据收集同意');
+        console.log(' 用户已撤销数据收集同意');
       },
 
       // 数据收集类型控制
       updateDataCollectionTypes: (types: Partial<DataCollectionTypes>) => {
         const currentState = get();
         if (!currentState.hasAcceptedDataCollection) {
-          console.warn('⚠️ 用户未同意数据收集，无法更新数据收集类型');
+          console.warn(' 用户未同意数据收集，无法更新数据收集类型');
           return;
         }
         
         set((state) => ({
           dataCollectionTypes: { ...state.dataCollectionTypes, ...types }
         }));
-        console.log('🔄 数据收集类型已更新:', types);
+        console.log(' 数据收集类型已更新:', types);
       },
 
       // 批量操作
@@ -230,7 +230,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           },
           shouldExitApp: false,
         });
-        console.log('✅ 用户已同意所有条款');
+        console.log(' 用户已同意所有条款');
       },
 
       revokeAll: () => {
@@ -245,7 +245,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           dataCollectionTypes: { ...defaultDataCollectionTypes },
           shouldExitApp: true,
         });
-        console.log('❌ 用户已撤销所有同意');
+        console.log(' 用户已撤销所有同意');
       },
 
       // 状态检查
@@ -277,7 +277,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           hasCompletedPrivacySetup: true,
           isFirstLaunch: false,
         });
-        console.log('✅ 隐私设置已完成');
+        console.log(' 隐私设置已完成');
       },
 
       setFirstLaunch: (isFirst: boolean) => {
@@ -291,7 +291,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
       // 重置操作
       resetPrivacyConsent: () => {
         set({ ...initialState });
-        console.log('🔄 隐私同意状态已重置');
+        console.log(' 隐私同意状态已重置');
       },
 
       // 版本更新检查
@@ -310,7 +310,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
           hasAcceptedUserAgreement: false,
           hasCompletedPrivacySetup: false,
         });
-        console.log('🔄 隐私政策版本已更新，需要重新同意');
+        console.log(' 隐私政策版本已更新，需要重新同意');
       },
     }),
     {
@@ -341,7 +341,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
 export const shouldShowPrivacyConsent = (): boolean => {
   const state = usePrivacyConsentStore.getState();
 
-  console.log('🔍 检查是否需要显示隐私政策同意界面:', {
+  console.log(' 检查是否需要显示隐私政策同意界面:', {
     isFirstLaunch: state.isFirstLaunch,
     hasCompletedPrivacySetup: state.hasCompletedPrivacySetup,
     hasAcceptedPrivacyPolicy: state.hasAcceptedPrivacyPolicy,
@@ -357,7 +357,7 @@ export const shouldShowPrivacyConsent = (): boolean => {
                    !state.hasAcceptedUserAgreement ||
                    state.checkVersionUpdates();
 
-  console.log('📋 隐私政策显示检查结果:', { needsShow });
+  console.log(' 隐私政策显示检查结果:', { needsShow });
   return needsShow;
 };
 

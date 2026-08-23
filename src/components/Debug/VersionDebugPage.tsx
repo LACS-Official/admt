@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 版本检查调试页面
  * 用于诊断版本检测问题
  */
@@ -100,7 +100,7 @@ const VersionDebugPage: React.FC = () => {
     setError(null);
     
     try {
-      console.log('🔍 开始运行调试版本检查...');
+      console.log(' 开始运行调试版本检查...');
       
       // 清除缓存确保获取最新数据
       debugVersionService.clearCache();
@@ -114,14 +114,14 @@ const VersionDebugPage: React.FC = () => {
       const normalRes = await versionService.checkForUpdates();
       setNormalResult(normalRes);
       
-      console.log('✅ 调试检查完成');
+      console.log(' 调试检查完成');
       console.log('调试结果:', debugRes);
       console.log('正常结果:', normalRes);
       
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       setError(errorMsg);
-      console.error('❌ 调试检查失败:', errorMsg);
+      console.error(' 调试检查失败:', errorMsg);
     } finally {
       setLoading(false);
     }
@@ -132,7 +132,7 @@ const VersionDebugPage: React.FC = () => {
     versionService.clearCache();
     setDebugResult(null);
     setNormalResult(null);
-    console.log('🗑️ 缓存已清空');
+    console.log(' 缓存已清空');
   };
 
   const getStatusIcon = (success: boolean, hasError?: boolean) => {

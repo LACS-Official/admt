@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -39,22 +39,22 @@ fn read_version_config() -> Result<VersionConfig, String> {
             match fs::read_to_string(config_path) {
                 Ok(content) => match serde_json::from_str::<VersionConfig>(&content) {
                     Ok(config) => {
-                        println!("✅ 成功读取版本配置文件: {}", config_path);
+                        println!(" 成功读取版本配置文件: {}", config_path);
                         return Ok(config);
                     }
                     Err(e) => {
-                        eprintln!("❌ 版本配置文件格式错误 {}: {}", config_path, e);
+                        eprintln!(" 版本配置文件格式错误 {}: {}", config_path, e);
                     }
                 },
                 Err(e) => {
-                    eprintln!("❌ 读取版本配置文件失败 {}: {}", config_path, e);
+                    eprintln!(" 读取版本配置文件失败 {}: {}", config_path, e);
                 }
             }
         }
     }
 
     // 如果无法读取配置文件，返回默认配置
-    eprintln!("⚠️  无法读取版本配置文件，使用默认版本信息");
+    eprintln!("  无法读取版本配置文件，使用默认版本信息");
     Ok(VersionConfig {
         version: env!("CARGO_PKG_VERSION").to_string(),
         build_number: 1,

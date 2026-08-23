@@ -11,6 +11,7 @@ import {
   Flash24Regular,
   Code24Regular,
   Archive24Regular,
+  Layer24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
@@ -18,6 +19,8 @@ import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
 import ImageFlashCard from "../Tools/ImageFlashCard";
 import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
 import { RomManagerCard } from "./RomManagerCard";
+import { FastbootPartitionManagerCard } from "./FastbootPartitionManagerCard";
+import OneClickRootPanel from "../Root/OneClickRootPanel";
 import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
@@ -177,6 +180,8 @@ const useStyles = makeStyles({
 });
 
 type FlashZoneView =
+  | "one-click-root"
+  | "partition-manager"
   | "unlock-tools"
   | "image-flash"
   | "xiaomi-flash"
@@ -186,7 +191,7 @@ const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
-  const [currentView, setCurrentView] = useState<FlashZoneView>("unlock-tools");
+  const [currentView, setCurrentView] = useState<FlashZoneView>("one-click-root");
   const [showOverlay, setShowOverlay] = useState(false);
   const connectedDevices = devices.filter((d) => d.connected);
 
@@ -211,6 +216,16 @@ const FlashZonePanel: React.FC = () => {
 
   const tabs = [
     {
+      id: "one-click-root" as FlashZoneView,
+      label: "一键 Root",
+      icon: <Flash24Regular />,
+    },
+    {
+      id: "partition-manager" as FlashZoneView,
+      label: t("flash.tab_partition_manager", "分区管理"),
+      icon: <Layer24Regular />,
+    },
+    {
       id: "unlock-tools" as FlashZoneView,
       label: t("flash.tab_unlock"),
       icon: <LockOpen24Regular />,
@@ -233,10 +248,23 @@ const FlashZonePanel: React.FC = () => {
   ];
 
   const renderContent = () => {
-    // 即使没有选中设备也显示默认内容，以支持刷机过程中设备断开的情况
-    const deviceToUse = selectedDevice || connectedDevices[0] || null;
+    // 优先匹配处于 Fastboot 模式的设备，其次使用已选设备或首个连接设备
+    const deviceToUse =
+      connectedDevices.find((d) => d.mode === "fastboot" || d.mode === "fastbootd") ||
+      selectedDevice ||
+      connectedDevices[0] ||
+      null;
 
     switch (currentView) {
+      case "one-click-root":
+        return <OneClickRootPanel device={deviceToUse} />;
+      case "partition-manager":
+        return (
+          <FastbootPartitionManagerCard
+            device={deviceToUse}
+            onFastbootRequired={triggerOverlay}
+          />
+        );
       case "unlock-tools":
         return deviceToUse ? (
           <XiaomiUnlockCard device={deviceToUse} />
@@ -258,10 +286,11 @@ const FlashZonePanel: React.FC = () => {
       case "rom-manager":
         return <RomManagerCard />;
       default:
-        return deviceToUse ? (
-          <XiaomiUnlockCard device={deviceToUse} />
-        ) : (
-          <XiaomiUnlockCard device={null} />
+        return (
+          <FastbootPartitionManagerCard
+            device={deviceToUse}
+            onFastbootRequired={triggerOverlay}
+          />
         );
     }
   };

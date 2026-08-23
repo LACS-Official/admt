@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 隐私政策调试面板
  * 用于开发和测试隐私政策显示逻辑
  */
@@ -95,15 +95,15 @@ const PrivacyDebugPanel: React.FC<PrivacyDebugPanelProps> = ({ onClose }) => {
   }, []);
 
   const handleRunTests = () => {
-    console.log('🧪 运行隐私政策测试...');
+    console.log(' 运行隐私政策测试...');
     const results = runPrivacyTests();
     setTestResults(`测试完成: ${results.passed}通过, ${results.failed}失败`);
   };
 
   // const handleRunVerification = () => {
-  //   console.log('🔧 运行修复验证...');
+  //   console.log(' 运行修复验证...');
   //   const results = runCompleteVerification();
-  //   setTestResults(`修复验证: ${results.allPassed ? '✅ 成功' : '❌ 失败'}`);
+  //   setTestResults(`修复验证: ${results.allPassed ? ' 成功' : ' 失败'}`);
   // };
 
   const handleResetState = () => {

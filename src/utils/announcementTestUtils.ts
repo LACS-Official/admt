@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 公告功能测试工具
  * 用于测试和验证公告显示功能
  */
@@ -17,7 +17,7 @@ export interface AnnouncementTestResult {
  */
 export const testAnnouncementAPI = async (): Promise<AnnouncementTestResult> => {
   try {
-    console.log('🧪 测试公告API连接...');
+    console.log(' 测试公告API连接...');
     
     const response = await announcementService.getAnnouncements({
       limit: 5,
@@ -56,7 +56,7 @@ export const testAnnouncementAPI = async (): Promise<AnnouncementTestResult> => 
  */
 export const testAnnouncementFormatting = async (): Promise<AnnouncementTestResult> => {
   try {
-    console.log('🧪 测试公告格式化功能...');
+    console.log(' 测试公告格式化功能...');
     
     const response = await announcementService.getAnnouncements({ limit: 1 });
     
@@ -102,7 +102,7 @@ export const testAnnouncementFormatting = async (): Promise<AnnouncementTestResu
  */
 export const testImportantAnnouncements = async (): Promise<AnnouncementTestResult> => {
   try {
-    console.log('🧪 测试重要公告获取...');
+    console.log(' 测试重要公告获取...');
     
     const announcements = await announcementService.getImportantAnnouncements();
     
@@ -127,7 +127,7 @@ export const testImportantAnnouncements = async (): Promise<AnnouncementTestResu
  */
 export const testLatestAnnouncements = async (): Promise<AnnouncementTestResult> => {
   try {
-    console.log('🧪 测试最新公告获取...');
+    console.log(' 测试最新公告获取...');
     
     const announcements = await announcementService.getLatestAnnouncements(3);
     
@@ -151,7 +151,7 @@ export const testLatestAnnouncements = async (): Promise<AnnouncementTestResult>
  * 运行所有公告测试
  */
 export const runAllAnnouncementTests = async (): Promise<AnnouncementTestResult[]> => {
-  console.log('🚀 开始运行所有公告测试...');
+  console.log(' 开始运行所有公告测试...');
   
   const tests = [
     testAnnouncementAPI,
@@ -168,9 +168,9 @@ export const runAllAnnouncementTests = async (): Promise<AnnouncementTestResult[
       results.push(result);
       
       if (result.passed) {
-        console.log(`✅ ${result.testName}: ${result.message}`);
+        console.log(` ${result.testName}: ${result.message}`);
       } else {
-        console.log(`❌ ${result.testName}: ${result.message}`);
+        console.log(` ${result.testName}: ${result.message}`);
       }
     } catch (error) {
       results.push({
@@ -179,7 +179,7 @@ export const runAllAnnouncementTests = async (): Promise<AnnouncementTestResult[
         message: `测试执行失败: ${error instanceof Error ? error.message : '未知错误'}`,
         data: error
       });
-      console.log(`💥 ${test.name}: 测试执行失败`);
+      console.log(` ${test.name}: 测试执行失败`);
     }
   }
   
@@ -187,10 +187,10 @@ export const runAllAnnouncementTests = async (): Promise<AnnouncementTestResult[
   const passedTests = results.filter(r => r.passed).length;
   const totalTests = results.length;
   
-  console.log(`\n📊 测试总结:`);
-  console.log(`✅ 通过: ${passedTests}/${totalTests}`);
-  console.log(`❌ 失败: ${totalTests - passedTests}/${totalTests}`);
-  console.log(`📈 成功率: ${((passedTests / totalTests) * 100).toFixed(1)}%`);
+  console.log(`\n 测试总结:`);
+  console.log(` 通过: ${passedTests}/${totalTests}`);
+  console.log(` 失败: ${totalTests - passedTests}/${totalTests}`);
+  console.log(` 成功率: ${((passedTests / totalTests) * 100).toFixed(1)}%`);
   
   return results;
 };
@@ -200,7 +200,7 @@ export const runAllAnnouncementTests = async (): Promise<AnnouncementTestResult[
  */
 export const simulateStartupAnnouncementFlow = async (): Promise<AnnouncementTestResult> => {
   try {
-    console.log('🎭 模拟启动流程中的公告获取...');
+    console.log(' 模拟启动流程中的公告获取...');
     
     // 模拟版本检查完成后的公告获取
     const startTime = Date.now();
@@ -297,20 +297,20 @@ export const getAnnouncementStats = async () => {
  * 快速测试公告API
  */
 export const quickTestAPI = async () => {
-  console.log('🚀 快速测试公告API...');
+  console.log(' 快速测试公告API...');
 
   try {
     const result = await testAnnouncementAPI();
-    console.log('📊 测试结果:', result);
+    console.log(' 测试结果:', result);
 
     if (result.passed && result.data) {
-      console.log('📢 公告数据:', result.data.announcements);
-      console.log('🏢 软件信息:', result.data.software);
+      console.log(' 公告数据:', result.data.announcements);
+      console.log(' 软件信息:', result.data.software);
     }
 
     return result;
   } catch (error) {
-    console.error('💥 测试失败:', error);
+    console.error(' 测试失败:', error);
     return {
       testName: '快速API测试',
       passed: false,
@@ -335,7 +335,7 @@ if (import.meta.env.DEV) {
 
   // 自动运行快速测试
   setTimeout(() => {
-    console.log('🔧 自动运行公告API测试...');
+    console.log(' 自动运行公告API测试...');
     quickTestAPI();
   }, 2000);
 }

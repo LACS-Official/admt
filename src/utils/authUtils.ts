@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 前端认证工具
  * 用于生成和管理用户行为统计API的认证信息
  */
@@ -201,9 +201,9 @@ export class AuthUtils {
   static async initializeAuth(userDeviceFingerprint?: string): Promise<void> {
     try {
       await this.requestJwtToken(userDeviceFingerprint)
-      console.log('✅ 用户行为统计API认证初始化成功')
+      console.log(' 用户行为统计API认证初始化成功')
     } catch (error) {
-      console.error('❌ 用户行为统计API认证初始化失败:', error)
+      console.error(' 用户行为统计API认证初始化失败:', error)
       // 在认证失败的情况下，可以选择禁用某些功能或使用降级方案
     }
   }

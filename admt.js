@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 /**
  * ADMT 项目命令行管理工具
@@ -22,7 +22,7 @@ async function main() {
   switch (command) {
     case 'update':
       if (!value) {
-        console.error('❌ 请提供版本号: node admt update <version>');
+        console.error(' 请提供版本号: node admt update <version>');
         process.exit(1);
       }
       // 直接复用 VersionManager 的 sync 逻辑
@@ -35,7 +35,7 @@ async function main() {
 
     case 'current':
       const config = manager.readConfig();
-      console.log(`📦 当前项目版本: ${config.version}`);
+      console.log(` 当前项目版本: ${config.version}`);
       break;
 
     case 'help':
@@ -47,7 +47,7 @@ async function main() {
 
 function showHelp() {
   console.log(`
-🚀 ADMT 管理工具用法:
+ ADMT 管理工具用法:
 
   node admt update <version>    - 统一同步更新所有文件的版本号
   node admt validate           - 验证各文件版本一致性状态
@@ -61,6 +61,6 @@ function showHelp() {
 }
 
 main().catch(error => {
-  console.error('❌ 执行失败:', error);
+  console.error(' 执行失败:', error);
   process.exit(1);
 });

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 版本检测诊断工具
  * 用于快速识别和解决开发板与发布版版本检测不一致问题
  */
@@ -48,7 +48,7 @@ class VersionDiagnostic {
     const timestamp = new Date().toISOString();
     const environment = import.meta.env.MODE;
 
-    console.log('🔍 开始版本检测诊断...');
+    console.log(' 开始版本检测诊断...');
 
     // 1. 检查环境配置
     results.push(...await this.checkEnvironmentConfig());
@@ -96,7 +96,7 @@ class VersionDiagnostic {
       recommendations
     };
 
-    console.log('📊 版本检测诊断完成:', report);
+    console.log(' 版本检测诊断完成:', report);
     return report;
   }
 
@@ -472,37 +472,37 @@ class VersionDiagnostic {
     const warnings = results.filter(r => r.status === 'warning');
 
     if (errors.length === 0 && warnings.length === 0) {
-      recommendations.push('✅ 版本检测系统运行正常，无需额外操作');
+      recommendations.push(' 版本检测系统运行正常，无需额外操作');
       return recommendations;
     }
 
     // 针对错误的建议
     if (errors.some(e => e.category === '环境配置')) {
-      recommendations.push('🔧 检查并修复.env和.env.production文件中的环境变量配置');
+      recommendations.push(' 检查并修复.env和.env.production文件中的环境变量配置');
     }
 
     if (errors.some(e => e.category === 'Tauri命令')) {
-      recommendations.push('🔨 重新编译Tauri应用，确保后端命令正确注册');
+      recommendations.push(' 重新编译Tauri应用，确保后端命令正确注册');
     }
 
     if (errors.some(e => e.category === 'API连接')) {
-      recommendations.push('🌐 检查网络连接和API服务器状态');
+      recommendations.push(' 检查网络连接和API服务器状态');
     }
 
     // 针对警告的建议
     if (warnings.some(w => w.category === '版本同步' || w.category === '版本源')) {
-      recommendations.push('📝 统一所有版本源的版本号配置，确保一致性');
+      recommendations.push(' 统一所有版本源的版本号配置，确保一致性');
     }
 
     if (warnings.some(w => w.category === '缓存状态')) {
-      recommendations.push('🗑️ 清理版本检查缓存，避免使用过期数据');
+      recommendations.push(' 清理版本检查缓存，避免使用过期数据');
     }
 
     // 通用建议
     if (import.meta.env.DEV) {
-      recommendations.push('🔍 在开发环境中启用详细日志，便于问题排查');
+      recommendations.push(' 在开发环境中启用详细日志，便于问题排查');
     } else {
-      recommendations.push('📊 在生产环境中定期运行版本检测诊断');
+      recommendations.push(' 在生产环境中定期运行版本检测诊断');
     }
 
     return recommendations;
@@ -529,12 +529,12 @@ class VersionDiagnostic {
     
     lines.push('## 详细结果');
     for (const result of report.results) {
-      const statusIcon = result.status === 'success' ? '✅' : 
-                        result.status === 'warning' ? '⚠️' : '❌';
+      const statusIcon = result.status === 'success' ? '' : 
+                        result.status === 'warning' ? '' : '';
       lines.push(`${statusIcon} **${result.category}** - ${result.title}`);
       lines.push(`   ${result.message}`);
       if (result.solution) {
-        lines.push(`   💡 解决方案: ${result.solution}`);
+        lines.push(`    解决方案: ${result.solution}`);
       }
       lines.push('');
     }

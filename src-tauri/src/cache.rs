@@ -1,4 +1,4 @@
-use crate::device::{DeviceInfo, DeviceProperties};
+﻿use crate::device::{DeviceInfo, DeviceProperties};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -378,7 +378,7 @@ fn find_adb_path() -> PathBuf {
 
             for path in &production_paths {
                 if path.exists() {
-                    log::info!("✅ Found ADB at production path: {}", path.display());
+                    log::info!(" Found ADB at production path: {}", path.display());
                     // 确保具有执行权限 (针对 Linux)
                     let _ = crate::utils::ensure_executable(path);
                     return path.clone();
@@ -406,14 +406,14 @@ fn find_adb_path() -> PathBuf {
 
     for path in &dev_paths {
         if path.exists() {
-            log::info!("✅ Found ADB at development path: {}", path.display());
+            log::info!(" Found ADB at development path: {}", path.display());
             // 确保具有执行权限 (针对 Linux)
             let _ = crate::utils::ensure_executable(path);
             return path.clone();
         }
     }
 
-    log::error!("❌ ADB executable not found!");
+    log::error!(" ADB executable not found!");
     PathBuf::from("INVALID_ADB_PATH")
 }
 
@@ -457,7 +457,7 @@ fn find_fastboot_path() -> PathBuf {
 
             for path in &production_paths {
                 if path.exists() {
-                    log::info!("✅ Found Fastboot at production path: {}", path.display());
+                    log::info!(" Found Fastboot at production path: {}", path.display());
                     // 确保具有执行权限 (针对 Linux)
                     let _ = crate::utils::ensure_executable(path);
                     return path.clone();
@@ -485,14 +485,14 @@ fn find_fastboot_path() -> PathBuf {
 
     for path in &dev_paths {
         if path.exists() {
-            log::info!("✅ Found Fastboot at development path: {}", path.display());
+            log::info!(" Found Fastboot at development path: {}", path.display());
             // 确保具有执行权限 (针对 Linux)
             let _ = crate::utils::ensure_executable(path);
             return path.clone();
         }
     }
 
-    log::error!("❌ Fastboot executable not found!");
+    log::error!(" Fastboot executable not found!");
     PathBuf::from("INVALID_FASTBOOT_PATH")
 }
 

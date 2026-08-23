@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 公告服务
  * 负责获取和管理应用公告
  */
@@ -44,21 +44,21 @@ export class AnnouncementService {
 
     // 1. 检查是否有正在进行的相同请求
     if (this.pendingRequests.has(cacheKey)) {
-      console.log('📢 公告请求已在进行中，合并请求:', cacheKey);
+      console.log(' 公告请求已在进行中，合并请求:', cacheKey);
       return this.pendingRequests.get(cacheKey)!;
     }
 
     // 2. 检查缓存
     const cached = this.cache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
-      console.log('📢 使用缓存的公告数据');
+      console.log(' 使用缓存的公告数据');
       return cached.data;
     }
 
     // 3. 执行新请求
     const requestPromise = (async () => {
       try {
-        console.log('📢 开始获取公告列表...', params);
+        console.log(' 开始获取公告列表...', params);
 
         await this.configManager.initialize();
 
@@ -80,7 +80,7 @@ export class AnnouncementService {
         }
         
         const endpoint = `/app/software/id/${softwareId}/announcements?${queryParams.toString()}`;
-        console.log('📢 请求公告API:', endpoint);
+        console.log(' 请求公告API:', endpoint);
 
         const response = await tauriHttpService.get<AnnouncementResponse>(endpoint, {
           timeout: 10000,
@@ -95,13 +95,13 @@ export class AnnouncementService {
           throw new Error(`公告API返回错误: ${data.error || '未知错误'}`);
         }
 
-        console.log('✅ 公告获取成功');
+        console.log(' 公告获取成功');
         
         this.cache.set(cacheKey, { data, timestamp: Date.now() });
         return data;
 
       } catch (error) {
-        console.error('❌ 获取公告失败:', error);
+        console.error(' 获取公告失败:', error);
         return {
           success: true,
           data: {
@@ -141,7 +141,7 @@ export class AnnouncementService {
 
       return [];
     } catch (error) {
-      console.error('❌ 获取重要公告失败:', error);
+      console.error(' 获取重要公告失败:', error);
       return [];
     }
   }
@@ -163,7 +163,7 @@ export class AnnouncementService {
 
       return [];
     } catch (error) {
-      console.error('❌ 获取最新公告失败:', error);
+      console.error(' 获取最新公告失败:', error);
       return [];
     }
   }
@@ -186,7 +186,7 @@ export class AnnouncementService {
 
       return validAnnouncements.length > 0;
     } catch (error) {
-      console.error('❌ 检查重要公告失败:', error);
+      console.error(' 检查重要公告失败:', error);
       return false;
     }
   }

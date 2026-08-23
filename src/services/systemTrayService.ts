@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 系统托盘服务
  * 提供最小化到系统托盘的功能，包括托盘图标、右键菜单等
  */
@@ -66,7 +66,7 @@ export class SystemTrayService {
         const svc = (mod as any).screenMirrorService || (mod as any).default || mod;
         if (svc?.stop && typeof svc.stop === 'function') {
           await svc.stop();
-          console.log('🧹 已停止屏幕镜像服务');
+          console.log(' 已停止屏幕镜像服务');
         }
       } catch (_) {}
 
@@ -79,7 +79,7 @@ export class SystemTrayService {
         for (const fn of stopFns) {
           if (mgr && typeof mgr[fn] === 'function') {
             await mgr[fn]();
-            console.log(`🧹 已执行 adbToolsManager.${fn}()`);
+            console.log(` 已执行 adbToolsManager.${fn}()`);
             break;
           }
         }
@@ -89,7 +89,7 @@ export class SystemTrayService {
       // try { const mod = await import('../services/deviceService'); await mod.deviceService?.shutdown?.(); } catch (_) {}
 
     } catch (err) {
-      console.warn('⚠️ 清理子进程时出现问题（已忽略）：', err);
+      console.warn(' 清理子进程时出现问题（已忽略）：', err);
     }
   }
 
@@ -97,12 +97,12 @@ export class SystemTrayService {
    * 统一的优雅退出流程：销毁托盘 → 清理子进程 → 退出（插件优先，后端兜底）
    */
   private async performGracefulExit(exitCode: number = 0): Promise<void> {
-    console.log('🔄 执行优雅退出流程...');
+    console.log(' 执行优雅退出流程...');
     // 1) 销毁托盘与事件
     try {
       await this.cleanup();
     } catch (e) {
-      console.warn('⚠️ 清理托盘时出现问题（已忽略）：', e);
+      console.warn(' 清理托盘时出现问题（已忽略）：', e);
     }
 
     // 2) 清理子进程/后台任务
@@ -113,7 +113,7 @@ export class SystemTrayService {
       await exit(exitCode);
       return;
     } catch (pluginErr) {
-      console.warn('⚠️ 插件退出失败，尝试后端兜底：', pluginErr);
+      console.warn(' 插件退出失败，尝试后端兜底：', pluginErr);
     }
 
     // 4) 后端兜底：force_exit 优先，其次兼容 exit_app，如均不可用则最终 window.close()
@@ -127,7 +127,7 @@ export class SystemTrayService {
         return;
       }
     } catch (backendErr) {
-      console.error('❌ 后端兜底退出失败：', backendErr);
+      console.error(' 后端兜底退出失败：', backendErr);
       if (typeof window !== 'undefined') {
         window.close();
       }
@@ -151,7 +151,7 @@ export class SystemTrayService {
     try {
       // 如果已经初始化，先清理旧的托盘
       if (this.isInitialized) {
-        console.log('🔄 检测到托盘已存在，先清理旧托盘...');
+        console.log(' 检测到托盘已存在，先清理旧托盘...');
         await this.cleanup();
         
         // 添加延迟确保清理完成
@@ -159,12 +159,16 @@ export class SystemTrayService {
       }
 
       const defaultConfig: TrayConfig = {
-        tooltip: '玩机管家',
+        tooltip: '玩机管家 (ADMT)',
         icon: 'icons/tray-icon.png',
         menuItems: [
-          { id: 'show', label: '显示窗口', enabled: true },
+          { id: 'show', label: '显示主界面', enabled: true },
           { id: 'separator1', label: '-' },
-          { id: 'exit', label: '退出应用', enabled: true }
+          { id: 'reboot_sys', label: '重启设备至系统', enabled: true },
+          { id: 'reboot_bootloader', label: '重启至 Fastboot 模式', enabled: true },
+          { id: 'reboot_recovery', label: '重启至 Recovery 模式', enabled: true },
+          { id: 'separator2', label: '-' },
+          { id: 'exit', label: '退出玩机管家', enabled: true }
         ]
       };
 
@@ -181,9 +185,9 @@ export class SystemTrayService {
       await this.setupTrayEventListeners();
 
       this.isInitialized = true;
-      console.log('✅ 系统托盘初始化成功');
+      console.log(' 系统托盘初始化成功');
     } catch (error) {
-      console.error('❌ 系统托盘初始化失败:', error);
+      console.error(' 系统托盘初始化失败:', error);
       throw new Error(`Failed to initialize system tray: ${error}`);
     }
   }
@@ -208,7 +212,7 @@ export class SystemTrayService {
       });
 
     } catch (error) {
-      console.error('❌ 设置托盘事件监听器失败:', error);
+      console.error(' 设置托盘事件监听器失败:', error);
       throw error;
     }
   }
@@ -218,51 +222,66 @@ export class SystemTrayService {
    */
   private async handleTrayMenuClick(menuId: string): Promise<void> {
     try {
-      console.log(`📋 托盘菜单点击事件: ${menuId}`);
+      console.log(` 托盘菜单点击事件: ${menuId}`);
       
       switch (menuId) {
         case 'show':
+        case 'custom-show':
+        case '显示主界面':
+        case '显示窗口':
           await this.showWindow();
           break;
         case 'hide':
+        case 'custom-hide':
           await this.hideWindow();
           break;
+        case 'reboot_sys':
+        case 'custom-reboot_sys':
+          try {
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('reboot_device', { rebootType: 'system' });
+          } catch (e) {
+            console.error('托盘重启系统失败:', e);
+          }
+          break;
+        case 'reboot_bootloader':
+        case 'custom-reboot_bootloader':
+          try {
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('reboot_device', { rebootType: 'bootloader' });
+          } catch (e) {
+            console.error('托盘重启Fastboot失败:', e);
+          }
+          break;
+        case 'reboot_recovery':
+        case 'custom-reboot_recovery':
+          try {
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('reboot_device', { rebootType: 'recovery' });
+          } catch (e) {
+            console.error('托盘重启Recovery失败:', e);
+          }
+          break;
         case 'exit':
+        case 'custom-exit':
+        case '退出应用':
+        case '退出玩机管家':
           await this.performGracefulExit(0);
           break;
         default: {
-          // 兼容后端 custom-* 菜单ID（某些环境下“退出应用”会被映射为 custom-xxxx）
           const id = String(menuId || '');
-          if (
-            id === 'custom-退出应用' ||
-            id === '退出应用' ||
-            id.toLowerCase() === 'exit'
-          ) {
+          if (id.includes('退出') || id.includes('exit')) {
             await this.performGracefulExit(0);
-          } else if (
-            id === 'custom-显示窗口' ||
-            id === '显示窗口' ||
-            id.toLowerCase() === 'show'
-          ) {
+          } else if (id.includes('显示') || id.includes('show')) {
             await this.showWindow();
-          } else if (id.startsWith('custom-')) {
-            // 对于其他custom-*格式的ID，尝试提取关键信息
-            const cleanId = id.replace('custom-', '');
-            if (cleanId.includes('退出') || cleanId.includes('exit')) {
-              await this.performGracefulExit(0);
-            } else if (cleanId.includes('显示') || cleanId.includes('show')) {
-              await this.showWindow();
-            } else {
-              console.warn(`未识别的custom菜单ID: ${menuId}`);
-            }
           } else {
-            console.warn(`未处理的托盘菜单点击: ${menuId}`);
+            console.warn(`未识别的托盘菜单ID: ${menuId}`);
           }
           break;
         }
       }
     } catch (error) {
-      console.error('❌ 处理托盘菜单点击失败:', error);
+      console.error(' 处理托盘菜单点击失败:', error);
     }
   }
 
@@ -284,7 +303,7 @@ export class SystemTrayService {
         await this.showWindow();
       }
     } catch (error) {
-      console.error('❌ 处理托盘图标点击失败:', error);
+      console.error(' 处理托盘图标点击失败:', error);
     }
   }
 
@@ -301,9 +320,9 @@ export class SystemTrayService {
       await this.currentWindow.show();
       await this.currentWindow.setFocus();
       await this.currentWindow.unminimize();
-      console.log('✅ 窗口已显示');
+      console.log(' 窗口已显示');
     } catch (error) {
-      console.error('❌ 显示窗口失败:', error);
+      console.error(' 显示窗口失败:', error);
       throw error;
     }
   }
@@ -319,9 +338,9 @@ export class SystemTrayService {
       }
       
       await this.currentWindow.hide();
-      console.log('✅ 窗口已隐藏到托盘');
+      console.log(' 窗口已隐藏到托盘');
     } catch (error) {
-      console.error('❌ 隐藏窗口失败:', error);
+      console.error(' 隐藏窗口失败:', error);
       throw error;
     }
   }
@@ -336,7 +355,7 @@ export class SystemTrayService {
       }
       await this.hideWindow();
     } catch (error) {
-      console.error('❌ 最小化到托盘失败:', error);
+      console.error(' 最小化到托盘失败:', error);
       throw error;
     }
   }
@@ -354,7 +373,7 @@ export class SystemTrayService {
   async cleanup(): Promise<void> {
     try {
       if (this.isInitialized) {
-        console.log('🧹 开始清理系统托盘资源...');
+        console.log(' 开始清理系统托盘资源...');
         
         // 移除事件监听器
         if (this.closeEventUnlisten) {
@@ -366,15 +385,15 @@ export class SystemTrayService {
         try {
           await invoke('destroy_system_tray');
         } catch (destroyError) {
-          console.warn('⚠️ 销毁托盘时出现警告:', destroyError);
+          console.warn(' 销毁托盘时出现警告:', destroyError);
         }
         
         this.isInitialized = false;
         this.closeToTrayEnabled = false;
-        console.log('✅ 系统托盘已清理');
+        console.log(' 系统托盘已清理');
       }
     } catch (error) {
-      console.error('❌ 清理系统托盘失败:', error);
+      console.error(' 清理系统托盘失败:', error);
       // 即使清理失败，也要重置状态
       this.isInitialized = false;
       this.closeToTrayEnabled = false;
@@ -443,9 +462,9 @@ export class SystemTrayService {
         minimizeToTray: enabled 
       });
 
-      console.log(`✅ 窗口关闭处理器已设置: ${enabled ? '最小化到托盘' : '直接退出'}`);
+      console.log(` 窗口关闭处理器已设置: ${enabled ? '最小化到托盘' : '直接退出'}`);
     } catch (error) {
-      console.error('❌ 设置窗口关闭处理器失败:', error);
+      console.error(' 设置窗口关闭处理器失败:', error);
       throw error;
     }
   }
@@ -460,9 +479,9 @@ export class SystemTrayService {
       }
 
       await invoke('update_tray_menu', { menuItems });
-      console.log('✅ 托盘菜单已更新');
+      console.log(' 托盘菜单已更新');
     } catch (error) {
-      console.error('❌ 更新托盘菜单失败:', error);
+      console.error(' 更新托盘菜单失败:', error);
       throw error;
     }
   }
@@ -477,9 +496,9 @@ export class SystemTrayService {
       }
 
       await invoke('update_tray_tooltip', { tooltip });
-      console.log('✅ 托盘提示已更新');
+      console.log(' 托盘提示已更新');
     } catch (error) {
-      console.error('❌ 更新托盘提示失败:', error);
+      console.error(' 更新托盘提示失败:', error);
       throw error;
     }
   }

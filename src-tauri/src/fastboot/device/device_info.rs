@@ -53,81 +53,120 @@ pub fn parse_fastboot_getvar_all(output: &str) -> FastbootDeviceProperties {
     let mut partition_sizes = HashMap::new();
 
     for line in output.lines() {
-        // 跳过空行
-        if line.trim().is_empty() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
             continue;
         }
 
-        // 解析格式: (bootloader) key:value
-        if let Some(stripped) = line.strip_prefix("(bootloader) ") {
-            if let Some((key, value)) = stripped.split_once(':') {
-                let key = key.trim();
-                let value = value.trim();
+        // 移除可选的 (bootloader) 前缀
+        let clean_line = if let Some(stripped) = trimmed.strip_prefix("(bootloader)") {
+            stripped.trim()
+        } else {
+            trimmed
+        };
 
-                match key {
-                    // 设备基础身份信息
-                    "product" => properties.product = Some(value.to_string()),
-                    "serialno" => properties.serialno = Some(value.to_string()),
-                    "kernel" => properties.kernel = Some(value.to_string()),
+        if clean_line.is_empty() {
+            continue;
+        }
 
-                    // Bootloader状态与安全配置
-                    "unlocked" => properties.unlocked = parse_bool(value),
-                    "secure" => properties.secure = parse_bool(value),
-                    "anti" => properties.anti = Some(value.to_string()),
-                    "is-userspace" => properties.is_userspace = parse_bool(value),
-
-                    // A/B分区信息
-                    "slot-count" => properties.slot_count = Some(value.to_string()),
-                    "current-slot" => properties.current_slot = Some(value.to_string()),
-                    "slot-successful:a" => properties.slot_successful_a = parse_bool(value),
-                    "slot-successful:b" => properties.slot_successful_b = parse_bool(value),
-                    "slot-unbootable:a" => {
-                        properties.slot_successful_a = parse_bool(value).map(|b| !b)
-                    } // 可引导状态取反
-                    "slot-unbootable:b" => {
-                        properties.slot_successful_b = parse_bool(value).map(|b| !b)
-                    } // 可引导状态取反
-                    "slot-retry-count:a" => properties.slot_retry_count_a = Some(value.to_string()),
-                    "slot-retry-count:b" => properties.slot_retry_count_b = Some(value.to_string()),
-
-                    // 硬件与电源状态
-
-                    //设备硬件版本号
-                    "hw-revision" => properties.hw_revision = Some(value.to_string()),
-                    // 电池电压
-                    "battery-voltage" => properties.battery_voltage = Some(value.to_string()),
-                    // 电池电量状态
-                    "battery-soc-ok" => properties.battery_soc_ok = parse_bool(value),
-                    //cpuid
-                    "cpuid" => properties.cpuid = Some(parse_cpuid(value)),
-
-                    // 存储与分区结构
-                    "max-download-size" => properties.max_download_size = Some(value.to_string()),
-                    // 存储与分区结构 - 并行刷写支持
-                    "parallel-download-flash" => {
-                        properties.parallel_download_flash = parse_bool(value)
-                    }
-
-                    // 其他辅助参数
-                    "off-mode-charge" => properties.off_mode_charge = parse_bool(value),
-                    "charger-screen-enabled" => {
-                        properties.charger_screen_enabled = parse_bool(value)
-                    }
-
-                    // 分区信息
-                    key if key.starts_with("partition-type:") => {
-                        if let Some(partition_name) = key.strip_prefix("partition-type:") {
-                            partition_types.insert(partition_name.to_string(), value.to_string());
-                        }
-                    }
-                    key if key.starts_with("partition-size:") => {
-                        if let Some(partition_name) = key.strip_prefix("partition-size:") {
-                            partition_sizes.insert(partition_name.to_string(), value.to_string());
-                        }
-                    }
-
-                    _ => {} // 忽略未知属性
+        // 1. 处理带双冒号的分区大小: partition-size:<name>: <size>
+        if let Some(rest) = clean_line.strip_prefix("partition-size:") {
+            if let Some((part_name, size_val)) = rest.split_once(':') {
+                let part = part_name.trim();
+                let sz = size_val.trim();
+                if !part.is_empty() && !sz.is_empty() {
+                    partition_sizes.insert(part.to_string(), sz.to_string());
                 }
+            }
+            continue;
+        }
+
+        // 2. 处理带双冒号的分区类型: partition-type:<name>: <type>
+        if let Some(rest) = clean_line.strip_prefix("partition-type:") {
+            if let Some((part_name, type_val)) = rest.split_once(':') {
+                let part = part_name.trim();
+                let tp = type_val.trim();
+                if !part.is_empty() && !tp.is_empty() {
+                    partition_types.insert(part.to_string(), tp.to_string());
+                }
+            }
+            continue;
+        }
+
+        // 3. 处理 A/B 槽位特定状态
+        if let Some(rest) = clean_line.strip_prefix("slot-successful:") {
+            if let Some((slot_name, val)) = rest.split_once(':') {
+                if slot_name.trim() == "a" {
+                    properties.slot_successful_a = parse_bool(val.trim());
+                } else if slot_name.trim() == "b" {
+                    properties.slot_successful_b = parse_bool(val.trim());
+                }
+            }
+            continue;
+        }
+
+        if let Some(rest) = clean_line.strip_prefix("slot-unbootable:") {
+            if let Some((slot_name, val)) = rest.split_once(':') {
+                if slot_name.trim() == "a" {
+                    properties.slot_successful_a = parse_bool(val.trim()).map(|b| !b);
+                } else if slot_name.trim() == "b" {
+                    properties.slot_successful_b = parse_bool(val.trim()).map(|b| !b);
+                }
+            }
+            continue;
+        }
+
+        if let Some(rest) = clean_line.strip_prefix("slot-retry-count:") {
+            if let Some((slot_name, val)) = rest.split_once(':') {
+                if slot_name.trim() == "a" {
+                    properties.slot_retry_count_a = Some(val.trim().to_string());
+                } else if slot_name.trim() == "b" {
+                    properties.slot_retry_count_b = Some(val.trim().to_string());
+                }
+            }
+            continue;
+        }
+
+        // 4. 处理标准单冒号属性 key: value
+        if let Some((key, value)) = clean_line.split_once(':') {
+            let key = key.trim();
+            let value = value.trim();
+
+            match key {
+                // 设备基础身份信息
+                "product" => properties.product = Some(value.to_string()),
+                "serialno" => properties.serialno = Some(value.to_string()),
+                "kernel" => properties.kernel = Some(value.to_string()),
+
+                // Bootloader状态与安全配置
+                "unlocked" => properties.unlocked = parse_bool(value),
+                "secure" => properties.secure = parse_bool(value),
+                "anti" => properties.anti = Some(value.to_string()),
+                "is-userspace" => properties.is_userspace = parse_bool(value),
+
+                // A/B分区信息
+                "slot-count" => properties.slot_count = Some(value.to_string()),
+                "current-slot" => properties.current_slot = Some(value.to_string()),
+
+                // 硬件与电源状态
+                "hw-revision" => properties.hw_revision = Some(value.to_string()),
+                "battery-voltage" => properties.battery_voltage = Some(value.to_string()),
+                "battery-soc-ok" => properties.battery_soc_ok = parse_bool(value),
+                "cpuid" => properties.cpuid = Some(parse_cpuid(value)),
+
+                // 存储与分区结构
+                "max-download-size" => properties.max_download_size = Some(value.to_string()),
+                "parallel-download-flash" => {
+                    properties.parallel_download_flash = parse_bool(value)
+                }
+
+                // 其他辅助参数
+                "off-mode-charge" => properties.off_mode_charge = parse_bool(value),
+                "charger-screen-enabled" => {
+                    properties.charger_screen_enabled = parse_bool(value)
+                }
+
+                _ => {} // 忽略未知属性
             }
         }
     }

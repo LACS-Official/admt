@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import {
   makeStyles,
   shorthands,
@@ -213,12 +213,12 @@ export const SkillsResourcesPanel: React.FC = () => {
 
   const categories = [
     { id: "all", label: "全部技能" },
-    { id: "flash", label: "⚡ 救砖与刷机" },
-    { id: "magisk", label: "🛡️ Magisk/Root" },
-    { id: "reverse", label: "🔍 逆向工程" },
-    { id: "rom", label: "📱 ROM 定制" },
-    { id: "kernel", label: "⚙️ 内核调优" },
-    { id: "tuning", label: "🚀 性能调优" },
+    { id: "flash", label: " 救砖与刷机" },
+    { id: "magisk", label: " Magisk/Root" },
+    { id: "reverse", label: " 逆向工程" },
+    { id: "rom", label: " ROM 定制" },
+    { id: "kernel", label: " 内核调优" },
+    { id: "tuning", label: " 性能调优" },
   ];
 
   const filteredSkills = useMemo(() => {

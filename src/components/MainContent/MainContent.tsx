@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+﻿import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   makeStyles,
@@ -26,6 +26,7 @@ import {
   Icons24Regular,
   Notepad24Regular,
   AppsAddIn24Regular,
+  Flash24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
@@ -40,6 +41,7 @@ import { AppView } from "../../types/app";
 import HomePage from "../Home/HomePage";
 import AdbZonePanel from "../AdbTools/AdbZonePanel";
 import FlashZonePanel from "../FlashZone/FlashZonePanel";
+import RootPanel from "../Root/RootPanel";
 import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
 import OnlineZonePanel from "../OnlineResources/OnlineZonePanel";
 import PluginSystemPanel from "../PluginSystem/PluginSystemPanel";
@@ -660,6 +662,11 @@ const MainContent: React.FC = () => {
       icon: <CloudArrowUp24Regular />,
     },
     {
+      id: "root" as AppView,
+      label: t("sidebar.root_zone", "Root专区"),
+      icon: <Flash24Regular />,
+    },
+    {
       id: "online-resources" as AppView,
       label: t("sidebar.online_resources"),
       icon: <CloudArrowDown24Regular />,
@@ -783,10 +790,10 @@ const MainContent: React.FC = () => {
   useEffect(() => {
     const trackMainContentEntry = async () => {
       // 启动流程已经处理了 trackMainPageEntry
-      console.log("🏢 MainContent 已挂载");
+      console.log(" MainContent 已挂载");
     };
 
-    console.log("🏢 MainContent useEffect 被触发");
+    console.log(" MainContent useEffect 被触发");
     trackMainContentEntry();
 
     // 首次进入应用的庆祝彩带 (如果刚刚同意了隐私政策，且开启了设置)
@@ -883,7 +890,7 @@ const MainContent: React.FC = () => {
       const timer = setTimeout(() => {
         // 如果是生产环境且未完成检查，则触发一次
         // 但建议保持手动触发或依赖 StartupFlow
-        // console.log("🔄 开始自动检测更新...");
+        // console.log(" 开始自动检测更新...");
         // setTriggerVersionCheck(true);
       }, 5000);
       return () => clearTimeout(timer);
@@ -893,7 +900,7 @@ const MainContent: React.FC = () => {
   // 处理版本检查完成
   const handleUpdateCheckComplete = () => {
     // eslint-disable-next-line no-console
-    console.log("✅ 版本检查完成");
+    console.log(" 版本检查完成");
     setUpdateCheckCompleted(true);
     setTriggerVersionCheck(false);
   };
@@ -1251,6 +1258,8 @@ const MainContent: React.FC = () => {
         return <AdbZonePanel />;
       case "flash-zone":
         return <FlashZonePanel />;
+      case "root":
+        return <RootPanel />;
       case "extended-features":
         return <ExtendedFeaturesPanel />;
       case "online-resources":
@@ -1349,17 +1358,17 @@ const MainContent: React.FC = () => {
         onCheckUpdate={() => { /* noop */ }}
         onUpdateFound={(result) => {
           // eslint-disable-next-line no-console
-          console.log("🆕 发现新版本:", result);
+          console.log(" 发现新版本:", result);
           handleUpdateCheckComplete();
         }}
         onNoUpdate={(currentVersion) => {
           // eslint-disable-next-line no-console
-          console.log("✅ 当前已是最新版本:", currentVersion);
+          console.log(" 当前已是最新版本:", currentVersion);
           handleUpdateCheckComplete();
         }}
         onError={(error) => {
           // eslint-disable-next-line no-console
-          console.error("❌ 版本检查失败:", error);
+          console.error(" 版本检查失败:", error);
           handleUpdateCheckComplete();
         }}
         showStatusMessage={false} // 不显示状态消息，避免干扰用户

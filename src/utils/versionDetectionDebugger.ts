@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 版本检测调试工具
  * 用于分析开发版与发布版的差异
  */
@@ -27,8 +27,8 @@ export class VersionDetectionDebugger {
       userAgent: navigator.userAgent
     };
     
-    console.group('🌐 版本检测请求详情');
-    console.log('📊 请求信息:', requestInfo);
+    console.group(' 版本检测请求详情');
+    console.log(' 请求信息:', requestInfo);
     console.groupEnd();
     
     return requestInfo;
@@ -46,8 +46,8 @@ export class VersionDetectionDebugger {
       data: data
     };
     
-    console.group('📡 版本检测响应详情');
-    console.log('📊 响应信息:', responseInfo);
+    console.group(' 版本检测响应详情');
+    console.log(' 响应信息:', responseInfo);
     console.groupEnd();
     
     return responseInfo;
@@ -66,8 +66,8 @@ export class VersionDetectionDebugger {
                  result < 0 ? '有新版本可用' : '版本相同'
     };
     
-    console.group('🔢 版本比较详情');
-    console.log('📊 比较信息:', comparisonInfo);
+    console.group(' 版本比较详情');
+    console.log(' 比较信息:', comparisonInfo);
     console.groupEnd();
     
     return comparisonInfo;
@@ -86,8 +86,8 @@ export class VersionDetectionDebugger {
       isDev: import.meta.env.DEV
     };
     
-    console.group('❌ 版本检测错误详情');
-    console.error('📊 错误信息:', errorInfo);
+    console.group(' 版本检测错误详情');
+    console.error(' 错误信息:', errorInfo);
     console.groupEnd();
     
     return errorInfo;
@@ -135,8 +135,8 @@ export class VersionDetectionDebugger {
       }
     };
     
-    console.group('📋 环境差异报告');
-    console.log('📊 报告内容:', report);
+    console.group(' 环境差异报告');
+    console.log(' 报告内容:', report);
     console.groupEnd();
     
     return report;

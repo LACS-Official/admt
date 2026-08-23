@@ -153,15 +153,18 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
   const selectedDevice = propDevice || storeDevice;
   const { t } = useTranslation();
   
-  const [isMonitoring, setIsMonitoring] = useState(config.monitorAutoStart || !!selectedDevice);
+  const isSysMode = selectedDevice?.mode === 'sys';
+  const [isMonitoring, setIsMonitoring] = useState((config.monitorAutoStart || !!selectedDevice) && isSysMode);
   const [dataPoints, setDataPoints] = useState<MonitorDataPoint[]>([]);
 
-  // 监听设备切换，只要有设备选中且当前未监控，则自动启动 (实现真正意义上的“自动开启”)
+  // 监听设备切换，只要有设备处于系统模式且当前未监控，则自动启动
   useEffect(() => {
-    if (selectedDevice && !isMonitoring) {
+    if (selectedDevice && selectedDevice.mode === 'sys' && !isMonitoring) {
       setIsMonitoring(true);
+    } else if (selectedDevice && selectedDevice.mode !== 'sys' && isMonitoring) {
+      setIsMonitoring(false);
     }
-  }, [selectedDevice?.serial]);
+  }, [selectedDevice?.serial, selectedDevice?.mode]);
   const [activeTab, setActiveTab] = useState<'cpu' | 'memory' | 'temperature' | 'power' | 'network' | 'gpu'>('cpu');
   const [cpuDisplayMode, setCpuDisplayMode] = useState<'utilization' | 'frequency'>('utilization');
   const [memDisplayMode, setMemDisplayMode] = useState<'percent' | 'space'>('percent');
@@ -228,11 +231,11 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
   // 监控循环
   useEffect(() => {
     let timer: any;
-    if (isMonitoring && selectedDevice) {
+    if (isMonitoring && selectedDevice && selectedDevice.mode === 'sys') {
       console.log(`[Monitor] Starting monitoring for device: ${selectedDevice.serial}`);
       
       const fetchData = async () => {
-        if (!isMonitoringRef.current || isFetching.current) return;
+        if (!isMonitoringRef.current || isFetching.current || selectedDevice?.mode !== 'sys') return;
         isFetching.current = true;
         
         const startTime = Date.now();
@@ -384,13 +387,13 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
 
   // 当切换设备或检测到新连接时，根据配置自动开启循环
   useEffect(() => {
-    if (selectedDevice && config.monitorAutoStart) {
+    if (selectedDevice && selectedDevice.mode === 'sys' && config.monitorAutoStart) {
       setIsMonitoring(true);
       // 清空旧数据以开启新 Session
       setDataPoints([]);
       csvFileRef.current = null;
     }
-  }, [selectedDevice?.serial, config.monitorAutoStart]);
+  }, [selectedDevice?.serial, selectedDevice?.mode, config.monitorAutoStart]);
 
   const clearData = () => {
     setDataPoints([]);
@@ -468,6 +471,10 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
     const step = Math.ceil(displayRange / 300);
     return raw.filter((_, index) => index % step === 0);
   }, [dataPoints, displayRange]);
+
+  if (!selectedDevice || selectedDevice.mode !== 'sys') {
+    return null;
+  }
 
   return (
     <Card className={styles.card}>

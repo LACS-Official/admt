@@ -1,4 +1,4 @@
-use crate::error::{AdmtError, Result};
+﻿use crate::error::{AdmtError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -43,42 +43,42 @@ pub fn get_adb_tools_info(app_handle: tauri::AppHandle) -> Result<AdbToolsInfo> 
             // 验证ADB可执行文件存在
             if adb_path.exists() {
                 adb_info.adb_path = Some(adb_path.to_string_lossy().to_string());
-                log::info!("✅ ADB文件存在: {}", adb_path.display());
+                log::info!(" ADB文件存在: {}", adb_path.display());
 
                 // 获取ADB版本
                 match get_adb_version(&adb_path) {
                     Ok(version) => {
                         adb_info.version = Some(version.clone());
-                        log::info!("✅ ADB版本获取成功: {}", version);
+                        log::info!(" ADB版本获取成功: {}", version);
                     }
                     Err(e) => {
-                        log::warn!("⚠️ ADB版本获取失败: {}", e);
+                        log::warn!(" ADB版本获取失败: {}", e);
                         // 版本获取失败不影响可用性
                     }
                 }
             } else {
                 let error_msg = format!("ADB可执行文件不存在: {}", adb_path.display());
                 adb_info.error = Some(error_msg.clone());
-                log::error!("❌ {}", error_msg);
+                log::error!(" {}", error_msg);
                 return Ok(adb_info);
             }
 
             // 验证Fastboot可执行文件存在
             if fastboot_path.exists() {
                 adb_info.fastboot_path = Some(fastboot_path.to_string_lossy().to_string());
-                log::info!("✅ Fastboot文件存在: {}", fastboot_path.display());
+                log::info!(" Fastboot文件存在: {}", fastboot_path.display());
             } else {
-                log::warn!("⚠️ Fastboot可执行文件不存在: {}", fastboot_path.display());
+                log::warn!(" Fastboot可执行文件不存在: {}", fastboot_path.display());
                 // Fastboot不存在不影响ADB的可用性
             }
 
             adb_info.is_available = true;
-            log::info!("🎉 ADB工具初始化成功，可用性: true");
+            log::info!(" ADB工具初始化成功，可用性: true");
         }
         Err(e) => {
             let error_msg = format!("解析ADB工具路径失败: {}", e);
             adb_info.error = Some(error_msg.clone());
-            log::error!("❌ {}", error_msg);
+            log::error!(" {}", error_msg);
             // is_available 保持为 false
         }
     }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 开发者工具管理器
  * 提供环境检测和开发者工具控制功能
  */
@@ -39,10 +39,10 @@ export class DevToolsManager {
 
   private setupDevTools(): void {
     if (this.isDevMode) {
-      console.log('🔧 开发模式：启用开发者工具');
+      console.log(' 开发模式：启用开发者工具');
       this.enableDevTools();
     } else {
-      console.log('🔒 生产模式：禁用开发者工具');
+      console.log(' 生产模式：禁用开发者工具');
       this.disableDevTools();
     }
   }
@@ -122,7 +122,7 @@ export class DevToolsManager {
         if (event.key === 'F3' || event.key === 'F7') {
           event.preventDefault();
           event.stopPropagation();
-          console.warn(`🔒 ${event.key}快捷键在生产模式下被禁用`);
+          console.warn(` ${event.key}快捷键在生产模式下被禁用`);
           return;
         }
         
@@ -134,7 +134,7 @@ export class DevToolsManager {
         
         event.preventDefault();
         event.stopPropagation();
-        console.warn('🔒 开发者工具在生产模式下被禁用');
+        console.warn(' 开发者工具在生产模式下被禁用');
       }
     });
   }
@@ -153,7 +153,7 @@ export class DevToolsManager {
     // 在生产模式下禁用右键菜单
     document.addEventListener('contextmenu', (event) => {
       event.preventDefault();
-      console.warn('🔒 右键菜单在生产模式下被禁用');
+      console.warn(' 右键菜单在生产模式下被禁用');
     });
   }
 
@@ -161,7 +161,7 @@ export class DevToolsManager {
     // 创建开发者工具按钮
     const button = document.createElement('button');
     button.id = 'dev-tools-button';
-    button.innerHTML = '🔧 DevTools';
+    button.innerHTML = ' DevTools';
     button.style.cssText = `
       position: fixed;
       top: 10px;
@@ -195,7 +195,7 @@ export class DevToolsManager {
 
   public async openDevTools(): Promise<void> {
     if (!this.isDevMode) {
-      console.warn('🔒 开发者工具在生产模式下不可用');
+      console.warn(' 开发者工具在生产模式下不可用');
       return;
     }
 
@@ -203,9 +203,9 @@ export class DevToolsManager {
       // 尝试使用 Tauri API 打开开发者工具
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke('open_devtools');
-      console.log('🔧 开发者工具已打开');
+      console.log(' 开发者工具已打开');
     } catch (error) {
-      console.error('❌ 无法打开开发者工具:', error);
+      console.error(' 无法打开开发者工具:', error);
       
       // 备用方案：尝试使用 window.open
       try {
@@ -223,13 +223,13 @@ export class DevToolsManager {
           `);
         }
       } catch (fallbackError) {
-        console.error('❌ 备用方案也失败了:', fallbackError);
+        console.error(' 备用方案也失败了:', fallbackError);
       }
     }
   }
 
   public logEnvironmentInfo(): void {
-    console.group('🔍 环境信息');
+    console.group(' 环境信息');
     console.log('开发模式:', this.isDevMode);
     console.log('NODE_ENV:', typeof process !== 'undefined' ? process.env?.NODE_ENV : 'undefined');
     console.log('TAURI_ENV:', typeof process !== 'undefined' ? process.env?.TAURI_ENV : 'undefined');
@@ -245,7 +245,7 @@ export class DevToolsManager {
     
     // 添加全局错误处理
     window.addEventListener('error', (event) => {
-      console.error('🚨 全局错误:', event.error);
+      console.error(' 全局错误:', event.error);
       console.error('文件:', event.filename);
       console.error('行号:', event.lineno);
       console.error('列号:', event.colno);
@@ -253,10 +253,10 @@ export class DevToolsManager {
 
     // 添加未处理的 Promise 拒绝处理
     window.addEventListener('unhandledrejection', (event) => {
-      console.error('🚨 未处理的 Promise 拒绝:', event.reason);
+      console.error(' 未处理的 Promise 拒绝:', event.reason);
     });
 
-    console.log('🔧 调试模式已启用');
+    console.log(' 调试模式已启用');
   }
 }
 

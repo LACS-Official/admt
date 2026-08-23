@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import {
   makeStyles,
   Text,
@@ -199,7 +199,7 @@ const OtherSettingsPanel: React.FC = () => {
         setTraySupported(traySupported);
         setAutoStartSupported(autoStartSupported);
       } catch (error) {
-        console.error('❌ 系统功能检查失败:', error);
+        console.error(' 系统功能检查失败:', error);
       }
     }, 1000), []
   );
@@ -216,7 +216,7 @@ const OtherSettingsPanel: React.FC = () => {
         // 同步托盘状态（不重复初始化）
         const trayStatus = await systemTrayService().isReady();
         if (trayStatus !== config.systemTrayEnabled) {
-          console.log(`🔄 同步托盘状态: ${trayStatus ? '已启用' : '未启用'}`);
+          console.log(` 同步托盘状态: ${trayStatus ? '已启用' : '未启用'}`);
           updateConfig({ systemTrayEnabled: trayStatus });
           setMinimizeToTray(trayStatus);
         }
@@ -226,13 +226,13 @@ const OtherSettingsPanel: React.FC = () => {
           await autoStartService.initialize('玩机管家');
           const autoStartStatus = await autoStartService.getAutoStartStatus();
           if (autoStartStatus.isEnabled !== config.autoStartEnabled) {
-            console.log(`🔄 同步自启动状态: ${autoStartStatus.isEnabled ? '已启用' : '未启用'}`);
+            console.log(` 同步自启动状态: ${autoStartStatus.isEnabled ? '已启用' : '未启用'}`);
             updateConfig({ autoStartEnabled: autoStartStatus.isEnabled });
             setStartWithSystem(autoStartStatus.isEnabled);
           }
         }
       } catch (error) {
-        console.error('❌ 状态同步失败:', error);
+        console.error(' 状态同步失败:', error);
       } finally {
         setLoading(false);
       }
@@ -278,9 +278,9 @@ const OtherSettingsPanel: React.FC = () => {
         minimizeToTrayOnClose: checked 
       });
 
-      console.log(`✅ 系统托盘已${checked ? '启用' : '禁用'}`);
+      console.log(` 系统托盘已${checked ? '启用' : '禁用'}`);
     } catch (error) {
-      console.error('❌ 系统托盘设置失败:', error);
+      console.error(' 系统托盘设置失败:', error);
       // 回滚状态
       setMinimizeToTray(!checked);
       setStatusBarMessage({

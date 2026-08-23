@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 统一API错误处理服务
  * 提供网络错误分类、重试机制和自动退出功能
  */
@@ -106,7 +106,7 @@ class ExitManagerImpl implements ExitManager {
   }
 
   async scheduleExit(reason: string, delay: number): Promise<void> {
-    console.log(`⚠️ 应用将在 ${delay / 1000} 秒后退出: ${reason}`);
+    console.log(` 应用将在 ${delay / 1000} 秒后退出: ${reason}`);
     
     // 取消之前的退出计划
     this.cancelScheduledExit();
@@ -132,7 +132,7 @@ class ExitManagerImpl implements ExitManager {
   }
 
   async forceExit(exitCode: number): Promise<void> {
-    console.log(`🚪 强制退出应用，退出码: ${exitCode}`);
+    console.log(` 强制退出应用，退出码: ${exitCode}`);
     try {
       // 尝试使用 Tauri 的退出功能
       await invoke('exit_app', { exitCode });
@@ -329,7 +329,7 @@ export class APIErrorHandlerService {
     const apiError = this.classifyAPIError(error);
     const retryCount = this.retryCounter.incrementVersionCheck();
     
-    console.log(`🔍 版本检测错误处理 - 第 ${retryCount} 次:`, {
+    console.log(` 版本检测错误处理 - 第 ${retryCount} 次:`, {
       type: apiError.type,
       message: apiError.message,
       retryable: apiError.retryable,
@@ -379,7 +379,7 @@ export class APIErrorHandlerService {
     const apiError = this.classifyAPIError(error);
     const retryCount = this.retryCounter.incrementActivation();
     
-    console.log(`🔑 激活验证错误处理 - 第 ${retryCount} 次:`, {
+    console.log(` 激活验证错误处理 - 第 ${retryCount} 次:`, {
       type: apiError.type,
       message: apiError.message,
       retryable: apiError.retryable,

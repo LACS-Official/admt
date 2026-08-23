@@ -1,4 +1,4 @@
-{
+﻿{
   "settings": {
     "language_region": "Language & Region",
     "language_region_desc": "Language, Timezone and Localization settings",
@@ -230,13 +230,13 @@
     "policy": "Privacy Policy",
     "agreement": "User Agreement",
     "data_collection": "Data Collection",
-    "accepted": "✅ Accepted",
-    "not_accepted": "❌ Not Accepted",
+    "accepted": " Accepted",
+    "not_accepted": " Not Accepted",
     "accepted_at": "Accepted at: {{time}}",
     "not_set": "Not Set",
     "collection_warning": "Current privacy settings do not allow data collection. Software functionality may be limited.",
     "reset_title": "Reset App Data",
-    "danger_zone": "⚠️ Danger Zone",
+    "danger_zone": " Danger Zone",
     "reset_desc": "Resetting app data will completely clear all user data and settings, revoke all agreed terms, and restore the app to its initial state upon first installation. This operation is irreversible, please proceed with caution.",
     "confirm_reset_title": "Confirm Reset App Data",
     "confirm_reset_desc": "Are you sure you want to reset app data? This operation will:",
@@ -246,7 +246,7 @@
     "reset_item4": "• Show welcome page and first-use flow on next launch",
     "irreversible_notice": "This operation is irreversible, please proceed with caution!",
     "final_confirm_title": "Final Confirmation",
-    "last_chance": "⚠️ This is your last chance to confirm!",
+    "last_chance": " This is your last chance to confirm!",
     "will_perform": "The reset operation is about to be executed, which will:",
     "final_item1": "• Permanently delete all app data",
     "final_item2": "• Clear all user settings and preferences",
@@ -311,7 +311,7 @@
     "patch_success": "Image patched successfully!",
     "patch_failed": "Patch failed: {{error}}",
     "patch_preparing": "Preparing to patch...",
-    "missing_tool_title": "📥 Missing required tool: {{tool}}",
+    "missing_tool_title": " Missing required tool: {{tool}}",
     "missing_tool_desc": "Offline patching on PC requires the Windows version of the magiskboot tool. Please download it manually and place it in the specified directory:",
     "download_pinna_code": "Go to GitHub to download (PinNaCode)",
     "open_release_dir": "Open release directory",
@@ -336,6 +336,7 @@
     "selinux_mode_desc": "Switch SELinux operation mode (Enforcing/Permissive)"
   },
   "flash": {
+    "tab_partition_manager": "Partition Manager",
     "tab_unlock": "Unlock Tools",
     "tab_image": "Image Flashing",
     "tab_rom": "Fastboot Flashing",
@@ -350,7 +351,7 @@
     "no_device_hint": "Please ensure the device is connected and USB debugging is enabled",
     "select_device_title": "Please Select a Device",
     "select_device_hint": "Select the device to operate from the device info page",
-    "warning_title": "⚠️ Important Warning",
+    "warning_title": " Important Warning",
     "warning_desc": "Unlocking carries risks and may result in bricking, warranty voidance, or data loss. Ensure you understand the risks and have backed up important data.",
     "select_device_first": "Please select or connect a device before performing this operation",
     "execute_failed_log": "Unlock tool execution failed",
@@ -366,7 +367,7 @@
     "unknown_action": "Unknown action",
     "success": "Execution successful",
     "unknown_error": "Unknown error",
-    "risk_warning": "⚠️ Unlocking is risky and may result in bricking or warranty voidance. Please proceed with caution.",
+    "risk_warning": " Unlocking is risky and may result in bricking or warranty voidance. Please proceed with caution.",
     "xiaomi_unlock_tool": "Xiaomi Unlock Tool",
     "xiaomi_unlock_tool_desc": "Start the official Xiaomi unlock tool",
     "bypass_unlock": "Bypass Unlock",
@@ -551,7 +552,7 @@
     "stop_success_msg": "Force stop success",
     "stop_fail_msg": "Force stop failed",
     "batch_stop_failed": "Batch force stop failed",
-    "export_apk_result": "✓ {{name}}: APK exported to: {{path}}",
+    "export_apk_result": " {{name}}: APK exported to: {{path}}",
     "batch_start_stop_success": "Force stop success",
     "batch_start_stop_fail": "Force stop failed"
 

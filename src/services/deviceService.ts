@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+﻿import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef } from "react";
 import { useDeviceStore } from "../stores/deviceStore";
 import { useAppStore } from "../stores/appStore";
@@ -613,7 +613,7 @@ export class DeviceService {
     }
 
     try {
-      console.log('🔍 执行初始设备扫描，检查启动前已连接的设备...');
+      console.log(' 执行初始设备扫描，检查启动前已连接的设备...');
       logService.info('开始初始设备扫描', 'DeviceService');
       
       const devices = await this.scanDevices();
@@ -625,13 +625,13 @@ export class DeviceService {
       const connectedDevices = devices.filter(device => device.connected);
       
       if (connectedDevices.length > 0) {
-        console.log(`🔥 检测到 ${connectedDevices.length} 台启动前已连接的设备，开始记录连接统计...`);
+        console.log(` 检测到 ${connectedDevices.length} 台启动前已连接的设备，开始记录连接统计...`);
         logService.info(`检测到 ${connectedDevices.length} 台启动前已连接的设备`, 'DeviceService');
         
         // 为每个已连接的设备记录连接统计
         for (const device of connectedDevices) {
           try {
-            console.log(`📊 记录启动前连接设备: ${device.serial}`);
+            console.log(` 记录启动前连接设备: ${device.serial}`);
             await this.recordDeviceConnection(device, true); // 标记为启动扫描
           } catch (error) {
             console.warn(`记录设备连接统计失败: ${device.serial}`, error);
@@ -639,10 +639,10 @@ export class DeviceService {
           }
         }
         
-        console.log('✅ 启动前已连接设备的连接统计记录完成');
+        console.log(' 启动前已连接设备的连接统计记录完成');
         logService.info('启动前已连接设备的连接统计记录完成', 'DeviceService');
       } else {
-        console.log('📋 未检测到启动前已连接的设备');
+        console.log(' 未检测到启动前已连接的设备');
         logService.info('未检测到启动前已连接的设备', 'DeviceService');
       }
       

@@ -17,6 +17,7 @@ import {
   ArrowDownload24Regular,
   Apps24Regular,
   Navigation24Regular,
+  Play24Regular,
 } from '@fluentui/react-icons';
 import { ProgressBar } from '@fluentui/react-components';
 import { OnlineSoftware, DownloadTask } from '../../types/app';
@@ -201,6 +202,26 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
 
 
 
+  // 运行程序
+  const handleLaunch = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!downloadStatus.filePath) return;
+
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('launch_software_resource', {
+        path: downloadStatus.filePath,
+        openname: software.openname || null,
+      });
+      await logService.info(`已通过卡片启动程序: ${software.name}`, '在线资源UI', {
+        path: downloadStatus.filePath,
+        openname: software.openname,
+      });
+    } catch (error) {
+      logService.error(`启动程序失败: ${software.name}`, '在线资源UI', { error: String(error) });
+    }
+  };
+
   // 打开文件位置
   const handleOpenFolder = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -286,14 +307,23 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
               检查中
             </Button>
           ) : downloadStatus.isDownloaded ? (
-            <Button
-              size="small"
-              appearance="outline"
-              icon={<CheckmarkCircle24Filled />}
-              onClick={handleOpenFolder}
-            >
-              打开位置
-            </Button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <Button
+                size="small"
+                appearance="subtle"
+                icon={<FolderOpen24Regular />}
+                onClick={handleOpenFolder}
+                title="打开文件位置"
+              />
+              <Button
+                size="small"
+                appearance="primary"
+                icon={<Play24Regular />}
+                onClick={handleLaunch}
+              >
+                运行
+              </Button>
+            </div>
           ) : activeTask ? (
             <Button
               size="small"

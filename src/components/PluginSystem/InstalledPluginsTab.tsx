@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   makeStyles,
   shorthands,
@@ -232,9 +232,9 @@ const InstalledPluginsTab: React.FC<Props> = ({ onGoToStore, onGoToImport }) => 
 
   const categories = [
     { id: "all", label: "全部插件", count: installedPlugins.length },
-    { id: "life", label: "🛋️ 生活助手", count: installedPlugins.filter((p) => p.manifest.category === "life").length },
-    { id: "dev", label: "🛠️ 开发利器", count: installedPlugins.filter((p) => p.manifest.category === "dev").length },
-    { id: "common", label: "📦 常用工具", count: installedPlugins.filter((p) => p.manifest.category === "common").length },
+    { id: "life", label: " 生活助手", count: installedPlugins.filter((p) => p.manifest.category === "life").length },
+    { id: "dev", label: " 开发利器", count: installedPlugins.filter((p) => p.manifest.category === "dev").length },
+    { id: "common", label: " 常用工具", count: installedPlugins.filter((p) => p.manifest.category === "common").length },
   ];
 
   const filteredPlugins = installedPlugins.filter((p) => {
@@ -250,19 +250,19 @@ const InstalledPluginsTab: React.FC<Props> = ({ onGoToStore, onGoToImport }) => 
   const getCategoryIcon = (category: PluginCategory) => {
     switch (category) {
       case "life":
-        return "🛋️";
+        return "";
       case "dev":
-        return "🛠️";
+        return "";
       case "common":
-        return "📦";
+        return "";
       case "flash":
-        return "⚡";
+        return "";
       case "tuning":
-        return "🏎️";
+        return "";
       case "ai":
-        return "✨";
+        return "";
       default:
-        return "🧩";
+        return "";
     }
   };
 
@@ -438,7 +438,7 @@ const InstalledPluginsTab: React.FC<Props> = ({ onGoToStore, onGoToImport }) => 
 
               <div className={styles.cardFooter}>
                 <div style={{ fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
-                  评分: ★ {plugin.rating || 4.9}
+                  评分:  {plugin.rating || 4.9}
                 </div>
 
                 <div className={styles.footerActions}>

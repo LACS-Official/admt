@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 调试版本的版本检查服务
  * 用于诊断版本检测问题
  */
@@ -166,7 +166,7 @@ class DebugVersionService {
     error?: string;
   } {
     try {
-      console.log(`🔍 开始调试版本比较: ${current} vs ${latest}`);
+      console.log(` 开始调试版本比较: ${current} vs ${latest}`);
 
       if (!this.isValidVersion(current)) {
         throw new Error(`当前版本格式无效: ${current}`);
@@ -192,7 +192,7 @@ class DebugVersionService {
       const currentParsed = parseVersion(current);
       const latestParsed = parseVersion(latest);
 
-      console.log('📊 版本解析结果:', {
+      console.log(' 版本解析结果:', {
         current: currentParsed,
         latest: latestParsed
       });
@@ -237,7 +237,7 @@ class DebugVersionService {
 
       const hasUpdate = comparisonResult < 0;
 
-      console.log(`🔄 版本比较详情:`, {
+      console.log(` 版本比较详情:`, {
         step: comparisonStep,
         result: comparisonResult,
         hasUpdate,
@@ -255,7 +255,7 @@ class DebugVersionService {
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '未知错误';
-      console.error('❌ 版本比较失败:', errorMsg);
+      console.error(' 版本比较失败:', errorMsg);
       
       return {
         current,
@@ -310,11 +310,11 @@ class DebugVersionService {
    * 完整的调试版本检查
    */
   async debugCheckForUpdates(): Promise<DebugVersionResult> {
-    console.log('🚀 开始调试版本检查...');
+    console.log(' 开始调试版本检查...');
 
     // 1. 调试版本获取
     const { sources, finalVersion } = await this.debugGetCurrentVersion();
-    console.log('📱 版本获取调试结果:', { sources, finalVersion });
+    console.log(' 版本获取调试结果:', { sources, finalVersion });
 
     // 2. 调试API配置
     let apiConfig;
@@ -324,7 +324,7 @@ class DebugVersionService {
       const endpoint = `${baseUrl}/app/software/id/${softwareId}/versions`;
       
       apiConfig = { baseUrl, softwareId, endpoint };
-      console.log('🔧 API配置:', apiConfig);
+      console.log(' API配置:', apiConfig);
     } catch (error) {
       throw new Error(`API配置错误: ${error instanceof Error ? error.message : '未知错误'}`);
     }
@@ -332,7 +332,7 @@ class DebugVersionService {
     // 3. 调试缓存
     const cacheKey = this.getCacheKey('version');
     const cacheInfo = this.getCacheInfo(cacheKey);
-    console.log('💾 缓存信息:', cacheInfo);
+    console.log(' 缓存信息:', cacheInfo);
 
     // 4. 如果有有效缓存，使用缓存数据进行调试
     if (cacheInfo.isValidCache) {
@@ -353,7 +353,7 @@ class DebugVersionService {
     let apiError;
     
     try {
-      console.log(`🌐 调用API: ${apiConfig.endpoint}`);
+      console.log(` 调用API: ${apiConfig.endpoint}`);
       
       const response = await tauriHttpService.get(apiConfig.endpoint, {
         timeout: 10000,
@@ -368,7 +368,7 @@ class DebugVersionService {
       }
 
       apiResponse = response.data;
-      console.log('📥 API响应:', apiResponse);
+      console.log(' API响应:', apiResponse);
 
       // 更新缓存
       if (apiResponse && apiResponse.success && apiResponse.data) {
@@ -380,7 +380,7 @@ class DebugVersionService {
 
     } catch (error) {
       apiError = error instanceof Error ? error.message : '未知API错误';
-      console.error('❌ API调用失败:', apiError);
+      console.error(' API调用失败:', apiError);
     }
 
     // 6. 调试版本比较
@@ -414,7 +414,7 @@ class DebugVersionService {
    */
   clearCache(): void {
     this.cache.clear();
-    console.log('🗑️ 调试版本检查缓存已清空');
+    console.log(' 调试版本检查缓存已清空');
   }
 }
 

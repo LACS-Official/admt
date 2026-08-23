@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 隐私政策测试工具
  * 用于测试和验证隐私政策显示逻辑
  */
@@ -98,15 +98,15 @@ export const privacyTestScenarios: PrivacyTestScenario[] = [
  * 运行隐私政策测试
  */
 export const runPrivacyTests = (): { passed: number; failed: number; results: Array<{ scenario: string; passed: boolean; expected: boolean; actual: boolean }> } => {
-  console.log('🧪 开始运行隐私政策测试...');
+  console.log(' 开始运行隐私政策测试...');
   
   const results: Array<{ scenario: string; passed: boolean; expected: boolean; actual: boolean }> = [];
   let passed = 0;
   let failed = 0;
 
   for (const scenario of privacyTestScenarios) {
-    console.log(`\n📋 测试场景: ${scenario.name}`);
-    console.log(`📝 描述: ${scenario.description}`);
+    console.log(`\n 测试场景: ${scenario.name}`);
+    console.log(` 描述: ${scenario.description}`);
     
     try {
       // 设置测试场景
@@ -117,10 +117,10 @@ export const runPrivacyTests = (): { passed: number; failed: number; results: Ar
       const testPassed = actualResult === scenario.expectedResult;
       
       if (testPassed) {
-        console.log(`✅ 测试通过 - 期望: ${scenario.expectedResult}, 实际: ${actualResult}`);
+        console.log(` 测试通过 - 期望: ${scenario.expectedResult}, 实际: ${actualResult}`);
         passed++;
       } else {
-        console.log(`❌ 测试失败 - 期望: ${scenario.expectedResult}, 实际: ${actualResult}`);
+        console.log(` 测试失败 - 期望: ${scenario.expectedResult}, 实际: ${actualResult}`);
         failed++;
       }
       
@@ -132,7 +132,7 @@ export const runPrivacyTests = (): { passed: number; failed: number; results: Ar
       });
       
     } catch (error) {
-      console.error(`💥 测试场景 "${scenario.name}" 执行失败:`, error);
+      console.error(` 测试场景 "${scenario.name}" 执行失败:`, error);
       failed++;
       results.push({
         scenario: scenario.name,
@@ -143,10 +143,10 @@ export const runPrivacyTests = (): { passed: number; failed: number; results: Ar
     }
   }
   
-  console.log(`\n📊 测试结果汇总:`);
-  console.log(`✅ 通过: ${passed}`);
-  console.log(`❌ 失败: ${failed}`);
-  console.log(`📈 成功率: ${((passed / (passed + failed)) * 100).toFixed(1)}%`);
+  console.log(`\n 测试结果汇总:`);
+  console.log(` 通过: ${passed}`);
+  console.log(` 失败: ${failed}`);
+  console.log(` 成功率: ${((passed / (passed + failed)) * 100).toFixed(1)}%`);
   
   return { passed, failed, results };
 };
@@ -174,40 +174,40 @@ export const getCurrentPrivacyState = () => {
 export const resetPrivacyStateForTesting = () => {
   const store = usePrivacyConsentStore.getState();
   store.resetPrivacyConsent();
-  console.log('🔄 隐私政策状态已重置为测试状态');
+  console.log(' 隐私政策状态已重置为测试状态');
 };
 
 /**
  * 模拟完整的隐私政策同意流程
  */
 export const simulatePrivacyConsentFlow = () => {
-  console.log('🎭 模拟隐私政策同意流程...');
+  console.log(' 模拟隐私政策同意流程...');
   
   const store = usePrivacyConsentStore.getState();
   
-  console.log('1️⃣ 重置状态');
+  console.log('1⃣ 重置状态');
   store.resetPrivacyConsent();
   
-  console.log('2️⃣ 检查初始状态 - 应该需要显示同意界面');
+  console.log('2⃣ 检查初始状态 - 应该需要显示同意界面');
   console.log('需要显示:', shouldShowPrivacyConsent());
   
-  console.log('3️⃣ 用户同意隐私政策');
+  console.log('3⃣ 用户同意隐私政策');
   store.acceptPrivacyPolicy();
   console.log('需要显示:', shouldShowPrivacyConsent());
   
-  console.log('4️⃣ 用户同意用户协议');
+  console.log('4⃣ 用户同意用户协议');
   store.acceptUserAgreement();
   console.log('需要显示:', shouldShowPrivacyConsent());
   
-  console.log('5️⃣ 用户同意数据收集');
+  console.log('5⃣ 用户同意数据收集');
   store.acceptDataCollection();
   console.log('需要显示:', shouldShowPrivacyConsent());
   
-  console.log('6️⃣ 完成隐私设置');
+  console.log('6⃣ 完成隐私设置');
   store.completePrivacySetup();
   console.log('需要显示:', shouldShowPrivacyConsent());
   
-  console.log('✅ 隐私政策同意流程模拟完成');
+  console.log(' 隐私政策同意流程模拟完成');
 };
 
 // 在开发环境下将测试函数暴露到全局

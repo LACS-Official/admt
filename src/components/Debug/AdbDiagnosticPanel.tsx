@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ADB 和 Fastboot 路径诊断面板
  * 用于诊断和解决设备检测问题
  */
@@ -268,21 +268,21 @@ const AdbDiagnosticPanel: React.FC = () => {
             <div style={{ padding: tokens.spacingVerticalM }}>
               {!diagnosticData.adb_exists && (
                 <div className={styles.errorContainer}>
-                  <Text weight="semibold">❌ ADB 文件不存在</Text>
+                  <Text weight="semibold"> ADB 文件不存在</Text>
                   <Text>请将 ADB 可执行文件放置在 src-tauri/tools/adb/ 目录中。</Text>
                 </div>
               )}
 
               {!diagnosticData.fastboot_exists && (
                 <div className={styles.errorContainer}>
-                  <Text weight="semibold">❌ Fastboot 文件不存在</Text>
+                  <Text weight="semibold"> Fastboot 文件不存在</Text>
                   <Text>请将 Fastboot 可执行文件放置在 src-tauri/tools/adb/ 目录中。</Text>
                 </div>
               )}
 
               {(!diagnosticData.adb_command_test.success || !diagnosticData.fastboot_command_test.success) && (
                 <div className={styles.errorContainer}>
-                  <Text weight="semibold">❌ 命令执行失败</Text>
+                  <Text weight="semibold"> 命令执行失败</Text>
                   <Text>工具文件可能损坏或权限不足，请重新下载 Android Platform Tools。</Text>
                 </div>
               )}
@@ -290,14 +290,14 @@ const AdbDiagnosticPanel: React.FC = () => {
               {diagnosticData.adb_exists && diagnosticData.fastboot_exists &&
                diagnosticData.adb_command_test.success && diagnosticData.fastboot_command_test.success && (
                 <div className={styles.successContainer}>
-                  <Text weight="semibold">✅ 配置正常</Text>
+                  <Text weight="semibold"> 配置正常</Text>
                   <Text>ADB 和 Fastboot 工具都已正确配置，设备检测应该可以正常工作。</Text>
                 </div>
               )}
 
               {(!diagnosticData.adb_exists || !diagnosticData.fastboot_exists) && (
                 <div style={{ marginTop: tokens.spacingVerticalM, padding: tokens.spacingVerticalS, backgroundColor: tokens.colorNeutralBackground2, borderRadius: tokens.borderRadiusMedium }}>
-                  <Text weight="semibold">📥 下载 Android Platform Tools</Text>
+                  <Text weight="semibold"> 下载 Android Platform Tools</Text>
                   <Text>
                     访问 <a href="https://developer.android.com/studio/releases/platform-tools" target="_blank" rel="noopener noreferrer">
                       Android 开发者网站
@@ -308,7 +308,7 @@ const AdbDiagnosticPanel: React.FC = () => {
 
               {diagnosticData.adb_exists && !diagnosticData.adb_command_test.success && (
                 <div style={{ marginTop: tokens.spacingVerticalM, padding: tokens.spacingVerticalS, backgroundColor: tokens.colorPaletteYellowBackground1, borderRadius: tokens.borderRadiusMedium }}>
-                  <Text weight="semibold">🐧 Linux 提示: 权限问题</Text>
+                  <Text weight="semibold"> Linux 提示: 权限问题</Text>
                   <Text block>
                     如果您在 Linux 下遇到 "no permissions" 错误，请尝试：
                     <br />

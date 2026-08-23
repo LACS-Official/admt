@@ -32,24 +32,12 @@ const useStyles = makeStyles({
   container: {
     padding: tokens.spacingHorizontalL,
     height: "100%",
-    overflow: "hidden", // 改为 hidden，内部滚动
+    overflow: "hidden",
     display: "flex",
     flexDirection: "column",
     gap: tokens.spacingHorizontalM,
     position: "relative",
     backgroundColor: "var(--colorNeutralBackground2)",
-  },
-  backgroundDecoration: {
-    position: "absolute",
-    top: "0",
-    right: "0",
-    width: "200px",
-    height: "200px",
-    background: `linear-gradient(135deg, ${tokens.colorBrandBackground2} 0%, transparent 70%)`,
-    borderRadius: "0 0 0 100%",
-    opacity: 0.1,
-    pointerEvents: "none",
-    zIndex: 0,
   },
   header: {
     display: "flex",
@@ -332,10 +320,12 @@ const HomePage: React.FC = () => {
               </div>
             </div>
 
-            {/* 硬件实时监控区域 */}
-            <div className="card-enter-delayed" style={{ flex: '0 0 auto' }} id="tour-home-monitor">
-              <DeviceMonitorCard device={displayDevice} />
-            </div>
+            {/* 硬件实时监控区域（仅系统模式下显示） */}
+            {displayDevice?.mode === 'sys' && (
+              <div className="card-enter-delayed" style={{ flex: '0 0 auto' }} id="tour-home-monitor">
+                <DeviceMonitorCard device={displayDevice} />
+              </div>
+            )}
 
             {/* 第二行：功能控制区域 */}
             <div className={mergeClasses(styles.deviceActionsSection)}>
@@ -355,11 +345,6 @@ const HomePage: React.FC = () => {
 
   return (
     <div className={`${styles.container} startup-optimized`}>
-      {/* 背景装饰 */}
-      <div className={styles.backgroundDecoration} />
-
-
-
       {/* 标签页导航 */}
       <div className={styles.tabArea}>
         <TabList 

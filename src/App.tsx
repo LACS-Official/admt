@@ -26,6 +26,8 @@ import { useAppStyles } from "./styles/appStyles";
 import { useAppStartup } from "./hooks/useAppStartup";
 import { useThemeStore } from "./stores/themeStore";
 
+import { SecurityVerificationDialog } from "./components/Common/SecurityVerificationDialog";
+
 function App() {
   const styles = useAppStyles();
   const {
@@ -45,14 +47,10 @@ function App() {
   
   const { isDarkMode } = useThemeStore();
 
-
-
-
   // 加载中状态
   if (isLoading) {
     return null;
   }
-
 
   // 显示错误通知
   if (showErrorNotification && error) {
@@ -85,6 +83,7 @@ function App() {
       <TitleBar />
       <MainContent />
       <StatusBar />
+      <SecurityVerificationDialog />
     </div>
   );
 }
