@@ -88,12 +88,11 @@ const useStyles = makeStyles({
     flexDirection: "column",
     alignItems: "flex-start",
     gap: "8px",
-    textAlign: "left",
     "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      borderColor: "var(--colorNeutralStroke1Hover)",
     },
-    transition: "all 0.2s ease",
+    transition: "all 0.15s ease",
   },
   xiaomiIcon: {
     fontSize: "24px",

@@ -1,7 +1,7 @@
 import React from "react";
 import { makeStyles } from "@fluentui/react-components";
 import ConsoleTitleBar from "./ConsoleTitleBar";
-import AIChatPanel from "@/components/Console/AIChatPanel";
+import AIChatPanel from "./AIChatPanel";
 
 const useStyles = makeStyles({
   container: {

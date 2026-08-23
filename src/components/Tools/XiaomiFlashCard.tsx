@@ -48,9 +48,8 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "12px",
+    borderRadius: "6px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
   },
   packageSection: {
     display: "flex",
@@ -65,9 +64,8 @@ const useStyles = makeStyles({
   packageInfo: {
     padding: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontFamily: "'Inter', sans-serif",
+    borderRadius: "4px",
+    fontSize: "13px",
     lineHeight: 1.5,
   },
   deviceInfo: {
@@ -76,8 +74,8 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "8px",
-    fontSize: "14px",
+    borderRadius: "4px",
+    fontSize: "13px",
   },
   progressSection: {
     display: "flex",
@@ -86,11 +84,6 @@ const useStyles = makeStyles({
   },
   statusBadge: {
     alignSelf: "flex-start",
-    transition: "all 0.2s ease",
-    ":hover": {
-      transform: "translateY(-1px)",
-      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-    },
   },
   logOutput: {
     fontFamily: "'JetBrains Mono', monospace",

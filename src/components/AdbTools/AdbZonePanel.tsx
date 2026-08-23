@@ -108,18 +108,15 @@ const useStyles = makeStyles({
       margin: `0 ${tokens.spacingHorizontalXS}`,
 
       "&:hover": {
-        backgroundColor: "var(--colorNeutralBackground2)",
+        backgroundColor: "var(--colorNeutralBackground1Hover)",
         color: "var(--colorNeutralForeground1)",
-        transform: "translateY(-1px)",
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
 
       "&[aria-selected='true']": {
         backgroundColor: "var(--colorBrandBackground2)",
         color: "var(--colorBrandForeground1)",
-        border: "1px solid var(--brand-stroke-2, var(--colorBrandStroke2))",
+        border: "1px solid var(--colorBrandStroke2)",
         fontWeight: 600,
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
     },
 
@@ -132,10 +129,8 @@ const useStyles = makeStyles({
   },
   tab: {
     "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground2)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
       color: "var(--colorNeutralForeground1)",
-      transform: "translateY(-1px)",
-      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
     },
   },
   overlay: {

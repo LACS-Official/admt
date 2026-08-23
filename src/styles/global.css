@@ -285,16 +285,10 @@ body::after {
   opacity: 0.5;
 }
 
-/* 全局组件圆角与透明度覆盖 - 现已对接主题系统 */
+/* 全局组件圆角与交互规范 */
 .fui-Card {
-  border-radius: var(--borderRadiusLarge) !important;
-  backdrop-filter: blur(16px) saturate(180%);
-  background-color: rgba(255, 255, 255, 0.72) !important; /* 浅色模式透明底 */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.fui-FluentProvider--dark .fui-Card {
-  background-color: rgba(30, 30, 30, 0.72) !important; /* 深色模式透明底 */
+  border-radius: var(--borderRadiusMedium) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fui-Dropdown,

@@ -109,10 +109,10 @@ const useStyles = makeStyles({
   softwareCard: {
     height: 'auto',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.15s ease',
     '&:hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+      backgroundColor: 'var(--colorNeutralBackground1Hover)',
+      borderColor: 'var(--colorNeutralStroke1Hover)',
     },
   },
   cardContent: {
@@ -401,7 +401,7 @@ const OnlineResourcesPanel: React.FC = () => {
           <div className={styles.emptyContainer}>
             <CloudArrowDown24Regular style={{ fontSize: '48px', color: 'var(--colorNeutralForeground3)' }} />
             <Body1>{t('online_resources.no_software_available')}</Body1>
-            <Caption1>没找到想要的？ <Link onClick={() => window.open('https://admt.lacs.cc/feedback')}>提交软件需求</Link></Caption1>
+            <Caption1>没找到想要的？ <Link onClick={() => window.open('https://github.com/LACS-Official/admt/issues')}>提交需求与反馈</Link></Caption1>
           </div>
         ) : (
           <div className={styles.softwareGrid}>

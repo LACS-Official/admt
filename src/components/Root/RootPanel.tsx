@@ -127,10 +127,8 @@ const useStyles = makeStyles({
       margin: "0 4px",
       
       "&:hover": {
-        backgroundColor: "var(--colorNeutralBackground2)",
+        backgroundColor: "var(--colorNeutralBackground1Hover)",
         color: "var(--colorNeutralForeground1)",
-        transform: "translateY(-1px)",
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
       },
       
       "&[aria-selected='true']": {
@@ -138,7 +136,6 @@ const useStyles = makeStyles({
         color: "var(--colorBrandForeground1)",
         border: "1px solid var(--colorBrandStroke2)",
         fontWeight: 600,
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
       },
     },
     

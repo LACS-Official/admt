@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   makeStyles,
   shorthands,
@@ -109,9 +109,8 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "6px",
     "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground2Hover)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
       color: "var(--colorNeutralForeground1)",
-      transform: "translateY(-1px)",
     },
   },
   categoryChipActive: {
@@ -119,7 +118,6 @@ const useStyles = makeStyles({
     color: "var(--colorBrandForeground1)",
     ...shorthands.borderColor("var(--colorBrandStroke2)"),
     fontWeight: "600",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.06)",
   },
   content: {
     flex: 1,
@@ -142,14 +140,12 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     gap: "12px",
-    transition: "all 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
+    transition: "all 0.15s ease",
     position: "relative",
     overflow: "hidden",
-    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
     "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 6px 16px rgba(0, 0, 0, 0.08)",
-      ...shorthands.borderColor("var(--colorBrandStroke2)"),
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
     },
   },
   cardTop: {
@@ -384,8 +380,11 @@ const PluginStorePanel: React.FC = () => {
       <div className={styles.content}>
         {filteredPlugins.length === 0 ? (
           <div className={styles.emptyState}>
-            <Search24Regular style={{ fontSize: "40px", opacity: 0.5 }} />
-            <Text>未搜索到符合条件的插件</Text>
+            <Apps24Regular style={{ fontSize: "40px", color: "var(--colorBrandForeground1)", opacity: 0.8 }} />
+            <Text weight="semibold" size={400}>插件市场开放中（开发者预览版）</Text>
+            <Text size={200} style={{ color: "var(--colorNeutralForeground3)", maxWidth: "420px", textAlign: "center" }}>
+              当前插件系统支持通过本地 manifest.json 导入或基于开放接口开发。更多扩展生态即将上线。
+            </Text>
           </div>
         ) : (
           <div className={styles.grid}>

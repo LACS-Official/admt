@@ -67,18 +67,11 @@ const useStyles = makeStyles({
     maxHeight: "85vh",
     display: "flex",
     flexDirection: "row",
-    borderRadius: "24px",
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
-    backdropFilter: "blur(20px)",
-    border: `1px solid rgba(255, 255, 255, 0.5)`,
-    boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    border: `1px solid var(--colorNeutralStroke2)`,
+    boxShadow: tokens.shadow28,
     overflow: "hidden",
-
-    // Dark mode support
-    "@media (prefers-color-scheme: dark)": {
-      backgroundColor: "rgba(30, 30, 30, 0.7)",
-      border: `1px solid rgba(255, 255, 255, 0.1)`,
-    },
   },
   leftPanel: {
     width: "40%",
@@ -150,8 +143,6 @@ const useStyles = makeStyles({
     ":hover": {
       border: `1px solid ${tokens.colorBrandStroke1}`,
       backgroundColor: tokens.colorNeutralBackground2Hover,
-      transform: "translateY(-2px)",
-      boxShadow: tokens.shadow4,
     },
   },
   policyIconBox: {

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   makeStyles,
@@ -67,16 +67,12 @@ const useStyles = makeStyles({
     width: "180px", 
     maxWidth: "250px",
     backgroundColor: "var(--colorNeutralBackground2)", 
-    borderRight: "1px solid var(--colorNeutralStroke3)", 
+    borderRight: "1px solid var(--colorNeutralStroke2)", 
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    boxShadow: "2px 0 16px rgba(0, 0, 0, 0.08)", 
     position: "relative",
     zIndex: 10,
-    // 添加渐变背景
-    background:
-      "linear-gradient(180deg, var(--colorNeutralBackground2) 0%, var(--colorNeutralBackground1) 100%)",
   },
   deviceInfo: {
     padding: tokens.spacingHorizontalXS, // 增加内边距
@@ -492,8 +488,7 @@ const useStyles = makeStyles({
     cursor: "pointer",
     overflow: "hidden",
     boxSizing: "border-box",
-    border: "1px solid var(--colorNeutralStroke2)",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.02)", // Subtle shadow for depth
+    border: "1px solid transparent",
 
     // Icon styles
     "& .fui-Tab__icon": {
@@ -506,14 +501,11 @@ const useStyles = makeStyles({
 
     // Hover state
     "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground2)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
       color: "var(--colorNeutralForeground1)",
-      transform: "translateY(-1px)",
-      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
 
       "& .fui-Tab__icon": {
         color: "var(--colorBrandForeground1)",
-        transform: "scale(1.05)",
       },
     },
 
@@ -523,12 +515,9 @@ const useStyles = makeStyles({
       color: "var(--colorBrandForeground1)",
       border: "1px solid var(--colorBrandStroke2)",
       fontWeight: "600",
-      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
-      paddingLeft: "16px", // Indent selected tab
 
       "& .fui-Tab__icon": {
         color: "var(--colorBrandForeground1)",
-        transform: "scale(1.1)",
       },
 
       // Left indicator for selected tab
@@ -1300,10 +1289,6 @@ const MainContent: React.FC = () => {
           ))}
         </TabList>
 
-        {/* 轮播图区域 */}
-        <div className={styles.carouselContainer}>
-          <CarouselComponent autoPlayInterval={config.carouselInterval} />
-        </div>
         <div className={styles.buttonGroupContainer}>
           {/* 打开命令行按钮 */}
           <div
@@ -1335,15 +1320,12 @@ const MainContent: React.FC = () => {
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={currentView}
-            initial={{ opacity: 0, x: 20, filter: "blur(5px)" }}
-            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, x: -20, filter: "blur(5px)" }}
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
             transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 30,
-              opacity: { duration: 0.2 },
-              filter: { type: "tween", duration: 0.3, ease: "easeInOut" }
+              duration: 0.15,
+              ease: "easeOut"
             }}
             style={{ width: "100%", height: "100%", overflow: "hidden" }}
           >

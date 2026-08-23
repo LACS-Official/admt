@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   makeStyles,
   shorthands,
@@ -97,9 +97,8 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground2)",
     whiteSpace: "nowrap",
     "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground2Hover)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
       color: "var(--colorNeutralForeground1)",
-      transform: "translateY(-1px)",
     },
   },
   categoryChipActive: {
@@ -107,7 +106,6 @@ const useStyles = makeStyles({
     color: "var(--colorBrandForeground1)",
     ...shorthands.borderColor("var(--colorBrandStroke2)"),
     fontWeight: "600",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.06)",
   },
   content: {
     flex: 1,
@@ -134,12 +132,10 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "10px",
     cursor: "pointer",
-    transition: "all 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
-    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
+    transition: "all 0.15s ease",
     "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 6px 16px rgba(0, 0, 0, 0.08)",
-      ...shorthands.borderColor("var(--colorBrandStroke2)"),
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
     },
   },
   cardTop: {

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -178,7 +178,6 @@ const useStyles = makeStyles({
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
       borderColor: "var(--colorBrandStroke2)",
-      transform: "translateY(-1px)",
     },
   },
   partitionRowActive: {

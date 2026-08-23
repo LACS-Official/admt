@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   makeStyles,
   shorthands,
@@ -103,12 +103,10 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "12px",
     cursor: "pointer",
-    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
-    transition: "all 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
+    transition: "all 0.15s ease",
     "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "0 6px 16px rgba(0, 0, 0, 0.08)",
-      ...shorthands.borderColor("var(--colorBrandStroke2)"),
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
     },
   },
   cardTop: {

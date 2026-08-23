@@ -20,6 +20,7 @@ import {
   Spinner,
   shorthands,
   Tooltip,
+  tokens,
 } from "@fluentui/react-components";
 import {
   Info24Regular,
@@ -63,8 +64,8 @@ const useStyles = makeStyles({
     "@media (max-width: 900px)": {
       gridColumn: "1 / -1",
     },
-    ...shorthands.border("none"),
-    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
+    boxShadow: tokens.shadow4,
   },
   heroContent: {
     padding: "32px 24px",
@@ -78,10 +79,10 @@ const useStyles = makeStyles({
     },
   },
   appLogoLarge: {
-    width: "120px",
-    height: "120px",
-    ...shorthands.borderRadius("20px"),
-    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+    width: "100px",
+    height: "100px",
+    ...shorthands.borderRadius("8px"),
+    boxShadow: tokens.shadow8,
   },
   logoSection: {
     display: "flex",
@@ -358,7 +359,7 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
   const links = {
     checkUpdate: "https://admt.lacs.cc/download",
     userManual: "https://admt.lacs.cc/docs",
-    feedback: "https://admt.lacs.cc/feedback",
+    feedback: "https://github.com/LACS-Official/admt/issues",
     otherapps:"https://www.lacs.cc/#projects",
     officialWebsite: "https://www.lacs.cc",
     officialADMTWeb: "https://admt.lacs.cc",

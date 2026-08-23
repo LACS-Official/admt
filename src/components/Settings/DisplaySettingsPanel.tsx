@@ -5,29 +5,21 @@ import {
   Card,
   CardHeader,
   Switch,
-  Slider,
   RadioGroup,
   Radio,
+  Button,
+  shorthands,
+  mergeClasses,
+  Badge,
 } from "@fluentui/react-components";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
 import {
-  Timer24Regular,
   Color24Regular,
   ArrowReset24Regular,
-  Sparkle20Regular,
 } from "@fluentui/react-icons";
-import { 
-    Button, 
-    shorthands,
-    mergeClasses,
-    Badge
-} from "@fluentui/react-components";
 import { ChromePicker } from 'react-color';
-import { open } from '@tauri-apps/plugin-dialog';
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
-import confetti from "canvas-confetti";
 
 const useStyles = makeStyles({
   container: {
@@ -395,67 +387,6 @@ const DisplaySettingsPanel: React.FC = () => {
                 </div>
             </div>
         </Card>
-
-        {/* 动画与交互设置 */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Timer24Regular />}
-            header={<Text weight="semibold">{t('settings.animations_interaction')}</Text>}
-            description={<Text size={200} className={styles.settingDescription}>{t('settings.animations_interaction_desc')}</Text>}
-          />
-          <div className={styles.cardContent}>
-            {/* 动画设置行：合并启用动画和轮播速度 */}
-
-              {/* 轮播速度 */}
-              <div className={styles.settingTile}>
-                  <div className={styles.settingRow}>
-                      <div className={styles.rowInfo}>
-                        <Text weight="semibold">{t('settings.carousel_speed')}</Text>
-                      </div>
-                      <Badge appearance="tint" color="brand">
-                          {config.carouselInterval ? (config.carouselInterval / 1000).toFixed(1) : "8.0"}s
-                      </Badge>
-                  </div>
-                  <div style={{ padding: '0 8px' }}>
-                      <Slider
-                          min={2000}
-                          max={15000}
-                          step={500}
-                          value={config.carouselInterval || 8000}
-                          onChange={handleCarouselIntervalChange}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: "var(--colorNeutralForeground4)", fontSize: "10px", marginTop: '4px' }}>
-                          <span>{t('settings.fastest')}</span>
-                          <span>{t('settings.slowest')}</span>
-                      </div>
-                  </div>
-              </div>
-
-            {/* 首页彩带 */}
-            <div className={styles.settingTile}>
-                <div className={styles.settingRow}>
-                  <div className={styles.rowInfo}>
-                    <Text weight="semibold">{t('settings.confetti_entrance')}</Text>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Button 
-                        size="small" 
-                        appearance="subtle" 
-                        icon={<Sparkle20Regular />} 
-                        onClick={handleTestConfetti}
-                    >
-                      {t('settings.test')}
-                    </Button>
-                    <Switch
-                        checked={showConfetti}
-                        onChange={(_, data) => setShowConfetti(data.checked === true)}
-                    />
-                  </div>
-                </div>
-            </div>
-          </div>
-        </Card>
-
       </div>
     </div>
   );

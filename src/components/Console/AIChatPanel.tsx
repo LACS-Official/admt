@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   makeStyles,
   tokens,
@@ -64,8 +64,8 @@ import { invoke } from "@tauri-apps/api/core";
 const useStyles = makeStyles({
   container: {
     display: "flex",
-    height: "100vh",
-    width: "100vw",
+    height: "100%",
+    width: "100%",
     backgroundColor: "var(--colorNeutralBackground1)",
     overflow: "hidden",
   },
@@ -138,13 +138,13 @@ const useStyles = makeStyles({
     overflow: "hidden",
   },
   chatHeader: {
-    padding: "8px 20px",
+    padding: "10px 24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: "var(--colorNeutralBackground1)",
-    minHeight: "50px",
+    minHeight: "52px",
     height: "auto",
     flexShrink: 0,
     flexWrap: "wrap",
@@ -154,19 +154,20 @@ const useStyles = makeStyles({
     flex: 1,
     overflowY: "auto",
     overflowX: "hidden",
-    padding: "16px",
+    padding: "20px 24px",
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "18px",
     scrollBehavior: "smooth",
     minHeight: 0,
   },
   messageGroup: {
     display: "flex",
     gap: "12px",
-    maxWidth: "70%",
+    maxWidth: "860px",
+    width: "100%",
+    margin: "0 auto",
     position: "relative",
-    width: "fit-content",
     ":hover .message-actions": {
       opacity: 1,
     },
@@ -196,44 +197,67 @@ const useStyles = makeStyles({
     alignSelf: "flex-start",
   },
   messageContent: {
-    padding: "12px 16px",
-    borderRadius: "12px",
-    fontSize: "14px",
-    lineHeight: "1.5",
+    padding: "12px 18px",
+    borderRadius: "8px",
+    fontSize: "13.5px",
+    lineHeight: "1.6",
     whiteSpace: "normal",
     wordBreak: "break-word",
-    maxWidth: "100%",
-    maxHeight: "60vh",
+    maxWidth: "82%",
+    maxHeight: "65vh",
     overflowY: "auto",
     overflowX: "hidden",
   },
   userContent: {
-    backgroundColor: tokens.colorBrandBackground,
-    color: tokens.colorNeutralForegroundOnBrand,
+    backgroundColor: "var(--colorBrandBackground2)",
+    color: "var(--colorBrandForeground1)",
+    border: `1px solid var(--colorBrandStroke2)`,
   },
   botContent: {
-    backgroundColor: tokens.colorNeutralBackground3,
-    color: tokens.colorNeutralForeground1,
+    backgroundColor: "var(--colorNeutralBackground2)",
+    color: "var(--colorNeutralForeground1)",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   inputArea: {
-    padding: "12px 20px",
-    borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
+    padding: "14px 24px 18px",
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: "var(--colorNeutralBackground1)",
     flexShrink: 0,
   },
   inputWrapper: {
     display: "flex",
-    gap: "12px",
-    alignItems: "flex-end",
-    maxWidth: "1000px",
+    flexDirection: "column",
+    gap: "8px",
+    maxWidth: "860px",
     margin: "0 auto",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: "8px",
+    padding: "10px 14px",
+    transition: "border-color 0.15s ease",
+    ":focus-within": {
+      borderColor: "var(--colorBrandStroke1)",
+    },
   },
   input: {
     flex: 1,
-    minHeight: "40px",
-    maxHeight: "150px",
-    overflow: "hidden",
+    minHeight: "44px",
+    maxHeight: "160px",
+    border: "none",
+    backgroundColor: "transparent",
+    outline: "none",
+    resize: "none",
+    fontFamily: "inherit",
+    fontSize: "13.5px",
+    color: "var(--colorNeutralForeground1)",
+    lineHeight: "1.5",
+  },
+  inputToolbar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: "6px",
+    borderTop: `1px solid ${tokens.colorNeutralStroke3}`,
   },
   emptyState: {
     flex: 1,
@@ -242,6 +266,9 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     gap: "16px",
+    maxWidth: "860px",
+    width: "100%",
+    margin: "0 auto",
     color: tokens.colorNeutralForeground4,
   },
   footer: {
@@ -1627,7 +1654,7 @@ ${slicedLogs}
                                         justifyContent: "space-between", 
                                         alignItems: "center", 
                                         padding: "4px 8px", 
-                                        backgroundColor: tokens.colorNeutralBackground3,
+                                        backgroundColor: "var(--colorNeutralBackground3)",
                                         borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
                                       }}>
                                         <Text size={200} style={{ fontFamily: "monospace" }}>
@@ -1710,18 +1737,19 @@ ${slicedLogs}
                   flexWrap: "wrap",
                   gap: "8px",
                   marginBottom: "8px",
-                  padding: "4px 0"
+                  maxWidth: "860px",
+                  margin: "0 auto 8px",
                 }}>
                   {attachedFiles.map((file, idx) => (
                     <div key={idx} style={{
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: "4px 10px",
-                      backgroundColor: tokens.colorNeutralBackground3,
-                      border: `1px solid ${tokens.colorNeutralStroke1}`,
+                      padding: "4px 8px",
+                      backgroundColor: "var(--colorNeutralBackground3)",
                       borderRadius: "6px",
                       fontSize: "12px",
+                      border: `1px solid var(--colorNeutralStroke2)`,
                     }}>
                       <span style={{
                         maxWidth: "180px",
@@ -1729,7 +1757,7 @@ ${slicedLogs}
                         overflow: "hidden",
                         textOverflow: "ellipsis"
                       }} title={file.path}>
-                         {file.name}
+                        {file.name}
                       </span>
                       <Button
                         size="small"
@@ -1742,75 +1770,87 @@ ${slicedLogs}
                   ))}
                 </div>
               )}
+
               <div className={styles.inputWrapper}>
-                {selectedDevice && (
-                  <Tooltip content="抓取 Logcat 并诊断崩溃" relationship="label">
-                    <Button
-                      icon={<Sparkle24Regular />}
-                      appearance="outline"
-                      size="large"
-                      onClick={handleLogcatDiagnose}
-                      disabled={isLoading}
-                    />
-                  </Tooltip>
-                )}
-                <Tooltip content="AI Skills 专家提示词库" relationship="label">
-                  <Button
-                    icon={<Sparkle24Regular />}
-                    appearance="outline"
-                    size="large"
-                    onClick={() => setIsSkillsModalOpen(true)}
-                  >
-                    Skills 专家
-                  </Button>
-                </Tooltip>
-                <Tooltip content="MCP 工具箱 (手动调试与调用)" relationship="label">
-                  <Button
-                    icon={<Server24Regular />}
-                    appearance="outline"
-                    size="large"
-                    onClick={() => setIsMcpToolModalOpen(true)}
-                  >
-                    MCP 工具
-                  </Button>
-                </Tooltip>
-                <Tooltip content="添加文本/日志文件附件 (限制 2MB)" relationship="label">
-                  <Button
-                    icon={<DocumentAdd24Regular />}
-                    appearance="outline"
-                    size="large"
-                    onClick={handleUploadFile}
-                    disabled={isLoading}
-                  />
-                </Tooltip>
                 <Textarea
                   ref={textareaRef}
                   className={styles.input}
-                  placeholder="向 AI 玩机助手提问，或上传日志文件进行分析..."
+                  placeholder="输入问题或需求，支持自动生成并执行 ADB/Fastboot 指令..."
                   value={inputValue}
                   onChange={(e, data) => setInputValue(data.value)}
                   onKeyDown={handleKeyPress}
-                  size="large"
+                  size="medium"
                   resize="none"
-                  style={{ minHeight: '40px' }}
                   textarea={{
                     style: {
-                      overflowX: "hidden",
-                      overflowY: "hidden",
+                      border: "none",
+                      backgroundColor: "transparent",
+                      padding: "4px 0",
                     }
                   }}
                 />
-                <Button 
-                  icon={<Send24Regular />} 
-                  appearance="primary" 
-                  size="large"
-                  onClick={handleSendMessage}
-                  disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
-                />
-              </div>
-              <div className={styles.footer} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
-                <span>AI 助手是由大语言模型驱动的，可能会产生错误。</span>
-                <span style={{ opacity: 0.8 }}>Enter 发送 / Shift + Enter 换行</span>
+
+                <div className={styles.inputToolbar}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    {selectedDevice && (
+                      <Tooltip content="抓取 Logcat 并自动诊断" relationship="label">
+                        <Button
+                          icon={<Sparkle24Regular />}
+                          appearance="subtle"
+                          size="small"
+                          onClick={handleLogcatDiagnose}
+                          disabled={isLoading}
+                        >
+                          Logcat
+                        </Button>
+                      </Tooltip>
+                    )}
+                    <Tooltip content="专家提示词库" relationship="label">
+                      <Button
+                        icon={<Sparkle24Regular />}
+                        appearance="subtle"
+                        size="small"
+                        onClick={() => setIsSkillsModalOpen(true)}
+                      >
+                        Skills
+                      </Button>
+                    </Tooltip>
+                    <Tooltip content="MCP 工具箱" relationship="label">
+                      <Button
+                        icon={<Server24Regular />}
+                        appearance="subtle"
+                        size="small"
+                        onClick={() => setIsMcpToolModalOpen(true)}
+                      >
+                        MCP
+                      </Button>
+                    </Tooltip>
+                    <Tooltip content="添加文件附件 (日志/脚本)" relationship="label">
+                      <Button
+                        icon={<DocumentAdd24Regular />}
+                        appearance="subtle"
+                        size="small"
+                        onClick={handleUploadFile}
+                        disabled={isLoading}
+                      />
+                    </Tooltip>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "11px", color: "var(--colorNeutralForeground4)" }}>
+                      Enter 发送 / Shift+Enter 换行
+                    </span>
+                    <Button 
+                      icon={<Send24Regular />} 
+                      appearance="primary" 
+                      size="medium"
+                      onClick={handleSendMessage}
+                      disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
+                    >
+                      发送
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </>

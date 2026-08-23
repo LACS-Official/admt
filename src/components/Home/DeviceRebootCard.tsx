@@ -81,8 +81,7 @@ const useStyles = makeStyles({
     position: "relative",
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground2Hover)",
-      transform: "translateY(-1px)",
-      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+      borderColor: "var(--colorNeutralStroke1Hover)",
     },
   },
   rebootOptionPending: {

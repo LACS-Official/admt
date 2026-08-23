@@ -61,9 +61,8 @@ const useStyles = makeStyles({
       margin: "0 3px",
 
       "&:hover": {
-        backgroundColor: "var(--colorNeutralBackground2)",
+        backgroundColor: "var(--colorNeutralBackground1Hover)",
         color: "var(--colorNeutralForeground1)",
-        transform: "translateY(-1px)",
       },
 
       "&[aria-selected='true']": {

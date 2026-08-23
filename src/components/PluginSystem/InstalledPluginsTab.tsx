@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   makeStyles,
   shorthands,
@@ -94,12 +94,10 @@ const useStyles = makeStyles({
     gap: "12px",
     position: "relative",
     cursor: "pointer",
-    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
+    transition: "all 0.15s ease",
     "&:hover": {
-      boxShadow: "0 6px 16px rgba(0, 0, 0, 0.08)",
-      ...shorthands.borderColor("var(--colorBrandStroke2)"),
-      transform: "translateY(-1px)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
     },
   },
   pluginCardDisabled: {
@@ -107,8 +105,8 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground2)",
     cursor: "default",
     "&:hover": {
-      transform: "none",
-      boxShadow: "none",
+      backgroundColor: "var(--colorNeutralBackground2)",
+      borderColor: "var(--colorNeutralStroke2)",
     },
   },
   cardHeader: {
@@ -346,11 +344,11 @@ const InstalledPluginsTab: React.FC<Props> = ({ onGoToStore, onGoToImport }) => 
                 resetToBuiltinPlugins();
                 setStatusBarMessage({
                   type: "success",
-                  message: "已重置并载入 14 款官方精选生活/开发/常用内置插件",
+                  message: "已重置插件列表状态",
                 });
               }}
             >
-              重置预置
+              清空重置
             </Button>
           </Tooltip>
         </div>
@@ -361,21 +359,11 @@ const InstalledPluginsTab: React.FC<Props> = ({ onGoToStore, onGoToImport }) => 
         <div className={styles.emptyBox}>
           <AppsAddIn24Regular style={{ fontSize: "44px", color: "var(--colorBrandForeground1)" }} />
           <Text weight="bold" size={400}>
-            {t("plugin_system.installed.empty_title", "暂无符合条件的插件")}
+            {t("plugin_system.installed.empty_title", "暂无已安装的扩展插件")}
           </Text>
           <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-            可点击右上角「重置预置」快速载入 14 款官方内置生活、开发与常用工具插件
+            插件系统处于开发者预览阶段，支持导入自定义扩展包（manifest.json）或按照规范进行本地开发
           </Text>
-          <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
-            <Button appearance="primary" icon={<ArrowReset24Regular />} onClick={resetToBuiltinPlugins}>
-              重置载入内置插件
-            </Button>
-            {onGoToStore && (
-              <Button appearance="secondary" onClick={onGoToStore}>
-                前往插件商店
-              </Button>
-            )}
-          </div>
         </div>
       ) : (
         <div className={styles.pluginGrid}>
