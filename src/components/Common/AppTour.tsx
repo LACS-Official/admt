@@ -162,15 +162,6 @@ const AppTour: React.FC<AppTourProps> = ({ runTour, mode = 'detailed', onTourEnd
                     }
                 },
                 {
-                    element: '#tour-header-settings',
-                    popover: {
-                        title: t('tour.header_settings_title', '快捷设置'),
-                        description: t('tour.header_settings_desc', '在任何界面都可通过此图标快速进入设置中心，调整应用配置。'),
-                        side: "bottom",
-                        align: 'end'
-                    }
-                },
-                {
                     element: '#tour-search-button',
                     popover: {
                         title: t('tour.search_button_title', '全局搜索'),

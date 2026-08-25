@@ -1,7 +1,3 @@
-/*
-AdbToolsPanel.tsx
-这是 ADB 工具面板组件
-*/
 import React, {
   useState,
   useEffect,
@@ -11,9 +7,8 @@ import React, {
 } from "react";
 import {
   makeStyles,
+  mergeClasses,
   Text,
-  Card,
-  Field,
   Input,
   Button,
   Dialog,
@@ -22,21 +17,23 @@ import {
   DialogBody,
   DialogSurface,
   DialogActions,
+  Field,
+  Tooltip,
 } from "@fluentui/react-components";
 import {
-  Play24Regular,
-  Delete24Regular,
-  Copy24Regular,
-  Search24Regular,
-  ChevronDown24Regular,
-  Edit24Regular,
-  Add24Regular,
-  Save24Regular,
-  Bot24Regular,
-  Sparkle24Regular,
+  Play20Regular,
+  Delete20Regular,
+  Copy20Regular,
+  Checkmark20Regular,
+  Search20Regular,
+  ChevronDown16Regular,
+  Edit20Regular,
+  Add20Regular,
+  Save20Regular,
+  Dismiss20Regular,
+  Apps20Regular,
 } from "@fluentui/react-icons";
-import { emit, listen } from "@tauri-apps/api/event";
-import { windowService } from "../../services/windowService";
+import { listen } from "@tauri-apps/api/event";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { DeviceInfo, DeviceMode } from "../../types/device";
@@ -47,351 +44,348 @@ import {
   AdbCommandsConfig,
   AdbCommand,
   CommandCategory,
-  flattenCommands,
   filterCommandsBySearchTerm,
-} from "../../utils/configLoader";
-import { useAppStore } from "../../stores/appStore";
-import {
   loadFastbootCommandsConfig,
   saveFastbootCommandsConfig,
   watchFastbootConfigFile,
 } from "../../utils/configLoader";
+import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
-    height: "100%",
-    overflow: "hidden", // 修改为hidden，防止整个页面滚动
-  },
-  mainCard: {
-    height: "100%",
     display: "flex",
     flexDirection: "column",
+    height: "100%",
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "16px 20px",
+    gap: "12px",
+    backgroundColor: "var(--colorNeutralBackground1)",
     overflow: "hidden",
   },
-  cardContent: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
-    gap: "16px",
-  },
-  controlsSection: {
-    height: "30%",
-    minHeight: "100px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    overflow: "hidden",
-    border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "8px",
-    padding: "8px",
-  },
-  topControlsRow: {
-    display: "flex",
-    gap: "12px",
-    alignItems: "flex-end",
-    flexShrink: 0,
-  },
-  commandInputContainer: {
-    flex: 1,
-    display: "flex",
-    gap: "8px",
-  },
-  commandInputField: {
-    flex: 1,
-  },
-  quickCommandButton: {
-    whiteSpace: "nowrap",
-  },
-  searchAndActionsRow: {
+  // Top Header / Toolbar
+  header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "nowrap",
+    gap: "12px",
     flexShrink: 0,
   },
-  searchContainer: {
-    flex: 1,
-    width: "400px",
-  },
-  actionButtons: {
+  headerLeft: {
     display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  title: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
+    letterSpacing: "-0.01em",
+  },
+  modeBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "3px 10px",
+    borderRadius: "9999px",
+    fontSize: "11px",
+    fontWeight: "600",
+    letterSpacing: "0.02em",
+  },
+  modeBadgeAdb: {
+    backgroundColor: "rgba(0, 113, 227, 0.1)",
+    color: "#0071e3",
+    border: "1px solid rgba(0, 113, 227, 0.2)",
+  },
+  modeBadgeFastboot: {
+    backgroundColor: "rgba(139, 92, 246, 0.1)",
+    color: "#8b5cf6",
+    border: "1px solid rgba(139, 92, 246, 0.2)",
+  },
+  // Device Selector Dropdown Button
+  deviceSelectorWrapper: {
+    position: "relative",
+  },
+  deviceSelectorBtn: {
+    display: "inline-flex",
+    alignItems: "center",
     gap: "8px",
-  },
-  outputSection: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    minHeight: "380px",
-    height: "380px",
-    maxHeight: "380px",
-  },
-  outputContainer: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
+    height: "32px",
+    padding: "0 12px",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
-    overflow: "hidden",
-    height: "100%", // 确保容器占满整个输出区域
-  },
-  outputContent: {
-    flex: 1,
-    overflow: "auto", // 保持滚动功能
-    padding: "8px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    height: "100%", // 确保内容区域占满容器
-    "& pre": {
-      margin: 0,
-      fontFamily: '"Cascadia Code", Consolas, monospace',
-      fontSize: "13px",
-      lineHeight: "1.5",
-      whiteSpace: "pre-wrap",
-      wordBreak: "break-word",
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground1)",
+    cursor: "pointer",
+    userSelect: "none",
+    transition: "all 0.15s ease",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground3)",
+      borderColor: "var(--colorNeutralStroke1)",
     },
   },
-  dialogBody: {
-    maxHeight: "60vh",
+  statusDot: {
+    width: "7px",
+    height: "7px",
+    borderRadius: "50%",
+    flexShrink: 0,
+  },
+  deviceDropdownMenu: {
+    position: "absolute",
+    top: "calc(100% + 4px)",
+    left: 0,
+    minWidth: "260px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "10px",
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+    zIndex: 1000,
+    maxHeight: "300px",
     overflowY: "auto",
+    padding: "4px",
+  },
+  deviceDropdownItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "12px",
+    transition: "background-color 0.12s ease",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2)",
+    },
+  },
+  deviceDropdownItemSelected: {
+    backgroundColor: "var(--colorNeutralBackground3)",
+    fontWeight: "600",
+  },
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  actionBtn: {
+    minWidth: "32px",
+    height: "32px",
+    padding: "0 8px",
+    borderRadius: "8px",
+    color: "var(--colorNeutralForeground2)",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground3)",
+      color: "var(--colorNeutralForeground1)",
+    },
+  },
+  actionBtnActive: {
+    backgroundColor: "rgba(0, 113, 227, 0.12)",
+    color: "#0071e3",
+  },
+
+  // Terminal Window Container
+  terminalCard: {
+    display: "flex",
+    flexDirection: "column",
+    flex: "1 1 0",
+    minHeight: 0,
+    backgroundColor: "var(--colorNeutralBackground2)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "14px",
+    overflow: "hidden",
+  },
+  // Inline Search Bar inside Terminal
+  searchToolbar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "6px 12px",
+    borderBottom: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    gap: "8px",
+  },
+  searchInput: {
+    flex: 1,
+    maxWidth: "320px",
+    height: "28px",
+    fontSize: "12px",
+  },
+  searchMatchesText: {
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground3)",
+  },
+
+  // Terminal Screen (Log & Output Stream)
+  terminalScreen: {
+    flex: "1 1 0",
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "auto",
+    padding: "12px 14px",
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'Cascadia Code', monospace",
+    fontSize: "12.5px",
+    lineHeight: "1.55",
+    color: "var(--colorNeutralForeground1)",
+    userSelect: "text",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+  },
+  terminalIntro: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    color: "var(--colorNeutralForeground3)",
+    padding: "20px 8px",
+    fontSize: "12px",
+  },
+  terminalIntroTitle: {
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground2)",
+  },
+
+  // Bottom Command Prompt Input Bar
+  promptBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 12px",
+    borderTop: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+  },
+  promptPrefix: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground3)",
+    userSelect: "none",
+    flexShrink: 0,
+  },
+  promptPrefixTarget: {
+    color: "#0071e3",
+  },
+  commandInput: {
+    flex: 1,
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+    fontSize: "12.5px",
+  },
+  runButton: {
+    height: "32px",
+    padding: "0 14px",
+    borderRadius: "8px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+
+  // Quick Command Modal Grid & Cards
+  dialogBody: {
+    maxHeight: "65vh",
+    overflowY: "auto",
+    padding: "8px 0",
+  },
+  categorySection: {
+    marginBottom: "18px",
   },
   categoryHeader: {
-    padding: "8px 12px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    fontWeight: "600",
-    fontSize: "14px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "6px 10px",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "8px",
     marginBottom: "8px",
-    borderRadius: "4px",
+  },
+  categoryTitle: {
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
   },
   commandGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
     gap: "8px",
-    padding: "8px 0",
   },
-  commandItem: {
-    padding: "10px 12px",
-    border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
-    cursor: "pointer",
+  commandCard: {
     display: "flex",
     flexDirection: "column",
+    padding: "10px 12px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "10px",
+    transition: "all 0.15s ease",
     "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground2)",
+      borderColor: "var(--colorNeutralStroke1)",
+      backgroundColor: "var(--colorNeutralBackground3)",
     },
   },
-  selectedCommandItem: {
-    backgroundColor: "var(--colorBrandBackground)",
-  },
-  searchMatchesInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  commandLabel: {
+  commandCardLabel: {
+    fontSize: "13px",
     fontWeight: "600",
-    fontSize: "14px",
+    color: "var(--colorNeutralForeground1)",
     marginBottom: "4px",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  commandText: {
-    fontFamily: '"Cascadia Code", Consolas, monospace',
-    fontSize: "12px",
-    color: "var(--colorNeutralForeground2)",
-    marginBottom: "4px",
+  commandCardCode: {
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+    fontSize: "11px",
+    color: "#0071e3",
+    backgroundColor: "rgba(0, 113, 227, 0.06)",
+    padding: "2px 6px",
+    borderRadius: "4px",
+    marginBottom: "6px",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  commandDescription: {
-    fontSize: "12px",
+  commandCardDesc: {
+    fontSize: "11px",
     color: "var(--colorNeutralForeground3)",
     marginBottom: "8px",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+    lineHeight: "1.4",
   },
-  commandButtons: {
+  commandCardFooter: {
     display: "flex",
-    gap: "4px",
+    alignItems: "center",
+    gap: "6px",
     marginTop: "auto",
-  },
-  executeButton: {
-    flex: 1,
-  },
-  editButton: {
-    flex: 1,
-  },
-  deleteButton: {
-    flex: 1,
-  },
-  deviceAndButtonsRow: {
-    display: "flex",
-    alignItems: "flex-end",
-    gap: "16px",
-    marginBottom: "12px",
-    borderRadius: "8px",
-  },
-  buttonsContainer: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-  },
-  commandInputRow: {
-    width: "100%",
-  },
-  deviceSelectorContainer: {
-    width: "400px",
-    position: "relative",
-  },
-  deviceSelector: {
-    position: "relative",
-    width: "100%",
-  },
-  deviceDropdown: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    backgroundColor: "var(--colorNeutralBackground1)",
-    border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-    zIndex: 1000,
-    maxHeight: "400px",
-    overflowY: "auto",
-    marginTop: "4px",
-  },
-  deviceDropdownItem: {
-    padding: "8px 12px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    borderBottom: "1px solid var(--colorNeutralStroke1)",
-    "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground2)",
-    },
-    "&:last-child": {
-      borderBottom: "none",
-    },
   },
 });
 
-// 添加全局样式来支持高亮显示
-const globalStyles = `
-  .highlighted-text {
-    background-color: #ffff00;
-    color: #000000;
-    font-weight: bold;
-  }
-  .current-match {
-    background-color: #ff6b35;
-    color: #ffffff;
-    font-weight: bold;
-    box-shadow: 0 0 4px rgba(255, 107, 53, 0.5);
-  }
-`;
-
-// 注入全局样式
-if (typeof document !== "undefined") {
-  const styleElement = document.createElement("style");
-  styleElement.textContent = globalStyles;
-  if (!document.head.querySelector("style[data-highlight-styles]")) {
-    styleElement.setAttribute("data-highlight-styles", "true");
-    document.head.appendChild(styleElement);
-  }
-}
-
-const CommandExecutePanel: React.FC = () => {
+export const CommandExecutePanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { devices, selectedDevice, selectDevice } = useDeviceStore();
-  const { deviceService, startScanning } = useDeviceService();
-  const { setStatusBarMessage, config } = useAppStore();
+  const { deviceService } = useDeviceService();
+  const { setStatusBarMessage } = useAppStore();
 
-  // 获取设备显示名称
   const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState(false);
-  const getDeviceDisplayName = (device: DeviceInfo) => {
-    if (!device) return t("command_panel.device_unknown");
-
-    const { properties, mode, serial } = device;
-
-    // 优先使用品牌+型号，其次使用设备代号，最后使用序列号
-
-    return serial;
-  };
-
-  // 获取设备模式显示文本
-  const getDeviceModeText = (mode: DeviceMode) => {
-    switch (mode) {
-      case "sys":
-        return t("command_panel.mode_sys");
-      case "rec":
-        return t("command_panel.mode_rec");
-      case "fastboot":
-        return t("command_panel.mode_fastboot");
-      case "fastbootd":
-        return t("command_panel.mode_fastbootd");
-      case "sideload":
-        return t("command_panel.mode_sideload");
-      case "edl":
-        return t("command_panel.mode_edl");
-      case "unauthorized":
-        return t("command_panel.mode_unauthorized");
-      case "offline":
-        return t("command_panel.mode_offline");
-      default:
-        return t("command_panel.mode_unknown");
-    }
-  };
-
-  // 获取设备状态颜色
-  const getDeviceStatusColor = (device: DeviceInfo) => {
-    if (!device.connected) return "#999";
-
-    switch (device.mode) {
-      case "sys":
-        return "#4CAF50"; // 绿色
-      case "rec":
-        return "#FF9800"; // 橙色
-      case "fastboot":
-      case "fastbootd":
-        return "#2196F3"; // 蓝色
-      case "sideload":
-        return "#9C27B0"; // 紫色
-      case "edl":
-        return "#F44336"; // 红色
-      case "unauthorized":
-        return "#FF5722"; // 深橙色
-      case "offline":
-        return "#607D8B"; // 蓝灰色
-      default:
-        return "#9E9E9E"; // 灰色
-    }
-  };
-
   const [command, setCommand] = useState("");
   const [output, setOutput] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [isQuickCommandDialogOpen, setIsQuickCommandDialogOpen] =
-    useState(false);
-  const [dialogSearchTerm, setDialogSearchTerm] = useState("");
-  const [commandsConfig, setCommandsConfig] =
-    useState<AdbCommandsConfig | null>(null);
-  const [, setConfigLoading] = useState(true);
 
-  // 统一面板相关状态
-  const [isUnifiedPanelOpen, setIsUnifiedPanelOpen] = useState(false);
-  const [unifiedPanelSearchTerm, setUnifiedPanelSearchTerm] = useState("");
+  // Command history
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
-  // 编辑相关状态
+  // Quick commands modal & config
+  const [isQuickCommandDialogOpen, setIsQuickCommandDialogOpen] = useState(false);
+  const [quickCmdSearch, setQuickCmdSearch] = useState("");
+  const [commandsConfig, setCommandsConfig] = useState<AdbCommandsConfig | null>(null);
+
+  // Edit / Add command dialog
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCommand, setEditingCommand] = useState<AdbCommand | null>(null);
-  const [editingCategory, setEditingCategory] =
-    useState<CommandCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<CommandCategory | null>(null);
   const [isAddingNewCommand, setIsAddingNewCommand] = useState(false);
   const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -405,166 +399,160 @@ const CommandExecutePanel: React.FC = () => {
     name: "",
     description: "",
   });
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
-  const outputRef = useRef<HTMLPreElement>(null);
+  const [isCopiedOutput, setIsCopiedOutput] = useState(false);
+  const outputScreenRef = useRef<HTMLDivElement>(null);
+  const deviceDropdownRef = useRef<HTMLDivElement>(null);
 
-  // 加载配置文件 - 根据设备模式决定加载哪个配置
+  // Device mode & status helpers
+  const isFastbootMode =
+    selectedDevice?.mode === "fastboot" || selectedDevice?.mode === "fastbootd";
+
+  const getDeviceDisplayName = (device: DeviceInfo | null) => {
+    if (!device) return t("command_panel.device_unknown", "未知设备");
+    return device.properties?.model || device.serial;
+  };
+
+  const getDeviceModeLabel = (mode?: DeviceMode) => {
+    switch (mode) {
+      case "sys":
+        return "系统模式";
+      case "rec":
+        return "Recovery";
+      case "fastboot":
+        return "Fastboot";
+      case "fastbootd":
+        return "Fastbootd";
+      case "sideload":
+        return "Sideload";
+      case "edl":
+        return "EDL";
+      case "unauthorized":
+        return "未授权";
+      case "offline":
+        return "离线";
+      default:
+        return "未知状态";
+    }
+  };
+
+  const getDeviceStatusColor = (device?: DeviceInfo | null) => {
+    if (!device || !device.connected) return "#9ca3af";
+    switch (device.mode) {
+      case "sys":
+        return "#10b981"; // green
+      case "rec":
+        return "#f59e0b"; // amber
+      case "fastboot":
+      case "fastbootd":
+        return "#8b5cf6"; // purple
+      case "sideload":
+        return "#06b6d4"; // cyan
+      case "edl":
+      case "unauthorized":
+        return "#ef4444"; // red
+      default:
+        return "#6b7280";
+    }
+  };
+
+  // Close device dropdown on outer click
   useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        deviceDropdownRef.current &&
+        !deviceDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsDeviceDropdownOpen(false);
+      }
+    };
+    if (isDeviceDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isDeviceDropdownOpen]);
+
+  // Load config & watch changes
+  useEffect(() => {
+    let stopWatching: (() => void) | undefined;
+
     const loadConfig = async () => {
       try {
-        setConfigLoading(true);
-        // 根据当前选中的设备模式决定加载哪个配置
-        const isFastbootMode =
-          selectedDevice?.mode === "fastboot" ||
-          selectedDevice?.mode === "fastbootd";
-
-        let config;
+        let conf;
         if (isFastbootMode) {
-          config = await loadFastbootCommandsConfig();
+          conf = await loadFastbootCommandsConfig();
+          stopWatching = await watchFastbootConfigFile((newConf) => {
+            setCommandsConfig(newConf);
+          });
         } else {
-          config = await loadAdbCommandsConfig();
+          conf = await loadAdbCommandsConfig();
+          stopWatching = await watchConfigFile((newConf) => {
+            setCommandsConfig(newConf);
+          });
         }
-
-        setCommandsConfig(config);
-      } catch (error) {
-        console.error("加载命令配置失败:", error);
-      } finally {
-        setConfigLoading(false);
+        setCommandsConfig(conf);
+      } catch (err) {
+        console.error("加载命令配置失败:", err);
       }
     };
 
     loadConfig();
 
-    // 启动文件监听
-    let stopWatching: (() => void) | undefined;
-
-    const startWatching = async () => {
-      try {
-        // 根据当前选中的设备模式决定监听哪个配置文件
-        const isFastbootMode =
-          selectedDevice?.mode === "fastboot" ||
-          selectedDevice?.mode === "fastbootd";
-
-        if (isFastbootMode) {
-          stopWatching = await watchFastbootConfigFile((newConfig) => {
-            console.log("Fastboot配置文件已更新，重新加载配置");
-            setCommandsConfig(newConfig);
-            setStatusBarMessage({
-              type: "info",
-              message: t("command_panel.config_updated", { type: "Fastboot" }),
-            });
-          });
-        } else {
-          stopWatching = await watchConfigFile((newConfig) => {
-            console.log("ADB配置文件已更新，重新加载配置");
-            setCommandsConfig(newConfig);
-            setStatusBarMessage({
-              type: "info",
-              message: t("command_panel.config_updated", { type: "ADB" }),
-            });
-          });
-        }
-      } catch (error) {
-        console.error("启动文件监听失败:", error);
-      }
-    };
-
-    startWatching();
-
-    // 清理函数
     return () => {
-      if (stopWatching) {
-        stopWatching();
-      }
+      if (stopWatching) stopWatching();
     };
-  }, [setStatusBarMessage, selectedDevice?.mode]);
+  }, [isFastbootMode]);
 
-  // 新增：监听从AI助手发过来的代码运行请求
+  // Listen for AI assistant command triggers
   useEffect(() => {
     const setupListener = async () => {
-      const unlisten = await listen<{ command: string }>("execute-command-from-ai", (event) => {
-        if (event.payload && event.payload.command) {
-          let aiCmd = event.payload.command.trim();
-          
-          // 如果命令以 adb 或 fastboot 开头，去掉它（因为 executeCommand 会自动补充并添加设备号）
-          if (aiCmd.startsWith("adb ")) {
-            aiCmd = aiCmd.substring(4).trim();
-          } else if (aiCmd.startsWith("fastboot ")) {
-            aiCmd = aiCmd.substring(9).trim();
+      const unlisten = await listen<{ command: string }>(
+        "execute-command-from-ai",
+        (event) => {
+          if (event.payload && event.payload.command) {
+            let aiCmd = event.payload.command.trim();
+            if (aiCmd.startsWith("adb ")) aiCmd = aiCmd.substring(4).trim();
+            else if (aiCmd.startsWith("fastboot ")) aiCmd = aiCmd.substring(9).trim();
+            aiCmd = aiCmd.replace(/^-s\s+(?:"[^"]*"|\S+)\s+/, "");
+            executeCommand(aiCmd);
           }
-
-          // 进一步清理 AI 可能包含的 -s <serial> 
-          aiCmd = aiCmd.replace(/^-s\s+(?:"[^"]*"|\S+)\s+/, "");
-
-          executeCommand(aiCmd);
         }
-      });
+      );
       return unlisten;
     };
-    
+
     let unlistenFn: (() => void) | undefined;
-    setupListener().then(fn => unlistenFn = fn);
+    setupListener().then((fn) => (unlistenFn = fn));
 
     return () => {
       if (unlistenFn) unlistenFn();
     };
-  }, [selectedDevice]); 
+  }, [selectedDevice]);
 
-  // 加载配置文件
-  useEffect(() => {
-    loadAdbCommandsConfig();
-  }, []);
-
-  // 监听设备状态变化，确保设备列表为空时清除选中设备
+  // Sync selected device automatically if list changes
   useEffect(() => {
     if (devices.length === 0 && selectedDevice) {
-      // 设备列表为空，清除选中的设备
       selectDevice(null);
-      setStatusBarMessage({
-        type: "warning",
-        message: t("command_panel.device_disconnected"),
-      });
     } else if (devices.length > 0 && !selectedDevice) {
-      // 有设备但没有选中
-      if (devices.length === 1) {
-        // 只有一个设备，自动选择
-        selectDevice(devices[0]);
-        setStatusBarMessage({
-          type: "success",
-          message: t("command_panel.device_auto_selected", {
-            name: getDeviceDisplayName(devices[0]),
-          }),
-        });
-      } else {
-        // 多个设备，提示用户选择
-        setStatusBarMessage({
-          type: "info",
-          message: t("command_panel.device_select_prompt", {
-            count: devices.length,
-          }),
-        });
-      }
+      selectDevice(devices[0]);
     }
-  }, [devices, selectedDevice, selectDevice, setStatusBarMessage]);
+  }, [devices, selectedDevice, selectDevice]);
 
-  // 处理对话框打开状态变化的函数
-  const handleDialogOpenChange = (isOpen: boolean) => {
-    setIsQuickCommandDialogOpen(isOpen);
-  };
-
-  // 计算匹配项数量和位置
-  const searchMatches = useMemo<
-    Array<{ index: number; text: string; length: number }>
-  >(() => {
-    if (!searchTerm.trim() || !output) {
-      return [];
+  // Auto scroll output screen to bottom
+  useEffect(() => {
+    if (outputScreenRef.current) {
+      outputScreenRef.current.scrollTop = outputScreenRef.current.scrollHeight;
     }
+  }, [output]);
+
+  // Search match calculations
+  const searchMatches = useMemo(() => {
+    if (!searchTerm.trim() || !output) return [];
     const regex = new RegExp(
       searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-      "gi",
+      "gi"
     );
-    const matches = [];
+    const matches: Array<{ index: number; text: string; length: number }> = [];
     let match;
     while ((match = regex.exec(output)) !== null) {
       matches.push({
@@ -576,201 +564,84 @@ const CommandExecutePanel: React.FC = () => {
     return matches;
   }, [output, searchTerm]);
 
-  // 获取扁平化的命令列表
-  const allCommands = useMemo(() => {
+  // Filtered quick commands
+  const filteredCategories = useMemo(() => {
     if (!commandsConfig) return [];
-    return flattenCommands(commandsConfig.categories);
-  }, [commandsConfig]);
+    return filterCommandsBySearchTerm(commandsConfig.categories, quickCmdSearch);
+  }, [commandsConfig, quickCmdSearch]);
 
-  // 获取过滤后的命令分类
-  const filteredCommands = useMemo(() => {
-    if (!commandsConfig) return [];
-    return filterCommandsBySearchTerm(
-      commandsConfig.categories,
-      dialogSearchTerm,
-    );
-  }, [commandsConfig, dialogSearchTerm]);
+  // Execute Command
+  const executeCommand = async (cmdToRun?: string) => {
+    const rawCmd = (cmdToRun !== undefined ? cmdToRun : command).trim();
 
-  // 获取统一面板过滤后的命令分类
-  const unifiedPanelFilteredCommands = useMemo(() => {
-    if (!commandsConfig) return [];
-    return filterCommandsBySearchTerm(
-      commandsConfig.categories,
-      unifiedPanelSearchTerm,
-    );
-  }, [commandsConfig, unifiedPanelSearchTerm]);
-
-  // 处理搜索高亮显示
-  const highlightedOutput = useMemo(() => {
-    if (!searchTerm.trim() || !output || searchMatches.length === 0) {
-      return output;
-    }
-
-    let result = output;
-    let offset = 0;
-
-    searchMatches.forEach((match, index) => {
-      const isCurrentMatch = index === currentMatchIndex;
-      const className = isCurrentMatch ? "current-match" : "highlighted-text";
-      const id = isCurrentMatch
-        ? "current-search-match"
-        : `search-match-${index}`;
-
-      const before = result.substring(0, match.index + offset);
-      const matchText = result.substring(
-        match.index + offset,
-        match.index + offset + match.length,
-      );
-      const after = result.substring(match.index + offset + match.length);
-
-      const replacement = `<mark class="${className}" id="${id}">${matchText}</mark>`;
-      result = before + replacement + after;
-
-      offset += replacement.length - match.length;
-    });
-
-    return result;
-  }, [output, searchTerm, searchMatches, currentMatchIndex]);
-
-  // 搜索导航功能
-  const navigateToMatch = useCallback(() => {
-    if (searchMatches.length === 0) return;
-
-    // 循环导航到下一个匹配项
-    const nextIndex = (currentMatchIndex + 1) % searchMatches.length;
-    setCurrentMatchIndex(nextIndex);
-
-    // 滚动到当前匹配项
-    setTimeout(() => {
-      const currentElement = document.getElementById("current-search-match");
-      if (currentElement && outputRef.current) {
-        currentElement.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest",
-        });
-      }
-    }, 100);
-  }, [searchMatches.length, currentMatchIndex]);
-
-  // 重置搜索状态
-  const resetSearch = useCallback(() => {
-    setCurrentMatchIndex(0);
-  }, []);
-
-  // 当搜索词改变时重置索引
-  useEffect(() => {
-    resetSearch();
-  }, [searchTerm, resetSearch]);
-
-  // 执行命令的通用函数
-  const executeCommand = async (cmd: string) => {
-    // Clear output immediately when starting new command
-    setOutput("");
-    setCommand(cmd);
-
-    // 检查命令是否为空
-    if (!cmd.trim()) {
+    if (!rawCmd) {
       setStatusBarMessage({
         type: "error",
-        message: t("command_panel.command_empty"),
+        message: t("command_panel.command_empty", "命令不能为空"),
       });
       return;
     }
 
-    // 检查是否有选中的设备
     if (!selectedDevice) {
       setStatusBarMessage({
         type: "error",
-        message: t("command_panel.select_device_first"),
+        message: t("command_panel.select_device_first", "请先选择一个设备"),
       });
-      setOutput(`Error: ${t("command_panel.select_device_first")}\n`);
+      setOutput((prev) => prev + `[!] 错误: 请先连接或选择目标设备\n\n`);
       return;
     }
 
+    // Save to history
+    setHistory((prev) => [rawCmd, ...prev.filter((c) => c !== rawCmd)].slice(0, 50));
+    setHistoryIndex(-1);
+    setCommand("");
     setIsExecuting(true);
 
-    // 根据设备模式决定执行哪种命令
-    const isFastbootMode =
-      selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd";
-    const commandType = isFastbootMode ? "Fastboot" : "ADB";
+    const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+    const cmdPrefix = isFastbootMode ? "fastboot" : "adb";
+    const promptHeader = `\n[${time}] $ ${cmdPrefix} -s ${selectedDevice.serial} ${rawCmd}\n`;
 
-    setStatusBarMessage({
-      type: "info",
-      message: t("command_panel.executing_command", {
-        type: commandType,
-        device: getDeviceDisplayName(selectedDevice),
-      }),
-    });
+    setOutput((prev) => prev + promptHeader);
 
     try {
-      const parts = cmd.trim().split(" ");
+      const parts = rawCmd.split(" ");
       const commandName = parts[0];
       const args = parts.slice(1);
 
-      console.log(`执行${commandType}命令:`, {
-        command: commandName,
-        args,
-        device: selectedDevice.serial,
-      });
-
       let result;
-
       if (isFastbootMode) {
-        // 使用 fastboot 命令执行
         result = await deviceService.executeFastbootCommand(
           selectedDevice.serial,
           commandName,
           args,
-          30,
+          30
         );
       } else {
-        // 使用 ADB 命令执行
         result = await deviceService.executeAdbCommand(
           selectedDevice.serial,
           commandName,
           args,
-          30,
+          30
         );
       }
 
-      const timestamp = new Date().toLocaleTimeString();
-      const deviceInfo = `[${getDeviceDisplayName(selectedDevice)}]`;
-      const commandPrefix = isFastbootMode ? "fastboot" : "adb";
-      const newOutput = `[${timestamp}] ${deviceInfo} $ ${commandPrefix} -s ${selectedDevice.serial} ${cmd}\n`;
-
       if (result.success) {
-        setOutput((prev) => prev + newOutput + result.output + "\n\n");
-        // 显示命令执行成功提示
-        const truncatedCmd =
-          cmd.length > 30 ? cmd.substring(0, 30) + "..." : cmd;
+        setOutput((prev) => prev + (result.output ? result.output.trim() + "\n" : "[执行成功，无返回内容]\n"));
         setStatusBarMessage({
           type: "success",
-          message: t("command_panel.command_executed", {
-            cmd: truncatedCmd,
-            device: getDeviceDisplayName(selectedDevice),
-          }),
+          message: `已执行: ${rawCmd}`,
         });
       } else {
-        setOutput(
-          (prev) =>
-            prev + newOutput + `错误: ${result.error || "命令执行失败"}\n\n`,
-        );
-        // 显示命令执行失败提示
+        const errorText = result.error || "命令执行失败";
+        setOutput((prev) => prev + `[ERROR] ${errorText}\n`);
         setStatusBarMessage({
           type: "error",
-          message: result.error || t("command_panel.exec_failed"),
+          message: errorText,
         });
       }
     } catch (error) {
-      console.error("执行命令出错:", error);
-      const timestamp = new Date().toLocaleTimeString();
-      const deviceInfo = `[${getDeviceDisplayName(selectedDevice)}]`;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      setOutput(
-        (prev) => prev + `[${timestamp}] ${deviceInfo} 错误: ${errorMsg}\n\n`,
-      );
-      // 显示命令执行失败提示
+      setOutput((prev) => prev + `[ERROR] ${errorMsg}\n`);
       setStatusBarMessage({
         type: "error",
         message: errorMsg,
@@ -780,813 +651,464 @@ const CommandExecutePanel: React.FC = () => {
     }
   };
 
-  // 统一面板相关函数
-  const openUnifiedPanel = () => {
-    setIsUnifiedPanelOpen(true);
-    setUnifiedPanelSearchTerm("");
+  // Keyboard navigation for history
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      executeCommand();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (history.length === 0) return;
+      const nextIndex = Math.min(historyIndex + 1, history.length - 1);
+      setHistoryIndex(nextIndex);
+      setCommand(history[nextIndex]);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (historyIndex <= 0) {
+        setHistoryIndex(-1);
+        setCommand("");
+      } else {
+        const nextIndex = historyIndex - 1;
+        setHistoryIndex(nextIndex);
+        setCommand(history[nextIndex]);
+      }
+    }
   };
 
-  const closeUnifiedPanel = () => {
-    setIsUnifiedPanelOpen(false);
-    setUnifiedPanelSearchTerm("");
-  };
+  // Copy output
+  const handleCopyOutput = useCallback(async () => {
+    if (!output) return;
+    try {
+      await navigator.clipboard.writeText(output);
+      setIsCopiedOutput(true);
+      setTimeout(() => setIsCopiedOutput(false), 2000);
+    } catch (e) {
+      console.error("复制输出失败:", e);
+    }
+  }, [output]);
 
-  // 处理命令执行
-  const handleExecuteCommand = (command: AdbCommand) => {
-    closeUnifiedPanel();
-    executeCommand(command.command);
-  };
-
-  // 处理命令编辑
-  const handleEditCommand = (
-    command: AdbCommand,
-    category: CommandCategory,
-  ) => {
-    setEditingCommand(command);
-    setEditingCategory(category);
-    setEditForm({
-      id: command.id,
-      label: command.label,
-      command: command.command,
-      description: command.description,
-    });
-    setIsAddingNewCommand(false);
-    setIsEditDialogOpen(true);
-  };
-
-  // 处理命令删除
-  const handleDeleteCommand = async (
-    command: AdbCommand,
-    category: CommandCategory,
-  ) => {
-    await deleteCommand(command, category);
-  };
-
-  const clearOutput = () => {
+  // Clear output
+  const handleClearOutput = useCallback(() => {
     setOutput("");
+  }, []);
+
+  // Quick Command Action Handlers
+  const handleRunQuickCommand = (cmd: AdbCommand) => {
+    setIsQuickCommandDialogOpen(false);
+    executeCommand(cmd.command);
   };
 
-  const copyOutput = () => {
-    navigator.clipboard.writeText(output);
-  };
-
-  // AI 助手执行
-  const handleAIChatCommand = async () => {
-    const prompt = `我需要你帮我执行 ADB 命令。我会输入自然语言，请将其转换为正确的 ADB 命令并解释。\n当前选中的设备序列号是: ${selectedDevice?.serial || "未知"}\n请在回答中直接给出命令，方便我复制，并在其后提供简单的功能说明。`;
-
-    // 发送同步事件
-    await emit("ai-prompt-sync", { prompt });
-
-    // 打开并聚焦 AI 窗口
-    await windowService.openAIChatWindow(config.theme === "dark");
-  };
-
-  // AI 解释输出
-  const handleAIExplain = async () => {
-    if (!output.trim()) return;
-
-    const prompt = `请解释以下终端输出内容：\n\n\`\`\`\n${output}\n\`\`\``;
-
-    // 发送同步事件
-    await emit("ai-prompt-sync", { prompt });
-
-    // 打开并聚焦 AI 窗口
-    await windowService.openAIChatWindow(config.theme === "dark");
-  };
-
-  // 根据搜索词过滤快捷命令
-  const getFilteredCommands = () => {
-    return filteredCommands;
-  };
-
-  // 编辑命令相关函数
-  const openEditCommandDialog = (
-    command: AdbCommand,
-    category: CommandCategory,
-  ) => {
-    setEditingCommand(command);
-    setEditingCategory(category);
+  const handleEditQuickCommand = (cmd: AdbCommand, cat: CommandCategory) => {
+    setEditingCommand(cmd);
+    setEditingCategory(cat);
     setEditForm({
-      id: command.id,
-      label: command.label,
-      command: command.command,
-      description: command.description,
+      id: cmd.id,
+      label: cmd.label,
+      command: cmd.command,
+      description: cmd.description || "",
     });
     setIsAddingNewCommand(false);
+    setIsAddingNewCategory(false);
     setIsEditDialogOpen(true);
   };
 
-  const openAddCommandDialog = (category: CommandCategory) => {
-    setEditingCategory(category);
+  const handleOpenAddCommand = (cat: CommandCategory) => {
+    setEditingCategory(cat);
     setEditForm({
-      id: "",
+      id: `cmd_${Date.now()}`,
       label: "",
       command: "",
       description: "",
     });
     setIsAddingNewCommand(true);
+    setIsAddingNewCategory(false);
     setIsEditDialogOpen(true);
   };
 
-  const openAddCategoryDialog = () => {
+  const handleOpenAddCategory = () => {
     setCategoryForm({
-      id: "",
+      id: `cat_${Date.now()}`,
       name: "",
       description: "",
     });
     setIsAddingNewCategory(true);
+    setIsAddingNewCommand(false);
     setIsEditDialogOpen(true);
   };
 
-  const closeEditDialog = () => {
-    setIsEditDialogOpen(false);
-    setEditingCommand(null);
-    setEditingCategory(null);
-    setIsAddingNewCommand(false);
-    setIsAddingNewCategory(false);
-  };
-
-  const saveCommand = async () => {
-    if (!commandsConfig || !editingCategory) return;
-
-    try {
-      const updatedConfig = { ...commandsConfig };
-      const categoryIndex = updatedConfig.categories.findIndex(
-        (cat) => cat.id === editingCategory.id,
-      );
-
-      if (categoryIndex === -1) return;
-
-      if (isAddingNewCommand) {
-        // 添加新命令
-        const newCommand: AdbCommand = {
-          id: editForm.id || `cmd_${Date.now()}`,
-          label: editForm.label,
-          command: editForm.command,
-          description: editForm.description,
-        };
-        updatedConfig.categories[categoryIndex].commands.push(newCommand);
-      } else {
-        // 更新现有命令
-        const commandIndex = updatedConfig.categories[
-          categoryIndex
-        ].commands.findIndex((cmd) => cmd.id === editingCommand?.id);
-
-        if (commandIndex !== -1) {
-          updatedConfig.categories[categoryIndex].commands[commandIndex] = {
-            ...updatedConfig.categories[categoryIndex].commands[commandIndex],
-            ...editForm,
-          };
-        }
-      }
-
-      // 根据当前设备模式决定保存到哪个配置文件
-      const isFastbootMode =
-        selectedDevice?.mode === "fastboot" ||
-        selectedDevice?.mode === "fastbootd";
-      let saveSuccess;
-
-      if (isFastbootMode) {
-        saveSuccess = await saveFastbootCommandsConfig(updatedConfig);
-      } else {
-        saveSuccess = await saveAdbCommandsConfig(updatedConfig);
-      }
-
-      if (saveSuccess) {
-        setCommandsConfig(updatedConfig);
-        closeEditDialog();
-        // 显示保存成功提示
-        setStatusBarMessage({
-          type: "success",
-          message: isAddingNewCommand ? "命令已添加" : "命令已更新",
-        });
-      } else {
-        setStatusBarMessage({
-          type: "error",
-          message: "请重试",
-        });
-      }
-    } catch (error) {
-      console.error("保存命令失败:", error);
-      setStatusBarMessage({
-        type: "error",
-        message: "请重试",
-      });
-    }
-  };
-
-  const deleteCommand = async (
-    command: AdbCommand,
-    category: CommandCategory,
-  ) => {
-    if (!commandsConfig) return;
-
-    if (confirm(`确定要删除命令"${command.label}"吗？`)) {
-      try {
-        const updatedConfig = { ...commandsConfig };
-        const categoryIndex = updatedConfig.categories.findIndex(
-          (cat) => cat.id === category.id,
-        );
-
-        if (categoryIndex === -1) return;
-
-        updatedConfig.categories[categoryIndex].commands =
-          updatedConfig.categories[categoryIndex].commands.filter(
-            (cmd) => cmd.id !== command.id,
-          );
-
-        // 根据当前设备模式决定保存到哪个配置文件
-        const isFastbootMode =
-          selectedDevice?.mode === "fastboot" ||
-          selectedDevice?.mode === "fastbootd";
-        let saveSuccess;
-
-        if (isFastbootMode) {
-          saveSuccess = await saveFastbootCommandsConfig(updatedConfig);
-        } else {
-          saveSuccess = await saveAdbCommandsConfig(updatedConfig);
-        }
-
-        if (saveSuccess) {
-          setCommandsConfig(updatedConfig);
-          // 显示删除成功提示
-          setStatusBarMessage({
-            type: "success",
-            message: `命令"${command.label}"已删除`,
-          });
-        } else {
-          setStatusBarMessage({
-            type: "error",
-            message: "请重试",
-          });
-        }
-      } catch (error) {
-        console.error("删除命令失败:", error);
-        setStatusBarMessage({
-          type: "error",
-          message: "请重试",
-        });
-      }
-    }
-  };
-
-  const saveCategory = async () => {
+  const handleSaveCommandOrCategory = async () => {
     if (!commandsConfig) return;
 
     try {
       const updatedConfig = { ...commandsConfig };
 
       if (isAddingNewCategory) {
-        // 添加新分类
-        const newCategory: CommandCategory = {
+        const newCat: CommandCategory = {
           id: categoryForm.id || `cat_${Date.now()}`,
           name: categoryForm.name,
           description: categoryForm.description,
           commands: [],
         };
-        updatedConfig.categories.push(newCategory);
+        updatedConfig.categories.push(newCat);
+      } else if (isAddingNewCommand && editingCategory) {
+        const catIdx = updatedConfig.categories.findIndex((c) => c.id === editingCategory.id);
+        if (catIdx !== -1) {
+          updatedConfig.categories[catIdx].commands.push({
+            id: editForm.id || `cmd_${Date.now()}`,
+            label: editForm.label,
+            command: editForm.command,
+            description: editForm.description,
+          });
+        }
+      } else if (editingCommand && editingCategory) {
+        const catIdx = updatedConfig.categories.findIndex((c) => c.id === editingCategory.id);
+        if (catIdx !== -1) {
+          const cmdIdx = updatedConfig.categories[catIdx].commands.findIndex((c) => c.id === editingCommand.id);
+          if (cmdIdx !== -1) {
+            updatedConfig.categories[catIdx].commands[cmdIdx] = {
+              ...updatedConfig.categories[catIdx].commands[cmdIdx],
+              ...editForm,
+            };
+          }
+        }
       }
 
-      // 根据当前设备模式决定保存到哪个配置文件
-      const isFastbootMode =
-        selectedDevice?.mode === "fastboot" ||
-        selectedDevice?.mode === "fastbootd";
-      let saveSuccess;
+      const saveFn = isFastbootMode ? saveFastbootCommandsConfig : saveAdbCommandsConfig;
+      const success = await saveFn(updatedConfig);
 
-      if (isFastbootMode) {
-        saveSuccess = await saveFastbootCommandsConfig(updatedConfig);
-      } else {
-        saveSuccess = await saveAdbCommandsConfig(updatedConfig);
-      }
-
-      if (saveSuccess) {
+      if (success) {
         setCommandsConfig(updatedConfig);
-        closeEditDialog();
-        // 显示保存成功提示
+        setIsEditDialogOpen(false);
         setStatusBarMessage({
           type: "success",
-          message: isAddingNewCategory ? "分类已添加" : "分类已更新",
-        });
-      } else {
-        setStatusBarMessage({
-          type: "error",
-          message: "请重试",
+          message: "配置已保存",
         });
       }
-    } catch (error) {
-      console.error("保存分类失败:", error);
-      setStatusBarMessage({
-        type: "error",
-        message: "请重试",
-      });
+    } catch (err) {
+      console.error("保存命令配置失败:", err);
     }
   };
 
-  const deleteCategory = async (category: CommandCategory) => {
+  const handleDeleteQuickCommand = async (cmd: AdbCommand, cat: CommandCategory) => {
     if (!commandsConfig) return;
+    if (!window.confirm(`确定要删除快捷命令 "${cmd.label}" 吗？`)) return;
 
-    if (confirm(`确定要删除分类"${category.name}"及其所有命令吗？`)) {
-      try {
-        const updatedConfig = { ...commandsConfig };
-        updatedConfig.categories = updatedConfig.categories.filter(
-          (cat) => cat.id !== category.id,
+    try {
+      const updatedConfig = { ...commandsConfig };
+      const catIdx = updatedConfig.categories.findIndex((c) => c.id === cat.id);
+      if (catIdx !== -1) {
+        updatedConfig.categories[catIdx].commands = updatedConfig.categories[catIdx].commands.filter(
+          (c) => c.id !== cmd.id
         );
-
-        // 根据当前设备模式决定保存到哪个配置文件
-        const isFastbootMode =
-          selectedDevice?.mode === "fastboot" ||
-          selectedDevice?.mode === "fastbootd";
-        let saveSuccess;
-
-        if (isFastbootMode) {
-          saveSuccess = await saveFastbootCommandsConfig(updatedConfig);
-        } else {
-          saveSuccess = await saveAdbCommandsConfig(updatedConfig);
-        }
-
-        if (saveSuccess) {
-          setCommandsConfig(updatedConfig);
-          // 显示删除成功提示
-          setStatusBarMessage({
-            type: "success",
-            message: `分类"${category.name}"及其所有命令已删除`,
-          });
-        } else {
-          setStatusBarMessage({
-            type: "error",
-            message: "请重试",
-          });
-        }
-      } catch (error) {
-        console.error("删除分类失败:", error);
-        setStatusBarMessage({
-          type: "error",
-          message: "请重试",
-        });
+        const saveFn = isFastbootMode ? saveFastbootCommandsConfig : saveAdbCommandsConfig;
+        await saveFn(updatedConfig);
+        setCommandsConfig(updatedConfig);
       }
+    } catch (err) {
+      console.error("删除命令失败:", err);
+    }
+  };
+
+  const handleDeleteCategory = async (cat: CommandCategory) => {
+    if (!commandsConfig) return;
+    if (cat.commands.length > 0) {
+      alert("请先删除该分类下的所有命令");
+      return;
+    }
+    if (!window.confirm(`确定要删除分类 "${cat.name}" 吗？`)) return;
+
+    try {
+      const updatedConfig = { ...commandsConfig };
+      updatedConfig.categories = updatedConfig.categories.filter((c) => c.id !== cat.id);
+      const saveFn = isFastbootMode ? saveFastbootCommandsConfig : saveAdbCommandsConfig;
+      await saveFn(updatedConfig);
+      setCommandsConfig(updatedConfig);
+    } catch (err) {
+      console.error("删除分类失败:", err);
     }
   };
 
   return (
     <div className={styles.container}>
-      <Card className={styles.mainCard}>
-        <div className={styles.cardContent}>
-          {/* 上部分：控制区域 */}
-          <div className={styles.controlsSection}>
-            {/* 第一行：设备选择器、执行按钮和快捷命令按钮 */}
-            <div className={styles.deviceAndButtonsRow}>
-              {/* 设备选择器 */}
-              <Field
-                style={{ marginBottom: 0, width: "400px", borderRadius: "8px" }}
-              >
-                <div className={styles.deviceSelector}>
-                  <Button
-                    appearance="outline"
-                    onClick={() =>
-                      setIsDeviceDropdownOpen(!isDeviceDropdownOpen)
-                    }
-                    disabled={devices.length === 0}
-                    style={{
-                      width: "100%",
-                      justifyContent: "space-between",
-                      backgroundColor:
-                        selectedDevice?.mode === "fastboot" ||
-                        selectedDevice?.mode === "fastbootd"
-                          ? "var(--colorNeutralBackground1)"
-                          : "var(--colorNeutralBackground2)",
-                    }}
-                  >
-                    {selectedDevice ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          borderRadius: "8px",
-                          maxWidth: "200px",
-                          maxHeight: "32px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: "14px",
-                            fontWeight: "bold",
-                            minWidth: "80px",
-                          }}
-                        >
-                          选择设备：
-                        </span>
-                        <div
-                          style={{
-                            width: "8px",
-                            height: "8px",
-                            borderRadius: "50%",
-                            backgroundColor:
-                              getDeviceStatusColor(selectedDevice),
-                            minWidth: "8px",
-                            minHeight: "8px",
-                          }}
-                        />
-                        <span
-                          style={{
-                            textOverflow: "ellipsis",
-                            overflow: "hidden",
-                            whiteSpace: "nowrap",
-                            minWidth: "150px",
-                          }}
-                        >
-                          {getDeviceDisplayName(selectedDevice)}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "12px",
-                            color: "var(--colorNeutralForeground3)",
-                            minWidth: "50px",
-                          }}
-                        >
-                          [{getDeviceModeText(selectedDevice.mode)}]
-                        </span>
-                      </div>
-                    ) : (
-                      <span style={{ color: "var(--colorNeutralForeground3)" }}>
-                        {devices.length === 0 ? "无设备" : "请选择设备"}
-                      </span>
-                    )}
-                    <ChevronDown24Regular
-                      style={{
-                        transform: isDeviceDropdownOpen
-                          ? "rotate(180deg)"
-                          : "rotate(0)",
-                        transition: "transform 0.2s",
-                      }}
-                    />
-                  </Button>
+      {/* 顶部控制与设备栏 */}
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <Text className={styles.title}>{t("main.command_line", "终端命令行")}</Text>
 
-                  {isDeviceDropdownOpen && (
-                    <div className={styles.deviceDropdown}>
-                      {devices.length === 0 ? (
-                        <div className={styles.deviceDropdownItem}>
-                          <Text
-                            size={200}
-                            style={{ color: "var(--colorNeutralForeground3)" }}
-                          >
-                            无可用设备
-                          </Text>
-                        </div>
-                      ) : (
-                        devices.map((device) => (
-                          <div
-                            key={device.serial}
-                            className={styles.deviceDropdownItem}
-                            onClick={() => {
-                              selectDevice(device);
-                              setIsDeviceDropdownOpen(false);
-                              setStatusBarMessage({
-                                type: "info",
-                                message: `已选择设备: ${getDeviceDisplayName(device)}`,
-                              });
-                            }}
-                            style={{
-                              backgroundColor:
-                                selectedDevice?.serial === device.serial
-                                  ? "var(--colorNeutralBackground1Selected)"
-                                  : "transparent",
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "8px",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: "8px",
-                                  height: "8px",
-                                  borderRadius: "50%",
-                                  backgroundColor: getDeviceStatusColor(device),
-                                }}
-                              />
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                  }}
-                                >
-                                  <Text
-                                    size={200}
-                                    weight="semibold"
-                                    style={{
-                                      textOverflow: "ellipsis",
-                                      overflow: "hidden",
-                                      whiteSpace: "nowrap",
-                                      maxWidth: "180px",
-                                    }}
-                                  >
-                                    {getDeviceDisplayName(device)}
-                                  </Text>
-                                  <Text
-                                    size={200}
-                                    style={{
-                                      color: "var(--colorNeutralForeground3)",
-                                    }}
-                                  >
-                                    [{getDeviceModeText(device.mode)}]
-                                  </Text>
-                                </div>
-                                <Text
-                                  size={200}
-                                  style={{
-                                    color: "var(--colorNeutralForeground3)",
-                                  }}
-                                >
-                                  {device.serial}
-                                </Text>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              </Field>
-
-              {/* 执行按钮和快捷命令按钮 */}
-              <div className={styles.buttonsContainer}>
-                <Button
-                  icon={<Bot24Regular />}
-                  appearance="subtle"
-                  onClick={handleAIChatCommand}
-                  disabled={isExecuting}
-                  style={{ marginRight: "8px" }}
-                >
-                  AI 助手执行
-                </Button>
-                <Button
-                  appearance="primary"
-                  icon={<Play24Regular />}
-                  onClick={() => executeCommand(command)}
-                  disabled={isExecuting || !command.trim() || !selectedDevice}
-                  style={{ marginRight: "8px" }}
-                >
-                  {isExecuting ? "执行中..." : "执行"}
-                </Button>
-                <Button
-                  className={styles.quickCommandButton}
-                  icon={<ChevronDown24Regular />}
-                  onClick={openUnifiedPanel}
-                  disabled={isExecuting}
-                >
-                  快捷命令
-                </Button>
-              </div>
+          {/* 设备选择器 */}
+          <div className={styles.deviceSelectorWrapper} ref={deviceDropdownRef}>
+            <div
+              className={styles.deviceSelectorBtn}
+              onClick={() => setIsDeviceDropdownOpen(!isDeviceDropdownOpen)}
+            >
+              <span
+                className={styles.statusDot}
+                style={{ backgroundColor: getDeviceStatusColor(selectedDevice) }}
+              />
+              <span>
+                {selectedDevice
+                  ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})`
+                  : "未连接设备"}
+              </span>
+              <ChevronDown16Regular />
             </div>
 
-            {/* 设备选择和命令输入 */}
-            <div className={styles.topControlsRow}>
-              {/* 第二行：命令输入 */}
-              <div className={styles.commandInputRow}>
-                <Field style={{ marginBottom: 0, width: "100%" }}>
-                  <Field
-                    label={
-                      selectedDevice &&
-                      (selectedDevice.mode === "fastboot" ||
-                        selectedDevice.mode === "fastbootd")
-                        ? "Fastboot命令（注意：输入命令请谨慎，因输入错误命令导致的问题我们概不负责）"
-                        : "ADB命令（注意：输入命令请谨慎，因输入错误命令导致的问题我们概不负责）"
-                    }
-                  >
-                    <Input
-                      value={command}
-                      onChange={(_, data) => setCommand(data.value)}
-                      placeholder={
-                        selectedDevice &&
-                        (selectedDevice.mode === "fastboot" ||
-                          selectedDevice.mode === "fastbootd")
-                          ? "例如: devices"
-                          : "例如: shell getprop ro.product.model"
-                      }
-                      disabled={isExecuting || !selectedDevice}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          executeCommand(command);
-                        }
-                      }}
-                    />
-                  </Field>
-                </Field>
-              </div>
-            </div>
-
-            {/* 搜索框和操作按钮 */}
-            <div className={styles.searchAndActionsRow}>
-              <div className={styles.searchContainer}>
-                <Input
-                  placeholder="搜索输出..."
-                  value={searchTerm}
-                  onChange={(_, data) => setSearchTerm(data.value)}
-                  contentBefore={<Search24Regular />}
-                  disabled={!output}
-                />
-              </div>
-              <div className={styles.actionButtons}>
-                {searchTerm && searchMatches.length > 0 && (
-                  <div className={styles.searchMatchesInfo}>
-                    <Text size={200}>
-                      {t("command_panel.matches_found", {
-                        count: searchMatches.length,
-                      })}
-                    </Text>
-                    <Button
-                      appearance="subtle"
-                      size="small"
-                      onClick={navigateToMatch}
-                      disabled={!searchTerm || searchMatches.length === 0}
-                    >
-                      {t("command_panel.next_match")}
-                    </Button>
+            {isDeviceDropdownOpen && (
+              <div className={styles.deviceDropdownMenu}>
+                {devices.length === 0 ? (
+                  <div className={styles.deviceDropdownItem} style={{ color: "var(--colorNeutralForeground3)" }}>
+                    未发现可用设备
                   </div>
+                ) : (
+                  devices.map((d) => (
+                    <div
+                      key={d.serial}
+                      className={mergeClasses(
+                        styles.deviceDropdownItem,
+                        selectedDevice?.serial === d.serial && styles.deviceDropdownItemSelected
+                      )}
+                      onClick={() => {
+                        selectDevice(d);
+                        setIsDeviceDropdownOpen(false);
+                      }}
+                    >
+                      <span
+                        className={styles.statusDot}
+                        style={{ backgroundColor: getDeviceStatusColor(d) }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div>{getDeviceDisplayName(d)}</div>
+                        <div style={{ fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
+                          {d.serial} · {getDeviceModeLabel(d.mode)}
+                        </div>
+                      </div>
+                    </div>
+                  ))
                 )}
-                <Button
-                  appearance="subtle"
-                  icon={<Sparkle24Regular />}
-                  onClick={handleAIExplain}
-                  disabled={!output}
-                  title={t("command_panel.ai_explain_tooltip")}
-                />
-                <Button
-                  appearance="subtle"
-                  icon={<Copy24Regular />}
-                  onClick={copyOutput}
-                  disabled={!output}
-                  title={t("command_panel.copy_output")}
-                />
-                <Button
-                  appearance="subtle"
-                  icon={<Delete24Regular />}
-                  onClick={clearOutput}
-                  disabled={!output}
-                  title={t("command_panel.clear_output")}
-                />
               </div>
-            </div>
+            )}
           </div>
 
-          {/* 下部分：输出区域 */}
-          <div className={styles.outputSection}>
-            <div className={styles.outputContainer}>
-              <div className={styles.outputContent}>
-                <pre
-                  ref={outputRef}
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      highlightedOutput ||
-                      `<span style="color: #888">${t("command_panel.output_placeholder")}</span>`,
-                  }}
-                />
-              </div>
-            </div>
+          {/* 模式标签 */}
+          <div
+            className={mergeClasses(
+              styles.modeBadge,
+              isFastbootMode ? styles.modeBadgeFastboot : styles.modeBadgeAdb
+            )}
+          >
+            {isFastbootMode ? "FASTBOOT" : "ADB"}
           </div>
         </div>
-      </Card>
 
-      {/* 统一快捷命令面板 */}
+        {/* 顶部快捷操作 */}
+        <div className={styles.headerRight}>
+          <Tooltip content="快捷命令库" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Apps20Regular />}
+              className={styles.actionBtn}
+              onClick={() => setIsQuickCommandDialogOpen(true)}
+            >
+              快捷命令
+            </Button>
+          </Tooltip>
+
+          <Tooltip content={showSearch ? "收起搜索" : "在输出中搜索"} relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Search20Regular />}
+              className={mergeClasses(styles.actionBtn, showSearch && styles.actionBtnActive)}
+              onClick={() => setShowSearch(!showSearch)}
+            />
+          </Tooltip>
+
+          <Tooltip content={isCopiedOutput ? "已复制输出内容" : "复制全部输出"} relationship="label">
+            <Button
+              appearance="subtle"
+              icon={isCopiedOutput ? <Checkmark20Regular style={{ color: "#10b981" }} /> : <Copy20Regular />}
+              className={styles.actionBtn}
+              onClick={handleCopyOutput}
+              disabled={!output}
+            />
+          </Tooltip>
+
+          <Tooltip content="清空终端屏幕" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Delete20Regular />}
+              className={styles.actionBtn}
+              onClick={handleClearOutput}
+              disabled={!output}
+            />
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* 终端主体卡片 */}
+      <div className={styles.terminalCard}>
+        {/* 搜索工具条（按需展开） */}
+        {showSearch && (
+          <div className={styles.searchToolbar}>
+            <Input
+              placeholder="搜索终端输出内容..."
+              value={searchTerm}
+              onChange={(_, data) => setSearchTerm(data.value)}
+              contentBefore={<Search20Regular />}
+              contentAfter={
+                searchTerm ? (
+                  <Button
+                    appearance="transparent"
+                    size="small"
+                    icon={<Dismiss20Regular />}
+                    onClick={() => setSearchTerm("")}
+                    style={{ minWidth: "20px", padding: 0 }}
+                  />
+                ) : undefined
+              }
+              className={styles.searchInput}
+            />
+
+            {searchTerm && (
+              <span className={styles.searchMatchesText}>
+                找到 {searchMatches.length} 个匹配项
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* 终端日志流展示 */}
+        <div className={styles.terminalScreen} ref={outputScreenRef}>
+          {!output ? (
+            <div className={styles.terminalIntro}>
+              <span className={styles.terminalIntroTitle}>ADMT Terminal Console</span>
+              <span>• 当前设备: {selectedDevice ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})` : "未连接"}</span>
+              <span>• 运行模式: {isFastbootMode ? "Fastboot Protocol" : "Android Debug Bridge (ADB)"}</span>
+              <span>• 快捷键支持: 按 [Enter] 立即执行命令，按 [↑ / ↓] 键快速切换历史命令</span>
+            </div>
+          ) : (
+            output
+          )}
+        </div>
+
+        {/* 底部命令行输入栏 */}
+        <div className={styles.promptBar}>
+          <div className={styles.promptPrefix}>
+            <span>$</span>
+            <span className={styles.promptPrefixTarget}>{isFastbootMode ? "fastboot" : "adb"}</span>
+          </div>
+
+          <Input
+            value={command}
+            onChange={(_, data) => setCommand(data.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isFastbootMode
+                ? "输入 Fastboot 命令 (如 devices, oem unlock, getvar all)..."
+                : "输入 ADB 命令 (如 shell getprop ro.product.model, logcat -d, devices)..."
+            }
+            disabled={isExecuting || !selectedDevice}
+            className={styles.commandInput}
+          />
+
+          <Button
+            appearance="primary"
+            icon={<Play20Regular />}
+            onClick={() => executeCommand()}
+            disabled={isExecuting || !command.trim() || !selectedDevice}
+            className={styles.runButton}
+          >
+            {isExecuting ? "执行中..." : "执行"}
+          </Button>
+        </div>
+      </div>
+
+      {/* 快捷命令对话框 */}
       <Dialog
-        open={isUnifiedPanelOpen}
-        onOpenChange={(event, data) => {
-          if (!data.open) closeUnifiedPanel();
-        }}
+        open={isQuickCommandDialogOpen}
+        onOpenChange={(_, data) => setIsQuickCommandDialogOpen(data.open)}
         modalType="modal"
       >
-        <DialogSurface style={{ width: "900px", maxWidth: "90vw" }}>
+        <DialogSurface style={{ width: "880px", maxWidth: "90vw", borderRadius: "16px" }}>
           <DialogBody>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <DialogTitle>{t("command_panel.quick_commands")}</DialogTitle>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <DialogTitle>快捷命令库 ({isFastbootMode ? "Fastboot" : "ADB"})</DialogTitle>
             </div>
 
             <DialogContent className={styles.dialogBody}>
-              <div
-                style={{
-                  marginBottom: "16px",
-                  display: "flex",
-                  gap: "8px",
-                  alignItems: "center",
-                }}
-              >
+              {/* 搜索与添加分类 */}
+              <div style={{ display: "flex", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
                 <Input
-                  placeholder={t("command_panel.search_commands")}
-                  value={unifiedPanelSearchTerm}
-                  onChange={(_, data) => setUnifiedPanelSearchTerm(data.value)}
-                  contentBefore={<Search24Regular />}
+                  placeholder="搜索快捷命令名称、指令或描述..."
+                  value={quickCmdSearch}
+                  onChange={(_, data) => setQuickCmdSearch(data.value)}
+                  contentBefore={<Search20Regular />}
                   style={{ flex: 1 }}
                 />
-                <Button
-                  appearance="primary"
-                  size="small"
-                  icon={<Add24Regular />}
-                  onClick={openAddCategoryDialog}
-                >
-                  {t("command_panel.add_category")}
+                <Button appearance="primary" icon={<Add20Regular />} onClick={handleOpenAddCategory}>
+                  添加分类
                 </Button>
               </div>
 
-              {unifiedPanelFilteredCommands.map((category, categoryIndex) => (
-                <div key={categoryIndex} style={{ marginBottom: "20px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <div className={styles.categoryHeader}>{category.name}</div>
-                    <div style={{ display: "flex", gap: "8px" }}>
+              {filteredCategories.map((category) => (
+                <div key={category.id} className={styles.categorySection}>
+                  <div className={styles.categoryHeader}>
+                    <span className={styles.categoryTitle}>{category.name}</span>
+                    <div style={{ display: "flex", gap: "4px" }}>
                       <Button
                         appearance="subtle"
                         size="small"
-                        icon={<Add24Regular />}
-                        onClick={() => openAddCommandDialog(category)}
+                        icon={<Add20Regular />}
+                        onClick={() => handleOpenAddCommand(category)}
                       >
-                        {t("command_panel.add_command")}
+                        添加命令
                       </Button>
                       <Button
                         appearance="subtle"
                         size="small"
-                        icon={<Delete24Regular />}
-                        onClick={() => deleteCategory(category)}
+                        icon={<Delete20Regular />}
+                        onClick={() => handleDeleteCategory(category)}
                         disabled={category.commands.length > 0}
-                        title={
-                          category.commands.length > 0
-                            ? t("command_panel.delete_category_hint")
-                            : t("command_panel.delete_category")
-                        }
+                        title={category.commands.length > 0 ? "请先删除分类下的命令" : "删除分类"}
                       />
                     </div>
                   </div>
+
                   <div className={styles.commandGrid}>
-                    {category.commands.map((cmd, cmdIndex) => (
-                      <div key={cmdIndex} className={styles.commandItem}>
-                        <div style={{ paddingRight: "8px" }}>
-                          <div
-                            className={styles.commandLabel}
-                            title={cmd.label}
-                          >
-                            {cmd.label}
-                          </div>
-                          <div
-                            className={styles.commandText}
-                            title={cmd.command}
-                          >
-                            {cmd.command}
-                          </div>
-                          {cmd.description && (
-                            <div
-                              className={styles.commandDescription}
-                              title={cmd.description}
-                            >
-                              {cmd.description}
-                            </div>
-                          )}
+                    {category.commands.map((cmd) => (
+                      <div key={cmd.id} className={styles.commandCard}>
+                        <div className={styles.commandCardLabel} title={cmd.label}>
+                          {cmd.label}
                         </div>
-                        <div className={styles.commandButtons}>
+                        <div className={styles.commandCardCode} title={cmd.command}>
+                          {cmd.command}
+                        </div>
+                        {cmd.description && (
+                          <div className={styles.commandCardDesc} title={cmd.description}>
+                            {cmd.description}
+                          </div>
+                        )}
+
+                        <div className={styles.commandCardFooter}>
                           <Button
                             appearance="primary"
                             size="small"
-                            icon={<Play24Regular />}
-                            onClick={() => handleExecuteCommand(cmd)}
-                            className={styles.executeButton}
+                            icon={<Play20Regular />}
+                            onClick={() => handleRunQuickCommand(cmd)}
+                            style={{ flex: 1 }}
                           >
-                            {t("command_panel.execute")}
+                            运行
                           </Button>
                           <Button
                             appearance="subtle"
                             size="small"
-                            icon={<Edit24Regular />}
-                            onClick={() => handleEditCommand(cmd, category)}
-                            className={styles.editButton}
-                          >
-                            {t("command_panel.edit")}
-                          </Button>
+                            icon={<Edit20Regular />}
+                            onClick={() => handleEditQuickCommand(cmd, category)}
+                          />
                           <Button
                             appearance="subtle"
                             size="small"
-                            icon={<Delete24Regular />}
-                            onClick={() => handleDeleteCommand(cmd, category)}
-                            className={styles.deleteButton}
-                            title={t("command_panel.delete_command")}
+                            icon={<Delete20Regular />}
+                            onClick={() => handleDeleteQuickCommand(cmd, category)}
                           />
                         </div>
                       </div>
@@ -1595,180 +1117,79 @@ const CommandExecutePanel: React.FC = () => {
                 </div>
               ))}
 
-              {unifiedPanelFilteredCommands.length === 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "20px",
-                    color: "var(--colorNeutralForeground3)",
-                  }}
-                >
-                  {unifiedPanelSearchTerm
-                    ? t("command_panel.no_matches")
-                    : t("command_panel.no_commands")}
+              {filteredCategories.length === 0 && (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--colorNeutralForeground3)" }}>
+                  没有找到匹配的快捷命令
                 </div>
               )}
             </DialogContent>
 
             <DialogActions>
-              <Button onClick={closeUnifiedPanel}>
-                {t("command_panel.close")}
+              <Button appearance="subtle" onClick={() => setIsQuickCommandDialogOpen(false)}>
+                关闭
               </Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
       </Dialog>
 
-      {/* 编辑命令对话框 */}
+      {/* 新增/编辑命令或分类对话框 */}
       <Dialog
-        open={
-          isEditDialogOpen &&
-          (isAddingNewCommand || isAddingNewCategory || !!editingCommand)
-        }
-        onOpenChange={(event, data) => {
-          if (!data.open) closeEditDialog();
+        open={isEditDialogOpen}
+        onOpenChange={(_, data) => {
+          if (!data.open) setIsEditDialogOpen(false);
         }}
         modalType="modal"
       >
-        <DialogSurface>
+        <DialogSurface style={{ borderRadius: "16px" }}>
           <DialogBody>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <DialogTitle>
-                {isAddingNewCategory
-                  ? t("command_panel.add_new_category")
-                  : isAddingNewCommand
-                    ? t("command_panel.add_new_command")
-                    : t("command_panel.edit_command")}
-              </DialogTitle>
-            </div>
+            <DialogTitle>
+              {isAddingNewCategory
+                ? "添加新分类"
+                : isAddingNewCommand
+                ? "添加新快捷命令"
+                : "编辑快捷命令"}
+            </DialogTitle>
 
             <DialogContent className={styles.dialogBody}>
               {isAddingNewCategory ? (
-                // 添加新分类表单
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "16px",
-                  }}
-                >
-                  <Field label={t("command_panel.category_id")}>
-                    <Input
-                      value={categoryForm.id}
-                      onChange={(_, data) =>
-                        setCategoryForm({ ...categoryForm, id: data.value })
-                      }
-                      placeholder={t("command_panel.placeholder_category_id")}
-                    />
-                  </Field>
-                  <Field label={t("command_panel.category_name")}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <Field label="分类名称:">
                     <Input
                       value={categoryForm.name}
-                      onChange={(_, data) =>
-                        setCategoryForm({ ...categoryForm, name: data.value })
-                      }
-                      placeholder={t("command_panel.placeholder_category_name")}
+                      onChange={(_, data) => setCategoryForm({ ...categoryForm, name: data.value })}
+                      placeholder="如: 系统调试、分区操作"
                     />
                   </Field>
-                  <Field label={t("command_panel.category_desc")}>
+                  <Field label="分类描述 (可选):">
                     <Input
                       value={categoryForm.description}
-                      onChange={(_, data) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          description: data.value,
-                        })
-                      }
-                      placeholder={t("command_panel.placeholder_category_desc")}
+                      onChange={(_, data) => setCategoryForm({ ...categoryForm, description: data.value })}
+                      placeholder="简短说明分类用途"
                     />
                   </Field>
                 </div>
               ) : (
-                // 编辑命令或添加新命令表单
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "16px",
-                  }}
-                >
-                  {!isAddingNewCommand && (
-                    <Field label={t("command_panel.select_category")}>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        {commandsConfig?.categories.map((cat) => (
-                          <Button
-                            key={cat.id}
-                            appearance={
-                              editingCategory?.id === cat.id
-                                ? "primary"
-                                : "subtle"
-                            }
-                            size="small"
-                            onClick={() => setEditingCategory(cat)}
-                          >
-                            {cat.name}
-                          </Button>
-                        ))}
-                        <Button
-                          appearance="subtle"
-                          size="small"
-                          icon={<Add24Regular />}
-                          onClick={openAddCategoryDialog}
-                        >
-                          {t("command_panel.add_category")}
-                        </Button>
-                      </div>
-                    </Field>
-                  )}
-
-                  <Field label={t("command_panel.command_id")}>
-                    <Input
-                      value={editForm.id}
-                      onChange={(_, data) =>
-                        setEditForm({ ...editForm, id: data.value })
-                      }
-                      placeholder={t("command_panel.placeholder_command_id")}
-                      disabled={!isAddingNewCommand}
-                    />
-                  </Field>
-                  <Field label={t("command_panel.command_name")}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <Field label="命令名称:">
                     <Input
                       value={editForm.label}
-                      onChange={(_, data) =>
-                        setEditForm({ ...editForm, label: data.value })
-                      }
-                      placeholder={t("command_panel.placeholder_command_name")}
+                      onChange={(_, data) => setEditForm({ ...editForm, label: data.value })}
+                      placeholder="如: 获取设备型号"
                     />
                   </Field>
-                  <Field label={t("command_panel.adb_command")}>
+                  <Field label="执行指令 (无需带 adb / fastboot 前缀):">
                     <Input
                       value={editForm.command}
-                      onChange={(_, data) =>
-                        setEditForm({ ...editForm, command: data.value })
-                      }
-                      placeholder={t("command_panel.placeholder_command")}
+                      onChange={(_, data) => setEditForm({ ...editForm, command: data.value })}
+                      placeholder="如: shell getprop ro.product.model"
                     />
                   </Field>
-                  <Field label={t("command_panel.command_desc")}>
+                  <Field label="功能描述 (可选):">
                     <Input
                       value={editForm.description}
-                      onChange={(_, data) =>
-                        setEditForm({ ...editForm, description: data.value })
-                      }
-                      placeholder={t("command_panel.placeholder_command_desc")}
+                      onChange={(_, data) => setEditForm({ ...editForm, description: data.value })}
+                      placeholder="简要说明指令的作用"
                     />
                   </Field>
                 </div>
@@ -1776,20 +1197,20 @@ const CommandExecutePanel: React.FC = () => {
             </DialogContent>
 
             <DialogActions>
-              <Button appearance="subtle" onClick={closeEditDialog}>
-                {t("command_panel.cancel")}
+              <Button appearance="subtle" onClick={() => setIsEditDialogOpen(false)}>
+                取消
               </Button>
               <Button
                 appearance="primary"
-                icon={<Save24Regular />}
-                onClick={isAddingNewCategory ? saveCategory : saveCommand}
+                icon={<Save20Regular />}
+                onClick={handleSaveCommandOrCategory}
                 disabled={
                   isAddingNewCategory
                     ? !categoryForm.name.trim()
                     : !editForm.label.trim() || !editForm.command.trim()
                 }
               >
-                {t("command_panel.save")}
+                保存
               </Button>
             </DialogActions>
           </DialogBody>

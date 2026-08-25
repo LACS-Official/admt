@@ -15,8 +15,6 @@ import {
   Pin24Regular,
   PinOff24Regular,
   Bot24Regular,
-  Settings24Regular,
-  Camera24Regular,
 } from "@fluentui/react-icons";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
@@ -27,9 +25,6 @@ import { admtLogo64 } from "../../assets/icons";
 import AnnouncementBar from "./AnnouncementBar";
 import { SearchModal } from "../Common/SearchModal";
 import { Search24Regular } from "@fluentui/react-icons";
-import html2canvas from "html2canvas";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
 
 const useStyles = makeStyles({
   titleText:{
@@ -127,7 +122,7 @@ const useStyles = makeStyles({
 const TitleBar: React.FC = () => {
   const styles = useStyles();
   const { isDarkMode, toggleTheme, showTitleBarButtons } = useThemeStore();
-  const { setCurrentView } = useAppStore();
+  const { config } = useAppStore();
   useAppConfigStore();
   const [isMaximized, setIsMaximized] = React.useState(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = React.useState(false);
@@ -135,7 +130,6 @@ const TitleBar: React.FC = () => {
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   
   // 从设置获取当前搜索快捷键，默认为 Ctrl+K
-  const { config } = useAppStore();
   const searchHotkey = config.globalSearchHotkey || 'Ctrl+K';
 
   // 快捷键呼出搜索
@@ -295,45 +289,6 @@ const TitleBar: React.FC = () => {
     }
   };
 
-  const handleScreenshot = async () => {
-    try {
-      // 隐藏可能影响截图的元素（可选，但这里我们截图整个 body）
-      const canvas = await html2canvas(document.body, {
-        useCORS: true,
-        backgroundColor: isDarkMode ? "#1f1f1f" : "#ffffff", // 匹配应用背景
-        scale: window.devicePixelRatio || 2, // 提高清晰度
-      });
-
-      // 将 canvas 转换为 blob 或 base64
-      const screenshotData = canvas.toDataURL("image/png");
-      const base64Data = screenshotData.split(",")[1];
-      const binaryData = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
-
-      // 弹出保存对话框
-      const filePath = await save({
-        filters: [{
-          name: 'Image',
-          extensions: ['png']
-        }],
-        defaultPath: `ADMT_Screenshot_${new Date().getTime()}.png`
-      });
-
-      if (filePath) {
-        await writeFile(filePath, binaryData);
-        // 可以添加一个提示
-        console.log("截图已保存至:", filePath);
-      }
-    } catch (error) {
-      console.error("软件截图失败:", error);
-    }
-  };
-
-
-
-  const handleSettingsClick = () => {
-    setCurrentView("settings");
-  };
-
   const openAIChatWindow = async () => {
     const { windowService } = await import("../../services/windowService");
     await windowService.openAIChatWindow(isDarkMode);
@@ -361,19 +316,6 @@ const TitleBar: React.FC = () => {
           {showTitleBarButtons && (
             <>
               <Tooltip
-                content="软件截图"
-                relationship="label"
-              >
-                <Button
-                  appearance="subtle"
-                  icon={<Camera24Regular />}
-                  className={styles.titleBarButton}
-                  onClick={handleScreenshot}
-                  id="tour-screenshot-button"
-                />
-              </Tooltip>
-
-              <Tooltip
                 content="AI 助手"
                 relationship="label"
               >
@@ -383,20 +325,6 @@ const TitleBar: React.FC = () => {
                   className={styles.titleBarButton}
                   onClick={openAIChatWindow}
                   id="tour-ai-button"
-                />
-              </Tooltip>
-
-              <Tooltip
-                content="系统设置"
-                relationship="label"
-              >
-                <Button
-                  appearance="subtle"
-                  icon={<Settings24Regular />}
-                  className={styles.titleBarButton}
-                  onClick={handleSettingsClick}
-                  id="tour-header-settings"
-                  title="设置"
                 />
               </Tooltip>
 
@@ -412,7 +340,6 @@ const TitleBar: React.FC = () => {
                   id="tour-search-button"
                 />
               </Tooltip>
-
 
               <Tooltip
                 content={isDarkMode ? "切换到浅色模式" : "切换到深色模式"}

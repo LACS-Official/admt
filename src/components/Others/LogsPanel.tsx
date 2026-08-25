@@ -1,228 +1,477 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   makeStyles,
   mergeClasses,
   Text,
-  Card,
   Button,
-  Badge,
   Select,
-  Field,
   Input,
-  Switch,
-  ProgressBar,
+  Tooltip,
 } from "@fluentui/react-components";
 import {
-  Document24Regular,
   Delete24Regular,
   ArrowDownload24Regular,
   ArrowClockwise24Regular,
-  Warning24Regular,
-  ErrorCircle24Regular,
-  Info24Regular,
-  Bug24Regular,
-  Sparkle24Regular,
+  Warning20Regular,
+  ErrorCircle20Regular,
+  Info20Regular,
+  Bug20Regular,
+  Copy20Regular,
+  Checkmark20Regular,
+  Search20Regular,
+  Dismiss20Regular,
+  Pin20Regular,
+  PinOff20Regular,
+  ChevronRight16Regular,
+  ChevronDown16Regular,
+  DocumentBulletList24Regular,
+  TextAlignLeft20Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import { emit } from "@tauri-apps/api/event";
-import { windowService } from "../../services/windowService";
-import { useAppStore } from "../../stores/appStore";
 import { StructuredLogEntry, LogLevel, LogCategory, LogFilter } from "../../services/logTypes";
-
 import logService from "../../services/logService";
 
 const useStyles = makeStyles({
   container: {
-    padding: "16px",
+    display: "flex",
+    flexDirection: "column",
     height: "100%",
-    overflow: "auto",
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "16px 20px",
+    gap: "12px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    overflow: "hidden",
   },
+  // Top Header Area
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "16px",
+    flexWrap: "nowrap",
+    gap: "12px",
+    flexShrink: 0,
   },
-  controls: {
+  headerLeft: {
     display: "flex",
-    gap: "12px",
     alignItems: "center",
+    gap: "10px",
   },
-  filterRow: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr 1fr",
-    gap: "12px",
-    marginBottom: "16px",
+  title: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "var(--colorNeutralForeground1)",
+    letterSpacing: "-0.01em",
   },
-  logContent: {
-    height: "400px",
-    overflow: "auto",
-    backgroundColor: "var(--colorNeutralBackground2)",
+  liveIndicator: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "3px 8px",
+    borderRadius: "9999px",
+    backgroundColor: "rgba(16, 185, 129, 0.08)",
+    border: "1px solid rgba(16, 185, 129, 0.2)",
+    fontSize: "11px",
+    fontWeight: "500",
+    color: "#059669",
+  },
+  liveDot: {
+    width: "6px",
+    height: "6px",
+    borderRadius: "50%",
+    backgroundColor: "#10b981",
+    boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.25)",
+  },
+  countBadge: {
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground3)",
+    padding: "2px 8px",
     borderRadius: "6px",
-    padding: "12px",
-    fontFamily: "Consolas, 'Courier New', monospace",
+    backgroundColor: "var(--colorNeutralBackground3)",
+  },
+  toolbarActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  actionBtn: {
+    minWidth: "32px",
+    height: "32px",
+    padding: "0 8px",
+    borderRadius: "8px",
+    color: "var(--colorNeutralForeground2)",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground3)",
+      color: "var(--colorNeutralForeground1)",
+    },
+  },
+  actionBtnActive: {
+    backgroundColor: "rgba(0, 113, 227, 0.12)",
+    color: "#0071e3",
+    "&:hover": {
+      backgroundColor: "rgba(0, 113, 227, 0.18)",
+      color: "#0071e3",
+    },
+  },
+
+  // Control & Filter Bar
+  filterCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    padding: "8px 12px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "12px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    flexShrink: 0,
+    flexWrap: "wrap",
+  },
+  levelTabs: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    padding: "3px",
+    borderRadius: "8px",
+  },
+  levelTabItem: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "4px 10px",
+    borderRadius: "6px",
+    fontSize: "12px",
+    fontWeight: "500",
+    cursor: "pointer",
+    userSelect: "none",
+    color: "var(--colorNeutralForeground2)",
+    transition: "all 0.15s ease",
+    "&:hover": {
+      color: "var(--colorNeutralForeground1)",
+      backgroundColor: "var(--colorNeutralBackground1)",
+    },
+  },
+  levelTabItemActive: {
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "var(--colorNeutralForeground1)",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  },
+  levelTabCount: {
+    fontSize: "11px",
+    opacity: 0.75,
+    padding: "0 4px",
+    borderRadius: "4px",
+  },
+  levelTabCountAlert: {
+    backgroundColor: "rgba(220, 38, 38, 0.15)",
+    color: "#dc2626",
+    fontWeight: "600",
+    opacity: 1,
+  },
+  levelTabCountWarn: {
+    backgroundColor: "rgba(217, 119, 6, 0.15)",
+    color: "#d97706",
+    fontWeight: "600",
+    opacity: 1,
+  },
+  filterInputs: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flex: 1,
+    minWidth: "260px",
+    justifyContent: "flex-end",
+  },
+  searchInput: {
+    flex: "1 1 200px",
+    maxWidth: "320px",
+    height: "30px",
+    fontSize: "12px",
+    borderRadius: "8px",
+  },
+  categorySelect: {
+    height: "30px",
+    fontSize: "12px",
+    minWidth: "110px",
+    borderRadius: "8px",
+  },
+  deviceInput: {
+    width: "120px",
+    height: "30px",
+    fontSize: "12px",
+    borderRadius: "8px",
+  },
+
+  // Log Stream Container
+  streamBox: {
+    flex: "1 1 0",
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "auto",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "12px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    padding: "8px",
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'Cascadia Code', monospace",
     fontSize: "12px",
     lineHeight: "1.5",
-    border: "1px solid var(--colorNeutralStroke2)",
   },
-  logEntry: {
-    marginBottom: "6px",
-    padding: "8px",
-    borderRadius: "4px",
-    borderLeft: "3px solid transparent",
-    transition: "all 0.2s ease",
+  logList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: "100%",
+  },
+  logRow: {
+    display: "flex",
+    flexDirection: "column",
+    padding: "4px 8px",
+    borderRadius: "6px",
+    transition: "background-color 0.1s ease",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
     },
   },
-  logEntryFatal: {
-    backgroundColor: "rgba(139, 0, 0, 0.05)",
-  },
-  logEntryError: {
-    backgroundColor: "rgba(220, 20, 60, 0.05)",
-  },
-  logEntryWarning: {
-    backgroundColor: "rgba(255, 140, 0, 0.05)",
-  },
-  logEntryInfo: {
-    backgroundColor: "rgba(65, 105, 225, 0.05)",
-  },
-  logEntryDebug: {
-    backgroundColor: "rgba(128, 128, 128, 0.05)",
-  },
-  logHeader: {
+  logRowMain: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: "8px",
-    marginBottom: "4px",
+    minWidth: "100%",
   },
-  logTimestamp: {
+  logTime: {
     color: "var(--colorNeutralForeground3)",
     fontSize: "11px",
-    minWidth: "80px",
+    fontVariantNumeric: "tabular-nums",
+    flexShrink: 0,
+    userSelect: "text",
+    lineHeight: "20px",
   },
-  logLevel: {
-    minWidth: "60px",
+  levelPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "1px 6px",
+    borderRadius: "4px",
+    fontSize: "10px",
+    fontWeight: "700",
+    letterSpacing: "0.02em",
+    flexShrink: 0,
+    lineHeight: "16px",
+    textTransform: "uppercase",
   },
-  logSource: {
-    color: "var(--colorNeutralForeground2)",
+  levelPillFatal: {
+    backgroundColor: "rgba(220, 38, 38, 0.15)",
+    color: "#dc2626",
+    border: "1px solid rgba(220, 38, 38, 0.3)",
+  },
+  levelPillError: {
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    color: "#ef4444",
+  },
+  levelPillWarning: {
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    color: "#d97706",
+  },
+  levelPillInfo: {
+    backgroundColor: "rgba(0, 113, 227, 0.1)",
+    color: "#0071e3",
+  },
+  levelPillDebug: {
+    backgroundColor: "rgba(139, 92, 246, 0.1)",
+    color: "#8b5cf6",
+  },
+  sourceTag: {
+    color: "var(--colorNeutralForeground3)",
     fontSize: "11px",
-    minWidth: "100px",
-    fontWeight: "500",
+    fontWeight: "600",
+    flexShrink: 0,
+    userSelect: "text",
+    lineHeight: "20px",
   },
-  logMessage: {
-    flex: 1,
+  messageText: {
+    flex: "1 1 auto",
     wordBreak: "break-word",
+    color: "var(--colorNeutralForeground1)",
+    userSelect: "text",
+    lineHeight: "20px",
   },
-  emptyState: {
-    textAlign: "center",
-    padding: "40px",
+  messageNoWrap: {
+    whiteSpace: "pre",
+    wordBreak: "normal",
+  },
+  highlight: {
+    backgroundColor: "rgba(234, 179, 8, 0.35)",
+    color: "inherit",
+    borderRadius: "2px",
+    padding: "0 2px",
+  },
+  rowActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    marginLeft: "auto",
+    opacity: 0.15,
+    flexShrink: 0,
+    transition: "opacity 0.15s ease",
+    ".logRow:hover &": {
+      opacity: 1,
+    },
+  },
+  rowCopyBtn: {
+    padding: "2px 4px",
+    height: "20px",
+    minWidth: "20px",
+    borderRadius: "4px",
+    fontSize: "11px",
+    cursor: "pointer",
+    color: "var(--colorNeutralForeground3)",
+    "&:hover": {
+      color: "var(--colorNeutralForeground1)",
+      backgroundColor: "var(--colorNeutralBackground1)",
+    },
+  },
+  contextToggleBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "3px",
+    padding: "1px 6px",
+    borderRadius: "4px",
+    fontSize: "10px",
+    fontWeight: "600",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    color: "var(--colorNeutralForeground2)",
+    cursor: "pointer",
+    border: "1px solid var(--colorNeutralStroke3)",
+    lineHeight: "16px",
+    marginTop: "2px",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1)",
+      color: "var(--colorNeutralForeground1)",
+    },
+  },
+  contextBox: {
+    marginTop: "4px",
+    marginLeft: "24px",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    border: "1px solid var(--colorNeutralStroke3)",
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground2)",
+    overflowX: "auto",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-all",
+  },
+
+  // Empty state
+  emptyContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    minHeight: "260px",
+    gap: "12px",
+    color: "var(--colorNeutralForeground3)",
+  },
+  emptyIcon: {
+    fontSize: "40px",
+    opacity: 0.5,
+  },
+  emptyTitle: {
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "var(--colorNeutralForeground2)",
+  },
+  emptySubtitle: {
+    fontSize: "12px",
     color: "var(--colorNeutralForeground3)",
   },
 });
 
-
-
-const LogsPanel: React.FC = () => {
+export const LogsPanel: React.FC = () => {
   const styles = useStyles();
-  // 保持状态定义用于UI展示
+  const { t } = useTranslation();
+
   const [logs, setLogs] = useState<StructuredLogEntry[]>([]);
-  const [filteredLogs, setFilteredLogs] = useState<StructuredLogEntry[]>([]);
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [deviceFilter, setDeviceFilter] = useState<string>("");
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const logContentRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
-  const { config } = useAppStore();
+  const [wrapLines, setWrapLines] = useState<boolean>(true);
+  const [expandedContexts, setExpandedContexts] = useState<Record<string, boolean>>({});
+  const [isCopiedAll, setIsCopiedAll] = useState<boolean>(false);
+  const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
 
-  // 订阅日志服务
+  const logContentRef = useRef<HTMLDivElement>(null);
+
+  // Subscribe to log service
   useEffect(() => {
-    // 订阅日志更新
     const unsubscribe = logService.subscribe((updatedLogs) => {
-        // 由于日志量可能很大，这里可以做一些优化，比如只取最后N条
-        // logService已经在内部限制了maxLogs，所以这里直接设置即可
-        setLogs(updatedLogs);
+      setLogs(updatedLogs);
     });
 
-    logService.info('LogsPanel组件已挂载', 'LogsPanel', { category: 'system' });
-    
+    logService.info('LogsPanel 视图已加载', 'LogsPanel', { category: 'system' });
+
     return () => {
       unsubscribe();
-      // 不要在卸载时记录日志，因为可能导致更新已卸载的组件（如果logService同步回调）
     };
   }, []);
 
-  // 过滤日志 - 当logs或过滤条件变化时执行
-  useEffect(() => {
-    const applyFilters = () => {
-      setIsLoading(true);
-      try {
-        const filter: LogFilter = {
-          level: levelFilter !== "all" ? (levelFilter as LogLevel) : undefined,
-          category: categoryFilter !== "all" ? (categoryFilter as LogCategory) : undefined,
-          search: searchFilter || undefined,
-          deviceId: deviceFilter || undefined,
-        };
-
-        // 使用 logService 的过滤逻辑或本地过滤
-        // 这里使用本地过滤，因为 logs 已经是内存中的全量数据
-        const filtered = logs.filter(log => {
-          // 级别过滤
-          if (filter.level && log.level !== filter.level) return false;
-          
-          // 分类过滤
-          if (filter.category && log.category !== filter.category) return false;
-          
-          // 设备过滤
-          if (filter.deviceId && log.context?.deviceId !== filter.deviceId) return false;
-          
-          // 搜索过滤
-          if (filter.search) {
-            const searchLower = filter.search!.toLowerCase();
-            const messageMatch = log.message.toLowerCase().includes(searchLower);
-            const sourceMatch = log.source.toLowerCase().includes(searchLower);
-            const contextMatch = JSON.stringify(log.context).toLowerCase().includes(searchLower);
-            
-            if (!messageMatch && !sourceMatch && !contextMatch) return false;
-          }
-          
-          return true;
-        });
-        
-        setFilteredLogs(filtered);
-      } catch (error) {
-        console.error("过滤日志失败:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  // Compute log counts by level for segmented pills
+  const counts = useMemo(() => {
+    const res = {
+      all: logs.length,
+      info: 0,
+      warning: 0,
+      error: 0,
+      fatal: 0,
+      debug: 0,
     };
+    for (const log of logs) {
+      if (log.level in res) {
+        res[log.level as keyof typeof res]++;
+      }
+    }
+    return res;
+  }, [logs]);
 
-    // 使用 debounce 或 requestAnimationFrame 优化性能
-    const timer = setTimeout(applyFilters, 100);
-    return () => clearTimeout(timer);
+  // Filter logs
+  const filteredLogs = useMemo(() => {
+    const searchLower = searchFilter.trim().toLowerCase();
+    const deviceLower = deviceFilter.trim().toLowerCase();
 
+    return logs.filter((log) => {
+      if (levelFilter !== "all" && log.level !== levelFilter) return false;
+      if (categoryFilter !== "all" && log.category !== categoryFilter) return false;
+      if (deviceLower && (!log.context?.deviceId || !String(log.context.deviceId).toLowerCase().includes(deviceLower))) {
+        return false;
+      }
+      if (searchLower) {
+        const msgMatch = log.message.toLowerCase().includes(searchLower);
+        const srcMatch = log.source.toLowerCase().includes(searchLower);
+        const catMatch = log.category.toLowerCase().includes(searchLower);
+        const ctxMatch = log.context ? JSON.stringify(log.context).toLowerCase().includes(searchLower) : false;
+        if (!msgMatch && !srcMatch && !catMatch && !ctxMatch) return false;
+      }
+      return true;
+    });
   }, [logs, levelFilter, categoryFilter, searchFilter, deviceFilter]);
 
-  // 自动滚动到底部
+  // Auto scroll to bottom
   useEffect(() => {
     if (autoScroll && logContentRef.current) {
       logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
     }
   }, [filteredLogs, autoScroll]);
 
-  const handleClearLogs = async () => {
-    try {
-      logService.clearLogs();
-      // logs状态会在subscribe回调中更新
-    } catch (error) {
-      console.error("清空日志失败:", error);
-    }
-  };
+  // Actions
+  const handleClearLogs = useCallback(() => {
+    logService.clearLogs();
+  }, []);
 
-  const handleExportLogs = async () => {
+  const handleExportLogs = useCallback(() => {
     try {
       const filter: LogFilter = {
         level: levelFilter !== "all" ? (levelFilter as LogLevel) : undefined,
@@ -232,179 +481,329 @@ const LogsPanel: React.FC = () => {
       };
 
       const logContent = logService.exportLogs(filter);
-      
-      const blob = new Blob([logContent], { type: 'text/plain' });
+      const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `admt-logs-${new Date().toISOString().split("T")[0]}.txt`;
+      a.download = `admt-log-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.log`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
-      logService.info("导出日志", "LogsPanel", { category: 'user', filter });
     } catch (error) {
-      logService.error("导出日志失败", "LogsPanel", { error: String(error) });
+      console.error("导出日志失败:", error);
     }
-  };
-  const handleRefreshLogs = async () => {
-     logService.info("手动刷新日志视图", "LogsPanel", { category: 'user' });
-  };
+  }, [levelFilter, categoryFilter, searchFilter, deviceFilter]);
 
-  const handleAIExplainLogs = async () => {
+  const handleCopyAll = useCallback(async () => {
     if (filteredLogs.length === 0) return;
-
-    // 格式化最近的日志条目
-    const recentLogs = filteredLogs.slice(-20).map(log => {
-      return `[${new Date(log.timestamp).toLocaleTimeString()}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}`;
+    const content = filteredLogs.map((log) => {
+      const time = new Date(log.timestamp).toLocaleTimeString();
+      const ctx = log.context && Object.keys(log.context).length > 0 ? ` ${JSON.stringify(log.context)}` : "";
+      return `[${time}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}${ctx}`;
     }).join('\n');
 
-    const prompt = `请分析并解释以下系统日志：\n\n\`\`\`\n${recentLogs}\n\`\`\``;
-    
-    // 发送同步事件
-    await emit("ai-prompt-sync", { prompt });
-    
-    // 打开并聚焦 AI 窗口
-    await windowService.openAIChatWindow(config.theme === 'dark');
-  };
+    try {
+      await navigator.clipboard.writeText(content);
+      setIsCopiedAll(true);
+      setTimeout(() => setIsCopiedAll(false), 2000);
+    } catch (e) {
+      console.error("复制日志失败:", e);
+    }
+  }, [filteredLogs]);
 
+  const handleCopyRow = useCallback(async (log: StructuredLogEntry, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const time = new Date(log.timestamp).toLocaleTimeString();
+    const ctx = log.context && Object.keys(log.context).length > 0 ? ` ${JSON.stringify(log.context)}` : "";
+    const text = `[${time}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}${ctx}`;
 
-  const getLevelBadge = (level: LogLevel) => {
-    const config = {
-      fatal: { color: "danger" as const, icon: <ErrorCircle24Regular /> },
-      error: { color: "danger" as const, icon: <ErrorCircle24Regular /> },
-      warning: { color: "warning" as const, icon: <Warning24Regular /> },
-      info: { color: "brand" as const, icon: <Info24Regular /> },
-      debug: { color: "subtle" as const, icon: <Bug24Regular /> },
-    };
-    
-    const levelConfig = config[level] || config.debug;
-    
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedRowId(log.id);
+      setTimeout(() => setCopiedRowId(null), 1500);
+    } catch (err) {
+      console.error("复制行失败:", err);
+    }
+  }, []);
+
+  const toggleContext = useCallback((id: string) => {
+    setExpandedContexts((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
+  // Highlight search keywords
+  const renderHighlightedMessage = (text: string) => {
+    if (!searchFilter.trim()) return text;
+    const query = searchFilter.trim();
+    const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
     return (
-      <Badge 
-        appearance="filled" 
-        color={levelConfig.color}
-        size="small"
-        icon={levelConfig.icon}
-      >
-        {level.toUpperCase()}
-      </Badge>
+      <>
+        {parts.map((part, i) =>
+          part.toLowerCase() === query.toLowerCase() ? (
+            <mark key={i} className={styles.highlight}>
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </>
     );
   };
 
-  const renderLogEntry = (log: StructuredLogEntry) => {
-    const entryClass = `logEntry${log.level.charAt(0).toUpperCase() + log.level.slice(1)}`;
-    
-    return (
-      <div 
-        key={log.id} 
-        className={mergeClasses(styles.logEntry, styles[entryClass as keyof typeof styles])}
-      >
-        <div className={styles.logHeader}>
-          <span className={styles.logTimestamp}>
-            {new Date(log.timestamp).toLocaleTimeString()}
-          </span>
-          <span className={styles.logLevel}>
-            {getLevelBadge(log.level)}
-          </span>
-          <span className={styles.logSource}>
-            [{log.source}]
-          </span>
-          <span className={styles.logMessage}>
-            {log.message}
-          </span>
-        </div>
-      </div>
-    );
+  const getLevelPillClass = (level: LogLevel) => {
+    switch (level) {
+      case "fatal":
+        return styles.levelPillFatal;
+      case "error":
+        return styles.levelPillError;
+      case "warning":
+        return styles.levelPillWarning;
+      case "info":
+        return styles.levelPillInfo;
+      case "debug":
+        return styles.levelPillDebug;
+      default:
+        return styles.levelPillInfo;
+    }
   };
 
   return (
     <div className={styles.container}>
-      {/* 头部控制栏 */}
+      {/* 顶部标题栏与快捷工具 */}
       <div className={styles.header}>
-        <Text size={400} weight="semibold">{t('logs_panel.title')}</Text>
-        <div className={styles.controls}>
-          <Button
-            appearance="subtle"
-            icon={<Sparkle24Regular />}
-            onClick={handleAIExplainLogs}
-            disabled={filteredLogs.length === 0}
-            title={t('logs_panel.ai_explain_tooltip')}
-          >
-            {t('logs_panel.ai_explain')}
-          </Button>
-          <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-            显示 {filteredLogs.length} / {logs.length} 条日志
-          </Text>
+        <div className={styles.headerLeft}>
+          <Text className={styles.title}>{t('logs_panel.title', '运行日志')}</Text>
+          <div className={styles.liveIndicator}>
+            <span className={styles.liveDot} />
+            <span>实时监听</span>
+          </div>
+          <span className={styles.countBadge}>
+            {filteredLogs.length === logs.length
+              ? `共 ${logs.length} 条`
+              : `筛选 ${filteredLogs.length} / 共 ${logs.length} 条`}
+          </span>
+        </div>
+
+        <div className={styles.toolbarActions}>
+          <Tooltip content={autoScroll ? "已启用自动滚动" : "已暂停自动滚动"} relationship="label">
+            <Button
+              appearance="subtle"
+              icon={autoScroll ? <Pin20Regular /> : <PinOff20Regular />}
+              className={mergeClasses(styles.actionBtn, autoScroll && styles.actionBtnActive)}
+              onClick={() => setAutoScroll(!autoScroll)}
+            />
+          </Tooltip>
+
+          <Tooltip content={wrapLines ? "已开启自动换行" : "已开启单行横向滚动"} relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<TextAlignLeft20Regular />}
+              className={mergeClasses(styles.actionBtn, wrapLines && styles.actionBtnActive)}
+              onClick={() => setWrapLines(!wrapLines)}
+            />
+          </Tooltip>
+
+          <Tooltip content={isCopiedAll ? "已复制所有日志" : "复制当前筛选日志"} relationship="label">
+            <Button
+              appearance="subtle"
+              icon={isCopiedAll ? <Checkmark20Regular style={{ color: "#10b981" }} /> : <Copy20Regular />}
+              className={styles.actionBtn}
+              onClick={handleCopyAll}
+              disabled={filteredLogs.length === 0}
+            />
+          </Tooltip>
+
+          <Tooltip content="导出日志为文件" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<ArrowDownload24Regular />}
+              className={styles.actionBtn}
+              onClick={handleExportLogs}
+              disabled={filteredLogs.length === 0}
+            />
+          </Tooltip>
+
+          <Tooltip content="清空当前日志" relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Delete24Regular />}
+              className={styles.actionBtn}
+              onClick={handleClearLogs}
+              disabled={logs.length === 0}
+            />
+          </Tooltip>
         </div>
       </div>
 
-      {/* 过滤器 */}
-      <div className={styles.filterRow}>
-        <Field label="日志级别:">
-          <Select
-            value={levelFilter}
-            onChange={(_, data) => setLevelFilter(data.value)}
+      {/* 过滤与搜索控制卡片 */}
+      <div className={styles.filterCard}>
+        {/* 日志级别分段选择 */}
+        <div className={styles.levelTabs}>
+          <div
+            className={mergeClasses(styles.levelTabItem, levelFilter === "all" && styles.levelTabItemActive)}
+            onClick={() => setLevelFilter("all")}
           >
-            <option value="all">全部级别</option>
-            <option value="fatal">致命错误</option>
-            <option value="error">错误</option>
-            <option value="warning">警告</option>
-            <option value="info">信息</option>
-            <option value="debug">调试</option>
-          </Select>
-        </Field>
+            <span>全部</span>
+            <span className={styles.levelTabCount}>{counts.all}</span>
+          </div>
 
-        <Field label="日志分类:">
+          <div
+            className={mergeClasses(styles.levelTabItem, levelFilter === "info" && styles.levelTabItemActive)}
+            onClick={() => setLevelFilter("info")}
+          >
+            <span>信息</span>
+            <span className={styles.levelTabCount}>{counts.info}</span>
+          </div>
+
+          <div
+            className={mergeClasses(styles.levelTabItem, levelFilter === "warning" && styles.levelTabItemActive)}
+            onClick={() => setLevelFilter("warning")}
+          >
+            <span>警告</span>
+            <span className={mergeClasses(styles.levelTabCount, counts.warning > 0 && styles.levelTabCountWarn)}>
+              {counts.warning}
+            </span>
+          </div>
+
+          <div
+            className={mergeClasses(styles.levelTabItem, levelFilter === "error" && styles.levelTabItemActive)}
+            onClick={() => setLevelFilter("error")}
+          >
+            <span>错误</span>
+            <span className={mergeClasses(styles.levelTabCount, counts.error > 0 && styles.levelTabCountAlert)}>
+              {counts.error}
+            </span>
+          </div>
+
+          <div
+            className={mergeClasses(styles.levelTabItem, levelFilter === "debug" && styles.levelTabItemActive)}
+            onClick={() => setLevelFilter("debug")}
+          >
+            <span>调试</span>
+            <span className={styles.levelTabCount}>{counts.debug}</span>
+          </div>
+        </div>
+
+        {/* 筛选输入区 */}
+        <div className={styles.filterInputs}>
+          <Input
+            placeholder="搜索日志内容 / 来源..."
+            value={searchFilter}
+            onChange={(_, data) => setSearchFilter(data.value)}
+            contentBefore={<Search20Regular />}
+            contentAfter={
+              searchFilter ? (
+                <Button
+                  appearance="transparent"
+                  size="small"
+                  icon={<Dismiss20Regular />}
+                  onClick={() => setSearchFilter("")}
+                  style={{ minWidth: "20px", padding: 0 }}
+                />
+              ) : undefined
+            }
+            className={styles.searchInput}
+          />
+
           <Select
             value={categoryFilter}
             onChange={(_, data) => setCategoryFilter(data.value)}
+            className={styles.categorySelect}
           >
-            <option value="all">{t('logs_panel.category_all')}</option>
-            <option value="device">{t('logs_panel.category_device')}</option>
-            <option value="firmware">{t('logs_panel.category_firmware')}</option>
-            <option value="system">{t('logs_panel.category_system')}</option>
-            <option value="user">{t('logs_panel.category_user')}</option>
-            <option value="network">{t('logs_panel.category_network')}</option>
-            <option value="security">{t('logs_panel.category_security')}</option>
-            <option value="ai">{t('logs_panel.category_ai')}</option>
+            <option value="all">全部分类</option>
+            <option value="system">系统</option>
+            <option value="device">设备</option>
+            <option value="firmware">固件</option>
+            <option value="user">用户</option>
+            <option value="network">网络</option>
+            <option value="security">安全</option>
+            <option value="ai">AI</option>
           </Select>
-        </Field>
 
-        <Field label="设备筛选:">
           <Input
-            placeholder="设备ID或型号..."
+            placeholder="设备筛选..."
             value={deviceFilter}
             onChange={(_, data) => setDeviceFilter(data.value)}
+            className={styles.deviceInput}
           />
-        </Field>
-
-        <Field label="内容搜索:">
-          <Input
-            placeholder="搜索日志内容..."
-            value={searchFilter}
-            onChange={(_, data) => setSearchFilter(data.value)}
-          />
-        </Field>
+        </div>
       </div>
 
-      {/* 加载指示器 */}
-      {isLoading && <ProgressBar />}
+      {/* 日志流主区域 */}
+      <div className={styles.streamBox} ref={logContentRef}>
+        {filteredLogs.length === 0 ? (
+          <div className={styles.emptyContainer}>
+            <DocumentBulletList24Regular className={styles.emptyIcon} />
+            <span className={styles.emptyTitle}>暂无日志记录</span>
+            <span className={styles.emptySubtitle}>
+              {logs.length === 0 ? "系统运行事件将实时输出至此" : "没有符合当前筛选条件的日志项"}
+            </span>
+          </div>
+        ) : (
+          <div className={styles.logList}>
+            {filteredLogs.map((log) => {
+              const hasContext = log.context && Object.keys(log.context).length > 0;
+              const isExpanded = !!expandedContexts[log.id];
+              const isRowCopied = copiedRowId === log.id;
 
-      {/* 日志内容 */}
-      <Card>
-        <div className={styles.logContent} ref={logContentRef}>
-          {filteredLogs.length === 0 ? (
-            <div className={styles.emptyState}>
-              <Document24Regular style={{ fontSize: "48px", marginBottom: "16px" }} />
-              <Text>暂无符合条件的日志记录</Text>
-            </div>
-          ) : (
-            filteredLogs.map(renderLogEntry)
-          )}
-        </div>
-      </Card>
+              return (
+                <div key={log.id} className={mergeClasses(styles.logRow, "logRow")}>
+                  <div className={styles.logRowMain}>
+                    <span className={styles.logTime}>
+                      {new Date(log.timestamp).toLocaleTimeString("zh-CN", {
+                        hour12: false,
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
+                    </span>
+
+                    <span className={mergeClasses(styles.levelPill, getLevelPillClass(log.level))}>
+                      {log.level}
+                    </span>
+
+                    <span className={styles.sourceTag}>[{log.source}]</span>
+
+                    <span className={mergeClasses(styles.messageText, !wrapLines && styles.messageNoWrap)}>
+                      {renderHighlightedMessage(log.message)}
+                    </span>
+
+                    {hasContext && (
+                      <button
+                        type="button"
+                        className={styles.contextToggleBtn}
+                        onClick={() => toggleContext(log.id)}
+                        title="查看详细上下文数据"
+                      >
+                        {isExpanded ? <ChevronDown16Regular /> : <ChevronRight16Regular />}
+                        <span>JSON</span>
+                      </button>
+                    )}
+
+                    <div className={styles.rowActions}>
+                      <button
+                        type="button"
+                        className={styles.rowCopyBtn}
+                        onClick={(e) => handleCopyRow(log, e)}
+                        title="复制单行"
+                      >
+                        {isRowCopied ? <Checkmark20Regular style={{ color: "#10b981" }} /> : <Copy20Regular />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {hasContext && isExpanded && (
+                    <div className={styles.contextBox}>
+                      {JSON.stringify(log.context, null, 2)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

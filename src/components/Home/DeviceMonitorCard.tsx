@@ -152,7 +152,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
   const { selectedDevice: storeDevice } = useDeviceStore();
   const selectedDevice = propDevice || storeDevice;
   const { t } = useTranslation();
-  
+
   const isSysMode = selectedDevice?.mode === 'sys';
   const [isMonitoring, setIsMonitoring] = useState((config.monitorAutoStart || !!selectedDevice) && isSysMode);
   const [dataPoints, setDataPoints] = useState<MonitorDataPoint[]>([]);
@@ -174,7 +174,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
   const chartRef = useRef<HTMLDivElement>(null);
   const csvFileRef = useRef<string | null>(null);
   const lastFetchTime = useRef<number>(0);
-  
+
   // 维护 CPU 核心名称列表以动态生成 Line
   const cpuCoreNames = useMemo(() => {
     if (dataPoints.length === 0) return [];
@@ -184,7 +184,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
   // 处理图例点击
   const handleLegendClick = (entry: any) => {
     const { dataKey } = entry;
-    setHiddenLines(prev => 
+    setHiddenLines(prev =>
       prev.includes(dataKey) ? prev.filter(k => k !== dataKey) : [...prev, dataKey]
     );
   };
@@ -233,11 +233,11 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
     let timer: any;
     if (isMonitoring && selectedDevice && selectedDevice.mode === 'sys') {
       console.log(`[Monitor] Starting monitoring for device: ${selectedDevice.serial}`);
-      
+
       const fetchData = async () => {
         if (!isMonitoringRef.current || isFetching.current || selectedDevice?.mode !== 'sys') return;
         isFetching.current = true;
-        
+
         const startTime = Date.now();
         try {
           let res: any;
@@ -282,7 +282,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
           } else {
             res = await invoke('get_device_realtime_monitor_data', { serial: selectedDevice.serial });
           }
-          
+
           if (!isMonitoringRef.current) return;
 
           if (!res || !res.cpu) {
@@ -291,7 +291,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
 
           const now = new Date();
           const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-          
+
           const newDataPoint: MonitorDataPoint = {
             time: timeStr,
             timestamp: res.timestamp,
@@ -324,7 +324,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
           if (config.monitorAutoCsvExport) {
             handleAutoCsvWrite(newDataPoint);
           }
-          
+
           const duration = Date.now() - startTime;
           if (duration > 1500) {
             console.warn(`[Monitor] Fetch data took too long: ${duration}ms`);
@@ -356,19 +356,19 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
       if (!csvFileRef.current) {
         const docDir = await documentDir();
         const admtDir = await join(docDir, 'admt');
-        
+
         // 格式化设备名称 (移除不合法文件名字符)
         const rawName = selectedDevice?.market_name || selectedDevice?.model || selectedDevice?.serial || 'unknown';
         const deviceName = rawName.replace(/[\\/:*?"<>|]/g, '_');
-        
+
         // 时间戳 YYYYMMDDHHMMSS
         const now = new Date();
         const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-        
+
         const fname = `admt_DeviceInfo_${deviceName}_${timestamp}.csv`;
         csvFileRef.current = await join(admtDir, fname);
         const header = "Time,CPU Usage(%),Mem Usage(%),CPU Temp(C),Battery Temp(C),Battery(%),Power(W)\n";
-        
+
         // 确保目录存在
         try {
           await mkdir(admtDir, { recursive: true });
@@ -466,7 +466,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
   const displayedDataPoints = useMemo(() => {
     const raw = dataPoints.slice(-displayRange);
     if (displayRange <= 300) return raw;
-    
+
     // 如果点数太多，进行等距采样 (最大保留约 300 个点)
     const step = Math.ceil(displayRange / 300);
     return raw.filter((_, index) => index % step === 0);
@@ -480,7 +480,6 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
     <Card className={styles.card}>
       <div className={styles.header}>
         <div className={styles.titleSection}>
-          <Pulse24Regular color="var(--colorBrandForeground1)" />
           <Text weight="bold" size={500}>{t('monitor.title')}</Text>
         </div>
         <div className={styles.controls}>
@@ -490,23 +489,15 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
             <Button size="small" appearance={displayRange === 1800 ? "secondary" : "transparent"} onClick={() => setDisplayRange(1800)}>{t('monitor.range_30m')}</Button>
             <Button size="small" appearance={displayRange === 3600 ? "secondary" : "transparent"} onClick={() => setDisplayRange(3600)}>{t('monitor.range_1h')}</Button>
           </div>
-          <Button 
-            icon={isMonitoring ? <Stop24Filled /> : <Play24Filled />}
-            appearance={isMonitoring ? "subtle" : "primary"}
-            onClick={() => setIsMonitoring(!isMonitoring)}
-            size="medium"
-          >
-            {isMonitoring ? t('monitor.stop') : t('monitor.start')}
-          </Button>
           <Button icon={<ArrowDownload24Regular />} onClick={exportCsvManually} disabled={dataPoints.length === 0}>{t('monitor.export')}</Button>
           <Button icon={<Image24Regular />} onClick={exportImage} disabled={dataPoints.length === 0}>{t('monitor.screenshot')}</Button>
-          <Button icon={<Delete24Regular />} onClick={clearData} appearance="transparent">{t('monitor.clear')}</Button>
+          <Button icon={<Delete24Regular />} onClick={clearData}>{t('monitor.clear')}</Button>
         </div>
       </div>
 
       <div className={styles.tabsContainer}>
-        <TabList 
-          selectedValue={activeTab} 
+        <TabList
+          selectedValue={activeTab}
           onTabSelect={(_, data) => {
             setActiveTab(data.value as any);
             setHiddenLines([]);
@@ -545,30 +536,30 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
             </div>
           )}
           <div style={{ position: 'absolute', right: 16, top: 8, zIndex: 10 }}>
-             <Button size="small" appearance="subtle" onClick={toggleCurrentTabLines}>
-               {t('monitor.switching_all')}
-             </Button>
+            <Button size="small" appearance="subtle" onClick={toggleCurrentTabLines}>
+              {t('monitor.switching_all')}
+            </Button>
           </div>
           <ResponsiveContainer width="100%" height="100%" debounce={50}>
             <LineChart data={displayedDataPoints} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--colorNeutralStroke2)" opacity={0.3} />
-              <XAxis 
-                dataKey="time" 
-                tick={{ fontSize: 10, fill: 'var(--colorNeutralForeground4)' }} 
+              <XAxis
+                dataKey="time"
+                tick={{ fontSize: 10, fill: 'var(--colorNeutralForeground4)' }}
                 axisLine={false}
                 tickLine={false}
               />
-              <YAxis 
-                tick={{ fontSize: 10, fill: 'var(--colorNeutralForeground4)' }} 
+              <YAxis
+                tick={{ fontSize: 10, fill: 'var(--colorNeutralForeground4)' }}
                 axisLine={false}
                 tickLine={false}
-                domain={activeTab.includes('temp') || activeTab === 'power' ? ['auto', 'auto'] : [0, 'auto']} 
+                domain={activeTab.includes('temp') || activeTab === 'power' ? ['auto', 'auto'] : [0, 'auto']}
               />
               <Tooltip content={<CustomTooltipContent />} />
-              <Legend 
-                verticalAlign="top" 
+              <Legend
+                verticalAlign="top"
                 align="center"
-                height={40} 
+                height={40}
                 onClick={handleLegendClick}
                 content={(props) => {
                   const { payload } = props;
@@ -577,19 +568,19 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
                       {payload?.map((entry: any, index: number) => {
                         const isHidden = hiddenLines.includes(entry.dataKey);
                         return (
-                          <div 
-                            key={`item-${index}`} 
-                            className={styles.legendItem} 
+                          <div
+                            key={`item-${index}`}
+                            className={styles.legendItem}
                             onClick={() => handleLegendClick(entry)}
-                            style={{ 
+                            style={{
                               opacity: isHidden ? 0.4 : 1,
                               backgroundColor: isHidden ? 'transparent' : `${entry.color}11`,
                               border: `1px solid ${isHidden ? 'transparent' : `${entry.color}33`}`
                             }}
                           >
                             <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: entry.color }} />
-                            <Text size={200} weight={isHidden ? "regular" : "medium"} 
-                                  style={{ color: isHidden ? 'var(--colorNeutralForegroundDisabled)' : 'var(--colorNeutralForeground1)' }}>
+                            <Text size={200} weight={isHidden ? "regular" : "medium"}
+                              style={{ color: isHidden ? 'var(--colorNeutralForegroundDisabled)' : 'var(--colorNeutralForeground1)' }}>
                               {entry.value}
                             </Text>
                           </div>
@@ -599,7 +590,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
                   );
                 }}
               />
-              
+
               {activeTab === 'cpu' && cpuDisplayMode === 'utilization' && (
                 <>
                   <Line aria-label={t('monitor.total_cpu')} hide={hiddenLines.includes('totalCpuUsage')} type="monotone" dataKey="totalCpuUsage" name={t('monitor.total_line')} stroke="#3a7bd5" strokeWidth={3} dot={false} isAnimationActive={false} />
