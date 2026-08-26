@@ -55,43 +55,38 @@ const useStyles = makeStyles({
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    background: `linear-gradient(135deg, ${tokens.colorBrandBackground2} 0%, ${tokens.colorNeutralBackground1} 50%, ${tokens.colorBrandBackground2} 100%)`,
+    background: "linear-gradient(135deg, rgba(0, 113, 227, 0.06) 0%, var(--colorNeutralBackground1) 50%, rgba(0, 113, 227, 0.04) 100%)",
     backgroundSize: "400% 400%",
     animation: "gradientBG 15s ease infinite",
     position: "relative",
     overflow: "hidden",
   },
   glassCard: {
-    width: "900px",
-    maxWidth: "90%",
-    maxHeight: "85vh",
+    width: "920px",
+    maxWidth: "92%",
+    maxHeight: "88vh",
     display: "flex",
     flexDirection: "row",
-    borderRadius: "8px",
+    borderRadius: "20px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    border: `1px solid var(--colorNeutralStroke2)`,
-    boxShadow: tokens.shadow28,
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 24px 64px -12px rgba(0, 0, 0, 0.14)",
     overflow: "hidden",
   },
   leftPanel: {
-    width: "40%",
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    width: "38%",
+    backgroundColor: "var(--colorNeutralBackground2)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: tokens.spacingHorizontalXL,
-    borderRight: `1px solid rgba(0, 0, 0, 0.05)`,
+    padding: "32px 24px",
+    borderRight: "1px solid var(--colorNeutralStroke2)",
     position: "relative",
-
-    "@media (prefers-color-scheme: dark)": {
-      backgroundColor: "rgba(0, 0, 0, 0.2)",
-      borderRight: `1px solid rgba(255, 255, 255, 0.05)`,
-    },
   },
   rightPanel: {
     flex: 1,
-    padding: tokens.spacingHorizontalXXL,
+    padding: "36px 40px",
     display: "flex",
     flexDirection: "column",
     overflowY: "auto",
@@ -101,60 +96,63 @@ const useStyles = makeStyles({
     },
   },
   appIconImage: {
-    width: "128px",
-    height: "128px",
-    borderRadius: "24px",
-    boxShadow: tokens.shadow8,
-    marginBottom: tokens.spacingVerticalL,
+    width: "112px",
+    height: "112px",
+    borderRadius: "22px",
+    boxShadow: "0 8px 24px -4px rgba(0, 0, 0, 0.12)",
+    marginBottom: "16px",
   },
   welcomeTitle: {
-    fontSize: tokens.fontSizeHero800,
-    fontWeight: tokens.fontWeightBold,
-    color: tokens.colorNeutralForeground1,
-    marginBottom: tokens.spacingVerticalM,
+    fontSize: "26px",
+    fontWeight: "700",
+    color: "var(--colorNeutralForeground1)",
+    marginBottom: "6px",
+    letterSpacing: "-0.02em",
     textAlign: "left",
   },
   welcomeSubtitle: {
-    fontSize: tokens.fontSizeBase300,
-    color: tokens.colorNeutralForeground2,
-    marginBottom: tokens.spacingVerticalXL,
+    fontSize: "13px",
+    color: "var(--colorNeutralForeground2)",
+    marginBottom: "20px",
     lineHeight: "1.5",
   },
   policyList: {
     display: "flex",
     flexDirection: "row",
-    gap: tokens.spacingHorizontalM,
-    marginBottom: tokens.spacingVerticalXL,
+    gap: "12px",
+    marginBottom: "20px",
   },
   policyItem: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: tokens.spacingVerticalL,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid transparent`,
+    padding: "16px 12px",
+    borderRadius: "14px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    border: "1px solid var(--colorNeutralStroke2)",
     cursor: "pointer",
-    transition: "all 0.2s ease",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     textDecoration: "none",
     flex: 1,
 
     ":hover": {
-      border: `1px solid ${tokens.colorBrandStroke1}`,
-      backgroundColor: tokens.colorNeutralBackground2Hover,
+      borderColor: "var(--colorBrandStroke1)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      transform: "translateY(-2px)",
+      boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.06)",
     },
   },
   policyIconBox: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "16px",
-    backgroundColor: tokens.colorBrandBackground2,
+    width: "44px",
+    height: "44px",
+    borderRadius: "12px",
+    backgroundColor: "rgba(0, 113, 227, 0.08)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: tokens.spacingVerticalM,
-    color: tokens.colorBrandForeground1,
+    marginBottom: "10px",
+    color: "var(--colorBrandForeground1)",
   },
   policyInfo: {
     display: "flex",
@@ -163,107 +161,113 @@ const useStyles = makeStyles({
     textAlign: "center",
   },
   policyTitle: {
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
+    fontWeight: "600",
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground1)",
   },
   footer: {
     marginTop: "auto",
-    paddingTop: tokens.spacingVerticalL,
+    paddingTop: "16px",
   },
   checkboxWrapper: {
-    marginBottom: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalM,
-    borderRadius: tokens.borderRadiusMedium,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-
-    "@media (prefers-color-scheme: dark)": {
-      backgroundColor: "rgba(0, 0, 0, 0.2)",
-    },
+    marginBottom: "16px",
+    padding: "10px 14px",
+    borderRadius: "12px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground2)",
   },
   actionButtons: {
     display: "flex",
-    gap: tokens.spacingHorizontalM,
+    gap: "12px",
     justifyContent: "flex-end",
+  },
+  pillButton: {
+    borderRadius: "9999px",
+    fontWeight: 500,
+    transition: "all 0.15s ease",
+  },
+  dialogSurface: {
+    borderRadius: "18px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 24px 64px -12px rgba(0, 0, 0, 0.2)",
   },
   dialogHeader: {
     display: "flex",
     alignItems: "center",
-    gap: tokens.spacingHorizontalS,
-    color: tokens.colorBrandForeground1,
+    gap: "8px",
+    color: "var(--colorPaletteRedForeground1)",
   },
   versionTag: {
-    marginTop: tokens.spacingVerticalL,
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground4,
+    marginTop: "16px",
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground4)",
     textAlign: "center",
   },
   quickSettings: {
-    marginTop: tokens.spacingVerticalL,
+    marginTop: "16px",
     display: "flex",
     flexDirection: "column",
-    gap: tokens.spacingVerticalM,
+    gap: "10px",
   },
   settingRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: tokens.borderRadiusMedium,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    padding: "8px 12px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "12px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   sponsorshipLeftPanel: {
-    width: "45%",
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    width: "42%",
+    backgroundColor: "var(--colorNeutralBackground2)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: tokens.spacingHorizontalXL,
-    gap: tokens.spacingVerticalL,
-    borderRight: `1px solid rgba(0, 0, 0, 0.05)`,
-    "@media (prefers-color-scheme: dark)": {
-      backgroundColor: "rgba(0, 0, 0, 0.2)",
-      borderRight: `1px solid rgba(255, 255, 255, 0.05)`,
-    },
+    padding: "24px",
+    gap: "16px",
+    borderRight: "1px solid var(--colorNeutralStroke2)",
   },
   qrImage: {
-    width: "220px",
-    height: "220px",
-    borderRadius: "16px",
+    width: "160px",
+    height: "160px",
+    borderRadius: "14px",
     objectFit: "cover",
-    border: `4px solid ${tokens.colorNeutralBackground1}`,
-    transition: "transform 0.3s ease",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.06)",
+    transition: "transform 0.2s ease",
     ":hover": {
-      transform: "scale(1.05)",
+      transform: "scale(1.03)",
     },
   },
   sponsorshipContent: {
     display: "flex",
     flexDirection: "column",
-    gap: tokens.spacingVerticalL,
+    gap: "14px",
     height: "100%",
     justifyContent: "center",
   },
   sponsorshipTitle: {
-    fontSize: tokens.fontSizeHero700,
-    fontWeight: tokens.fontWeightBold,
-    color: tokens.colorBrandForeground1,
-    marginBottom: tokens.spacingVerticalS,
+    fontSize: "20px",
+    fontWeight: "700",
+    color: "var(--colorBrandForeground1)",
+    letterSpacing: "-0.01em",
+    marginBottom: "4px",
   },
   sponsorshipDescription: {
-    fontSize: tokens.fontSizeBase400,
-    lineHeight: "1.6",
-    color: tokens.colorNeutralForeground2,
+    fontSize: "13px",
+    lineHeight: "1.5",
+    color: "var(--colorNeutralForeground2)",
   },
   highlightBox: {
-    padding: tokens.spacingHorizontalL,
-    paddingBlock: tokens.spacingVerticalL,
-    backgroundColor: tokens.colorBrandBackground2,
-    borderRadius: tokens.borderRadiusLarge,
-    border: `1px solid ${tokens.colorBrandStroke2}`,
-    marginTop: tokens.spacingVerticalXL,
+    padding: "14px 16px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "14px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
   },
 });
 
@@ -701,12 +705,14 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                         <div className={styles.actionButtons}>
                           <Button
                             appearance="secondary"
+                            className={styles.pillButton}
                             onClick={() => setShowExitConfirm(true)}
                           >
                             {t("legal.exit_browse")}
                           </Button>
                           <Button
                             appearance="primary"
+                            className={styles.pillButton}
                             size="large"
                             onClick={handleAccept}
                             disabled={!acceptedAll}
@@ -731,14 +737,14 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                         transition={{ delay: 0.1 }}
                       >
                         <Text className={styles.sponsorshipTitle} block>
-                          支持开源！自愿赞助（金额不限）
+                          支持开源 · 自愿赞助
                         </Text>
                         <Text className={styles.sponsorshipDescription} block>
-                          玩机管家是一款由<b>领创工作室</b> 维护的开源免费项目
-                          我们的目标是为 Android
-                          玩家与开发者提供强大、简洁、优雅的调试工具箱。
+                          玩机管家是一款由<b>领创工作室</b>维护的开源免费项目。
+                          致力于为 Android 玩机爱好者与开发者提供高效、纯净、强大的现代化工具箱。
                         </Text>
                       </motion.div>
+
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -747,43 +753,18 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                       >
                         <Text
                           weight="semibold"
-                          size={400}
+                          size={300}
                           block
-                          style={{ marginBottom: "8px" }}
                         >
                           开源项目，完全免费使用
                         </Text>
                         <Text
+                          size={200}
                           block
-                          style={{ color: tokens.colorNeutralForeground2 }}
+                          style={{ color: "var(--colorNeutralForeground2)" }}
                         >
-                          本软件完全开源免费，自愿捐赠金额不限。
-                          <br />
-                          <b>所有捐赠资金将用于维护开源项目、服务器运营与软件迭代</b>
-                          <br />
-                          无需捐赠也可免费使用所有功能
-                        </Text>
-                      </motion.div>
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className={styles.highlightBox}
-                      >
-                        <Text
-                          weight="semibold"
-                          size={400}
-                          block
-                          style={{ marginBottom: "8px" }}
-                        >
-                          为什么需要您的支持？
-                        </Text>
-                        <Text
-                          block
-                          style={{ color: tokens.colorNeutralForeground2 }}
-                        >
-                          赞助资金将直接用于服务器运营、官网维护以及支持开发者的持续开发热情。
-                          无论金额大小，您的每一份支持都是我们前进的动力。
+                          本软件所有核心功能完全免费开放，捐赠与否均可体验完整功能。
+                          赞助资金将全部用于服务器带宽、开源维护与版本迭代。
                         </Text>
                       </motion.div>
 
@@ -795,17 +776,17 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                       >
                         <Text
                           weight="semibold"
-                          size={400}
+                          size={300}
                           block
-                          style={{ marginBottom: "8px" }}
                         >
-                          捐赠后即视为同意本页内容，付款后概不退款，请您了解
+                          致谢与社区捐赠榜
                         </Text>
                         <Text
+                          size={200}
                           block
-                          style={{ color: tokens.colorBrandBackground3Static }}
+                          style={{ color: "var(--colorNeutralForeground2)" }}
                         >
-                          已捐赠用户我们会记录到捐赠墙，感谢支持
+                          无论金额大小，每一份支持都是我们持续迭代的动力。已赞助用户将记录于社区鸣谢榜。
                         </Text>
                       </motion.div>
 
@@ -814,16 +795,18 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                         style={{ marginTop: "auto" }}
                       >
                         <div className={styles.actionButtons}>
-                        <Button
-                          appearance="primary"
-                          size="large"
-                          onClick={openDonationPage}
-                          icon={<Heart24Regular />}
-                        >
-                          打开捐赠墙
-                        </Button>
+                          <Button
+                            appearance="secondary"
+                            className={styles.pillButton}
+                            size="large"
+                            onClick={openDonationPage}
+                            icon={<Heart24Regular />}
+                          >
+                            打开捐赠墙
+                          </Button>
                           <Button
                             appearance="primary"
+                            className={styles.pillButton}
                             size="large"
                             onClick={handleFinalAccept}
                             icon={<CheckmarkCircle24Regular />}
@@ -843,12 +826,12 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
 
       {/* 退出确认对话框 */}
       <Dialog open={showExitConfirm} modalType="modal">
-        <DialogSurface>
+        <DialogSurface className={styles.dialogSurface}>
           <DialogBody>
             <DialogTitle>
               <div className={styles.dialogHeader}>
                 <Warning24Regular
-                  style={{ color: tokens.colorPaletteRedForeground1 }}
+                  style={{ color: "var(--colorPaletteRedForeground1)" }}
                 />
                 {t("legal.confirm_exit_title")}
               </div>
@@ -856,23 +839,25 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
             <DialogContent>
               <Text>{t("legal.confirm_exit_desc")}</Text>
               <br />
-              <Text style={{ marginTop: "10px", display: "block" }}>
+              <Text style={{ marginTop: "10px", display: "block", color: "var(--colorNeutralForeground3)", fontSize: "13px" }}>
                 {t("legal.data_promise")}
               </Text>
             </DialogContent>
             <DialogActions>
               <Button
                 appearance="secondary"
+                className={styles.pillButton}
                 onClick={() => setShowExitConfirm(false)}
               >
                 {t("common.think_again")}
               </Button>
               <Button
                 appearance="primary"
+                className={styles.pillButton}
                 onClick={handleReject}
                 style={{
-                  backgroundColor: tokens.colorPaletteRedBackground3,
-                  color: tokens.colorNeutralForegroundOnBrand,
+                  backgroundColor: "var(--colorPaletteRedBackground3)",
+                  color: "var(--colorNeutralForegroundOnBrand)",
                 }}
               >
                 {t("common.confirm_exit")}
