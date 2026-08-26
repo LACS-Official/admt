@@ -1,23 +1,22 @@
 {
-  "version": "1.5.0",
-  "buildNumber": 5,
-  "versionName": "1.5.0",
-  "releaseDate": "2026-08-10",
+  "version": "1.5.1",
+  "buildNumber": 6,
+  "versionName": "1.5.1",
+  "releaseDate": "2026-08-26",
   "description": "统一版本管理配置文件",
   "changelog": [
-    "开源准备：切换开源许可证为 Apache License 2.0",
-    "安全脱敏：完成硬编码凭证脱敏与环境变量解耦",
-    "规则升级：明确软件开源免费与自愿捐赠原则",
-    "关于页面：新增 GitHub 官方开源仓库跳转链接",
-    "文档美化：新增性能对比矩阵与项目路线图 Roadmap"
+    "视觉规范：全面接入 Apple / Craft 人文极简大圆角与药丸胶囊设计系统规范",
+    "交互升级：主页、系统、刷机、Root、在线与插件专区全面适配药丸分段选择器",
+    "体验优化：重构设置面板、欢迎引导页与致谢赞赏视窗物理层级与交互动效",
+    "架构精简：清理历史废弃与冗余组件，优化整体工程结构与运行流畅度"
   ],
   "environments": {
     "development": {
-      "version": "1.5.0-dev",
+      "version": "1.5.1-dev",
       "enableDebug": true
     },
     "production": {
-      "version": "1.5.0",
+      "version": "1.5.1",
       "enableDebug": false
     }
   },
