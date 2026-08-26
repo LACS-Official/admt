@@ -501,6 +501,8 @@ const getMemoryUsage = (memoryStorageInfo: MemoryStorageInfo | null) => {
     if (memory_total && memory_used && memory_usage_percent !== null) {
       return {
         used: memory_usage_percent,
+        total: 100,
+        text: `${formatStorageSize(memory_used)} / ${formatStorageSize(memory_total)}`,
         usedGB: formatStorageSize(memory_used),
         totalGB: formatStorageSize(memory_total),
       };
@@ -509,6 +511,8 @@ const getMemoryUsage = (memoryStorageInfo: MemoryStorageInfo | null) => {
 
   return {
     used: 0,
+    total: 100,
+    text: "获取中...",
     usedGB: "获取中...",
     totalGB: "获取中...",
   };

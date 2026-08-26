@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   makeStyles,
+  shorthands,
   mergeClasses,
   Text,
   Input,
@@ -124,7 +125,7 @@ const useStyles = makeStyles({
     transition: "all 0.15s ease",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
-      borderColor: "var(--colorNeutralStroke1)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
     },
   },
   statusDot: {
@@ -319,7 +320,7 @@ const useStyles = makeStyles({
     borderRadius: "10px",
     transition: "all 0.15s ease",
     "&:hover": {
-      borderColor: "var(--colorNeutralStroke1)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
       backgroundColor: "var(--colorNeutralBackground3)",
     },
   },

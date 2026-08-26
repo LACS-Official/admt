@@ -1,6 +1,7 @@
 import React, { useState }  from 'react';
 import {
   makeStyles,
+  shorthands,
   mergeClasses,
   Card,
   CardHeader,
@@ -37,7 +38,7 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "border-color 0.2s ease",
     ":hover": {
-      borderColor: "var(--colorNeutralStroke1)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
     },
   },
   content: {
@@ -81,7 +82,7 @@ const useStyles = makeStyles({
     position: "relative",
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
-      borderColor: "var(--colorNeutralStroke1)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
       transform: "translateY(-1px)",
     },
     ":active": {

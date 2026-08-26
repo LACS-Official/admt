@@ -347,14 +347,12 @@ const HomePage: React.FC = () => {
           <Tab 
             value="connect" 
             icon={<Link24Regular />}
-            className={styles.tab}
           >
             {t('home.tab_connect')}
           </Tab>
           <Tab 
             value="info" 
             icon={<DeviceEq24Regular />}
-            className={styles.tab}
           >
             {t('home.tab_info')}
           </Tab>

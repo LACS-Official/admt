@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   makeStyles,
+  shorthands,
   tokens,
   Button,
   Textarea,
@@ -236,7 +237,7 @@ const useStyles = makeStyles({
     padding: "10px 14px",
     transition: "border-color 0.15s ease",
     ":focus-within": {
-      borderColor: "var(--colorBrandStroke1)",
+      ...shorthands.borderColor("var(--colorBrandStroke1)"),
     },
   },
   input: {

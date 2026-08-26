@@ -14,6 +14,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   makeStyles,
+  shorthands,
   Card,
   Text,
   Button,
@@ -90,7 +91,7 @@ const useStyles = makeStyles({
     gap: "8px",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
-      borderColor: "var(--colorNeutralStroke1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
     },
     transition: "all 0.15s ease",
   },

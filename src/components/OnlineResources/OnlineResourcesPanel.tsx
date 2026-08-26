@@ -112,7 +112,7 @@ const useStyles = makeStyles({
     transition: 'all 0.15s ease',
     '&:hover': {
       backgroundColor: 'var(--colorNeutralBackground1Hover)',
-      borderColor: 'var(--colorNeutralStroke1Hover)',
+      ...shorthands.borderColor('var(--colorNeutralStroke1Hover)'),
     },
   },
   cardContent: {

@@ -4,6 +4,7 @@
 import React, { useEffect, useState }  from 'react';
 import {
   makeStyles,
+  shorthands,
   Text,
   Badge,
   Caption1,
@@ -35,7 +36,7 @@ const useStyles = makeStyles({
     margin: '2px',
     '&:hover': {
       backgroundColor: 'var(--colorNeutralBackground1Hover)',
-      borderColor: 'var(--colorNeutralStroke1Hover)',
+      ...shorthands.borderColor('var(--colorNeutralStroke1Hover)'),
     },
   },
   cardContent: {

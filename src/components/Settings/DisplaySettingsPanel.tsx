@@ -20,6 +20,7 @@ import {
 } from "@fluentui/react-icons";
 import { ChromePicker } from 'react-color';
 import { useTranslation } from "react-i18next";
+import confetti from "canvas-confetti";
 
 const useStyles = makeStyles({
   container: {
@@ -121,11 +122,11 @@ const useStyles = makeStyles({
     transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
-      borderColor: "var(--colorNeutralStroke1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
     },
   },
   densityTileActive: {
-    borderColor: "var(--colorBrandStroke1)",
+    ...shorthands.borderColor("var(--colorBrandStroke1)"),
     backgroundColor: "var(--colorBrandBackground2)",
     boxShadow: "0 2px 8px -2px rgba(0, 113, 227, 0.12)",
   },

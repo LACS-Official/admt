@@ -11,6 +11,7 @@ import {
   Checkbox,
   Text,
   makeStyles,
+  shorthands,
   tokens,
   Card,
   Dialog,
@@ -137,7 +138,7 @@ const useStyles = makeStyles({
     flex: 1,
 
     ":hover": {
-      borderColor: "var(--colorBrandStroke1)",
+      ...shorthands.borderColor("var(--colorBrandStroke1)"),
       backgroundColor: "var(--colorNeutralBackground1Hover)",
       transform: "translateY(-2px)",
       boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.06)",

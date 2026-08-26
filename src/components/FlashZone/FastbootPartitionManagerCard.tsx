@@ -3,6 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import {
   makeStyles,
+  shorthands,
   Text,
   Button,
   Input,
@@ -43,7 +44,6 @@ import {
   PartitionImageInspection,
 } from "../../types/fastbootPartition";
 import { fastbootPartitionService } from "../../services/fastbootPartitionService";
-import { useDeviceStore } from "../../stores/deviceStore";
 import { AIImageInspectorModal } from "./AIImageInspectorModal";
 import { useTranslation } from "react-i18next";
 
@@ -144,7 +144,7 @@ const useStyles = makeStyles({
   categoryChipActive: {
     backgroundColor: "var(--colorBrandBackground2)",
     color: "var(--colorBrandForeground1)",
-    borderColor: "var(--colorBrandStroke2)",
+    ...shorthands.borderColor("var(--colorBrandStroke2)"),
     fontWeight: 600,
   },
   selectionBar: {
@@ -177,12 +177,12 @@ const useStyles = makeStyles({
     cursor: "pointer",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
-      borderColor: "var(--colorBrandStroke2)",
+      ...shorthands.borderColor("var(--colorBrandStroke2)"),
     },
   },
   partitionRowActive: {
     backgroundColor: "var(--colorBrandBackground2)",
-    borderColor: "var(--colorBrandStroke1)",
+    ...shorthands.borderColor("var(--colorBrandStroke1)"),
   },
   partitionRowChecked: {
     borderLeft: "3px solid var(--colorBrandForeground1)",
@@ -274,7 +274,6 @@ export const FastbootPartitionManagerCard: React.FC<
 > = ({ device, onFastbootRequired }) => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { refreshDevices } = useDeviceStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [partitions, setPartitions] = useState<FastbootPartitionItem[]>([]);
@@ -379,7 +378,6 @@ export const FastbootPartitionManagerCard: React.FC<
       await invoke("reboot_device", { serial: device.serial, mode: "bootloader" });
       appendLog(` 重启命令已下发，请稍候设备进入 Fastboot 模式并自动重连...`);
       setTimeout(() => {
-        refreshDevices();
         setIsRebooting(false);
       }, 4000);
     } catch (e: any) {

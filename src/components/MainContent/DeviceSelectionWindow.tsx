@@ -1,5 +1,5 @@
 import React from 'react';
-import { makeStyles, Text, Badge, Button, mergeClasses } from "@fluentui/react-components";
+import { makeStyles, shorthands, Text, Badge, Button, mergeClasses } from "@fluentui/react-components";
 import { Phone24Regular, CheckmarkCircle24Regular } from "@fluentui/react-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -41,7 +41,7 @@ const useStyles = makeStyles({
     transition: 'all 0.15s ease',
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
-      borderColor: "var(--colorNeutralStroke1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
     },
   },
   selectedDevice: {

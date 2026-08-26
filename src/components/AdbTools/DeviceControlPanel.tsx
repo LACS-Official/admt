@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   makeStyles,
   mergeClasses,
+  shorthands,
   Text,
   Button,
   Input,
@@ -125,7 +126,7 @@ const useStyles = makeStyles({
     gap: "14px",
     transition: "box-shadow 0.2s ease, border-color 0.2s ease",
     "&:hover": {
-      borderColor: "var(--colorNeutralStroke1)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
     },
   },
   cardHeader: {
@@ -170,7 +171,7 @@ const useStyles = makeStyles({
     userSelect: "none",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
-      borderColor: "var(--colorNeutralStroke1)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
       transform: "translateY(-1px)",
     },
     "&:active": {
@@ -179,7 +180,7 @@ const useStyles = makeStyles({
   },
   keyButtonActive: {
     backgroundColor: "rgba(0, 113, 227, 0.08)",
-    borderColor: "rgba(0, 113, 227, 0.3)",
+    ...shorthands.borderColor("rgba(0, 113, 227, 0.3)"),
     color: "#0071e3",
   },
   keyIcon: {
@@ -281,12 +282,12 @@ const useStyles = makeStyles({
     transition: "all 0.12s ease",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
-      borderColor: "var(--colorNeutralStroke1)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
     },
   },
   chipActive: {
     backgroundColor: "#0071e3",
-    borderColor: "#0071e3",
+    ...shorthands.borderColor("#0071e3"),
     color: "#ffffff",
     "&:hover": {
       backgroundColor: "#0077ed",

@@ -273,7 +273,6 @@ const AdbZonePanel: React.FC = () => {
                 key={tab.id}
                 value={tab.id}
                 icon={tab.icon}
-                className={styles.tab}
               >
                 {tab.label}
               </Tab>

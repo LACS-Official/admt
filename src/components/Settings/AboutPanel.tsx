@@ -194,7 +194,7 @@ const useStyles = makeStyles({
     transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
-      borderColor: "var(--colorNeutralStroke1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
       transform: "translateY(-2px)",
       boxShadow: "0 8px 16px -4px rgba(0, 0, 0, 0.06)",
     },

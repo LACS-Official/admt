@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   makeStyles,
+  shorthands,
   Text,
   Button,
   Field,
@@ -151,7 +152,7 @@ const useStyles = makeStyles({
     transition: "all 0.2s ease",
     cursor: "pointer",
     "&:hover": {
-      borderColor: "#0071e3",
+      ...shorthands.borderColor("#0071e3"),
       backgroundColor: "rgba(0, 113, 227, 0.03)",
     },
   },
@@ -202,7 +203,7 @@ const useStyles = makeStyles({
     transition: "all 0.18s cubic-bezier(0.4, 0, 0.2, 1)",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
-      borderColor: "var(--colorNeutralStroke1Hover)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
       transform: "translateY(-1px)",
     },
   },

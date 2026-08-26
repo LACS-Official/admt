@@ -180,6 +180,7 @@ const useStyles = makeStyles({
 
 export const McpResourcesPanel: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { setStatusBarMessage } = useAppStore();
 
   const mcpResources = useMcpStore((state) => state.mcpResources);

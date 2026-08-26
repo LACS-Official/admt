@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
+  shorthands,
   Button,
   Text,
   Title1,
@@ -123,7 +124,7 @@ const useStyles = makeStyles({
     cursor: 'pointer',
     transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
     '&:hover': {
-      borderColor: 'var(--colorBrandStroke1)',
+      ...shorthands.borderColor('var(--colorBrandStroke1)'),
       backgroundColor: 'var(--colorNeutralBackground1Hover)',
       transform: 'translateY(-1px)',
     },

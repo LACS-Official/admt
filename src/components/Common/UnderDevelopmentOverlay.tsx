@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
+  shorthands,
   Text,
   Button,
   Badge,
@@ -100,7 +101,7 @@ const useStyles = makeStyles({
   votedButton: {
     backgroundColor: "rgba(40, 205, 65, 0.12)",
     color: "#28cd41",
-    borderColor: "rgba(40, 205, 65, 0.25)",
+    ...shorthands.borderColor("rgba(40, 205, 65, 0.25)"),
   },
 });
 

@@ -106,7 +106,7 @@ const useStyles = makeStyles({
     cursor: "default",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground2)",
-      borderColor: "var(--colorNeutralStroke2)",
+      ...shorthands.borderColor("var(--colorNeutralStroke2)"),
     },
   },
   cardHeader: {

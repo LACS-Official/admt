@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
     makeStyles,
+    shorthands,
     Text,
     Badge,
     Spinner,
@@ -107,13 +108,13 @@ const useStyles = makeStyles({
         backgroundColor: "var(--colorNeutralBackground1)",
         "&:hover": {
             backgroundColor: "var(--colorNeutralBackground1Hover)",
-            borderColor: "var(--colorNeutralStroke1Hover)",
+            ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
             transform: "translateY(-1px)",
         },
     },
     selectedDevice: {
         backgroundColor: "rgba(0, 113, 227, 0.08)",
-        borderColor: "var(--colorBrandStroke1)",
+        ...shorthands.borderColor("var(--colorBrandStroke1)"),
         "&:hover": {
             backgroundColor: "rgba(0, 113, 227, 0.12)",
         },
@@ -225,7 +226,7 @@ const useStyles = makeStyles({
         border: "1px solid var(--colorNeutralStroke2)",
         transition: "all 0.15s ease",
         "&:hover": {
-            borderColor: "var(--colorNeutralStroke1Hover)",
+            ...shorthands.borderColor("var(--colorNeutralStroke1Hover)"),
         },
     },
     switchLabel: {
