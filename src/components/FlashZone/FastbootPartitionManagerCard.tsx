@@ -544,8 +544,7 @@ export const FastbootPartitionManagerCard: React.FC<
       setInspectionResult(result);
       setShowAIModal(true);
       appendLog(
-        ` 解析完成: 识别为 ${result.imageType} (OS: ${result.osVersion || "未知"}), Patch: ${
-          result.osPatchLevel || "未知"
+        ` 解析完成: 识别为 ${result.imageType} (OS: ${result.osVersion || "未知"}), Patch: ${result.osPatchLevel || "未知"
         }`
       );
     } catch (e: any) {
@@ -777,70 +776,6 @@ export const FastbootPartitionManagerCard: React.FC<
 
   return (
     <div className={styles.container}>
-      {/* 顶部设备与 A/B 状态卡片 */}
-      <div className={styles.topHeaderCard}>
-        <div className={styles.headerInfo}>
-          <Layer24Regular style={{ fontSize: "28px", color: "var(--colorBrandForeground1)" }} />
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Text size={400} weight="bold">
-                Fastboot 分区管理
-              </Text>
-              {isFastbootMode ? (
-                <Badge color="success" appearance="filled">
-                  Fastboot 已连接
-                </Badge>
-              ) : isAdbMode ? (
-                <Badge color="informative" appearance="tint">
-                  系统模式 (ADB)
-                </Badge>
-              ) : (
-                <Badge color="warning" appearance="tint">
-                  未就绪 / 离线
-                </Badge>
-              )}
-            </div>
-            <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-              设备: {deviceDisplayName} ({deviceSerial || "无序列号"}) · 分区总数:{" "}
-              {partitions.length}
-            </Text>
-          </div>
-        </div>
-
-        <div className={styles.headerActions}>
-          {isAbDevice && currentSlot && (
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Badge appearance="tint" color="brand">
-                当前活动: Slot {currentSlot.toUpperCase()}
-              </Badge>
-              <Tooltip content="一键切换活动 A/B 槽位 (救砖/回退)" relationship="label">
-                <Button
-                  size="small"
-                  appearance="outline"
-                  icon={<ArrowSwap24Regular />}
-                  onClick={() => handleSwitchSlot(currentSlot === "a" ? "b" : "a")}
-                  disabled={isExecuting || !isFastbootMode}
-                >
-                  切至 Slot {currentSlot === "a" ? "B" : "A"}
-                </Button>
-              </Tooltip>
-            </div>
-          )}
-
-          <Button
-            size="small"
-            appearance="subtle"
-            icon={<ArrowReset24Regular />}
-            onClick={() => {
-              refreshDevices();
-              loadPartitions();
-            }}
-            disabled={isLoading || isExecuting}
-          >
-            刷新状态
-          </Button>
-        </div>
-      </div>
 
       {/* 当设备在系统模式时显示一键引导 Banner */}
       {isAdbMode && (
@@ -892,9 +827,8 @@ export const FastbootPartitionManagerCard: React.FC<
             ].map((cat) => (
               <div
                 key={cat.id}
-                className={`${styles.categoryChip} ${
-                  selectedCategory === cat.id ? styles.categoryChipActive : ""
-                }`}
+                className={`${styles.categoryChip} ${selectedCategory === cat.id ? styles.categoryChipActive : ""
+                  }`}
                 onClick={() => setSelectedCategory(cat.id)}
               >
                 {cat.label}
@@ -951,9 +885,8 @@ export const FastbootPartitionManagerCard: React.FC<
                 return (
                   <div
                     key={p.name}
-                    className={`${styles.partitionRow} ${
-                      isActive ? styles.partitionRowActive : ""
-                    } ${isChecked ? styles.partitionRowChecked : ""}`}
+                    className={`${styles.partitionRow} ${isActive ? styles.partitionRowActive : ""
+                      } ${isChecked ? styles.partitionRowChecked : ""}`}
                     onClick={() => {
                       setActivePartition(p);
                       if (selectedPartitionNames.size === 0) {
@@ -1233,8 +1166,8 @@ export const FastbootPartitionManagerCard: React.FC<
                           targetSlot === "current"
                             ? "当前活动槽位"
                             : targetSlot === "a"
-                            ? "Slot A"
-                            : "Slot B"
+                              ? "Slot A"
+                              : "Slot B"
                         }
                         onOptionSelect={(_, d) => setTargetSlot(d.optionValue as string)}
                       >

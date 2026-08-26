@@ -67,9 +67,42 @@ const useStyles = makeStyles({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: tokens.spacingHorizontalM,
-    borderBottom: '1px solid var(--colorNeutralStroke2)',
-    paddingBottom: tokens.spacingVerticalS,
+    flexWrap: 'wrap',
+    gap: '10px',
+  },
+  monitorTabList: {
+    flexShrink: 0,
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "3px 4px",
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    minHeight: "34px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    "& .fui-Tab": {
+      fontSize: "12px",
+      padding: "5px 12px",
+      minHeight: "28px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
+      fontWeight: 500,
+      color: "var(--colorNeutralForeground2)",
+      margin: "0 2px",
+
+      "&:hover": {
+        backgroundColor: "var(--colorNeutralBackground1Hover)",
+        color: "var(--colorNeutralForeground1)",
+      },
+
+      "&[aria-selected='true']": {
+        backgroundColor: "var(--colorNeutralBackground1)",
+        color: "var(--colorBrandForeground1)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
+        fontWeight: 600,
+      },
+    },
   },
   chartContainer: {
     height: '400px',
@@ -502,7 +535,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
             setActiveTab(data.value as any);
             setHiddenLines([]);
           }}
-          appearance="subtle"
+          className={styles.monitorTabList}
         >
           <Tab value="cpu">{t('monitor.cpu_perf')}</Tab>
           <Tab value="memory">{t('monitor.memory')}</Tab>

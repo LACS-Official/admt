@@ -20,15 +20,16 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    padding: "24px",
-    gap: "24px",
-    backgroundColor: "var(--colorNeutralBackground2)",
+    padding: "16px 20px",
+    gap: "16px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxSizing: "border-box",
   },
   header: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: "16px",
+    paddingBottom: "12px",
     borderBottom: "1px solid var(--colorNeutralStroke2)",
   },
   headerLeft: {
@@ -47,6 +48,47 @@ const useStyles = makeStyles({
     gap: "16px",
     flex: 1,
     overflow: "hidden",
+  },
+  headerTabList: {
+    flexShrink: 0,
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "4px",
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    minHeight: "36px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    "& .fui-Tab": {
+      fontSize: "13px",
+      padding: "6px 14px",
+      minHeight: "30px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
+      fontWeight: 500,
+      color: "var(--colorNeutralForeground2)",
+      margin: "0 2px",
+
+      "&:hover": {
+        backgroundColor: "var(--colorNeutralBackground1Hover)",
+        color: "var(--colorNeutralForeground1)",
+      },
+
+      "&[aria-selected='true']": {
+        backgroundColor: "var(--colorNeutralBackground1)",
+        color: "var(--colorBrandForeground1)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
+        fontWeight: 600,
+      },
+    },
+
+    "@media (max-width: 768px)": {
+      "& .fui-Tab": {
+        fontSize: "12px",
+        padding: "4px 10px",
+      },
+    },
   },
   tabContent: {
     flex: 1,
@@ -196,6 +238,7 @@ const ExtendedFeaturesPanel: React.FC = () => {
             id="tour-extended-tabs"
             selectedValue={currentView}
             onTabSelect={(_, data) => setCurrentView(data.value as ExtendedFeaturesView)}
+            className={styles.headerTabList}
           >
             {tabs.map((tab) => (
               <Tab

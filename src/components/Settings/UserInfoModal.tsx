@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 用户信息弹窗组件
  * 显示激活码信息、过期时间，并提供删除本地激活数据的功能
  */
@@ -41,6 +41,11 @@ import { WelcomeStep } from '../../types/welcome';
 import { formatActivationExpiryDate } from '../../utils/dateFormatter';
 
 const useStyles = makeStyles({
+  dialogSurface: {
+    borderRadius: "18px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 20px 48px -8px rgba(0, 0, 0, 0.24)",
+  },
   dialogContent: {
     display: 'flex',
     flexDirection: 'column',
@@ -52,16 +57,16 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
-    padding: '16px',
+    padding: '16px 18px',
     backgroundColor: 'var(--colorNeutralBackground2)',
-    borderRadius: '8px',
+    borderRadius: '14px',
     border: '1px solid var(--colorNeutralStroke2)',
   },
   infoItem: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    padding: '8px 0',
+    padding: '4px 0',
   },
   infoIcon: {
     color: 'var(--colorBrandForeground1)',
@@ -70,7 +75,7 @@ const useStyles = makeStyles({
   infoContent: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
+    gap: '2px',
     flex: 1,
   },
   infoLabel: {
@@ -79,30 +84,37 @@ const useStyles = makeStyles({
   },
   infoValue: {
     color: 'var(--colorNeutralForeground2)',
-    fontFamily: 'monospace',
-    fontSize: '14px',
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+    fontSize: '13px',
   },
   dangerZone: {
-    padding: '16px',
-    backgroundColor: 'var(--colorPaletteRedBackground1)',
-    borderRadius: '8px',
-    border: '1px solid var(--colorPaletteRedBorder1)',
+    padding: '16px 18px',
+    backgroundColor: 'rgba(239, 68, 68, 0.04)',
+    borderRadius: '14px',
+    border: '1px solid rgba(239, 68, 68, 0.2)',
   },
   dangerTitle: {
     color: 'var(--colorPaletteRedForeground1)',
     fontWeight: '600',
-    marginBottom: '8px',
+    marginBottom: '6px',
   },
   dangerDescription: {
-    color: 'var(--colorNeutralForeground2)',
+    color: 'var(--colorNeutralForeground3)',
     marginBottom: '12px',
+    fontSize: '12px',
   },
   deleteButton: {
+    borderRadius: '9999px',
+    fontWeight: 500,
     backgroundColor: 'var(--colorPaletteRedBackground2)',
     color: 'var(--colorPaletteRedForeground2)',
     ':hover': {
       backgroundColor: 'var(--colorPaletteRedBackground3)',
     },
+  },
+  pillButton: {
+    borderRadius: '9999px',
+    fontWeight: 500,
   },
   loadingContainer: {
     display: 'flex',
@@ -454,11 +466,11 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
       <DialogTrigger disableButtonEnhancement>
         {children}
       </DialogTrigger>
-      <DialogSurface>
+      <DialogSurface className={styles.dialogSurface}>
         <DialogBody>
           <DialogTitle>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Person24Regular />
+              <Person24Regular style={{ color: 'var(--colorBrandForeground1)' }} />
               {t('user_info.title')}
             </div>
           </DialogTitle>
@@ -468,6 +480,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
           <DialogActions>
             <Button
               appearance="secondary"
+              className={styles.pillButton}
               onClick={() => setIsOpen(false)}
               disabled={isDeleting}
             >
@@ -476,6 +489,7 @@ const UserInfoModal = React.forwardRef<HTMLElement, UserInfoModalProps>(({ child
             {activationInfo && !deleteSuccess && (
               <Button
                 appearance="primary"
+                className={styles.pillButton}
                 onClick={loadActivationInfo}
                 disabled={isLoading || isDeleting}
               >

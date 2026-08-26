@@ -35,6 +35,7 @@ import { useMcpStore, ADMT_BUILTIN_MCP_TOOLS, PRESET_MCP_RESOURCES, McpToolDefin
 import { McpServerResource } from "../../types/mcp";
 import { useAppStore } from "../../stores/appStore";
 import { executeMcpTool } from "../../services/mcpExecutor";
+import UnderDevelopmentOverlay from "../Common/UnderDevelopmentOverlay";
 
 const useStyles = makeStyles({
   container: {
@@ -74,9 +75,38 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground3)",
   },
   subTabList: {
-    display: "flex",
-    gap: "8px",
-    marginTop: "4px",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "3px 4px",
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    minHeight: "34px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    marginTop: "6px",
+    "& .fui-Tab": {
+      fontSize: "12px",
+      padding: "5px 12px",
+      minHeight: "28px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
+      fontWeight: 500,
+      color: "var(--colorNeutralForeground2)",
+      margin: "0 2px",
+
+      "&:hover": {
+        backgroundColor: "var(--colorNeutralBackground1Hover)",
+        color: "var(--colorNeutralForeground1)",
+      },
+
+      "&[aria-selected='true']": {
+        backgroundColor: "var(--colorNeutralBackground1)",
+        color: "var(--colorBrandForeground1)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
+        fontWeight: 600,
+      },
+    },
   },
   content: {
     flex: 1,
@@ -222,84 +252,55 @@ export const McpResourcesPanel: React.FC = () => {
           className={styles.subTabList}
         >
           <Tab value="tools" icon={<Wrench24Regular />}>
-             ADMT 核心 MCP 工具能力 (8 项工具)
+            ADMT 核心 MCP 工具能力 (8 项工具)
           </Tab>
           <Tab value="servers" icon={<Globe24Regular />}>
-             主流开源 MCP 服务商 (8 个服务生态)
+            主流开源 MCP 服务商 (8 个服务生态)
           </Tab>
         </TabList>
       </div>
 
       {/* 主展示区 (一行 2 个卡片) */}
-      <div className={styles.content}>
-        {activeSubTab === "tools" ? (
-          /* 1. MCP 工具列表 */
-          <div className={styles.grid}>
-            {ADMT_BUILTIN_MCP_TOOLS.map((tool) => (
-              <div
-                key={tool.name}
-                className={styles.card}
-                onClick={() => {
-                  setDetailTool(tool);
-                  setMcpTestResult(null);
-                }}
-              >
-                <div className={styles.cardTop}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Wrench24Regular style={{ color: "var(--colorBrandForeground1)", fontSize: "18px" }} />
-                    <Text weight="bold" size={300}>
-                      {tool.name}
-                    </Text>
+      <div className={styles.content} style={{ position: "relative", flex: 1, minHeight: 0 }}>
+        <div style={{
+          opacity: 0.4,
+          pointerEvents: "none",
+          filter: "blur(3px)",
+          transition: "all 0.3s ease",
+          height: "100%",
+          overflow: "hidden",
+        }}>
+          {activeSubTab === "tools" ? (
+            /* 1. MCP 工具列表 */
+            <div className={styles.grid}>
+              {ADMT_BUILTIN_MCP_TOOLS.map((tool) => (
+                <div
+                  key={tool.name}
+                  className={styles.card}
+                >
+                  <div className={styles.cardTop}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Wrench24Regular style={{ color: "var(--colorBrandForeground1)", fontSize: "18px" }} />
+                      <Text weight="bold" size={300}>
+                        {tool.name}
+                      </Text>
+                    </div>
+                    <Badge appearance="tint" color="brand">
+                      MCP TOOL
+                    </Badge>
                   </div>
-                  <Badge appearance="tint" color="brand">
-                    MCP TOOL
-                  </Badge>
+
+                  <div className={styles.cardDesc}>{tool.description}</div>
                 </div>
-
-                <div className={styles.cardDesc}>{tool.description}</div>
-
-                <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    size="small"
-                    appearance="primary"
-                    icon={<Play24Regular />}
-                    onClick={() => {
-                      setDetailTool(tool);
-                      setMcpTestResult(null);
-                    }}
-                  >
-                    调试与执行测试
-                  </Button>
-                  <Button
-                    size="small"
-                    appearance="secondary"
-                    icon={copiedId === tool.name ? <Checkmark24Regular /> : <Copy24Regular />}
-                    onClick={() => copyToClipboard(JSON.stringify(tool, null, 2), tool.name)}
-                  >
-                    {copiedId === tool.name ? "已复制" : "复制 Schema"}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* 2. MCP 服务端列表 */
-          <div className={styles.grid}>
-            {mcpResources.map((res) => {
-              const configCode =
-                selectedClient === "cursor"
-                  ? res.configSnippets.cursor
-                  : selectedClient === "claudeDesktop"
-                  ? res.configSnippets.claudeDesktop
-                  : selectedClient === "antigravity"
-                  ? res.configSnippets.antigravity
-                  : res.configSnippets.windsurf;
-
-              return (
+              ))}
+            </div>
+          ) : (
+            /* 2. MCP 服务端列表 */
+            <div className={styles.grid}>
+              {mcpResources.map((res) => (
                 <div
                   key={res.id}
                   className={styles.card}
-                  onClick={() => setDetailMcpServer(res)}
                 >
                   <div className={styles.cardTop}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -308,36 +309,19 @@ export const McpResourcesPanel: React.FC = () => {
                         {res.name}
                       </Text>
                     </div>
-                    <Badge appearance="tint" color="brand">
-                      {res.transport.toUpperCase()}
-                    </Badge>
                   </div>
-
                   <div className={styles.cardDesc}>{res.description}</div>
-
-                  <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="small"
-                      appearance="primary"
-                      icon={<Open24Regular />}
-                      onClick={() => setDetailMcpServer(res)}
-                    >
-                      接入配置与详情
-                    </Button>
-                    <Button
-                      size="small"
-                      appearance="secondary"
-                      icon={copiedId === res.id ? <Checkmark24Regular /> : <Copy24Regular />}
-                      onClick={() => copyToClipboard(configCode, res.id)}
-                    >
-                      {copiedId === res.id ? "已复制" : "复制配置"}
-                    </Button>
-                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
+
+        <UnderDevelopmentOverlay
+          featureKey="online_mcp"
+          title={t("mcp.under_dev_title", "MCP 协议与服务端生态开发中...")}
+          description={t("mcp.under_dev_desc", "Model Context Protocol (MCP) 原生协议桥接、ADB/Fastboot 智能工具代理服务正在深度联调中。")}
+        />
       </div>
 
       {/* 1. MCP 工具调试弹窗 */}
@@ -512,10 +496,10 @@ export const McpResourcesPanel: React.FC = () => {
                           {clientKey === "cursor"
                             ? "Cursor"
                             : clientKey === "claudeDesktop"
-                            ? "Claude Desktop"
-                            : clientKey === "antigravity"
-                            ? "Antigravity"
-                            : "Windsurf"}
+                              ? "Claude Desktop"
+                              : clientKey === "antigravity"
+                                ? "Antigravity"
+                                : "Windsurf"}
                         </Button>
                       ))}
                     </div>
@@ -525,10 +509,10 @@ export const McpResourcesPanel: React.FC = () => {
                     {selectedClient === "cursor"
                       ? detailMcpServer.configSnippets.cursor
                       : selectedClient === "claudeDesktop"
-                      ? detailMcpServer.configSnippets.claudeDesktop
-                      : selectedClient === "antigravity"
-                      ? detailMcpServer.configSnippets.antigravity
-                      : detailMcpServer.configSnippets.windsurf}
+                        ? detailMcpServer.configSnippets.claudeDesktop
+                        : selectedClient === "antigravity"
+                          ? detailMcpServer.configSnippets.antigravity
+                          : detailMcpServer.configSnippets.windsurf}
                   </div>
                 </div>
               </DialogContent>
@@ -542,10 +526,10 @@ export const McpResourcesPanel: React.FC = () => {
                       selectedClient === "cursor"
                         ? detailMcpServer.configSnippets.cursor
                         : selectedClient === "claudeDesktop"
-                        ? detailMcpServer.configSnippets.claudeDesktop
-                        : selectedClient === "antigravity"
-                        ? detailMcpServer.configSnippets.antigravity
-                        : detailMcpServer.configSnippets.windsurf;
+                          ? detailMcpServer.configSnippets.claudeDesktop
+                          : selectedClient === "antigravity"
+                            ? detailMcpServer.configSnippets.antigravity
+                            : detailMcpServer.configSnippets.windsurf;
                     copyToClipboard(code, detailMcpServer.id);
                   }}
                 >

@@ -23,39 +23,42 @@ import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
-    padding: "20px",
+    padding: "4px 8px 24px 8px",
     height: "100%",
     overflow: "auto",
+    backgroundColor: "transparent",
   },
   content: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "20px",
-    maxWidth: "1000px",
+    maxWidth: "900px",
     margin: "0 auto",
   },
   card: {
     height: "fit-content",
-    borderRadius: "8px",
+    borderRadius: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+  },
+  cardHeader: {
+    padding: "18px 20px 8px 20px",
   },
   cardContent: {
-    padding: "20px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  },
-  fullWidthCard: {
-    gridColumn: "1 / -1",
-  },
-  settingTile: {
-    ...shorthands.padding("12px", "16px"),
-    backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.borderRadius("12px"),
+    padding: "8px 20px 20px 20px",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
+  },
+  settingTile: {
+    padding: "14px 16px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "12px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
     transition: "background-color 0.2s ease",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)",
+    },
   },
   settingRow: {
     display: "flex",
@@ -64,73 +67,81 @@ const useStyles = makeStyles({
     width: "100%",
   },
   rowInfo: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "2px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
   },
   settingDescription: {
     fontSize: "12px",
-    color: "var(--colorNeutralForeground4)",
+    color: "var(--colorNeutralForeground3)",
+    lineHeight: "1.4",
   },
   // 颜色预设
   presetGrid: {
-      display: "grid",
+    display: "grid",
+    gridTemplateColumns: "repeat(8, 1fr)",
+    gap: "10px",
+    marginTop: "10px",
+    "@media (max-width: 600px)": {
       gridTemplateColumns: "repeat(4, 1fr)",
-      gap: "8px",
-      marginTop: "8px",
+    },
   },
   presetCircle: {
-      width: "24px",
-      height: "24px",
-      ...shorthands.borderRadius("50%"),
-      cursor: "pointer",
-      ...shorthands.border("2px", "solid", "transparent"),
-      transition: "transform 0.2s, border-color 0.2s",
-      ":hover": {
-          transform: "scale(1.1)",
-      },
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    cursor: "pointer",
+    border: "2px solid transparent",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+    ":hover": {
+      transform: "scale(1.12)",
+    },
   },
   presetCircleActive: {
-      ...shorthands.border("2px", "solid", "var(--colorNeutralForeground1)"),
+    boxShadow: "0 0 0 2px var(--colorNeutralBackground1), 0 0 0 4px var(--colorBrandForeground1)",
+    transform: "scale(1.08)",
   },
   // 密度磁贴
   densityGrid: {
-      display: "flex",
-      gap: "12px",
-      marginTop: "4px",
+    display: "flex",
+    gap: "12px",
+    marginTop: "6px",
   },
   densityTile: {
-      flex: 1,
-      ...shorthands.padding("12px"),
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "8px",
-      cursor: "pointer",
-      ...shorthands.borderRadius("12px"),
-      ...shorthands.border("2px", "solid", "var(--colorNeutralStroke1)"),
-      transition: "all 0.2s ease",
-      ":hover": {
-          backgroundColor: "var(--colorNeutralBackground1Hover)",
-      }
+    flex: 1,
+    padding: "14px 12px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px",
+    cursor: "pointer",
+    borderRadius: "12px",
+    border: "1.5px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    ":hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      borderColor: "var(--colorNeutralStroke1Hover)",
+    },
   },
   densityTileActive: {
-      ...shorthands.borderColor("var(--colorBrandStroke1)"),
-      backgroundColor: "var(--colorBrandBackground2)",
+    borderColor: "var(--colorBrandStroke1)",
+    backgroundColor: "var(--colorBrandBackground2)",
+    boxShadow: "0 2px 8px -2px rgba(0, 113, 227, 0.12)",
   },
   densityVisual: {
-      width: "40px",
-      height: "30px",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      gap: "4px",
+    width: "44px",
+    height: "30px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: "4px",
   },
   densityLine: {
-      height: "3px",
-      backgroundColor: "var(--colorNeutralForeground4)",
-      ...shorthands.borderRadius("2px"),
-      width: "100%",
+    height: "3px",
+    backgroundColor: "var(--colorNeutralForeground4)",
+    borderRadius: "9999px",
+    width: "100%",
   },
 });
 
@@ -241,8 +252,9 @@ const DisplaySettingsPanel: React.FC = () => {
         {/* 个性化设置 */}
         <Card className={styles.card}>
             <CardHeader
+                className={styles.cardHeader}
                 image={<Color24Regular />}
-                header={<Text weight="semibold">{t('settings.personalization')}</Text>}
+                header={<Text weight="semibold" size={400}>{t('settings.personalization')}</Text>}
                 description={<Text size={200} className={styles.settingDescription}>{t('settings.personalization_desc')}</Text>}
             />
             <div className={styles.cardContent}>

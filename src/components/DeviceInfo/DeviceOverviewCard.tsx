@@ -236,20 +236,28 @@ const useStyles = makeStyles({
   // 头部中的标签页样式
   headerTabList: {
     flex: "1 1 auto",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "3px 4px",
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    minHeight: "34px",
+    border: "1px solid var(--colorNeutralStroke2)",
     "& .fui-TabList": {
-      minHeight: "32px",
+      minHeight: "28px",
       backgroundColor: "transparent",
     },
     "& .fui-Tab": {
       fontSize: "12px",
-      padding: `${tokens.spacingVerticalSNudge} ${tokens.spacingHorizontalM}`,
-      minHeight: "28px",
-      borderRadius: "6px",
-      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-      border: "1px solid var(--colorNeutralStroke2)",
+      padding: "4px 12px",
+      minHeight: "26px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
-      margin: `0 ${tokens.spacingHorizontalXS}`,
+      margin: "0 2px",
 
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground1Hover)",
@@ -257,9 +265,9 @@ const useStyles = makeStyles({
       },
 
       "&[aria-selected='true']": {
-        backgroundColor: "var(--colorBrandBackground2)",
+        backgroundColor: "var(--colorNeutralBackground1)",
         color: "var(--colorBrandForeground1)",
-        border: "1px solid var(--colorBrandStroke2)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
         fontWeight: 600,
       },
     },
@@ -267,7 +275,7 @@ const useStyles = makeStyles({
     "@media (max-width: 768px)": {
       "& .fui-Tab": {
         fontSize: "11px",
-        padding: "4px 8px",
+        padding: "3px 8px",
       },
     },
   },

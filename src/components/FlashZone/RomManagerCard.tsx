@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -54,7 +54,39 @@ const useStyles = makeStyles({
     alignItems: "flex-end",
   },
   tabList: {
-    marginBottom: "8px",
+    flexShrink: 0,
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "3px 4px",
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    minHeight: "34px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    marginBottom: "4px",
+    "& .fui-Tab": {
+      fontSize: "12px",
+      padding: "5px 12px",
+      minHeight: "28px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
+      fontWeight: 500,
+      color: "var(--colorNeutralForeground2)",
+      margin: "0 2px",
+
+      "&:hover": {
+        backgroundColor: "var(--colorNeutralBackground1Hover)",
+        color: "var(--colorNeutralForeground1)",
+      },
+
+      "&[aria-selected='true']": {
+        backgroundColor: "var(--colorNeutralBackground1)",
+        color: "var(--colorBrandForeground1)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
+        fontWeight: 600,
+      },
+    },
   },
   partitionListHeader: {
     display: "flex",

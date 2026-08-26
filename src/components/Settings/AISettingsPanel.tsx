@@ -45,66 +45,69 @@ import logService from "../../services/logService";
 
 const useStyles = makeStyles({
   container: {
-    padding: "20px",
+    padding: "4px 8px 24px 8px",
     height: "100%",
     overflow: "auto",
+    backgroundColor: "transparent",
   },
   content: {
     display: "grid",
-    gridTemplateColumns: "1.1fr 0.9fr",
-    gap: "20px",
+    gridTemplateColumns: "1.15fr 0.85fr",
+    gap: "18px",
     maxWidth: "1100px",
     margin: "0 auto",
-    "@media (max-width: 860px)": {
+    "@media (max-width: 880px)": {
       gridTemplateColumns: "1fr",
     },
   },
   leftColumn: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "18px",
   },
   rightColumn: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "18px",
   },
   card: {
     height: "fit-content",
-    borderRadius: "8px",
+    borderRadius: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+  },
+  cardHeader: {
+    padding: "18px 20px 8px 20px",
   },
   cardContent: {
-    padding: "20px",
+    padding: "8px 20px 20px 20px",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "14px",
   },
-  settingTile: {
-    ...shorthands.padding("12px", "16px"),
-    backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.borderRadius("12px"),
+  mcpCard: {
+    borderRadius: "16px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    padding: "16px 20px",
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
-    transition: "background-color 0.2s ease",
-    "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground2Hover)",
-    },
+    gap: "12px",
   },
-  rowContent: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
+  badgePill: {
+    borderRadius: "9999px",
+    fontWeight: 600,
+    fontSize: "11px",
+    padding: "2px 8px",
   },
-  titleWithIcon: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
+  pillButton: {
+    borderRadius: "9999px",
+    fontWeight: 500,
   },
   description: {
-    color: "var(--colorNeutralForeground4)",
+    color: "var(--colorNeutralForeground3)",
     fontSize: "12px",
     lineHeight: "1.4",
   },
@@ -568,8 +571,9 @@ const AISettingsPanel: React.FC = () => {
           {/* 1. AI 服务基本设置 */}
           <Card className={styles.card}>
             <CardHeader
-              image={<Bot24Regular />}
-              header={<Text weight="semibold">{t("settings.ai_settings")}</Text>}
+              className={styles.cardHeader}
+              image={<Bot24Regular style={{ color: "var(--colorBrandForeground1)" }} />}
+              header={<Text weight="semibold" size={400}>{t("settings.ai_settings")}</Text>}
               description={
                 <Text size={200} className={styles.description}>
                   配置人工智能玩机助手的服务通道、模型与 API 密钥。
@@ -637,6 +641,7 @@ const AISettingsPanel: React.FC = () => {
                     style={{ flex: 1 }}
                   />
                   <Button
+                    className={styles.pillButton}
                     onClick={fetchAvailableModels}
                     disabled={isFetchingModels}
                     icon={isFetchingModels ? <Spinner size="tiny" /> : undefined}
@@ -680,9 +685,10 @@ const AISettingsPanel: React.FC = () => {
               </Field>
 
               {/* 测试连接 & 保存配置 */}
-              <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "12px" }}>
                 <Button
                   appearance="primary"
+                  className={styles.pillButton}
                   onClick={handleTestConnection}
                   disabled={testStatus.type === "loading"}
                   icon={testStatus.type === "loading" ? <Spinner size="tiny" /> : undefined}
@@ -693,6 +699,7 @@ const AISettingsPanel: React.FC = () => {
 
                 <Button
                   appearance="primary"
+                  className={styles.pillButton}
                   onClick={handleSaveConfig}
                   disabled={isSaving || testStatus.type === "loading"}
                   icon={isSaving ? <Spinner size="tiny" /> : <Save24Regular />}
@@ -705,7 +712,7 @@ const AISettingsPanel: React.FC = () => {
           </Card>
 
           {/* 2. ADMT 本地 MCP 服务小卡片 (紧凑样式) */}
-          <Card className={styles.card} style={{ padding: "14px 18px", gap: "10px" }}>
+          <div className={styles.mcpCard}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Server24Regular style={{ color: "var(--colorBrandForeground1)", fontSize: "20px" }} />
@@ -714,7 +721,7 @@ const AISettingsPanel: React.FC = () => {
                     <Text weight="semibold" size={300}>
                       ADMT 本地 MCP 服务端
                     </Text>
-                    <Badge size="small" appearance="tint" color={mcpStatus.isRunning ? "success" : "subtle"}>
+                    <Badge className={styles.badgePill} size="small" appearance="tint" color={mcpStatus.isRunning ? "success" : "subtle"}>
                       {mcpStatus.isRunning ? "运行中 (SSE)" : "未启动"}
                     </Badge>
                   </div>
@@ -779,6 +786,7 @@ const AISettingsPanel: React.FC = () => {
                 </Select>
                 <Button
                   size="small"
+                  className={styles.pillButton}
                   appearance="secondary"
                   icon={isCopiedMcp ? <Checkmark24Regular /> : <Copy24Regular />}
                   onClick={handleCopyMcpConfig}
@@ -787,7 +795,7 @@ const AISettingsPanel: React.FC = () => {
                 </Button>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* 右侧列：AI 方案配置管理 */}
@@ -795,8 +803,9 @@ const AISettingsPanel: React.FC = () => {
           {/* 3. AI 方案配置管理 */}
           <Card className={styles.card}>
             <CardHeader
-              image={<Wand24Regular />}
-              header={<Text weight="semibold">AI 方案配置管理</Text>}
+              className={styles.cardHeader}
+              image={<Wand24Regular style={{ color: "var(--colorBrandForeground1)" }} />}
+              header={<Text weight="semibold" size={400}>AI 方案配置管理</Text>}
               description={
                 <Text size={200} className={styles.description}>
                   管理、导入、导出多套大模型配置方案，方便快捷切换。
@@ -832,6 +841,7 @@ const AISettingsPanel: React.FC = () => {
                     <Button
                       icon={<Delete24Regular />}
                       appearance="subtle"
+                      className={styles.pillButton}
                       onClick={() => {
                         const name = aiPresets.find(p => p.id === activePresetId)?.name;
                         deletePreset(activePresetId);
@@ -851,11 +861,12 @@ const AISettingsPanel: React.FC = () => {
                   <Input
                     value={newPresetName}
                     onChange={(_, data) => setNewPresetName(data.value)}
-                    placeholder="输入新方案名称（例如：ChatGPT-4o白嫖版）"
+                    placeholder="输入新方案名称（例如：ChatGPT-4o常用版）"
                     style={{ flex: 1 }}
                   />
                   <Button
                     icon={<Add24Regular />}
+                    className={styles.pillButton}
                     onClick={handleSaveAsPreset}
                     disabled={!newPresetName.trim()}
                   >
@@ -870,6 +881,7 @@ const AISettingsPanel: React.FC = () => {
               <div style={{ display: "flex", gap: "12px" }}>
                 <Button
                   icon={<ArrowUpload24Regular />}
+                  className={styles.pillButton}
                   onClick={handleImportPresets}
                   style={{ flex: 1 }}
                 >
@@ -877,6 +889,7 @@ const AISettingsPanel: React.FC = () => {
                 </Button>
                 <Button
                   icon={<ArrowDownload24Regular />}
+                  className={styles.pillButton}
                   onClick={handleExportPresets}
                   style={{ flex: 1 }}
                   disabled={aiPresets.length === 0}

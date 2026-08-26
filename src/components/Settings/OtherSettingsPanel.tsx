@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   makeStyles,
   Text,
@@ -96,35 +96,44 @@ const debounce = <T extends (...args: any[]) => any>(
 
 const useStyles = makeStyles({
   container: {
-    padding: "20px",
+    padding: "4px 8px 24px 8px",
     height: "100%",
     overflow: "auto",
+    backgroundColor: "transparent",
   },
   content: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "20px",
+    gap: "18px",
     maxWidth: "1000px",
     margin: "0 auto",
+    "@media (max-width: 800px)": {
+      gridTemplateColumns: "1fr",
+    },
   },
   card: {
     height: "fit-content",
-    borderRadius: "8px",
+    borderRadius: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+  },
+  cardHeader: {
+    padding: "18px 20px 8px 20px",
   },
   cardContent: {
-    padding: "20px",
+    padding: "8px 20px 20px 20px",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
   },
   settingTile: {
-    ...shorthands.padding("12px", "16px"),
+    padding: "14px 16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.borderRadius("12px"),
+    borderRadius: "12px",
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
+    gap: "6px",
     transition: "background-color 0.2s ease",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground2Hover)",
@@ -142,29 +151,41 @@ const useStyles = makeStyles({
     gap: "8px",
   },
   description: {
-    color: "var(--colorNeutralForeground4)",
+    color: "var(--colorNeutralForeground3)",
     fontSize: "12px",
     lineHeight: "1.4",
   },
   previewText: {
     color: "var(--colorBrandForeground1)",
     fontSize: "12px",
-    fontWeight: "bold",
-    fontFamily: "monospace",
-    marginTop: "4px",
+    fontWeight: "600",
+    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+    marginTop: "2px",
   },
   segmentedContainer: {
     backgroundColor: "var(--colorNeutralBackground3)",
-    ...shorthands.padding("2px"),
-    ...shorthands.borderRadius("8px"),
+    padding: "2px",
+    borderRadius: "9999px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    "& .fui-Tab": {
+      borderRadius: "9999px",
+      fontSize: "11px",
+      padding: "2px 8px",
+      minHeight: "24px",
+    },
   },
   restoreBar: {
     gridColumn: "1 / -1",
     display: "flex",
     justifyContent: "center",
-    marginTop: "20px",
-    ...shorthands.padding("10px"),
-    ...shorthands.borderTop("1px", "solid", "var(--colorNeutralStroke2)"),
+    marginTop: "12px",
+    padding: "12px",
+    borderTop: "1px solid var(--colorNeutralStroke2)",
+  },
+  restoreButton: {
+    borderRadius: "9999px",
+    fontWeight: 500,
+    padding: "0 16px",
   },
 });
 
@@ -292,13 +313,11 @@ const OtherSettingsPanel: React.FC = () => {
     }
   };
 
-
-
   const handleLanguageChange = (value: string) => {
     updateConfig({ language: value as "zh-CN" | "zh-TW" | "en-US" });
   };
 
-function handleStartWithSystemChange(checked: boolean): void {
+  function handleStartWithSystemChange(checked: boolean): void {
     if (!autoStartSupported) {
       setAutoStartStatus({
         type: 'error',
@@ -354,7 +373,6 @@ function handleStartWithSystemChange(checked: boolean): void {
       systemTrayEnabled: false,
       autoStartEnabled: false,
       soundEnabled: true,
-      // ... 其他默认值
     };
     updateConfig(defaultSettings);
     setStatusBarMessage({
@@ -374,8 +392,9 @@ function handleStartWithSystemChange(checked: boolean): void {
         {/* 语言和地区 (常规设置) */}
         <Card className={styles.card}>
           <CardHeader
+            className={styles.cardHeader}
             image={<Globe24Regular />}
-            header={<Text weight="semibold">{t('settings.language_region')}</Text>}
+            header={<Text weight="semibold" size={400}>{t('settings.language_region')}</Text>}
             description={<Text size={200} className={styles.description}>{t('settings.language_region_desc')}</Text>}
           />
 
@@ -438,15 +457,16 @@ function handleStartWithSystemChange(checked: boolean): void {
         {/* 系统行为设置 (常规设置) */}
         <Card className={styles.card}>
           <CardHeader
+            className={styles.cardHeader}
             image={<Settings24Regular />}
-            header={<Text weight="semibold">{t('settings.general_settings')}</Text>}
+            header={<Text weight="semibold" size={400}>{t('settings.general_settings')}</Text>}
             description={<Text size={200} className={styles.description}>{t('settings.general_settings_desc')}</Text>}
           />
 
           <div className={styles.cardContent}>
             {/* 加载指示器 */}
             {loading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                 <Spinner size="tiny" />
                 <Text size={200} className={styles.description}>{t('settings.syncing_status')}</Text>
               </div>
@@ -548,6 +568,7 @@ function handleStartWithSystemChange(checked: boolean): void {
         <div className={styles.restoreBar}>
           <Button 
             appearance="subtle" 
+            className={styles.restoreButton}
             icon={<ArrowCounterclockwise24Regular />}
             onClick={handleRestoreDefaults}
           >

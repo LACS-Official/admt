@@ -46,9 +46,9 @@ const useStyles = makeStyles({
     height: "100%",
     width: "100%",
     boxSizing: "border-box",
-    padding: "16px 20px",
-    gap: "14px",
-    backgroundColor: "var(--colorNeutralBackground1)",
+    padding: "0",
+    gap: "12px",
+    backgroundColor: "transparent",
     overflow: "hidden",
   },
   // Top Header & Segmented Tabs

@@ -43,17 +43,17 @@ import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
-    ...shorthands.padding("12px"),
+    padding: "4px 8px 24px 8px",
     height: "100%",
-    ...shorthands.overflow("auto"),
-    backgroundColor: "var(--colorNeutralBackground3)", // Subtle background for the whole page
+    overflow: "auto",
+    backgroundColor: "transparent",
   },
   content: {
     display: "grid",
-    gridTemplateColumns: "1.2fr 0.8fr", // Asymmetric layout
-    ...shorthands.gap("20px"),
+    gridTemplateColumns: "1.2fr 0.8fr",
+    gap: "18px",
     maxWidth: "1100px",
-    ...shorthands.margin("0", "auto"),
+    margin: "0 auto",
     "@media (max-width: 900px)": {
       gridTemplateColumns: "1fr",
     },
@@ -64,14 +64,17 @@ const useStyles = makeStyles({
     "@media (max-width: 900px)": {
       gridColumn: "1 / -1",
     },
-    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
-    boxShadow: tokens.shadow4,
+    borderRadius: "16px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    transition: "box-shadow 0.2s ease, transform 0.2s ease",
   },
   heroContent: {
-    padding: "32px 24px",
+    padding: "28px 24px",
     display: "flex",
     flexDirection: "row",
-    gap: "32px",
+    gap: "28px",
     alignItems: "center",
     "@media (max-width: 600px)": {
       flexDirection: "column",
@@ -79,21 +82,22 @@ const useStyles = makeStyles({
     },
   },
   appLogoLarge: {
-    width: "100px",
-    height: "100px",
-    ...shorthands.borderRadius("8px"),
-    boxShadow: tokens.shadow8,
+    width: "92px",
+    height: "92px",
+    borderRadius: "18px",
+    boxShadow: "0 8px 24px -4px rgba(0, 0, 0, 0.12)",
   },
   logoSection: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "12px",
+    gap: "10px",
+    flexShrink: 0,
   },
   heroInfo: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "6px",
     flex: 1,
   },
   versionText: {
@@ -103,13 +107,19 @@ const useStyles = makeStyles({
   heroButtonGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    ...shorthands.gap("8px"),
-    marginTop: "8px",
+    gap: "8px",
+    marginTop: "12px",
   },
   heroButton: {
-    ...shorthands.padding("0", "12px"),
+    padding: "0 14px",
     height: "36px",
+    borderRadius: "9999px",
     justifyContent: "center",
+    fontWeight: 500,
+    transition: "all 0.15s ease",
+    ":hover": {
+      transform: "translateY(-1px)",
+    },
   },
   
   // Team side card
@@ -118,23 +128,28 @@ const useStyles = makeStyles({
     "@media (max-width: 900px)": {
       gridColumn: "1 / -1",
     },
-    ...shorthands.border("none"),
+    borderRadius: "16px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
   },
   teamContent: {
-    ...shorthands.padding("24px"),
+    padding: "24px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     textAlign: "center",
-    gap: "12px",
+    gap: "10px",
+    height: "100%",
+    justifyContent: "center",
+    boxSizing: "border-box",
   },
   teamLogoRect: {
-    width: "140px",
-    height: "78.75px", // 16:9 aspect ratio (140 / 16 * 9)
-    ...shorthands.borderRadius("12px"),
-    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke3)"),
-    marginBottom: "8px",
+    width: "130px",
+    height: "73px",
+    borderRadius: "12px",
+    border: "1px solid var(--colorNeutralStroke3)",
+    marginBottom: "4px",
     objectFit: "cover",
   },
   teamButtonGrid: {
@@ -142,18 +157,22 @@ const useStyles = makeStyles({
     gap: "8px",
     marginTop: "8px",
   },
+  pillButtonSubtle: {
+    borderRadius: "9999px",
+    fontWeight: 500,
+  },
 
   // Social/Community section
   communitySection: {
     gridColumn: "1 / -1",
-    ...shorthands.padding("16px", "0"),
+    padding: "8px 0 0 0",
   },
   sectionHeader: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    marginBottom: "16px",
-    ...shorthands.padding("0", "8px"),
+    marginBottom: "14px",
+    padding: "0 4px",
   },
   headerLine: {
     height: "1px",
@@ -166,27 +185,39 @@ const useStyles = makeStyles({
     gap: "12px",
   },
   socialButton: {
-    height: "56px",
+    height: "52px",
     justifyContent: "flex-start",
-    ...shorthands.padding("0", "16px"),
+    padding: "0 16px",
+    borderRadius: "14px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      borderColor: "var(--colorNeutralStroke1Hover)",
+      transform: "translateY(-2px)",
+      boxShadow: "0 8px 16px -4px rgba(0, 0, 0, 0.06)",
+    },
     "& svg": {
       fontSize: "20px",
+      marginRight: "6px",
     },
   },
-
-  // Footer Grid removed as per user request
 
   // Dialog styles
   openSourceDialog: {
     maxWidth: "800px",
     maxHeight: "80vh",
+    borderRadius: "18px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 20px 48px -8px rgba(0, 0, 0, 0.24)",
   },
   openSourceGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "16px",
+    gap: "12px",
     marginTop: "16px",
-    ...shorthands.overflow("auto"),
+    overflow: "auto",
     maxHeight: "400px",
     paddingRight: "8px",
   },
@@ -194,10 +225,11 @@ const useStyles = makeStyles({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    ...shorthands.padding("12px"),
-    ...shorthands.borderRadius("6px"),
+    padding: "12px 14px",
+    borderRadius: "12px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
+    border: "1px solid var(--colorNeutralStroke2)",
+    transition: "all 0.15s ease",
   },
   openSourceName: {
     fontWeight: "600",
@@ -209,11 +241,11 @@ const useStyles = makeStyles({
   },
   openSourceLicense: {
     fontSize: "11px",
-    color: "var(--colorNeutralForeground3)",
-    backgroundColor: "var(--colorNeutralBackground3)",
-    ...shorthands.padding("2px", "6px"),
-    ...shorthands.borderRadius("4px"),
-    fontWeight: "500",
+    color: "var(--colorBrandForeground1)",
+    backgroundColor: "var(--colorBrandBackground2)",
+    padding: "3px 8px",
+    borderRadius: "9999px",
+    fontWeight: "600",
   },
 });
 
@@ -406,6 +438,7 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
               <Button 
                 appearance="subtle" 
                 size="small"
+                className={styles.pillButtonSubtle}
                 icon={<Globe24Regular />}
                 onClick={OpenofficialADMTWeb}
               >
@@ -490,6 +523,7 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
               <Button 
                 appearance="subtle" 
                 size="small"
+                className={styles.pillButtonSubtle}
                 icon={<Globe24Regular />}
                 onClick={() => openUrl(links.officialWebsite)}
               >
@@ -498,6 +532,7 @@ const AboutPanel: React.FC<AboutPanelProps> = () => {
               <Button 
                 appearance="subtle" 
                 size="small"
+                className={styles.pillButtonSubtle}
                 icon={<Map24Regular />}
                 onClick={() => openUrl(links.otherapps)}
               >

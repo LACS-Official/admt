@@ -22,15 +22,16 @@ import InstalledPluginsTab from "./InstalledPluginsTab";
 import ImportPluginTab from "./ImportPluginTab";
 import PluginDevDocsTab from "./PluginDevDocsTab";
 import PluginPublishDocsTab from "./PluginPublishDocsTab";
+import UnderDevelopmentOverlay from "../Common/UnderDevelopmentOverlay";
 
 const useStyles = makeStyles({
   container: {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    padding: "16px",
+    padding: "16px 20px",
     gap: "16px",
-    backgroundColor: "var(--colorNeutralBackground2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
     boxSizing: "border-box",
     overflow: "hidden",
   },
@@ -38,27 +39,28 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("10px"),
-    ...shorthands.padding("6px 12px"),
-    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+    flexShrink: 0,
   },
   headerTabList: {
-    "& .fui-TabList": {
-      minHeight: "32px",
-      backgroundColor: "transparent",
-    },
+    flexShrink: 0,
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "4px",
+    display: "inline-flex",
+    alignItems: "center",
+    width: "fit-content",
+    minHeight: "36px",
+    border: "1px solid var(--colorNeutralStroke2)",
     "& .fui-Tab": {
-      fontSize: "12px",
+      fontSize: "13px",
       padding: "6px 14px",
-      minHeight: "28px",
-      borderRadius: "8px",
-      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-      border: "1px solid var(--colorNeutralStroke2)",
+      minHeight: "30px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
-      margin: "0 3px",
+      margin: "0 2px",
 
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground1Hover)",
@@ -66,15 +68,23 @@ const useStyles = makeStyles({
       },
 
       "&[aria-selected='true']": {
-        backgroundColor: "var(--colorBrandBackground2)",
+        backgroundColor: "var(--colorNeutralBackground1)",
         color: "var(--colorBrandForeground1)",
-        border: "1px solid var(--colorBrandStroke2)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
         fontWeight: 600,
+      },
+    },
+
+    "@media (max-width: 768px)": {
+      "& .fui-Tab": {
+        fontSize: "12px",
+        padding: "4px 10px",
       },
     },
   },
   contentArea: {
-    flex: 1,
+    flex: "1 1 0",
+    minHeight: 0,
     overflow: "hidden",
   },
 });
@@ -109,7 +119,7 @@ const PluginSystemPanel: React.FC = () => {
     {
       id: "publish_docs" as PluginSubView,
       label: t("plugin_system.tabs.publish_docs", "上架与发布"),
-      icon: <DocumentSparkle24Regular />,
+      icon: <BookOpen24Regular />,
     },
   ];
 
@@ -166,7 +176,24 @@ const PluginSystemPanel: React.FC = () => {
         </Button>
       </div>
 
-      <div className={styles.contentArea}>{renderTabContent()}</div>
+      <div className={styles.contentArea} style={{ position: "relative" }}>
+        <div style={{
+          opacity: 0.4,
+          pointerEvents: "none",
+          filter: "blur(3px)",
+          transition: "all 0.3s ease",
+          height: "100%",
+          overflow: "hidden",
+        }}>
+          {renderTabContent()}
+        </div>
+
+        <UnderDevelopmentOverlay
+          featureKey="plugin_system"
+          title={t("plugin_system.under_dev_title", "插件与扩展系统开发中...")}
+          description={t("plugin_system.under_dev_desc", "开放式沙盒插件架构、第三方脚本运行时与开发者生态正在内测。")}
+        />
+      </div>
     </div>
   );
 };

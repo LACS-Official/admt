@@ -32,6 +32,7 @@ import { useTranslation } from "react-i18next";
 import { useMcpStore, PRESET_AI_SKILLS } from "../../stores/mcpStore";
 import { AISkillResource } from "../../types/mcp";
 import { useAppStore } from "../../stores/appStore";
+import UnderDevelopmentOverlay from "../Common/UnderDevelopmentOverlay";
 
 const useStyles = makeStyles({
   container: {
@@ -295,59 +296,57 @@ export const SkillsResourcesPanel: React.FC = () => {
       </div>
 
       {/* 技能卡片列表 (一行 2 个) */}
-      <div className={styles.content}>
-        <div className={styles.grid}>
-          {filteredSkills.map((skill) => (
-            <div key={skill.id} className={styles.skillCard} onClick={() => setDetailSkill(skill)}>
-              <div className={styles.cardTop}>
-                <Badge appearance="tint" color="brand" size="small">
-                  {skill.category.toUpperCase()}
-                </Badge>
-                <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                  作者: {skill.author}
-                </Text>
-              </div>
+      <div className={styles.content} style={{ position: "relative", flex: 1, minHeight: 0 }}>
+        <div style={{
+          opacity: 0.4,
+          pointerEvents: "none",
+          filter: "blur(3px)",
+          transition: "all 0.3s ease",
+          height: "100%",
+          overflow: "hidden",
+        }}>
+          <div className={styles.grid}>
+            {filteredSkills.map((skill) => (
+              <div key={skill.id} className={styles.skillCard}>
+                <div className={styles.cardTop}>
+                  <Badge appearance="tint" color="brand" size="small">
+                    {skill.category.toUpperCase()}
+                  </Badge>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                    作者: {skill.author}
+                  </Text>
+                </div>
 
-              <div className={styles.skillTitle}>{skill.title}</div>
-              <div className={styles.skillDesc}>{skill.description}</div>
+                <div className={styles.skillTitle}>{skill.title}</div>
+                <div className={styles.skillDesc}>{skill.description}</div>
 
-              <div className={styles.tagList}>
-                {skill.tags.map((tag, idx) => (
-                  <span key={idx} className={styles.tagChip}>
-                    #{tag}
-                  </span>
-                ))}
-              </div>
+                <div className={styles.tagList}>
+                  {skill.tags.map((tag, idx) => (
+                    <span key={idx} className={styles.tagChip}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
 
-              <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
-                <Button
-                  size="small"
-                  appearance="primary"
-                  icon={<Open24Regular />}
-                  onClick={() => setDetailSkill(skill)}
-                >
-                  查看详情与 Prompt
-                </Button>
-                <Button
-                  size="small"
-                  appearance="secondary"
-                  icon={copiedId === skill.id ? <Checkmark24Regular /> : <Copy24Regular />}
-                  onClick={() => copyToClipboard(skill.systemPrompt, skill.id)}
-                >
-                  {copiedId === skill.id ? "已复制" : "复制"}
-                </Button>
-                <Tooltip content="导出为 Markdown 格式" relationship="label">
+                <div className={styles.cardActions}>
                   <Button
                     size="small"
-                    appearance="subtle"
-                    icon={<ArrowDownload24Regular />}
-                    onClick={() => exportPromptToFile(skill)}
-                  />
-                </Tooltip>
+                    appearance="primary"
+                    icon={<Open24Regular />}
+                  >
+                    查看详情与 Prompt
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
+        <UnderDevelopmentOverlay
+          featureKey="online_skills"
+          title={t("skills.under_dev_title", "AI 技能 (Skills) 库开发中...")}
+          description={t("skills.under_dev_desc", "针对 Android 玩机与逆向调试的专业 LLM System Prompts / Agent 技能库正在内测构建。")}
+        />
       </div>
 
       {/* Skills 详情弹窗 (二级弹窗) */}

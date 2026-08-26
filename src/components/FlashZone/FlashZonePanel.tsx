@@ -20,7 +20,6 @@ import ImageFlashCard from "../Tools/ImageFlashCard";
 import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
 import { RomManagerCard } from "./RomManagerCard";
 import { FastbootPartitionManagerCard } from "./FastbootPartitionManagerCard";
-import OneClickRootPanel from "../Root/OneClickRootPanel";
 import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
@@ -28,34 +27,32 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    padding: "8px",
-    gap: "24px",
-    backgroundColor: "var(--colorNeutralBackground2)",
+    padding: "16px 20px",
+    gap: "16px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxSizing: "border-box",
     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   headerTabList: {
-    flex: "1 1 auto",
-    maxHeight: "45px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "6px",
-    padding: "4px 8px",
-    //居中显示
-    display: "flex",
+    flexShrink: 0,
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "4px",
+    display: "inline-flex",
     alignItems: "center",
-    "& .fui-TabList": {
-      minHeight: "32px",
-      backgroundColor: "transparent",
-    },
+    width: "fit-content",
+    minHeight: "36px",
+    border: "1px solid var(--colorNeutralStroke2)",
     "& .fui-Tab": {
-      fontSize: "12px",
-      padding: "6px 12px",
-      minHeight: "28px",
-      borderRadius: "8px",
-      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      fontSize: "13px",
+      padding: "6px 14px",
+      minHeight: "30px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
-      margin: "0 4px",
-      border: "1px solid var(--colorNeutralStroke2)",
+      margin: "0 2px",
 
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground1Hover)",
@@ -63,17 +60,17 @@ const useStyles = makeStyles({
       },
 
       "&[aria-selected='true']": {
-        backgroundColor: "var(--colorBrandBackground2)",
+        backgroundColor: "var(--colorNeutralBackground1)",
         color: "var(--colorBrandForeground1)",
-        border: "1px solid var(--colorBrandStroke2)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
         fontWeight: 600,
       },
     },
 
     "@media (max-width: 768px)": {
       "& .fui-Tab": {
-        fontSize: "11px",
-        padding: "4px 8px",
+        fontSize: "12px",
+        padding: "4px 10px",
       },
     },
   },
@@ -81,7 +78,7 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: "16px",
+    paddingBottom: "12px",
     borderBottom: "1px solid var(--colorNeutralStroke2)",
   },
   headerLeft: {
@@ -104,13 +101,14 @@ const useStyles = makeStyles({
   tabContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
     flex: 1,
+    minHeight: 0,
     overflow: "hidden",
-    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   tabContent: {
-    flex: 1,
+    flex: "1 1 0",
+    minHeight: 0,
     overflow: "auto",
     position: "relative",
   },
@@ -177,18 +175,17 @@ const useStyles = makeStyles({
 });
 
 type FlashZoneView =
-  | "one-click-root"
   | "partition-manager"
-  | "unlock-tools"
+  | "rom-manager"
   | "image-flash"
   | "xiaomi-flash"
-  | "rom-manager";
+  | "unlock-tools";
 
 const FlashZonePanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
-  const [currentView, setCurrentView] = useState<FlashZoneView>("one-click-root");
+  const [currentView, setCurrentView] = useState<FlashZoneView>("partition-manager");
   const [showOverlay, setShowOverlay] = useState(false);
   const connectedDevices = devices.filter((d) => d.connected);
 
@@ -213,34 +210,29 @@ const FlashZonePanel: React.FC = () => {
 
   const tabs = [
     {
-      id: "one-click-root" as FlashZoneView,
-      label: "一键 Root",
-      icon: <Flash24Regular />,
-    },
-    {
       id: "partition-manager" as FlashZoneView,
       label: t("flash.tab_partition_manager", "分区管理"),
       icon: <Layer24Regular />,
     },
     {
-      id: "unlock-tools" as FlashZoneView,
-      label: t("flash.tab_unlock"),
-      icon: <LockOpen24Regular />,
+      id: "rom-manager" as FlashZoneView,
+      label: t("flash.tab_rom_manager", "ROM 固件管理"),
+      icon: <Archive24Regular />,
     },
     {
       id: "image-flash" as FlashZoneView,
-      label: t("flash.tab_image"),
+      label: t("flash.tab_image", "镜像刷入"),
       icon: <CloudArrowUp24Regular />,
     },
     {
       id: "xiaomi-flash" as FlashZoneView,
-      label: t("flash.tab_rom"),
+      label: t("flash.tab_rom", "线刷工具"),
       icon: <Flash24Regular />,
     },
     {
-      id: "rom-manager" as FlashZoneView,
-      label: t("flash.tab_rom_manager"),
-      icon: <Archive24Regular />,
+      id: "unlock-tools" as FlashZoneView,
+      label: t("flash.tab_unlock", "解锁工具"),
+      icon: <LockOpen24Regular />,
     },
   ];
 
@@ -253,8 +245,6 @@ const FlashZonePanel: React.FC = () => {
       null;
 
     switch (currentView) {
-      case "one-click-root":
-        return <OneClickRootPanel device={deviceToUse} />;
       case "partition-manager":
         return (
           <FastbootPartitionManagerCard

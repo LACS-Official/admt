@@ -23,22 +23,24 @@ import ModulePanel from './ModulePanel';
 import AdvancedSettingsPanel from './AdvancedSettingsPanel';
 import OneClickRootPanel from './OneClickRootPanel';
 import { DeviceInfo } from '../../types/device';
+import UnderDevelopmentOverlay from '../Common/UnderDevelopmentOverlay';
 
 const useStyles = makeStyles({
   container: {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    padding: "8px",
-    gap: "24px",
-    backgroundColor: "var(--colorNeutralBackground2)",
+    padding: "16px 20px",
+    gap: "16px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxSizing: "border-box",
     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   header: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: "16px",
+    paddingBottom: "12px",
     borderBottom: "1px solid var(--colorNeutralStroke2)",
   },
   headerLeft: {
@@ -61,14 +63,16 @@ const useStyles = makeStyles({
   tabContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
     flex: 1,
+    minHeight: 0,
     overflow: "hidden",
-    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   tabContent: {
-    flex: 1,
-    overflow: "auto"
+    flex: "1 1 0",
+    minHeight: 0,
+    overflow: "auto",
+    position: "relative",
   },
 
   noDevice: {
@@ -95,7 +99,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     gap: "12px",
-    borderRadius: "8px",
+    borderRadius: "14px",
     border: "1px solid var(--colorNeutralStroke1)",
   },
   overlayIcon: {
@@ -103,46 +107,43 @@ const useStyles = makeStyles({
     color: "var(--colorBrandForeground1)",
   },
   headerTabList: {
-    flex: "1 1 auto",
-    maxHeight: "45px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "6px",
-    padding: "4px 8px",
-    //居中显示
-    display: "flex",
+    flexShrink: 0,
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "4px",
+    display: "inline-flex",
     alignItems: "center",
-    "& .fui-TabList": {
-      minHeight: "32px",
-      backgroundColor: "transparent",
-    },
+    width: "fit-content",
+    minHeight: "36px",
+    border: "1px solid var(--colorNeutralStroke2)",
     "& .fui-Tab": {
-      fontSize: "12px",
-      padding: "6px 12px",
-      minHeight: "28px",
-      borderRadius: "6px",
-      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-      border: "1px solid transparent",
+      fontSize: "13px",
+      padding: "6px 14px",
+      minHeight: "30px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
-      margin: "0 4px",
-      
+      margin: "0 2px",
+
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground1Hover)",
         color: "var(--colorNeutralForeground1)",
       },
-      
+
       "&[aria-selected='true']": {
-        backgroundColor: "var(--colorBrandBackground2)",
+        backgroundColor: "var(--colorNeutralBackground1)",
         color: "var(--colorBrandForeground1)",
-        border: "1px solid var(--colorBrandStroke2)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
         fontWeight: 600,
       },
     },
-    
+
     "@media (max-width: 768px)": {
       "& .fui-Tab": {
-        fontSize: "11px",
-        padding: "4px 8px",
+        fontSize: "12px",
+        padding: "4px 10px",
       },
     },
   },
@@ -233,43 +234,23 @@ const RootPanel: React.FC = () => {
           <div 
             className={styles.tabContent} 
             style={{ position: 'relative' }}
-            onClick={handleContentClick}
           >
             <div style={{ 
-              opacity: isNoDevice ? 0.6 : 1, 
-              pointerEvents: isNoDevice ? 'none' : 'auto',
-              transition: 'opacity 0.3s ease'
+              opacity: 0.4, 
+              pointerEvents: 'none',
+              filter: 'blur(3px)',
+              transition: 'all 0.3s ease',
+              height: '100%',
+              overflow: 'hidden',
             }}>
               {renderContent(selectedDevice || null)}
             </div>
             
-            {isNoDevice && showOverlay && (
-              <div className={styles.overlay}>
-                <Button 
-                  appearance="subtle" 
-                  icon={<Dismiss24Regular />} 
-                  onClick={(e) => { e.stopPropagation(); setShowOverlay(false); }}
-                  style={{ position: 'absolute', top: '8px', right: '8px' }}
-                />
-                <div className={styles.overlayIcon}>
-                  {devices.filter(d => d.connected).length === 0 ? <Code24Regular /> : <Settings24Regular />}
-                </div>
-                <Text size={500} weight="semibold">
-                  {devices.filter(d => d.connected).length === 0 ? t('common.no_device') : t('common.select_device')}
-                </Text>
-                <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-                  {devices.filter(d => d.connected).length === 0 ? t('common.no_device_hint') : t('common.select_device_hint')}
-                </Text>
-                <Button 
-                   appearance="primary" 
-                   size="small" 
-                   style={{ marginTop: '8px' }}
-                   onClick={() => window.location.hash = '#/'}
-                >
-                   {devices.filter(d => d.connected).length === 0 ? t('common.wireless_connection') : t('common.refresh')}
-                </Button>
-              </div>
-            )}
+            <UnderDevelopmentOverlay
+              featureKey="root_zone"
+              title={t("root.under_dev_title", "Root 专区深度开发中...")}
+              description={t("root.under_dev_desc", "一键 Root、Magisk/KernelSU 镜像自动修补与模块管理引擎正在加紧攻关测试。")}
+            />
           </div>
         </div>
       </div>

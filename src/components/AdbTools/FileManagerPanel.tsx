@@ -62,47 +62,52 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 const useStyles = makeStyles({
   container: {
     height: "100%",
-    display: "flex",
-    gap: "12px",
+    display: "grid",
+    gridTemplateColumns: "230px 1fr",
+    gap: "16px",
+    overflow: "hidden",
   },
   sidebar: {
-    width: "200px",
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "8px",
-    padding: "12px",
-    flexShrink: 0,
+    borderRadius: "14px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    padding: "16px",
+    overflowY: "auto",
+    boxSizing: "border-box",
   },
   sidebarHeader: {
-    padding: "0 8px 8px 8px",
+    paddingBottom: "8px",
     fontWeight: 600,
-    fontSize: "14px",
-    color: "var(--colorNeutralForeground2)",
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground3)",
     borderBottom: "1px solid var(--colorNeutralStroke2)",
-    marginBottom: "4px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
   },
   sidebarItem: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "8px",
-    borderRadius: "6px",
+    gap: "10px",
+    padding: "8px 12px",
+    borderRadius: "8px",
     cursor: "pointer",
     fontSize: "13px",
     color: "var(--colorNeutralForeground1)",
+    transition: "all 0.15s ease",
     "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground1)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
     },
   },
   sidebarItemActive: {
-    backgroundColor: "var(--colorNeutralBackground1)",
+    backgroundColor: "rgba(0, 113, 227, 0.08)",
     fontWeight: 600,
-    color: "var(--colorBrandForeground1)",
+    color: "#0071e3",
   },
   toolbox: {
-    marginTop: "20px",
+    marginTop: "12px",
     display: "flex",
     flexDirection: "column",
     gap: "8px",
@@ -110,76 +115,76 @@ const useStyles = makeStyles({
   toolboxItem: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "8px",
-    borderRadius: "6px",
+    gap: "10px",
+    padding: "8px 12px",
+    borderRadius: "8px",
     cursor: "pointer",
     fontSize: "13px",
     color: "var(--colorNeutralForeground1)",
-    transition: "all 0.2s ease",
+    transition: "all 0.15s ease",
     "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground1)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
       color: "var(--colorBrandForeground1)",
     },
   },
   toolboxLabel: {
     fontSize: "11px",
-    fontWeight: "bold",
+    fontWeight: 600,
     color: "var(--colorNeutralForeground3)",
-    padding: "0 8px",
+    padding: "0 4px",
     marginBottom: "4px",
     textTransform: "uppercase",
   },
   mainContent: {
-    flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
     minWidth: 0, 
     height: "100%",
+    minHeight: 0,
   },
   card: {
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    borderRadius: "8px",
+    borderRadius: "14px",
     border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+    overflow: "hidden",
+    minHeight: 0,
   },
   content: {
     flex: 1,
     padding: "16px",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
     minHeight: 0,
+    position: "relative",
   },
   navigationBar: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    padding: "8px",
+    padding: "6px 10px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "6px",
-    flexWrap: "wrap",
+    borderRadius: "10px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   pathInput: {
-    // 固定宽度且支持横向滚动，避免遮挡右侧快捷按钮
-    flex: "0 1 85%",
-    maxWidth: "85%",
+    flex: 1,
     overflowX: "auto",
     whiteSpace: "nowrap",
     padding: "0 4px",
-    borderRadius: "4px",
-    // 自定义滚动条
     "&::-webkit-scrollbar": {
-      height: "6px",
+      height: "4px",
     },
     "&::-webkit-scrollbar-track": {
-      backgroundColor: "var(--colorNeutralBackground2)",
+      backgroundColor: "transparent",
     },
     "&::-webkit-scrollbar-thumb": {
       backgroundColor: "var(--colorNeutralStroke2)",
-      borderRadius: "4px",
+      borderRadius: "10px",
     },
   },
   quickNavButtons: {
@@ -196,86 +201,91 @@ const useStyles = makeStyles({
   },
   tableContainer: {
     flex: 1,
-    maxHeight: "500px",
+    minHeight: 0,
     overflow: "auto",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "6px",
+    borderRadius: "10px",
+    backgroundColor: "var(--colorNeutralBackground1)",
     "&::-webkit-scrollbar": {
-      width: "8px",
-      height: "8px",
+      width: "6px",
+      height: "6px",
     },
     "&::-webkit-scrollbar-track": {
-      backgroundColor: "var(--colorNeutralBackground2)",
+      backgroundColor: "transparent",
     },
     "&::-webkit-scrollbar-thumb": {
       backgroundColor: "var(--colorNeutralStroke2)",
-      borderRadius: "4px",
+      borderRadius: "10px",
       "&:hover": {
         backgroundColor: "var(--colorNeutralStroke1)",
       },
     },
   },
   fileRow: {
-    height: "40px",
+    height: "44px",
     cursor: "pointer",
+    transition: "background-color 0.15s ease",
     "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground1)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
     },
   },
   fileIcon: {
-    width: "20px",
-    height: "20px",
+    width: "22px",
+    height: "22px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    color: "var(--colorBrandForeground1)",
   },
   fileName: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: "10px",
     cursor: "pointer",
   },
   fileSize: {
-    fontFamily: "monospace",
+    fontFamily: "ui-monospace, Consolas, monospace",
     fontSize: "12px",
     color: "var(--colorNeutralForeground2)",
   },
   permissions: {
-    fontFamily: "monospace",
+    fontFamily: "ui-monospace, Consolas, monospace",
     fontSize: "11px",
     color: "var(--colorNeutralForeground3)",
+  },
+  compactCell: {
+    padding: "4px 8px",
+    verticalAlign: "middle",
+  },
+  actionBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "8px 14px",
+    backgroundColor: "rgba(0, 113, 227, 0.08)",
+    borderRadius: "10px",
+    border: "1px solid var(--colorBrandStroke2)",
+  },
+  selectedInfo: {
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#0071e3",
   },
   loadingContainer: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "200px",
+    height: "100%",
   },
   emptyState: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    height: "200px",
+    height: "100%",
     gap: "12px",
     color: "var(--colorNeutralForeground3)",
-  },
-  actionBar: {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  selectedInfo: {
-    padding: "8px 12px",
-    backgroundColor: "var(--colorBrandBackground2)",
-    borderRadius: "4px",
-    fontSize: "12px",
-  },
-  compactCell: {
-    padding: "4px 8px",
-    verticalAlign: "middle",
   },
 });
 
@@ -292,6 +302,38 @@ interface FileManagerPanelProps {
   device: DeviceInfo | null;
   onAdbRequired: () => void;
 }
+
+const getFileIcon = (fileName: string, type: 'file' | 'directory') => {
+  if (type === 'directory') {
+    return <Folder24Regular style={{ color: '#0071e3' }} />;
+  }
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) {
+    return <Image24Regular style={{ color: '#34c759' }} />;
+  }
+  if (['mp4', 'mkv', 'avi', 'mov', 'flv', 'wmv'].includes(ext)) {
+    return <Video24Regular style={{ color: '#ff9500' }} />;
+  }
+  if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'].includes(ext)) {
+    return <Mic24Regular style={{ color: '#af52de' }} />;
+  }
+  if (['pdf'].includes(ext)) {
+    return <DocumentPdf24Regular style={{ color: '#ff3b30' }} />;
+  }
+  if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) {
+    return <Archive24Regular style={{ color: '#8e8e93' }} />;
+  }
+  if (['apk', 'xapk', 'apks'].includes(ext)) {
+    return <Apps24Regular style={{ color: '#5856d6' }} />;
+  }
+  if (['js', 'ts', 'jsx', 'tsx', 'py', 'json', 'xml', 'html', 'css', 'sh', 'bat', 'c', 'cpp', 'rs', 'java'].includes(ext)) {
+    return <Code24Regular style={{ color: '#0071e3' }} />;
+  }
+  if (['txt', 'log', 'md', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+    return <DocumentText24Regular style={{ color: '#ff9500' }} />;
+  }
+  return <Document24Regular style={{ color: 'var(--colorNeutralForeground2)' }} />;
+};
 
 const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequired }) => {
   const styles = useStyles();

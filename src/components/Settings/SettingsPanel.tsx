@@ -28,50 +28,47 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    padding: "8px",
-    gap: "8px",
-    backgroundColor: "var(--colorNeutralBackground2)",
+    padding: "16px 24px",
+    gap: "16px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxSizing: "border-box",
     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   },
   header: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    marginBottom: "5px",
+    marginBottom: "4px",
   },
   tabContainer: {
     marginBottom: "0px",
-  },
-  tabList: {
-    backgroundColor: "transparent",
+    flexShrink: 0,
   },
   content: {
-    flex: 1,
+    flex: "1 1 0",
+    minHeight: 0,
     overflow: "auto",
   },
   headerTabList: {
-    flex: "1 1 auto",
-    maxHeight: "45px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "8px",
-    padding: "4px 8px",
-    //居中显示
-    display: "flex",
+    flexShrink: 0,
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "4px",
+    display: "inline-flex",
     alignItems: "center",
-    "& .fui-TabList": {
-      minHeight: "32px",
-      backgroundColor: "transparent",
-    },
+    width: "fit-content",
+    minHeight: "36px",
+    border: "1px solid var(--colorNeutralStroke2)",
     "& .fui-Tab": {
-      fontSize: "12px",
-      padding: "6px 12px",
-      minHeight: "28px",
-      borderRadius: "8px",
-      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-      border: "1px solid var(--colorNeutralStroke2)",
+      fontSize: "13px",
+      padding: "6px 14px",
+      minHeight: "30px",
+      borderRadius: "9999px",
+      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+      border: "none",
       fontWeight: 500,
       color: "var(--colorNeutralForeground2)",
-      margin: "0 4px",
+      margin: "0 2px",
 
       "&:hover": {
         backgroundColor: "var(--colorNeutralBackground1Hover)",
@@ -79,24 +76,18 @@ const useStyles = makeStyles({
       },
 
       "&[aria-selected='true']": {
-        backgroundColor: "var(--colorBrandBackground2)",
+        backgroundColor: "var(--colorNeutralBackground1)",
         color: "var(--colorBrandForeground1)",
-        border: "1px solid var(--colorBrandStroke2)",
+        boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
         fontWeight: 600,
       },
     },
 
     "@media (max-width: 768px)": {
       "& .fui-Tab": {
-        fontSize: "11px",
-        padding: "4px 8px",
+        fontSize: "12px",
+        padding: "4px 10px",
       },
-    },
-  },
-  tab: {
-    "&:hover": {
-      backgroundColor: "var(--colorNeutralBackground1Hover)",
-      color: "var(--colorNeutralForeground1)",
     },
   },
 });

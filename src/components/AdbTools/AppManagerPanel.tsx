@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   makeStyles,
   Text,
@@ -67,7 +67,8 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "14px",
+    overflow: "hidden",
   },
   header: {
     display: "flex",
@@ -91,61 +92,50 @@ const useStyles = makeStyles({
     flexDirection: "column",
     minHeight: 0,
   },
-  gridLayout: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-    gap: "12px",
-    height: "100%",
-  },
-  threeColumnLayout: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "12px",
-    height: "100%",
-  },
-  fullLayout: {
-    height: "100%",
-  },
   splitLayout: {
-    display: "flex",
+    display: "grid",
+    gridTemplateColumns: "270px 1fr",
     gap: "16px",
     height: "100%",
     minHeight: 0,
   },
   leftPanel: {
-    width: "280px",
-    flexShrink: 0,
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    padding: "16px",
-    borderRadius: "8px",
+    padding: "18px",
+    borderRadius: "14px",
+    border: "1px solid var(--colorNeutralStroke2)",
     overflowY: "auto",
+    boxSizing: "border-box",
   },
   rightPanel: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
     minWidth: 0,
     height: "100%",
+    minHeight: 0,
   },
   card: {
     width: "100%",
     height: "100%",
-    borderRadius: "8px",
+    borderRadius: "14px",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+    overflow: "hidden",
   },
   content: {
     flex: 1,
-    padding: "16px",
+    padding: "12px 16px",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
     minHeight: 0,
   },
   toolbar: {
@@ -162,17 +152,18 @@ const useStyles = makeStyles({
     flex: 1,
     overflow: "auto",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "6px",
+    borderRadius: "10px",
+    backgroundColor: "var(--colorNeutralBackground1)",
     "&::-webkit-scrollbar": {
-      width: "8px",
-      height: "8px",
+      width: "6px",
+      height: "6px",
     },
     "&::-webkit-scrollbar-track": {
-      backgroundColor: "var(--colorNeutralBackground2)",
+      backgroundColor: "transparent",
     },
     "&::-webkit-scrollbar-thumb": {
       backgroundColor: "var(--colorNeutralStroke2)",
-      borderRadius: "4px",
+      borderRadius: "10px",
       "&:hover": {
         backgroundColor: "var(--colorNeutralStroke1)",
       },
@@ -182,21 +173,21 @@ const useStyles = makeStyles({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    height: "200px",
+    height: "100%",
   },
   emptyState: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    height: "200px",
+    height: "100%",
     gap: "12px",
     color: "var(--colorNeutralForeground3)",
   },
   appIcon: {
     width: "24px",
     height: "24px",
-    borderRadius: "4px",
+    borderRadius: "6px",
     backgroundColor: "var(--colorNeutralBackground2)",
     display: "flex",
     alignItems: "center",
@@ -204,7 +195,11 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   compactTableRow: {
-    height: "40px",
+    height: "44px",
+    transition: "background-color 0.15s ease",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+    },
   },
   truncatedText: {
     maxWidth: "150px",
@@ -1958,7 +1953,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
                 display: "flex",
                 flexDirection: "column",
                 gap: "6px",
-                marginTop: "12px",
+                marginTop: "8px",
               }}
             >
               <Text
@@ -1972,23 +1967,13 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
                 {t("common.info")} / {t("app_manager.status")}
               </Text>
               <Button
-                appearance={useBatchLoading ? "primary" : "secondary"}
-                size="small"
-                onClick={() => setUseBatchLoading(!useBatchLoading)}
-                disabled={isLoadingApps}
-                style={{ justifyContent: "flex-start" }}
-              >
-                {useBatchLoading
-                  ? t("app_manager.batch_loading")
-                  : t("app_manager.traditional_loading")}
-              </Button>
-              <Button
                 appearance={
                   viewSource === "apps" && !includeSystemApps
                     ? "primary"
                     : "secondary"
                 }
                 size="small"
+                shape="circular"
                 onClick={() => {
                   setIncludeSystemApps(false);
                   setViewSource("apps");
@@ -2007,6 +1992,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
                     : "secondary"
                 }
                 size="small"
+                shape="circular"
                 onClick={() => {
                   setIncludeSystemApps(true);
                   setViewSource("apps");
@@ -2030,6 +2016,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
               <Button
                 appearance={viewSource === "current" ? "primary" : "secondary"}
                 size="small"
+                shape="circular"
                 onClick={loadCurrentApp}
                 disabled={isLoadingApps}
                 style={{ justifyContent: "flex-start" }}
@@ -2039,6 +2026,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
               <Button
                 appearance={viewSource === "frozen" ? "primary" : "secondary"}
                 size="small"
+                shape="circular"
                 onClick={loadFrozenApps}
                 disabled={isLoadingApps}
                 style={{ justifyContent: "flex-start" }}
@@ -2078,6 +2066,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
               </Text>
               <Button
                 appearance="primary"
+                shape="circular"
                 icon={<Delete24Regular />}
                 onClick={handleBatchUninstall}
                 disabled={isLoadingApps || selectedApps.size === 0}
@@ -2094,6 +2083,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
               </Button>
               <Button
                 appearance="secondary"
+                shape="circular"
                 icon={<LockClosed24Regular />}
                 onClick={() => handleBatchFreezeToggle(true)}
                 disabled={isLoadingApps || selectedApps.size === 0}
@@ -2102,6 +2092,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
               </Button>
               <Button
                 appearance="secondary"
+                shape="circular"
                 icon={<LockOpen24Regular />}
                 onClick={() => handleBatchFreezeToggle(false)}
                 disabled={isLoadingApps || selectedApps.size === 0}
@@ -2110,6 +2101,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
               </Button>
               <Button
                 appearance="secondary"
+                shape="circular"
                 icon={<ShieldLock24Regular />}
                 onClick={handleBatchForceStop}
                 disabled={isLoadingApps || selectedApps.size === 0}
@@ -2118,6 +2110,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
               </Button>
               <Button
                 appearance="secondary"
+                shape="circular"
                 icon={<Save24Regular />}
                 onClick={handleBatchExportApk}
                 disabled={isLoadingApps || selectedApps.size === 0}
@@ -2126,15 +2119,17 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
               </Button>
               <Button
                 appearance="secondary"
+                shape="circular"
                 icon={<Eraser24Regular />}
                 onClick={handleBatchClearData}
                 disabled={isLoadingApps || selectedApps.size === 0}
               >
                 {t("app_manager.clear_data")}
               </Button>
-              <div style={{ display: "flex", gap: "4px" }}>
+              <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
                 <Button
                   appearance="subtle"
+                  shape="circular"
                   icon={<ArrowDownload24Regular />}
                   onClick={handleExportAppList}
                   disabled={isLoadingApps || selectedApps.size === 0}
@@ -2145,6 +2140,7 @@ const AppManagerPanel: React.FC<AppManagerPanelProps> = ({
                 </Button>
                 <Button
                   appearance="subtle"
+                  shape="circular"
                   icon={<ArrowUpload24Regular />}
                   onClick={handleImportAppList}
                   disabled={isLoadingApps}
