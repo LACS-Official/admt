@@ -30,13 +30,15 @@ const useStyles = makeStyles({
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     position: 'relative',
-    borderRadius: '6px',
+    borderRadius: '14px',
     border: '1px solid var(--colorNeutralStroke2)',
     backgroundColor: 'var(--colorNeutralBackground1)',
     margin: '2px',
     '&:hover': {
       backgroundColor: 'var(--colorNeutralBackground1Hover)',
-      ...shorthands.borderColor('var(--colorNeutralStroke1Hover)'),
+      ...shorthands.borderColor('var(--colorBrandStroke1)'),
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
     },
   },
   cardContent: {
@@ -44,86 +46,56 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: '8px',
     padding: '16px',
+    height: '100%',
+    boxSizing: 'border-box',
+  },
+  cardHeader: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  headerTop: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '8px',
   },
   softwareTitle: {
     fontWeight: '600',
-    fontSize: '16px',
-    lineHeight: '22px',
+    fontSize: '15px',
+    lineHeight: '20px',
     color: 'var(--colorNeutralForeground1)',
   },
+  metaInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    color: 'var(--colorNeutralForeground3)',
+  },
   softwareDescription: {
-    fontSize: '14px',
-    lineHeight: '20px',
+    fontSize: '13px',
+    lineHeight: '18px',
     color: 'var(--colorNeutralForeground2)',
     display: '-webkit-box',
     '-webkit-line-clamp': '2',
     '-webkit-box-orient': 'vertical',
     overflow: 'hidden',
   },
-  softwareInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    flexWrap: 'wrap',
-  },
   versionBadge: {
-    fontSize: '12px',
+    fontSize: '11px',
+    padding: '1px 6px',
   },
-  downloadStatus: {
+  cardBottomRow: {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: '8px',
-    marginTop: '8px',
-    padding: '8px',
-    backgroundColor: 'var(--colorNeutralBackground2)',
-    borderRadius: '4px',
-  },
-  downloadedBadge: {
-    backgroundColor: 'var(--colorPaletteGreenBackground1)',
-    color: 'var(--colorPaletteGreenForeground1)',
-    border: '1px solid var(--colorPaletteGreenBorder1)',
+    marginTop: 'auto',
+    paddingTop: '8px',
   },
   actionButtons: {
     display: 'flex',
     gap: '8px',
-    marginTop: 'auto',
-    justifyContent: 'flex-end',
-    paddingTop: '8px',
-  },
-  cardHeader: {
-    display: 'flex',
-    gap: '12px',
-    alignItems: 'flex-start',
-  },
-  iconWrapper: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '12px',
-    backgroundColor: 'var(--colorNeutralBackground3)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    overflow: 'hidden',
-    border: '1px solid var(--colorNeutralStroke3)',
-  },
-  iconImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  headerText: {
-    display: 'flex',
-    flexDirection: 'column',
-    flex: 1,
-    overflow: 'hidden',
-  },
-  metaInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginTop: '4px',
-    color: 'var(--colorNeutralForeground3)',
   },
   progressBar: {
     position: 'absolute',
@@ -131,7 +103,7 @@ const useStyles = makeStyles({
     left: 0,
     right: 0,
     height: '2px',
-  }
+  },
 });
 
 
@@ -260,22 +232,22 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
   return (
     <Card className={styles.softwareCard} onClick={onClick}>
       <div className={styles.cardContent}>
-        {/* 顶部标题与图标 */}
+        {/* 顶部标题与分类 */}
         <div className={styles.cardHeader}>
-          <div className={styles.iconWrapper}>
-            {software.iconUrl ? (
-              <img src={software.iconUrl} className={styles.iconImage} alt={software.name} />
-            ) : (
-              <Apps24Regular style={{ color: 'var(--colorNeutralForeground3)' }} />
+          <div className={styles.headerTop}>
+            <Text className={styles.softwareTitle}>{software.name}</Text>
+            {software.category && (
+              <Badge className={styles.versionBadge} appearance="tint">
+                {software.category}
+              </Badge>
             )}
           </div>
-          <div className={styles.headerText}>
-            <Text className={styles.softwareTitle}>{software.name}</Text>
-            <div className={styles.metaInfo}>
-              <Caption1>{formatSize(software.fileSize)}</Caption1>
-              {software.fileSize && <Caption1>• {software.fileSize}</Caption1>}
-              <Caption1>• v{software.currentVersion}</Caption1>
-            </div>
+          <div className={styles.metaInfo}>
+            <Caption1>v{software.currentVersion}</Caption1>
+            {software.fileSize ? <Caption1>• {formatSize(software.fileSize)}</Caption1> : null}
+            {software.metadata?.platform && Array.isArray(software.metadata.platform) && (
+              <Caption1>• {software.metadata.platform[0]}</Caption1>
+            )}
           </div>
         </div>
 
@@ -283,68 +255,57 @@ export const SoftwareCard: React.FC<SoftwareCardProps> = ({
           {software.description}
         </Text>
 
-        <div className={styles.softwareInfo}>
-          {software.category && (
-            <Badge className={styles.versionBadge} appearance="tint">
-              {software.category}
-            </Badge>
-          )}
-          {software.metadata?.platform && Array.isArray(software.metadata.platform) && (
-            <Badge className={styles.versionBadge} appearance="outline">
-              {software.metadata.platform[0]}
-            </Badge>
-          )}
-          
-          {software.updatedAt && (
-             <Caption1 style={{ color: 'var(--colorNeutralForeground4)', marginLeft: 'auto' }}>
-               {new Date(software.updatedAt).toLocaleDateString('zh-CN')}
-             </Caption1>
-          )}
-        </div>
+        {/* 底部信息与操作按钮区 */}
+        <div className={styles.cardBottomRow}>
+          {software.updatedAt ? (
+            <Caption1 style={{ color: 'var(--colorNeutralForeground4)' }}>
+              {new Date(software.updatedAt).toLocaleDateString('zh-CN')}
+            </Caption1>
+          ) : <div />}
 
-        {/* 操作按钮区 */}
-        <div className={styles.actionButtons}>
-          {isCheckingStatus ? (
-            <Button size="small" disabled icon={<Spinner size="tiny" />}>
-              检查中
-            </Button>
-          ) : downloadStatus.isDownloaded ? (
-            <div style={{ display: 'flex', gap: '6px' }}>
+          <div className={styles.actionButtons}>
+            {isCheckingStatus ? (
+              <Button size="small" disabled icon={<Spinner size="tiny" />}>
+                检查中
+              </Button>
+            ) : downloadStatus.isDownloaded ? (
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <Button
+                  size="small"
+                  appearance="subtle"
+                  icon={<FolderOpen24Regular />}
+                  onClick={handleOpenFolder}
+                  title="打开文件位置"
+                />
+                <Button
+                  size="small"
+                  appearance="primary"
+                  icon={<Play24Regular />}
+                  onClick={handleLaunch}
+                >
+                  运行
+                </Button>
+              </div>
+            ) : activeTask ? (
               <Button
                 size="small"
                 appearance="subtle"
-                icon={<FolderOpen24Regular />}
-                onClick={handleOpenFolder}
-                title="打开文件位置"
-              />
+                icon={<Spinner size="tiny" />}
+                disabled
+              >
+                {activeTask.status === 'extracting' ? '正在解压' : '正在下载'}
+              </Button>
+            ) : (
               <Button
                 size="small"
                 appearance="primary"
-                icon={<Play24Regular />}
-                onClick={handleLaunch}
+                icon={<ArrowDownload24Regular />}
+                onClick={handleDownload}
               >
-                运行
+                获取资源
               </Button>
-            </div>
-          ) : activeTask ? (
-            <Button
-              size="small"
-              appearance="subtle"
-              icon={<Spinner size="tiny" />}
-              disabled
-            >
-              {activeTask.status === 'extracting' ? '正在解压' : '正在下载'}
-            </Button>
-          ) : (
-            <Button
-              size="small"
-              appearance="primary"
-              icon={<ArrowDownload24Regular />}
-              onClick={handleDownload}
-            >
-              获取资源
-            </Button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

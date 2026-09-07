@@ -208,6 +208,7 @@ pub async fn execute_command(
     }
 
     let mut cmd = TokioCommand::new(program);
+    cmd.kill_on_drop(true);
     cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
 
     // 在Windows上隐藏命令行窗口

@@ -289,9 +289,8 @@ const TitleBar: React.FC = () => {
     }
   };
 
-  const openAIChatWindow = async () => {
-    const { windowService } = await import("../../services/windowService");
-    await windowService.openAIChatWindow(isDarkMode);
+  const openAIChatWindow = () => {
+    useAppStore.getState().setCurrentView("ai-chat");
   };
 
   return (

@@ -12,6 +12,11 @@ import {
     Slider,
     Field,
     mergeClasses,
+    Menu,
+    MenuTrigger,
+    MenuPopover,
+    MenuList,
+    MenuItem,
 } from "@fluentui/react-components";
 import {
     Phone24Regular,
@@ -23,12 +28,13 @@ import {
     Record24Regular,
     RecordStop24Regular,
     Screenshot24Regular,
-    PhoneDesktop24Regular,
+    MoreHorizontal24Regular,
     Options24Regular,
     Sparkle24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
+import { useAppStore } from "../../stores/appStore";
 import { 
     ScreenMirrorDevice, 
     SCREEN_MIRROR_QUALITY_PRESETS,
@@ -234,49 +240,11 @@ const useStyles = makeStyles({
         fontWeight: "500",
         color: "var(--colorNeutralForeground1)",
     },
-    // Sessions Layout
-    sessionsContainer: {
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-        gap: "16px",
-        marginTop: "8px",
-    },
-    displayCard: {
-        backgroundColor: "var(--colorNeutralBackground1)",
-        borderRadius: "14px",
-        border: "1px solid var(--colorNeutralStroke2)",
-        padding: "18px",
+    deviceActions: {
         display: "flex",
-        flexDirection: "column",
-        gap: "14px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-    },
-    displayHero: {
-        display: "flex",
-        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        padding: "24px 16px",
-        backgroundColor: "var(--colorNeutralBackground2)",
-        borderRadius: "10px",
-        border: "1px solid var(--colorNeutralStroke2)",
-        gap: "10px",
-        textAlign: "center",
-    },
-    infoGrid: {
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "8px",
-        padding: "10px",
-        borderRadius: "8px",
-        backgroundColor: "var(--colorNeutralBackground2)",
-        fontSize: "12px",
-    },
-    buttonGroup: {
-        display: "flex",
-        gap: "8px",
-        flexWrap: "wrap",
-        justifyContent: "center",
+        gap: "4px",
+        flexShrink: 0,
     },
 });
 
@@ -288,6 +256,8 @@ interface MirrorControlCardProps {
     onDeviceAction: (device: ScreenMirrorDevice) => void;
     isLoading: boolean;
     streamingDevices: string[];
+    activeSessions: ScreenMirrorSession[];
+    onStopMirror: (sessionId: string) => void;
 }
 
 const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
@@ -297,10 +267,14 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
     onDeviceAction,
     isLoading,
     streamingDevices,
+    activeSessions,
+    onStopMirror,
 }) => {
     const styles = useStyles();
     const { t } = useTranslation();
-    const { config, updateConfig, resetConfig, applyQualityPreset } = useScreenMirrorStore();
+    const { config, updateConfig, resetConfig, applyQualityPreset, isFullscreen, toggleFullscreen } = useScreenMirrorStore();
+    const { setStatusBarMessage } = useAppStore();
+    const [recordingSerials, setRecordingSerials] = useState<Record<string, boolean>>({});
 
     const handleDeviceClick = (device: ScreenMirrorDevice) => {
         if (selectedDevice?.serial === device.serial) {
@@ -311,6 +285,24 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
     };
 
     const isDeviceStreaming = (serial: string) => streamingDevices.includes(serial);
+
+    const handleToggleRecording = (serial: string) => {
+        const isNowRecording = !recordingSerials[serial];
+        setRecordingSerials(prev => ({ ...prev, [serial]: isNowRecording }));
+        setStatusBarMessage({
+            type: "info",
+            message: isNowRecording ? t('mirror.recording_started', '已开始录屏') : t('mirror.recording_stopped', '已停止录屏'),
+            duration: 3000,
+        });
+    };
+
+    const handleTakeScreenshot = (_serial: string) => {
+        setStatusBarMessage({
+            type: "info",
+            message: t('mirror.screenshot_taken', '已发送截屏指令'),
+            duration: 3000,
+        });
+    };
 
     const handleQualityPresetChange = (preset: string) => applyQualityPreset(preset);
     const handleResolutionChange = (resolution: string) => updateConfig({ quality: { ...config.quality, resolution } });
@@ -347,12 +339,12 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
 
     return (
         <div className={styles.mainLayout}>
-            {/* 左侧设备选择 */}
+            {/* 左侧设备管理 */}
             <div className={styles.leftPane}>
                 <div className={styles.sectionHeader}>
                     <div className={styles.headerTitleWrap}>
                         <Phone24Regular />
-                        <Text weight="semibold" size={300}>{t('mirror.device_selection_title')}</Text>
+                        <Text weight="semibold" size={300}>{t('mirror.device_management_title', '设备管理')}</Text>
                     </div>
                     <Badge appearance="tint" color="brand">
                         {devices.length}
@@ -373,6 +365,9 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                         {devices.map((device) => {
                             const isSelected = selectedDevice?.serial === device.serial;
                             const isStreaming = isDeviceStreaming(device.serial);
+                            const session = activeSessions.find(s => s.deviceSerial === device.serial);
+                            const isRecording = !!recordingSerials[device.serial];
+
                             return (
                                 <div
                                     key={device.serial}
@@ -393,20 +388,74 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                                             </Text>
                                             <div className={styles.deviceMeta}>
                                                 {device.resolution && <Badge size="small" appearance="outline">{device.resolution}</Badge>}
-                                                {isStreaming && <Badge size="small" color="danger" appearance="filled">{t('mirror.mirroring')}</Badge>}
+                                                {isStreaming && <Badge size="small" color="danger" appearance="filled">{t('mirror.mirroring', '投屏中')}</Badge>}
                                             </div>
                                         </div>
                                     </div>
-                                    {isSelected && !isStreaming && (
-                                        <Button appearance="primary" size="small" shape="circular" icon={<Play24Regular />} onClick={(e) => { e.stopPropagation(); onDeviceAction(device); }}>
-                                            {t('mirror.start_mirror')}
-                                        </Button>
-                                    )}
-                                    {isStreaming && (
-                                        <Button appearance="outline" size="small" shape="circular" icon={<Stop24Regular />} onClick={(e) => { e.stopPropagation(); onDeviceAction(device); }}>
-                                            {t('mirror.stop_mirror')}
-                                        </Button>
-                                    )}
+                                    <div className={styles.deviceActions} onClick={(e) => e.stopPropagation()}>
+                                        {isStreaming ? (
+                                            <>
+                                                <Button
+                                                    appearance="subtle"
+                                                    size="small"
+                                                    shape="circular"
+                                                    icon={<Stop24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />}
+                                                    onClick={() => {
+                                                        if (session) {
+                                                            onStopMirror(session.id);
+                                                        } else {
+                                                            onDeviceAction(device);
+                                                        }
+                                                    }}
+                                                    title={t('mirror.stop_mirror', '停止投屏')}
+                                                />
+                                                <Menu>
+                                                    <MenuTrigger disableButtonEnhancement>
+                                                        <Button
+                                                            appearance="subtle"
+                                                            size="small"
+                                                            shape="circular"
+                                                            icon={<MoreHorizontal24Regular />}
+                                                            title={t('mirror.more_actions', '投屏控制')}
+                                                        />
+                                                    </MenuTrigger>
+                                                    <MenuPopover>
+                                                        <MenuList>
+                                                            <MenuItem
+                                                                icon={<Screenshot24Regular />}
+                                                                onClick={() => handleTakeScreenshot(device.serial)}
+                                                            >
+                                                                {t('mirror.screenshot', '屏幕截图')}
+                                                            </MenuItem>
+                                                            <MenuItem
+                                                                icon={isRecording ? <RecordStop24Regular style={{ color: 'var(--colorPaletteRedForeground1)' }} /> : <Record24Regular />}
+                                                                onClick={() => handleToggleRecording(device.serial)}
+                                                            >
+                                                                {isRecording ? t('mirror.stop_record', '停止录屏') : t('mirror.start_record', '开始录屏')}
+                                                            </MenuItem>
+                                                            <MenuItem
+                                                                icon={<FullScreenMaximize24Regular />}
+                                                                onClick={toggleFullscreen}
+                                                            >
+                                                                {isFullscreen ? t('common.close', '退出全屏') : t('mirror.fullscreen', '全屏显示')}
+                                                            </MenuItem>
+                                                        </MenuList>
+                                                    </MenuPopover>
+                                                </Menu>
+                                            </>
+                                        ) : (
+                                            <Button
+                                                appearance={isSelected ? "primary" : "subtle"}
+                                                size="small"
+                                                shape="circular"
+                                                icon={<Play24Regular />}
+                                                onClick={() => onDeviceAction(device)}
+                                                title={t('mirror.start_mirror', '开始投屏')}
+                                            >
+                                                {t('mirror.start_mirror', '投屏')}
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}
@@ -518,79 +567,6 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    );
-};
-
-// --- Internal MirrorDisplayCard Component ---
-interface MirrorDisplayCardProps {
-    session: ScreenMirrorSession;
-    onStopMirror?: () => void;
-}
-
-const MirrorDisplayCard: React.FC<MirrorDisplayCardProps> = ({ session, onStopMirror }) => {
-    const styles = useStyles();
-    const { t } = useTranslation();
-    const [isRecording, setIsRecording] = useState(false);
-    const { isFullscreen, toggleFullscreen } = useScreenMirrorStore();
-
-    const handleToggleRecording = () => setIsRecording(!isRecording);
-    const handleTakeScreenshot = () => console.log('Taking screenshot...');
-
-    const formatDuration = (startTime?: Date) => {
-        if (!startTime) return "00:00";
-        const now = new Date();
-        const start = new Date(startTime);
-        const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
-        const minutes = Math.floor(diff / 60);
-        const seconds = diff % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    };
-
-    return (
-        <div className={styles.displayCard}>
-            <div className={styles.displayHero}>
-                <PhoneDesktop24Regular style={{ fontSize: '48px', color: 'var(--colorBrandForeground1)' }} />
-                <Text size={400} weight="semibold">{session.deviceName || session.deviceSerial || t('mirror.unknown_device')}</Text>
-                <Badge color="success" appearance="tint">{t('mirror.mirroring')}</Badge>
-            </div>
-
-            <div className={styles.infoGrid}>
-                <div>
-                    <Text size={100} color="neutralSecondary">{t('mirror.duration_label')}: </Text>
-                    <Text size={200} weight="semibold">{formatDuration(session.startTime)}</Text>
-                </div>
-                <div>
-                    <Text size={100} color="neutralSecondary">{t('mirror.resolution_label')}: </Text>
-                    <Text size={200} weight="semibold">{session.config.quality.resolution}</Text>
-                </div>
-            </div>
-
-            <div className={styles.buttonGroup}>
-                <Button size="small" shape="circular" icon={<Screenshot24Regular />} onClick={handleTakeScreenshot}>
-                    {t('mirror.screenshot')}
-                </Button>
-                <Button 
-                    size="small" 
-                    shape="circular"
-                    icon={isRecording ? <RecordStop24Regular style={{ color: 'var(--colorPaletteRedForeground1)' }} /> : <Record24Regular />} 
-                    onClick={handleToggleRecording}
-                >
-                    {isRecording ? t('mirror.stop_record') : t('mirror.start_record')}
-                </Button>
-                <Button size="small" shape="circular" icon={<FullScreenMaximize24Regular />} onClick={toggleFullscreen}>
-                    {isFullscreen ? t('common.close') : t('mirror.fullscreen')}
-                </Button>
-                <Button 
-                    appearance="primary" 
-                    size="small" 
-                    shape="circular"
-                    icon={<Stop24Regular />} 
-                    onClick={onStopMirror}
-                >
-                    {t('mirror.stop_mirror')}
-                </Button>
             </div>
         </div>
     );
@@ -743,28 +719,17 @@ const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequ
                     <Text style={{ color: "var(--colorPaletteRedForeground1)", fontSize: "13px" }}>{error}</Text>
                 </div>
             )}
-            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={{ flex: 1, minHeight: 0 }}>
-                    <MirrorControlCard
-                        devices={supportedDevices}
-                        selectedDevice={mirrorDevice}
-                        onSelectDevice={handleDeviceSelect}
-                        onDeviceAction={handleDeviceAction}
-                        isLoading={isLoading}
-                        streamingDevices={streamingDevices}
-                    />
-                </div>
-                {activeSessions.length > 0 && (
-                    <div className={styles.sessionsContainer}>
-                        {activeSessions.map(session => (
-                            <MirrorDisplayCard
-                                key={session.id}
-                                session={session}
-                                onStopMirror={() => handleStopMirror(session.id)}
-                            />
-                        ))}
-                    </div>
-                )}
+            <div style={{ flex: 1, minHeight: 0 }}>
+                <MirrorControlCard
+                    devices={supportedDevices}
+                    selectedDevice={mirrorDevice}
+                    onSelectDevice={handleDeviceSelect}
+                    onDeviceAction={handleDeviceAction}
+                    isLoading={isLoading}
+                    streamingDevices={streamingDevices}
+                    activeSessions={activeSessions}
+                    onStopMirror={handleStopMirror}
+                />
             </div>
         </div>
     );

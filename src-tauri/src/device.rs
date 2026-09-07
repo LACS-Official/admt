@@ -66,7 +66,9 @@ pub struct DeviceProperties {
     pub build_date: Option<String>,      // ro.build.date
     pub build_user: Option<String>,      // ro.build.user
     pub build_host: Option<String>,      // ro.build.host
-    pub miui_version: Option<String>,    // ro.mi.ui.version.name
+    pub miui_version: Option<String>,    // ro.mi.ui.version.name 或 HyperOS 版本名
+    pub os_version_name: Option<String>, // ro.mi.os.version.name (例如 OS1.0)
+    pub os_version_incremental: Option<String>, // ro.mi.os.version.incremental (例如 OS1.0.6.0.TKHCNXM)
 
     // 硬件信息
     pub cpu_abi: Option<String>,           // ro.product.cpu.abi

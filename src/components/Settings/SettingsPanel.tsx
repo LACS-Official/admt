@@ -22,6 +22,7 @@ import DisplaySettingsPanel from "./DisplaySettingsPanel";
 import OtherSettingsPanel from "./OtherSettingsPanel";
 import PrivacyManagementPanel from "./PrivacyManagementPanel";
 import AISettingsPanel from "./AISettingsPanel";
+import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
   container: {
@@ -41,8 +42,12 @@ const useStyles = makeStyles({
     marginBottom: "4px",
   },
   tabContainer: {
-    marginBottom: "0px",
+    display: "flex",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    width: "100%",
     flexShrink: 0,
+    marginBottom: "4px",
   },
   content: {
     flex: "1 1 0",
@@ -128,7 +133,10 @@ const tabs = [
 const SettingsPanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const [currentView, setCurrentView] = useState<SettingsView>("about");
+  const { navigationParams } = useAppStore();
+  const [currentView, setCurrentView] = useState<SettingsView>(
+    (navigationParams?.tab as SettingsView) || (navigationParams?.subView as SettingsView) || "about"
+  );
 
   const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setCurrentView(data.value as SettingsView);

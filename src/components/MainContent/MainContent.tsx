@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   makeStyles,
+  shorthands,
+  mergeClasses,
   TabList,
   Tab,
   SelectTabEvent,
@@ -27,6 +29,8 @@ import {
   Notepad24Regular,
   AppsAddIn24Regular,
   Flash24Regular,
+  Bot24Regular,
+  Sparkle20Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
@@ -46,10 +50,13 @@ import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
 import OnlineZonePanel from "../OnlineResources/OnlineZonePanel";
 import PluginSystemPanel from "../PluginSystem/PluginSystemPanel";
 import SettingsPanel from "../Settings/SettingsPanel";
+import CommandExecutePanel from "../Others/CommandExecutePanel";
+import LogsPanel from "../Others/LogsPanel";
+import AIChatPanel from "../Console/AIChatPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
 import WirelessDebuggingPanel from "../AdbTools/WirelessDebuggingPanel";
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { DeviceSelectionModal } from "../Modals";
 import AutoMirrorManager from "../Common/AutoMirrorManager";
 import { systemTrayManager } from "../../services/systemTrayManager";
 
@@ -555,43 +562,80 @@ const useStyles = makeStyles({
   },
   buttonGroupContainer: {
     display: "flex",
-    justifyContent: "space-between",
-    gap: "8px",
-    padding: "8px",
-    maxHeight: "50px",
+    flexDirection: "column",
+    gap: "6px",
+    padding: "8px 10px 10px 10px",
     borderTop: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     boxSizing: "border-box",
   },
-  actionButton: {
-    flex: 1,
-    height: "34px",
-    fontSize: "12px",
-    fontWeight: "500",
-    borderRadius: "6px",
+  aiActionButton: {
+    width: "100%",
+    height: "36px",
+    fontSize: "12.5px",
+    fontWeight: "600",
+    borderRadius: "8px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    transition: "all 0.2s ease",
-    border: "1px solid var(--colorNeutralStroke2)",
+    transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     backgroundColor: "var(--colorNeutralBackground2)",
-    color: "var(--colorNeutralForeground2)",
-    gap: "6px", // 添加图标和文字之间的间距
-
+    color: "var(--colorNeutralForeground1)",
+    gap: "8px",
+    boxSizing: "border-box",
     "&:hover": {
       backgroundColor: "var(--colorBrandBackground2)",
       color: "var(--colorBrandForeground1)",
+      ...shorthands.borderColor("var(--colorBrandStroke2)"),
     },
-
+    "&:active": {
+      transform: "scale(0.98)",
+    },
+  },
+  aiActionButtonSelected: {
+    backgroundColor: "var(--colorBrandBackground2)",
+    color: "var(--colorBrandForeground1)",
+    ...shorthands.borderColor("var(--colorBrandStroke1)"),
+    fontWeight: "600",
+    boxShadow: "0 2px 8px -2px rgba(0, 113, 227, 0.18)",
+  },
+  consoleButtonGroup: {
+    display: "flex",
+    gap: "6px",
+    width: "100%",
+  },
+  actionButton: {
+    flex: 1,
+    height: "32px",
+    fontSize: "12px",
+    fontWeight: "500",
+    borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
+    backgroundColor: "var(--colorNeutralBackground2)",
+    color: "var(--colorNeutralForeground2)",
+    gap: "6px",
+    boxSizing: "border-box",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      color: "var(--colorNeutralForeground1)",
+      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
+    },
     "&:active": {
       transform: "scale(0.98)",
     },
   },
   actionButtonSelected: {
-    backgroundColor: "var(--colorBrandBackground1)",
+    backgroundColor: "var(--colorBrandBackground2)",
     color: "var(--colorBrandForeground1)",
-    border: "1px solid var(--colorBrandStroke1)",
+    ...shorthands.borderColor("var(--colorBrandStroke1)"),
+    fontWeight: "600",
   },
   content: {
     flex: 1,
@@ -627,6 +671,9 @@ const MainContent: React.FC = () => {
   const setStatusBarMessage = useAppStore((state) => state.setStatusBarMessage);
   const isWirelessDebuggingDialogOpen = useAppStore((state) => state.isWirelessDebuggingDialogOpen);
   const setWirelessDebuggingDialogOpen = useAppStore((state) => state.setWirelessDebuggingDialogOpen);
+  const setCommandLineModalOpen = useAppStore((state) => state.setCommandLineModalOpen);
+  const setLogsModalOpen = useAppStore((state) => state.setLogsModalOpen);
+  const setDeviceSelectionModalOpen = useAppStore((state) => state.setDeviceSelectionModalOpen);
 
   const selectedDevice = useDeviceStore((state) => state.selectedDevice);
   const devices = useDeviceStore((state) => state.devices);
@@ -903,150 +950,52 @@ const MainContent: React.FC = () => {
     [currentView, setCurrentView],
   );
 
-  const openDeviceSelectionWindow = useCallback(async () => {
-    if (isOpeningWindowRef.current) return;
-    isOpeningWindowRef.current = true;
+  const openDeviceSelectionWindow = useCallback(() => {
+    setDeviceSelectionModalOpen(true);
+  }, [setDeviceSelectionModalOpen]);
 
-    try {
-      const label = 'device-selection';
-      const title = '玩机管家 - 设备选择';
-      
-      let targetWindow = await WebviewWindow.getByLabel(label);
-      
-      if (targetWindow) {
-        // 如果已存在，先尝试聚焦，忽略可能的琐碎错误
-        try {
-          await targetWindow.unminimize();
-          await targetWindow.show();
-          await targetWindow.setFocus();
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn("主应用聚焦已有设备选择窗口失败(非关键):", e);
-        }
-      } else {
-        const url = `${window.location.origin}/index.html`;
-        
-        targetWindow = new WebviewWindow(label, {
-          url: url,
-          title: title,
-          width: 500,
-          height: 450,
-          minWidth: 400,
-          minHeight: 300,
-          resizable: true,
-          decorations: false,
-          center: true,
-          alwaysOnTop: true,
-        });
-
-        targetWindow.once('tauri://created', function () {
-          // eslint-disable-next-line no-console
-          console.log(`${title} 窗口创建成功`);
-          targetWindow.show();
-        });
-
-        targetWindow.once('tauri://error', function (e) {
-          // eslint-disable-next-line no-console
-          console.error(`${title} 窗口创建失败:`, e);
-          // 仅在创建失败时设置状态消息
-          setStatusBarMessage({
-            type: 'error',
-            message: t('main.device_selection_window_create_failed')
-          });
-        });
-      }
-    } catch (error) {
-      // 检查是否是由于并发导致的标签冲突，这种情况下不需要报错提示
-      const errorStr = String(error);
-      if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
-        // eslint-disable-next-line no-console
-        console.warn("设备选择窗口已在创建或显示过程中:", error);
-      } else {
-        // eslint-disable-next-line no-console
-        console.error("打开设备选择窗口过程中发生异常:", error);
-        setStatusBarMessage({
-          type: 'error',
-          message: t('main.open_device_selection_window_failed')
-        });
-      }
-    } finally {
-      // 这里的延迟是为了防止瞬时的多次点击
-      setTimeout(() => {
-        isOpeningWindowRef.current = false;
-      }, 500);
+  const openConsoleWindow = useCallback((tab: 'logs' | 'command-line') => {
+    if (tab === 'command-line') {
+      setCurrentView('command-line');
+    } else {
+      setCurrentView('logs');
     }
-  }, [setStatusBarMessage, t]);
+  }, [setCurrentView]);
 
-  const openConsoleWindow = useCallback(async (tab: 'logs' | 'command-line') => {
-    if (isOpeningWindowRef.current) return;
-    isOpeningWindowRef.current = true;
+  useEffect(() => {
+    let unlisten1: (() => void) | undefined;
+    let unlisten2: (() => void) | undefined;
+    let unlisten3: (() => void) | undefined;
 
-    try {
-      // 检查窗口是否已存在
-      const label = tab; // 使用 'logs' 或 'command-line' 作为直接 label
-      const title = tab === 'command-line' ? '玩机管家 - 命令行' : '玩机管家 - 日志';
-      
-      let targetWindow = await WebviewWindow.getByLabel(label);
-      
-      if (targetWindow) {
-        // 如果已存在，明确显示、将其置顶并聚焦
-        try {
-          await targetWindow.unminimize();
-          await targetWindow.show();
-          await targetWindow.setFocus();
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn("主应用聚焦已有窗口失败(非关键):", e);
-        }
-      } else {
-        // 如果不存在，创建新窗口
-        const url = `${window.location.origin}/index.html`; // 路由逻辑现在由 main.tsx 中的 label 处理
-        
-        targetWindow = new WebviewWindow(label, {
-          url: url,
-          title: title,
-          width: 900,
-          height: 700,
-          minWidth: 800,
-          minHeight: 600,
-          decorations: false,
-          center: true,
-        });
+    import("@tauri-apps/api/event").then(({ listen }) => {
+      listen("open-command-line-modal", () => {
+        setCurrentView("command-line");
+      }).then((fn) => (unlisten1 = fn));
 
-        targetWindow.once('tauri://created', function () {
-          // eslint-disable-next-line no-console
-          console.log(`${title} 窗口创建成功`);
-          targetWindow.show();
-        });
+      listen("execute-command-from-ai", () => {
+        setCurrentView("command-line");
+      }).then((fn) => (unlisten2 = fn));
 
-        targetWindow.once('tauri://error', function (e) {
-          // eslint-disable-next-line no-console
-          console.error(`${title} 窗口创建失败:`, e);
-          setStatusBarMessage({
-            type: 'error',
-            message: `${title}窗口创建失败`
-          });
-        });
-      }
-    } catch (error) {
-      const errorStr = String(error);
-      if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
-        // eslint-disable-next-line no-console
-        console.warn("窗口已在创建或显示过程中:", error);
-      } else {
-        // eslint-disable-next-line no-console
-        console.error("打开控制台子窗口失败:", error);
-        setStatusBarMessage({
-          type: 'error',
-          message: t('main.open_console_window_failed')
-        });
-      }
-    } finally {
-      setTimeout(() => {
-        isOpeningWindowRef.current = false;
-      }, 500);
-    }
-  }, [setStatusBarMessage, t]);
+      listen("open-logs-modal", () => {
+        setCurrentView("logs");
+      }).then((fn) => (unlisten3 = fn));
+    });
+
+    return () => {
+      if (unlisten1) unlisten1();
+      if (unlisten2) unlisten2();
+      if (unlisten3) unlisten3();
+    };
+  }, [setCurrentView]);
+
+  useEffect(() => {
+    (window as any).openDeviceSelectionWindow = openDeviceSelectionWindow;
+    (window as any).openConsoleWindow = openConsoleWindow;
+    return () => {
+      delete (window as any).openDeviceSelectionWindow;
+      delete (window as any).openConsoleWindow;
+    };
+  }, [openDeviceSelectionWindow, openConsoleWindow]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDeviceSelect = useCallback((device: any) => {
@@ -1257,6 +1206,24 @@ const MainContent: React.FC = () => {
         return <PluginSystemPanel />;
       case "settings":
         return <SettingsPanel />;
+      case "command-line":
+        return (
+          <div style={{ height: "100%", width: "100%", overflow: "hidden" }}>
+            <CommandExecutePanel />
+          </div>
+        );
+      case "logs":
+        return (
+          <div style={{ height: "100%", width: "100%", overflow: "hidden" }}>
+            <LogsPanel />
+          </div>
+        );
+      case "ai-chat":
+        return (
+          <div style={{ height: "100%", width: "100%", overflow: "hidden" }}>
+            <AIChatPanel />
+          </div>
+        );
       default:
         return <HomePage />;
     }
@@ -1290,25 +1257,48 @@ const MainContent: React.FC = () => {
         </TabList>
 
         <div className={styles.buttonGroupContainer}>
-          {/* 打开命令行按钮 */}
+          {/* AI 助手按钮 - 位于命令行和日志上方，宽度占满整行（两个按钮宽度） */}
           <div
-            className={styles.actionButton}
-            onClick={() => openConsoleWindow("command-line")}
-            title={t("main.command_line")}
-            id="tour-command-line"
+            className={mergeClasses(
+              styles.aiActionButton,
+              currentView === "ai-chat" && styles.aiActionButtonSelected
+            )}
+            onClick={() => setCurrentView("ai-chat")}
+            title={t("main.ai_assistant", "AI 助手")}
+            id="tour-ai-button"
           >
-            <Icons24Regular />
-            <Text>{t("main.command_line")}</Text>
+            <Bot24Regular style={{ color: currentView === "ai-chat" ? "var(--colorBrandForeground1)" : undefined }} />
+            <Text>{t("main.ai_assistant", "AI 助手")}</Text>
           </div>
-          {/* 打开日志窗口按钮 */}
-          <div
-            className={styles.actionButton}
-            onClick={() => openConsoleWindow("logs")}
-            title={t("main.logs")}
-            id="tour-logs"
-          >
-            <Notepad24Regular />
-            <Text>{t("main.logs")}</Text>
+
+          {/* 命令行与日志按钮组（各占一半宽度） */}
+          <div className={styles.consoleButtonGroup}>
+            {/* 命令行按钮 */}
+            <div
+              className={mergeClasses(
+                styles.actionButton,
+                currentView === "command-line" && styles.actionButtonSelected
+              )}
+              onClick={() => setCurrentView("command-line")}
+              title={t("main.command_line")}
+              id="tour-command-line"
+            >
+              <Icons24Regular />
+              <Text>{t("main.command_line")}</Text>
+            </div>
+            {/* 日志窗口按钮 */}
+            <div
+              className={mergeClasses(
+                styles.actionButton,
+                currentView === "logs" && styles.actionButtonSelected
+              )}
+              onClick={() => setCurrentView("logs")}
+              title={t("main.logs")}
+              id="tour-logs"
+            >
+              <Notepad24Regular />
+              <Text>{t("main.logs")}</Text>
+            </div>
           </div>
         </div>
       </div>
@@ -1427,6 +1417,8 @@ const MainContent: React.FC = () => {
           </DialogBody>
         </DialogSurface>
       </Dialog>
+      {/* 设备选择模态弹窗与自动镜像 */}
+      <DeviceSelectionModal />
       <AutoMirrorManager />
     </div>
   );

@@ -59,7 +59,8 @@ export type AppView =
   | "demo"
   | "root"
   | "command-line"
-  | "logs";
+  | "logs"
+  | "ai-chat";
 
 export type SettingsView =
   | "about"

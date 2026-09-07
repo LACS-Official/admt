@@ -23,7 +23,6 @@ import ModulePanel from './ModulePanel';
 import AdvancedSettingsPanel from './AdvancedSettingsPanel';
 import OneClickRootPanel from './OneClickRootPanel';
 import { DeviceInfo } from '../../types/device';
-import UnderDevelopmentOverlay from '../Common/UnderDevelopmentOverlay';
 
 const useStyles = makeStyles({
   container: {
@@ -108,6 +107,7 @@ const useStyles = makeStyles({
   },
   headerTabList: {
     flexShrink: 0,
+    alignSelf: "flex-start",
     backgroundColor: "var(--colorNeutralBackground3)",
     borderRadius: "9999px",
     padding: "4px",
@@ -231,26 +231,8 @@ const RootPanel: React.FC = () => {
             ))}
           </TabList>
 
-          <div 
-            className={styles.tabContent} 
-            style={{ position: 'relative' }}
-          >
-            <div style={{ 
-              opacity: 0.4, 
-              pointerEvents: 'none',
-              filter: 'blur(3px)',
-              transition: 'all 0.3s ease',
-              height: '100%',
-              overflow: 'hidden',
-            }}>
-              {renderContent(selectedDevice || null)}
-            </div>
-            
-            <UnderDevelopmentOverlay
-              featureKey="root_zone"
-              title={t("root.under_dev_title", "Root 专区深度开发中...")}
-              description={t("root.under_dev_desc", "一键 Root、Magisk/KernelSU 镜像自动修补与模块管理引擎正在加紧攻关测试。")}
-            />
+          <div className={styles.tabContent}>
+            {renderContent(selectedDevice || null)}
           </div>
         </div>
       </div>

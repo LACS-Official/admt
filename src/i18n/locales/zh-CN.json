@@ -1,4 +1,4 @@
-﻿{
+{
   "settings": {
     "language_region": "语言和地区",
     "language_region_desc": "语言、时区和本地化设置",
@@ -156,7 +156,9 @@
   },
   "home": {
     "tab_connect": "连接设备",
-    "tab_info": "设备信息",
+    "tab_info": "设备概览",
+    "tab_monitor": "实时监控",
+    "tab_actions": "重启与辅助",
     "demo_mode_title": "演示模式",
     "demo_mode_desc": "当前显示的是模拟数据。连接真实设备后将自动切换为真实数据。",
     "select_device_title": "未选择设备",
@@ -363,6 +365,7 @@
     "no_device_desc": "请检查设备是否正常连接，对应驱动是否安装",
     "select_device_label": "当前设备: ",
     "no_device_connected": "无设备连接",
+    "ai_assistant": "AI 助手",
     "command_line": "命令行",
     "logs": "日志",
     "device_offline_title": "设备离线",
@@ -429,6 +432,7 @@
     "tab_image": "镜像刷入",
     "tab_rom": "线刷工具",
     "tab_rom_manager": "ROM管理 & 解包",
+    "tab_rom_download": "ROM 下载中心",
     "no_device_title": "未检测到设备",
     "no_device_hint": "请确保设备已连接",
     "select_device_title": "请选择一个设备",
@@ -1255,6 +1259,7 @@
     "no_device_title": "未检测到设备",
     "no_device_hint": "请确保设备已连接并启用USB调试",
     "device_selection_title": "设备选择",
+    "device_management_title": "设备管理",
     "devices_available": "{{count}} 台设备可用",
     "checking_support": "检查设备支持...",
     "no_devices": "没有可用的设备",

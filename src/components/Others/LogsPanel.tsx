@@ -389,7 +389,11 @@ const useStyles = makeStyles({
   },
 });
 
-export const LogsPanel: React.FC = () => {
+export interface LogsPanelProps {
+  onClose?: () => void;
+}
+
+export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
   const styles = useStyles();
   const { t } = useTranslation();
 
@@ -633,6 +637,17 @@ export const LogsPanel: React.FC = () => {
               disabled={logs.length === 0}
             />
           </Tooltip>
+
+          {onClose && (
+            <Tooltip content="关闭日志" relationship="label">
+              <Button
+                appearance="subtle"
+                icon={<Dismiss20Regular />}
+                className={styles.actionBtn}
+                onClick={onClose}
+              />
+            </Tooltip>
+          )}
         </div>
       </div>
 

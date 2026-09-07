@@ -251,56 +251,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   }, [query]);
 
   const handleSelect = async (feature: FeatureItem) => {
-    if (feature.view === ('command-line' as AppView) || feature.view === ('logs' as AppView)) {
-      if (isOpeningWindowRef.current) return;
-      isOpeningWindowRef.current = true;
-
-      // 如果是命令行或日志，打开独立窗口
-      try {
-        const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-        const label = feature.view;
-        const title = feature.view === 'command-line' ? '玩机管家 - 命令行' : '玩机管家 - 日志';
-        
-        let targetWindow = await WebviewWindow.getByLabel(label);
-        if (targetWindow) {
-          try {
-            await targetWindow.unminimize();
-            await targetWindow.show();
-            await targetWindow.setFocus();
-          } catch (e) {
-            // eslint-disable-next-line no-console
-            console.warn("从搜索聚焦已有窗口失败(非关键):", e);
-          }
-        } else {
-          const url = `${window.location.origin}/index.html`;
-          targetWindow = new WebviewWindow(label, {
-            url: url,
-            title: title,
-            width: 900,
-            height: 700,
-            minWidth: 800,
-            minHeight: 600,
-            decorations: false,
-            center: true,
-          });
-          targetWindow.once('tauri://created', () => {
-            targetWindow?.show();
-          });
-        }
-      } catch (error) {
-        const errorStr = String(error);
-        if (errorStr.includes("already exists") || errorStr.includes("Label already exists")) {
-          // eslint-disable-next-line no-console
-          console.warn("从搜索打开窗口冲突(非关键):", error);
-        } else {
-          // eslint-disable-next-line no-console
-          console.error("从搜索打开控制台窗口失败:", error);
-        }
-      } finally {
-        setTimeout(() => {
-          isOpeningWindowRef.current = false;
-        }, 500);
-      }
+    if (feature.view === ('command-line' as AppView)) {
+      useAppStore.getState().setCommandLineModalOpen(true);
+    } else if (feature.view === ('logs' as AppView)) {
+      useAppStore.getState().setLogsModalOpen(true);
     } else {
       setCurrentView(feature.view);
     }

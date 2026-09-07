@@ -229,6 +229,18 @@ export const RomManagerCard: React.FC = () => {
     };
   }, []);
 
+  // 监听路由跳转参数传递的 onlineUrl
+  const navigationParams = useAppStore((state) => state.navigationParams);
+  const setNavigationParams = useAppStore((state) => state.setNavigationParams);
+
+  useEffect(() => {
+    if (navigationParams?.onlineUrl) {
+      setActiveTab("online");
+      setOnlineUrl(navigationParams.onlineUrl);
+      setNavigationParams(undefined);
+    }
+  }, [navigationParams, setNavigationParams]);
+
   const handleSelectLocalFile = async () => {
     try {
       const selected = await open({

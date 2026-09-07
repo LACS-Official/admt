@@ -1,13 +1,12 @@
-/*
-在线资源-在线资源区域卡片页面
-*/  
 import React, { useState, useEffect} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   makeStyles,
   TabList,
   Tab,
+  Button,
   CounterBadge,
+  mergeClasses,
 } from "@fluentui/react-components";
 import {
   CloudArrowUp24Regular,
@@ -15,14 +14,14 @@ import {
   Brain24Regular,
   ArrowDownload24Regular,
   Sparkle24Regular,
-  Server24Regular,
 } from "@fluentui/react-icons";
 import { DownloadManagerPanel } from "./DownloadManagerPanel";
 import OnlineResourcesPanel from "./OnlineResourcesPanel";
 import PluginStorePanel from "./PluginStorePanel";
-import SkillsResourcesPanel from "./SkillsResourcesPanel";
-import McpResourcesPanel from "./McpResourcesPanel";
+import SkillsMcpPanel from "./SkillsMcpPanel";
+import { RomDownloadCenterCard } from "../FlashZone/RomDownloadCenterCard";
 import { onlineResourcesService } from '../../services/onlineResourcesService';
+import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
   container: {
@@ -34,6 +33,13 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
     boxSizing: "border-box",
     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+  topHeaderBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    flexShrink: 0,
   },
   headerTabList: {
     flexShrink: 0,
@@ -74,6 +80,32 @@ const useStyles = makeStyles({
         fontSize: "12px",
         padding: "4px 10px",
       },
+    },
+  },
+  downloadBtn: {
+    borderRadius: "9999px",
+    fontSize: "13px",
+    padding: "6px 16px",
+    minHeight: "36px",
+    fontWeight: 500,
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    color: "var(--colorNeutralForeground2)",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      color: "var(--colorNeutralForeground1)",
+    },
+  },
+  downloadBtnActive: {
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "var(--colorBrandForeground1)",
+    fontWeight: 600,
+    boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
+    border: "1px solid var(--colorNeutralStroke1)",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1)",
+      color: "var(--colorBrandForeground1)",
     },
   },
   header: {
@@ -138,12 +170,27 @@ const useStyles = makeStyles({
   },
 });
 
-type FlashZoneView = "online-resources" | "plugin-store" | "skills-resources" | "mcp-resources" | "download-manager";
+type FlashZoneView = "online-resources" | "rom-download" | "plugin-store" | "skills-mcp" | "download-manager";
 
 const OnlineZonePanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<FlashZoneView>("online-resources");
+  const navigationParams = useAppStore((state) => state.navigationParams);
+  const setNavigationParams = useAppStore((state) => state.setNavigationParams);
+
+  useEffect(() => {
+    if (navigationParams?.onlineTab) {
+      const tab = navigationParams.onlineTab;
+      if (tab === "skills-resources" || tab === "mcp-resources") {
+        setCurrentView("skills-mcp");
+      } else {
+        setCurrentView(tab as FlashZoneView);
+      }
+      setNavigationParams(undefined);
+    }
+  }, [navigationParams, setNavigationParams]);
+
   const [downloadStats, setDownloadStats] = useState({
     total: 0,
     downloading: 0,
@@ -177,24 +224,19 @@ const OnlineZonePanel: React.FC = () => {
       icon: <CloudArrowUp24Regular />,
     },
     {
+      id: "rom-download" as FlashZoneView,
+      label: "Rom 下载",
+      icon: <ArrowDownload24Regular />,
+    },
+    {
       id: "plugin-store" as FlashZoneView,
       label: t('online_resources.tabs.plugin_store', '插件商店'),
       icon: <Apps24Regular />,
     },
     {
-      id: "skills-resources" as FlashZoneView,
-      label: "Skills 技能资源库",
-      icon: <Brain24Regular />,
-    },
-    {
-      id: "mcp-resources" as FlashZoneView,
-      label: "MCP 服务与工具",
-      icon: <Server24Regular />,
-    },
-    {
-      id: "download-manager" as FlashZoneView,
-      label: t('online_resources.tabs.download_manager', '下载管理'),
-      icon: <ArrowDownload24Regular />,
+      id: "skills-mcp" as FlashZoneView,
+      label: "Skills & MCP",
+      icon: <Sparkle24Regular />,
     },
   ];
 
@@ -202,12 +244,12 @@ const OnlineZonePanel: React.FC = () => {
     switch (currentView) {
       case "online-resources":
         return <OnlineResourcesPanel />;
+      case "rom-download":
+        return <RomDownloadCenterCard />;
       case "plugin-store":
         return <PluginStorePanel />;
-      case "skills-resources":
-        return <SkillsResourcesPanel />;
-      case "mcp-resources":
-        return <McpResourcesPanel />;
+      case "skills-mcp":
+        return <SkillsMcpPanel />;
       case "download-manager":
         return <DownloadManagerPanel onBack={() => setCurrentView("online-resources")}/>;
       default:
@@ -216,33 +258,47 @@ const OnlineZonePanel: React.FC = () => {
   };
 
   return (
-        <div className={styles.container}>
+    <div className={styles.container}>
       <div className={styles.content}>
         <div className={styles.tabContainer}>
-          <TabList
-            id="tour-online-tabs"
-            selectedValue={currentView}
-            onTabSelect={(_, data) => setCurrentView(data.value as FlashZoneView)}
-            className={styles.headerTabList}
-          >
-            {tabs.map((tab) => (
-              <Tab
-                key={tab.id}
-                value={tab.id}
-                icon={tab.icon}
-              >
-                {tab.label}
-                {tab.id === "download-manager" && downloadStats.total > 0 && (
-                  <CounterBadge
-                    count={downloadStats.total}
-                    color="brand"
-                    size="small"
-                    style={{ marginLeft: '4px' }}
-                  />
-                )}
-              </Tab>
-            ))}
-          </TabList>
+          <div className={styles.topHeaderBar}>
+            <TabList
+              id="tour-online-tabs"
+              selectedValue={currentView === "download-manager" ? "" : currentView}
+              onTabSelect={(_, data) => setCurrentView(data.value as FlashZoneView)}
+              className={styles.headerTabList}
+            >
+              {tabs.map((tab) => (
+                <Tab
+                  key={tab.id}
+                  value={tab.id}
+                  icon={tab.icon}
+                >
+                  {tab.label}
+                </Tab>
+              ))}
+            </TabList>
+
+            <Button
+              shape="circular"
+              icon={<ArrowDownload24Regular />}
+              onClick={() => setCurrentView(currentView === "download-manager" ? "online-resources" : "download-manager")}
+              className={mergeClasses(
+                styles.downloadBtn,
+                currentView === "download-manager" && styles.downloadBtnActive
+              )}
+            >
+              {t('online_resources.tabs.download_manager', '下载管理')}
+              {downloadStats.total > 0 && (
+                <CounterBadge
+                  count={downloadStats.total}
+                  color={currentView === "download-manager" ? "brand" : "brand"}
+                  size="small"
+                  style={{ marginLeft: '6px' }}
+                />
+              )}
+            </Button>
+          </div>
 
           <div className={styles.tabContent}>
             {renderContent()}

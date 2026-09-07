@@ -359,7 +359,17 @@ const useStyles = makeStyles({
   },
 });
 
-export const CommandExecutePanel: React.FC = () => {
+export interface CommandExecutePanelProps {
+  onClose?: () => void;
+  initialCommand?: string | null;
+  onClearInitialCommand?: () => void;
+}
+
+export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
+  onClose,
+  initialCommand,
+  onClearInitialCommand,
+}) => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { devices, selectedDevice, selectDevice } = useDeviceStore();
@@ -652,6 +662,18 @@ export const CommandExecutePanel: React.FC = () => {
     }
   };
 
+  // Handle initialCommand passed from modal
+  useEffect(() => {
+    if (initialCommand && initialCommand.trim()) {
+      let aiCmd = initialCommand.trim();
+      if (aiCmd.startsWith("adb ")) aiCmd = aiCmd.substring(4).trim();
+      else if (aiCmd.startsWith("fastboot ")) aiCmd = aiCmd.substring(9).trim();
+      aiCmd = aiCmd.replace(/^-s\s+(?:"[^"]*"|\S+)\s+/, "");
+      executeCommand(aiCmd);
+      onClearInitialCommand?.();
+    }
+  }, [initialCommand, onClearInitialCommand]);
+
   // Keyboard navigation for history
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -942,6 +964,17 @@ export const CommandExecutePanel: React.FC = () => {
               disabled={!output}
             />
           </Tooltip>
+
+          {onClose && (
+            <Tooltip content="关闭终端" relationship="label">
+              <Button
+                appearance="subtle"
+                icon={<Dismiss20Regular />}
+                className={styles.actionBtn}
+                onClick={onClose}
+              />
+            </Tooltip>
+          )}
         </div>
       </div>
 

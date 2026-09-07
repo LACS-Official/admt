@@ -42,24 +42,39 @@ export const getSystemInfo = async (
 
   // 获取 MIUI/HyperOS 版本
   let miuiName = '';
-  const miuiNameRes = await deviceService.deviceService.executeAdbCommand(
+  const hyperNameRes = await deviceService.deviceService.executeAdbCommand(
     deviceSerial,
     'shell',
-    ['getprop', 'ro.miui.ui.version.name'],
+    ['getprop', 'ro.mi.os.version.name'],
     10
   );
-  miuiName = (miuiNameRes.output || '').trim();
-  
-  if (!miuiName) {
-    const hyperNameRes = await deviceService.deviceService.executeAdbCommand(
+  const rawHyper = (hyperNameRes.output || '').trim();
+  if (rawHyper) {
+    const hyperIncRes = await deviceService.deviceService.executeAdbCommand(
       deviceSerial,
       'shell',
-      ['getprop', 'ro.mi.os.version.name'],
+      ['getprop', 'ro.mi.os.version.incremental'],
       10
     );
-    miuiName = (hyperNameRes.output || '').trim();
+    const inc = (hyperIncRes.output || '').trim();
+    miuiName = inc || `HyperOS ${rawHyper}`;
   }
-  addCommandOutput('adb shell getprop ro.miui.ui.version.name | ro.mi.os.version.name', miuiName || '无输出', true);
+
+  if (!miuiName) {
+    const miuiNameRes = await deviceService.deviceService.executeAdbCommand(
+      deviceSerial,
+      'shell',
+      ['getprop', 'ro.miui.ui.version.name'],
+      10
+    );
+    const rawMiui = (miuiNameRes.output || '').trim();
+    if (rawMiui === 'V816' || rawMiui === '816') {
+      miuiName = 'HyperOS 1.0 (V816)';
+    } else {
+      miuiName = rawMiui;
+    }
+  }
+  addCommandOutput('adb shell getprop ro.mi.os.version.incremental | ro.miui.ui.version.name', miuiName || '无输出', true);
 
   // 获取 CPU/SoC 信息
   const propsToQuery = [

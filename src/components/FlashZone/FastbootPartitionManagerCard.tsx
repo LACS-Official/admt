@@ -55,6 +55,50 @@ const useStyles = makeStyles({
     gap: "12px",
     overflow: "hidden",
   },
+  guidanceContainer: {
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px",
+    boxSizing: "border-box",
+  },
+  guidanceCard: {
+    maxWidth: "540px",
+    width: "100%",
+    borderRadius: "16px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    padding: "32px 28px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    textAlign: "center",
+    gap: "18px",
+    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.04)",
+  },
+  guidanceIcon: {
+    width: "60px",
+    height: "60px",
+    borderRadius: "16px",
+    backgroundColor: "rgba(0, 113, 227, 0.1)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--colorBrandForeground1)",
+  },
+  deviceInfoBox: {
+    width: "100%",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    boxSizing: "border-box",
+  },
   topHeaderCard: {
     padding: "12px 16px",
     display: "flex",
@@ -76,14 +120,16 @@ const useStyles = makeStyles({
     gap: "10px",
   },
   modeBanner: {
-    padding: "10px 16px",
+    padding: "8px 14px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "var(--colorPaletteYellowBackground1)",
-    border: "1px solid var(--colorPaletteYellowBorder1)",
-    borderRadius: "8px",
-    fontSize: "13px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "12px",
+    fontSize: "12px",
+    gap: "12px",
+    flexShrink: 0,
   },
   mainLayout: {
     flex: 1,
@@ -322,6 +368,22 @@ export const FastbootPartitionManagerCard: React.FC<
     deviceSerial ||
     "未连接设备";
 
+  // 操作拦截与提示状态
+  const [fastbootPromptOpen, setFastbootPromptOpen] = useState(false);
+  const [fastbootPromptAction, setFastbootPromptAction] = useState("");
+
+  const checkFastbootOrPrompt = useCallback(
+    (actionName: string): boolean => {
+      if (!isFastbootMode) {
+        setFastbootPromptAction(actionName);
+        setFastbootPromptOpen(true);
+        return false;
+      }
+      return true;
+    },
+    [isFastbootMode]
+  );
+
   const appendLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
     setExecutionLogs((prev) => `${prev ? prev + "\n" : ""}[${time}] ${msg}`);
@@ -369,17 +431,18 @@ export const FastbootPartitionManagerCard: React.FC<
     }
   }, [activePartition?.name]);
 
-  // 一键重启进入 Fastboot 模式
-  const handleRebootToFastboot = async () => {
+  // 一键重启进入 Fastboot / Fastbootd 模式
+  const handleRebootToFastboot = async (targetMode: "bootloader" | "fastboot" | "recovery" = "bootloader") => {
     if (!device?.serial) return;
     setIsRebooting(true);
-    appendLog(` 正在发送重启指令进入 Bootloader / Fastboot 模式...`);
+    const modeName = targetMode === "bootloader" ? "Fastboot 模式" : targetMode === "fastboot" ? "Fastbootd 模式" : "Recovery 模式";
+    appendLog(` 正在发送重启指令进入 ${modeName}...`);
     try {
-      await invoke("reboot_device", { serial: device.serial, mode: "bootloader" });
-      appendLog(` 重启命令已下发，请稍候设备进入 Fastboot 模式并自动重连...`);
+      await invoke("reboot_device", { serial: device.serial, mode: targetMode });
+      appendLog(` 重启命令已下发，请稍候设备进入 ${modeName} 并自动重连...`);
       setTimeout(() => {
         setIsRebooting(false);
-      }, 4000);
+      }, 5000);
     } catch (e: any) {
       appendLog(` 重启失败: ${e?.message || e}`);
       setIsRebooting(false);
@@ -444,7 +507,8 @@ export const FastbootPartitionManagerCard: React.FC<
 
     if (!isFastbootMode) {
       appendLog(" 设备不在 Fastboot 模式，且未指定本地镜像文件");
-      onFastbootRequired?.();
+      setFastbootPromptAction(`从设备在线提取 [${partName}] 镜像用于分析`);
+      setFastbootPromptOpen(true);
       return null;
     }
 
@@ -554,11 +618,6 @@ export const FastbootPartitionManagerCard: React.FC<
 
   // 刷入当前激活分区
   const handleFlashActive = async () => {
-    if (!device?.serial && !isFastbootMode) {
-      appendLog(" 设备未连接或不在 Fastboot 模式");
-      onFastbootRequired?.();
-      return;
-    }
     if (!flashImagePath) {
       appendLog(" 请先选择要刷入的镜像文件 (*.img)");
       return;
@@ -566,6 +625,10 @@ export const FastbootPartitionManagerCard: React.FC<
     const part = activePartition?.name;
     if (!part) {
       appendLog(" 请先选择目标分区");
+      return;
+    }
+
+    if (!checkFastbootOrPrompt(`刷入镜像到 [${part}] 分区`)) {
       return;
     }
 
@@ -599,8 +662,7 @@ export const FastbootPartitionManagerCard: React.FC<
 
   // 单纯从设备提取备份单个分区 (fastboot fetch)
   const handleFetchSingle = async (partItem: FastbootPartitionItem) => {
-    if (!isFastbootMode) {
-      onFastbootRequired?.();
+    if (!checkFastbootOrPrompt(`提取备份 [${partItem.name}] 分区`)) {
       return;
     }
 
@@ -636,8 +698,8 @@ export const FastbootPartitionManagerCard: React.FC<
 
   // 批量备份勾选的分区
   const handleBatchFetch = async () => {
-    if (selectedPartitionNames.size === 0 || !isFastbootMode) {
-      onFastbootRequired?.();
+    if (selectedPartitionNames.size === 0) return;
+    if (!checkFastbootOrPrompt(`批量提取备份 ${selectedPartitionNames.size} 个分区`)) {
       return;
     }
 
@@ -700,6 +762,24 @@ export const FastbootPartitionManagerCard: React.FC<
     setIsExecuting(false);
   };
 
+  // 触发单分区擦除确认 (先检测模式再弹高危确认)
+  const handleRequestErase = (part: FastbootPartitionItem) => {
+    if (!checkFastbootOrPrompt(`擦除 [${part.name}] 分区`)) {
+      return;
+    }
+    setPartitionToErase(part);
+    setEraseDialogOpen(true);
+  };
+
+  // 触发批量擦除确认 (先检测模式再弹高危确认)
+  const handleRequestBatchErase = () => {
+    if (selectedPartitionNames.size === 0) return;
+    if (!checkFastbootOrPrompt(`批量擦除 ${selectedPartitionNames.size} 个分区`)) {
+      return;
+    }
+    setBatchEraseDialogOpen(true);
+  };
+
   // 单个擦除确认
   const handleEraseConfirm = async () => {
     if (!partitionToErase) return;
@@ -727,6 +807,9 @@ export const FastbootPartitionManagerCard: React.FC<
 
   // 切换 A/B 槽位
   const handleSwitchSlot = async (slot: string) => {
+    if (!checkFastbootOrPrompt(`切换活动槽位为 Slot ${slot.toUpperCase()}`)) {
+      return;
+    }
     setIsExecuting(true);
     appendLog(` 正在将活动槽位切换为 Slot ${slot.toUpperCase()}...`);
     try {
@@ -774,25 +857,52 @@ export const FastbootPartitionManagerCard: React.FC<
 
   return (
     <div className={styles.container}>
-
-      {/* 当设备在系统模式时显示一键引导 Banner */}
-      {isAdbMode && (
+      {/* 顶部模式提示横条 (非 Fastboot 模式下轻量展示) */}
+      {!isFastbootMode && (
         <div className={styles.modeBanner}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Warning24Regular style={{ color: "var(--colorPaletteYellowForeground1)" }} />
-            <span>
-              检测到当前设备处于<strong>开机系统 (ADB) 模式</strong>。如需执行 Fastboot 分区读写，请一键重启进入引导模式。
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+            <Info24Regular style={{ color: "var(--colorBrandForeground1)", flexShrink: 0 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", minWidth: 0 }}>
+              <Badge
+                appearance="tint"
+                color={device && device.connected ? "warning" : "informative"}
+              >
+                {device && device.connected
+                  ? device.mode === "sys"
+                    ? "系统开机模式 (ADB)"
+                    : device.mode === "rec"
+                    ? "Recovery 模式"
+                    : device.mode
+                  : "离线浏览模式"}
+              </Badge>
+              <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                已载入标准核心分区表，支持镜像预选、解包与离线分析；执行刷写、备份或擦除等底层操作时需切换至 Fastboot。
+              </Text>
+            </div>
           </div>
-          <Button
-            size="small"
-            appearance="primary"
-            icon={<Power24Regular />}
-            onClick={handleRebootToFastboot}
-            disabled={isRebooting}
-          >
-            {isRebooting ? "正在重启中..." : "一键重启至 Fastboot 模式"}
-          </Button>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+            {device && device.connected && isAdbMode ? (
+              <Button
+                size="small"
+                appearance="subtle"
+                icon={<Power24Regular />}
+                onClick={() => handleRebootToFastboot("bootloader")}
+                disabled={isRebooting}
+              >
+                {isRebooting ? "正在重启..." : "重启至 Fastboot"}
+              </Button>
+            ) : (
+              <Button
+                size="small"
+                appearance="subtle"
+                icon={<ArrowReset24Regular />}
+                onClick={loadPartitions}
+                disabled={isLoading}
+              >
+                刷新设备
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -944,7 +1054,7 @@ export const FastbootPartitionManagerCard: React.FC<
                           appearance="subtle"
                           icon={<ArrowDownload24Regular />}
                           onClick={() => handleFetchSingle(p)}
-                          disabled={isExecuting || !isFastbootMode}
+                          disabled={isExecuting}
                         />
                       </Tooltip>
                       <Tooltip content="擦除该分区数据 (危险)" relationship="label">
@@ -952,11 +1062,8 @@ export const FastbootPartitionManagerCard: React.FC<
                           size="small"
                           appearance="subtle"
                           icon={<Delete24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />}
-                          onClick={() => {
-                            setPartitionToErase(p);
-                            setEraseDialogOpen(true);
-                          }}
-                          disabled={isExecuting || !isFastbootMode}
+                          onClick={() => handleRequestErase(p)}
+                          disabled={isExecuting}
                         />
                       </Tooltip>
                     </div>
@@ -1020,7 +1127,7 @@ export const FastbootPartitionManagerCard: React.FC<
                   appearance="primary"
                   icon={<ArrowDownload24Regular />}
                   onClick={handleBatchFetch}
-                  disabled={isExecuting || !isFastbootMode}
+                  disabled={isExecuting || selectedPartitionNames.size === 0}
                 >
                   批量提取备份勾选的 {selectedPartitionNames.size} 个分区到文件夹
                 </Button>
@@ -1028,8 +1135,8 @@ export const FastbootPartitionManagerCard: React.FC<
                 <Button
                   appearance="secondary"
                   icon={<Delete24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />}
-                  onClick={() => setBatchEraseDialogOpen(true)}
-                  disabled={isExecuting || !isFastbootMode}
+                  onClick={handleRequestBatchErase}
+                  disabled={isExecuting || selectedPartitionNames.size === 0}
                 >
                   批量擦除勾选的 {selectedPartitionNames.size} 个分区
                 </Button>
@@ -1090,20 +1197,15 @@ export const FastbootPartitionManagerCard: React.FC<
                     appearance="secondary"
                     icon={<ArrowDownload24Regular />}
                     onClick={() => activePartition && handleFetchSingle(activePartition)}
-                    disabled={isExecuting || !isFastbootMode || !activePartition}
+                    disabled={isExecuting || !activePartition}
                   >
                     提取备份到文件 (Fetch)
                   </Button>
                   <Button
                     appearance="secondary"
                     icon={<Delete24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />}
-                    onClick={() => {
-                      if (activePartition) {
-                        setPartitionToErase(activePartition);
-                        setEraseDialogOpen(true);
-                      }
-                    }}
-                    disabled={isExecuting || !isFastbootMode || !activePartition}
+                    onClick={() => activePartition && handleRequestErase(activePartition)}
+                    disabled={isExecuting || !activePartition}
                   >
                     擦除此分区 (Erase)
                   </Button>
@@ -1298,6 +1400,107 @@ export const FastbootPartitionManagerCard: React.FC<
             >
               确认批量擦除
             </Button>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
+
+      {/* 非 Fastboot 模式操作拦截提示弹窗 */}
+      <Dialog open={fastbootPromptOpen} onOpenChange={(_, d) => setFastbootPromptOpen(d.open)}>
+        <DialogSurface style={{ borderRadius: "16px", padding: "24px", maxWidth: "480px" }}>
+          <DialogTitle>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "10px",
+                  backgroundColor: "rgba(0, 113, 227, 0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--colorBrandForeground1)",
+                  flexShrink: 0,
+                }}
+              >
+                <Flash24Regular />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <Text size={400} weight="semibold">
+                  需要 Fastboot 模式
+                </Text>
+                <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                  {fastbootPromptAction || "底层硬件交互操作"}
+                </Text>
+              </div>
+            </div>
+          </DialogTitle>
+          <DialogBody style={{ padding: "16px 0", display: "flex", flexDirection: "column", gap: "14px" }}>
+            <Text size={300} style={{ lineHeight: 1.6, color: "var(--colorNeutralForeground1)" }}>
+              执行此操作需要与设备的底层 Bootloader 引导加载器进行通信。
+            </Text>
+
+            <div
+              style={{
+                padding: "12px 14px",
+                borderRadius: "10px",
+                backgroundColor: "var(--colorNeutralBackground2)",
+                border: "1px solid var(--colorNeutralStroke2)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Text size={200} weight="semibold">
+                  当前设备状态
+                </Text>
+                <Badge
+                  appearance="tint"
+                  color={device && device.connected ? (isAdbMode ? "warning" : "informative") : "danger"}
+                >
+                  {device && device.connected
+                    ? device.mode === "sys"
+                      ? "开机系统 (ADB)"
+                      : device.mode === "rec"
+                      ? "Recovery 模式"
+                      : device.mode || "其他模式"
+                    : "未检测到设备"}
+                </Badge>
+              </div>
+              <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
+                {device && device.connected
+                  ? `设备 [${deviceDisplayName}] 当前未处于 Fastboot 模式。您可以直接点击下方按钮一键重启进入 Fastboot。`
+                  : "当前未连接手机。请使用 USB 数据线连接手机，并在关机状态下长按【音量下键 + 电源键】进入 Fastboot。"}
+              </Text>
+            </div>
+          </DialogBody>
+          <DialogActions>
+            <Button appearance="secondary" onClick={() => setFastbootPromptOpen(false)}>
+              取消
+            </Button>
+            {device && device.connected && isAdbMode ? (
+              <Button
+                appearance="primary"
+                icon={<Power24Regular />}
+                disabled={isRebooting}
+                onClick={async () => {
+                  setFastbootPromptOpen(false);
+                  await handleRebootToFastboot("bootloader");
+                }}
+              >
+                {isRebooting ? "正在重启..." : "立即重启至 Fastboot"}
+              </Button>
+            ) : (
+              <Button
+                appearance="primary"
+                onClick={() => {
+                  setFastbootPromptOpen(false);
+                  loadPartitions();
+                }}
+              >
+                刷新检测
+              </Button>
+            )}
           </DialogActions>
         </DialogSurface>
       </Dialog>

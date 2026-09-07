@@ -1,4 +1,4 @@
-﻿import { OnlineSoftware, OnlineSoftwareResponse, DownloadTask } from '../types/app';
+import { OnlineSoftware, OnlineSoftwareResponse, DownloadTask } from '../types/app';
 import { tauriHttpService } from './tauriHttpService';
 import { logService } from './logService';
 
@@ -438,7 +438,34 @@ class OnlineResourcesService {
     }
   }
 
+  /**
+   * 添加自定义文件下载任务（如 ROM 固件包）到下载管理中心
+   */
+  async downloadCustomFile(fileName: string, downloadUrl: string, _description?: string): Promise<string> {
+    const taskId = `rom_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const task: DownloadTask = {
+      id: taskId,
+      softwareId: Date.now(),
+      softwareName: fileName,
+      fileName: fileName,
+      downloadUrl: downloadUrl,
+      progress: 0,
+      status: 'pending',
+      startTime: new Date(),
+    };
 
+    this.downloadTasks.set(taskId, task);
+    this.persistTasks();
+
+    logService.info(`已将固件下载任务加入队列: ${fileName}`, '下载服务');
+
+    // 启动后台下载任务
+    this.startTauriDownload(task).catch((err) => {
+      console.error('自定义下载任务执行失败:', err);
+    });
+
+    return taskId;
+  }
 
   /**
    * 从URL或filetype中提取文件扩展名

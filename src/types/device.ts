@@ -41,6 +41,8 @@ export interface DeviceProperties {
   buildUser?: string;        // 构建用户
   buildHost?: string;        // 构建主机
   miuiVersion?: string;      // MIUI版本
+  osVersionName?: string;    // HyperOS/OS版本名称 (如 OS1.0)
+  osVersionIncremental?: string; // HyperOS/OS真实增量版本 (如 OS1.0.6.0.TKHCNXM)
 
   // 硬件信息
   cpuAbi?: string;          // CPU架构

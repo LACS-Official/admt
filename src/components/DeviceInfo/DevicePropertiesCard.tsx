@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   makeStyles,
   Card,
@@ -193,6 +193,15 @@ const DevicePropertiesCard: React.FC<DevicePropertiesCardProps> = ({ device }) =
     const systemInfo = [];
     if (props.androidVersion) systemInfo.push({ property: t('device_overview.android_version'), value: `Android ${props.androidVersion}` });
     if (props.sdkVersion) systemInfo.push({ property: t('device_overview.sdk_version'), value: `API ${props.sdkVersion}` });
+    if (props.osVersionName || props.miuiVersion) {
+      const uiName = props.osVersionName
+        ? (props.osVersionName.startsWith("OS") ? `HyperOS ${props.osVersionName.replace(/^OS/, "")}` : props.osVersionName)
+        : (props.miuiVersion || "");
+      systemInfo.push({ property: "系统 UI 版本", value: uiName });
+    }
+    if (props.osVersionIncremental || props.systemVersion) {
+      systemInfo.push({ property: "系统固件增量版本", value: props.osVersionIncremental || props.systemVersion || "" });
+    }
     if (props.buildId) systemInfo.push({ property: t('device_overview.build_id'), value: props.buildId });
     if (props.buildDisplayId) systemInfo.push({ property: t('device_overview.build_display_id'), value: props.buildDisplayId });
     if (props.securityPatchLevel) systemInfo.push({ property: t('device_properties.security_patch'), value: props.securityPatchLevel });

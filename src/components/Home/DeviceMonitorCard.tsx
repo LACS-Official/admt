@@ -42,33 +42,93 @@ import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
-    padding: tokens.spacingHorizontalXL,
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingHorizontalL,
-    overflow: 'hidden',
-    backgroundColor: 'var(--colorNeutralBackground1)',
-    borderRadius: '12px',
-    border: '1px solid var(--colorNeutralStroke2)',
-    boxShadow: 'var(--shadow4)',
+    padding: "20px 24px",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    overflow: "hidden",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    borderRadius: "14px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.03)",
   },
   header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "12px",
   },
   titleSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalM,
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "3px 10px",
+    borderRadius: "9999px",
+    fontSize: "12px",
+    fontWeight: 500,
+    backgroundColor: "var(--colorNeutralBackground3)",
+    color: "var(--colorNeutralForeground2)",
+  },
+  statusDot: {
+    width: "7px",
+    height: "7px",
+    borderRadius: "50%",
+    display: "inline-block",
+    transition: "all 0.3s ease",
+  },
+  rangePillGroup: {
+    display: "inline-flex",
+    alignItems: "center",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "2px",
+    border: "1px solid var(--colorNeutralStroke2)",
+  },
+  rangePillBtn: {
+    minHeight: "26px",
+    padding: "2px 10px",
+    fontSize: "12px",
+    borderRadius: "9999px",
+    border: "none",
+    backgroundColor: "transparent",
+    color: "var(--colorNeutralForeground2)",
+    cursor: "pointer",
+    fontWeight: 500,
+    transition: "all 0.15s ease",
+    ":hover": {
+      color: "var(--colorNeutralForeground1)",
+    },
+  },
+  rangePillBtnActive: {
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "var(--colorBrandForeground1)",
+    fontWeight: 600,
+    boxShadow: "0 1px 4px rgba(0, 0, 0, 0.08)",
+  },
+  controls: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+  },
+  actionBtns: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
   },
   tabsContainer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '10px',
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "10px",
   },
   monitorTabList: {
     flexShrink: 0,
@@ -104,64 +164,77 @@ const useStyles = makeStyles({
       },
     },
   },
-  chartContainer: {
-    height: '400px',
-    minHeight: '400px',
-    position: 'relative',
-    backgroundColor: 'var(--colorNeutralBackground1)',
-    borderRadius: '8px',
-    padding: '10px',
-    overflow: 'hidden',
+  subModePillGroup: {
+    display: "inline-flex",
+    alignItems: "center",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "2px",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
-  controls: {
-    display: 'flex',
-    gap: tokens.spacingHorizontalS,
+  chartContainer: {
+    height: "380px",
+    minHeight: "340px",
+    position: "relative",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "12px",
+    padding: "16px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    overflow: "hidden",
   },
   legendItem: {
-    display: 'flex',
-    alignItems: 'center',
+    display: "flex",
+    alignItems: "center",
     gap: tokens.spacingHorizontalSNudge,
     marginRight: tokens.spacingHorizontalL,
-    fontSize: '12px',
-    fontWeight: '500',
-    cursor: 'pointer',
+    fontSize: "12px",
+    fontWeight: "500",
+    cursor: "pointer",
     padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
-    borderRadius: '6px',
-    transition: 'background 0.2s',
-    '&:hover': {
-      backgroundColor: 'var(--colorNeutralBackground3)',
-    }
+    borderRadius: "6px",
+    transition: "background 0.2s",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground3)",
+    },
   },
   customTooltip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    backdropFilter: 'blur(12px)',
-    border: '1px solid var(--colorNeutralStroke1)',
-    borderRadius: '8px',
-    padding: tokens.spacingHorizontalM,
-    boxShadow: 'var(--shadow16)',
-    '@media (prefers-color-scheme: dark)': {
-      backgroundColor: 'rgba(28, 28, 28, 0.9)',
-    }
+    backgroundColor: "var(--colorNeutralBackground1)",
+    backdropFilter: "blur(16px)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "10px",
+    padding: "10px 14px",
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+  },
+  processSection: {
+    marginTop: "6px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  processHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   processList: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: tokens.spacingHorizontalM,
-    marginTop: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalM,
-    backgroundColor: 'var(--colorNeutralBackground2)',
-    borderRadius: '8px',
-    border: '1px solid var(--colorNeutralStroke2)',
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gap: "10px",
   },
   processItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-    padding: tokens.spacingHorizontalS,
-    backgroundColor: 'var(--colorNeutralBackground1)',
-    borderRadius: '6px',
-    border: '1px dotted var(--colorNeutralStroke3)',
-  }
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    padding: "10px 14px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    borderRadius: "10px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    transition: "all 0.15s ease",
+    ":hover": {
+      backgroundColor: "var(--colorNeutralBackground3)",
+    },
+  },
 });
 
 const COLORS = [
@@ -482,13 +555,19 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
       return (
         <div className={styles.customTooltip}>
           <Text weight="semibold" style={{ marginBottom: '8px', display: 'block', fontSize: '12px' }}>{label}</Text>
-          {payload.map((entry: any, index: number) => (
-            <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '2px 0' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '2px', backgroundColor: entry.color }} />
-              <Text size={200}>{entry.name}: </Text>
-              <Text weight="bold" size={200} style={{ fontFamily: 'Consolas' }}>{entry.value.toFixed(1)}</Text>
-            </div>
-          ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {payload.map((entry: any, index: number) => (
+              <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', minWidth: '130px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: entry.color }} />
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>{entry.name}</Text>
+                </div>
+                <Text weight="semibold" size={200} style={{ fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace' }}>
+                  {typeof entry.value === 'number' ? entry.value.toFixed(1) : entry.value}
+                </Text>
+              </div>
+            ))}
+          </div>
         </div>
       );
     }
@@ -513,18 +592,76 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
     <Card className={styles.card}>
       <div className={styles.header}>
         <div className={styles.titleSection}>
-          <Text weight="bold" size={500}>{t('monitor.title')}</Text>
-        </div>
-        <div className={styles.controls}>
-          <div style={{ display: 'flex', backgroundColor: 'var(--colorNeutralBackground3)', padding: '2px', borderRadius: '8px', marginRight: '8px' }}>
-            <Button size="small" appearance={displayRange === 60 ? "secondary" : "transparent"} onClick={() => setDisplayRange(60)}>{t('monitor.range_1m')}</Button>
-            <Button size="small" appearance={displayRange === 600 ? "secondary" : "transparent"} onClick={() => setDisplayRange(600)}>{t('monitor.range_10m')}</Button>
-            <Button size="small" appearance={displayRange === 1800 ? "secondary" : "transparent"} onClick={() => setDisplayRange(1800)}>{t('monitor.range_30m')}</Button>
-            <Button size="small" appearance={displayRange === 3600 ? "secondary" : "transparent"} onClick={() => setDisplayRange(3600)}>{t('monitor.range_1h')}</Button>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Pulse24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+            <Text weight="semibold" size={400}>{t('monitor.title')}</Text>
           </div>
-          <Button icon={<ArrowDownload24Regular />} onClick={exportCsvManually} disabled={dataPoints.length === 0}>{t('monitor.export')}</Button>
-          <Button icon={<Image24Regular />} onClick={exportImage} disabled={dataPoints.length === 0}>{t('monitor.screenshot')}</Button>
-          <Button icon={<Delete24Regular />} onClick={clearData}>{t('monitor.clear')}</Button>
+          <div className={styles.statusBadge}>
+            <span
+              className={styles.statusDot}
+              style={{
+                backgroundColor: isMonitoring ? "#10b981" : "var(--colorNeutralForeground4)",
+                boxShadow: isMonitoring ? "0 0 6px rgba(16, 185, 129, 0.4)" : "none",
+              }}
+            />
+            <span>{isMonitoring ? "实时监控中" : "已暂停"}</span>
+          </div>
+        </div>
+
+        <div className={styles.controls}>
+          <div className={styles.rangePillGroup}>
+            {[
+              { val: 60, label: t('monitor.range_1m') },
+              { val: 600, label: t('monitor.range_10m') },
+              { val: 1800, label: t('monitor.range_30m') },
+              { val: 3600, label: t('monitor.range_1h') },
+            ].map((r) => (
+              <button
+                key={r.val}
+                type="button"
+                className={mergeClasses(
+                  styles.rangePillBtn,
+                  displayRange === r.val && styles.rangePillBtnActive
+                )}
+                onClick={() => setDisplayRange(r.val)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          <div className={styles.actionBtns}>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={isMonitoring ? <Stop24Filled style={{ color: "#ef4444" }} /> : <Play24Filled style={{ color: "#10b981" }} />}
+              onClick={() => setIsMonitoring(!isMonitoring)}
+              title={isMonitoring ? "暂停监控" : "开始监控"}
+            />
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<ArrowDownload24Regular />}
+              onClick={exportCsvManually}
+              disabled={dataPoints.length === 0}
+              title={t('monitor.export')}
+            />
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<Image24Regular />}
+              onClick={exportImage}
+              disabled={dataPoints.length === 0}
+              title={t('monitor.screenshot')}
+            />
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<Delete24Regular />}
+              onClick={clearData}
+              title={t('monitor.clear')}
+            />
+          </div>
         </div>
       </div>
 
@@ -545,19 +682,46 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
           <Tab value="gpu">{t('monitor.gpu')}</Tab>
         </TabList>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {activeTab === 'cpu' && (
-            <div style={{ display: 'flex', backgroundColor: 'var(--colorNeutralBackground3)', padding: '2px', borderRadius: '8px' }}>
-              <Button size="small" appearance={cpuDisplayMode === 'utilization' ? "secondary" : "transparent"} onClick={() => setCpuDisplayMode('utilization')}>{t('monitor.utilization')}</Button>
-              <Button size="small" appearance={cpuDisplayMode === 'frequency' ? "secondary" : "transparent"} onClick={() => setCpuDisplayMode('frequency')}>{t('monitor.frequency')}</Button>
+            <div className={styles.subModePillGroup}>
+              <button
+                type="button"
+                className={mergeClasses(styles.rangePillBtn, cpuDisplayMode === 'utilization' && styles.rangePillBtnActive)}
+                onClick={() => setCpuDisplayMode('utilization')}
+              >
+                {t('monitor.utilization')}
+              </button>
+              <button
+                type="button"
+                className={mergeClasses(styles.rangePillBtn, cpuDisplayMode === 'frequency' && styles.rangePillBtnActive)}
+                onClick={() => setCpuDisplayMode('frequency')}
+              >
+                {t('monitor.frequency')}
+              </button>
             </div>
           )}
           {activeTab === 'memory' && (
-            <div style={{ display: 'flex', backgroundColor: 'var(--colorNeutralBackground3)', padding: '2px', borderRadius: '8px' }}>
-              <Button size="small" appearance={memDisplayMode === 'percent' ? "secondary" : "transparent"} onClick={() => setMemDisplayMode('percent')}>{t('monitor.percentage')}</Button>
-              <Button size="small" appearance={memDisplayMode === 'space' ? "secondary" : "transparent"} onClick={() => setMemDisplayMode('space')}>{t('monitor.capacity')}</Button>
+            <div className={styles.subModePillGroup}>
+              <button
+                type="button"
+                className={mergeClasses(styles.rangePillBtn, memDisplayMode === 'percent' && styles.rangePillBtnActive)}
+                onClick={() => setMemDisplayMode('percent')}
+              >
+                {t('monitor.percentage')}
+              </button>
+              <button
+                type="button"
+                className={mergeClasses(styles.rangePillBtn, memDisplayMode === 'space' && styles.rangePillBtnActive)}
+                onClick={() => setMemDisplayMode('space')}
+              >
+                {t('monitor.capacity')}
+              </button>
             </div>
           )}
+          <Button size="small" appearance="subtle" onClick={toggleCurrentTabLines}>
+            {t('monitor.switching_all')}
+          </Button>
         </div>
       </div>
 
@@ -568,14 +732,9 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
               {t('monitor.exception', { error })}
             </div>
           )}
-          <div style={{ position: 'absolute', right: 16, top: 8, zIndex: 10 }}>
-            <Button size="small" appearance="subtle" onClick={toggleCurrentTabLines}>
-              {t('monitor.switching_all')}
-            </Button>
-          </div>
           <ResponsiveContainer width="100%" height="100%" debounce={50}>
-            <LineChart data={displayedDataPoints} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--colorNeutralStroke2)" opacity={0.3} />
+            <LineChart data={displayedDataPoints} margin={{ top: 12, right: 24, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--colorNeutralStroke2)" opacity={0.35} />
               <XAxis
                 dataKey="time"
                 tick={{ fontSize: 10, fill: 'var(--colorNeutralForeground4)' }}
@@ -597,7 +756,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
                 content={(props) => {
                   const { payload } = props;
                   return (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '16px', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '12px', gap: '8px' }}>
                       {payload?.map((entry: any, index: number) => {
                         const isHidden = hiddenLines.includes(entry.dataKey);
                         return (
@@ -626,7 +785,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
 
               {activeTab === 'cpu' && cpuDisplayMode === 'utilization' && (
                 <>
-                  <Line aria-label={t('monitor.total_cpu')} hide={hiddenLines.includes('totalCpuUsage')} type="monotone" dataKey="totalCpuUsage" name={t('monitor.total_line')} stroke="#3a7bd5" strokeWidth={3} dot={false} isAnimationActive={false} />
+                  <Line aria-label={t('monitor.total_cpu')} hide={hiddenLines.includes('totalCpuUsage')} type="monotone" dataKey="totalCpuUsage" name={t('monitor.total_line')} stroke="#0071e3" strokeWidth={2.5} dot={false} isAnimationActive={false} />
                   {cpuCoreNames.map((name, i) => (
                     <Line key={name} hide={hiddenLines.includes(name)} type="monotone" dataKey={name} name={name} stroke={COLORS[i % COLORS.length]} strokeWidth={1} dot={false} isAnimationActive={false} />
                   ))}
@@ -639,45 +798,45 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
               )}
               {activeTab === 'memory' && memDisplayMode === 'percent' && (
                 <>
-                  <Line hide={hiddenLines.includes('memUsedPercent')} type="monotone" dataKey="memUsedPercent" name={t('monitor.used')} stroke="#f2994a" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('memFreePercent')} type="monotone" dataKey="memFreePercent" name={t('monitor.free')} stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('memUsedPercent')} type="monotone" dataKey="memUsedPercent" name={t('monitor.used')} stroke="#f59e0b" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('memFreePercent')} type="monotone" dataKey="memFreePercent" name={t('monitor.free')} stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'memory' && memDisplayMode === 'space' && (
                 <>
-                  <Line hide={hiddenLines.includes('memUsedGb')} type="monotone" dataKey="memUsedGb" name={t('monitor.used_gb')} stroke="#f2994a" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('memFreeGb')} type="monotone" dataKey="memFreeGb" name={t('monitor.free_gb')} stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('memUsedGb')} type="monotone" dataKey="memUsedGb" name={t('monitor.used_gb')} stroke="#f59e0b" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('memFreeGb')} type="monotone" dataKey="memFreeGb" name={t('monitor.free_gb')} stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'temperature' && (
                 <>
-                  <Line hide={hiddenLines.includes('cpuTemp')} type="monotone" dataKey="cpuTemp" name={t('monitor.core')} stroke="#eb3349" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('battTemp')} type="monotone" dataKey="battTemp" name={t('monitor.battery')} stroke="#ffaa00" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('cpuTemp')} type="monotone" dataKey="cpuTemp" name={t('monitor.core')} stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('battTemp')} type="monotone" dataKey="battTemp" name={t('monitor.battery')} stroke="#f97316" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'power' && (
                 <>
-                  <Line hide={hiddenLines.includes('battCap')} type="monotone" dataKey="battCap" name={t('monitor.level')} stroke="#107c10" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('battPower')} type="monotone" dataKey="battPower" name={t('monitor.power_w')} stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('battCap')} type="monotone" dataKey="battCap" name={t('monitor.level')} stroke="#10b981" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('battPower')} type="monotone" dataKey="battPower" name={t('monitor.power_w')} stroke="#8b5cf6" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'network' && (
                 <>
-                  <Line hide={hiddenLines.includes('rxSpeed')} type="monotone" dataKey="rxSpeed" name={t('monitor.download_kb')} stroke="#0078d4" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('txSpeed')} type="monotone" dataKey="txSpeed" name={t('monitor.upload_kb')} stroke="#d13438" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('rxSpeed')} type="monotone" dataKey="rxSpeed" name={t('monitor.download_kb')} stroke="#0284c7" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('txSpeed')} type="monotone" dataKey="txSpeed" name={t('monitor.upload_kb')} stroke="#ea580c" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
               {activeTab === 'gpu' && (
                 <>
-                  <Line hide={hiddenLines.includes('gpuLoad')} type="monotone" dataKey="gpuLoad" name={t('monitor.gpu_load')} stroke="#00b7c3" strokeWidth={2} dot={false} isAnimationActive={false} />
-                  <Line hide={hiddenLines.includes('gpuFreq')} type="monotone" dataKey="gpuFreq" name={t('monitor.gpu_freq')} stroke="#5c2d91" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('gpuLoad')} type="monotone" dataKey="gpuLoad" name={t('monitor.gpu_load')} stroke="#06b6d4" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line hide={hiddenLines.includes('gpuFreq')} type="monotone" dataKey="gpuFreq" name={t('monitor.gpu_freq')} stroke="#8b5cf6" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </>
               )}
             </LineChart>
           </ResponsiveContainer>
         </div>
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+        <div style={{ flex: 1, minHeight: "240px", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}>
           {isMonitoring ? (
             <>
               <Spinner label={t('monitor.fetching_data')} />
@@ -688,16 +847,37 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
       )}
 
       {isMonitoring && topProcesses.length > 0 && (
-        <div className={styles.processList}>
-          {topProcesses.map((p, i) => (
-            <div key={i} className={styles.processItem}>
-              <Text weight="bold" truncate size={200} title={p.name}>{p.name.split('.').pop()}</Text>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                <Badge appearance="tint" color="brand" size="small">CPU: {p.cpu}%</Badge>
-                <Badge appearance="tint" color="important" size="small">MEM: {p.mem}%</Badge>
+        <div className={styles.processSection}>
+          <div className={styles.processHeader}>
+            <Text weight="semibold" size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
+              系统前台与高负载进程 (Top Processes)
+            </Text>
+            <Text size={100} style={{ color: "var(--colorNeutralForeground4)" }}>
+              采样更新
+            </Text>
+          </div>
+          <div className={styles.processList}>
+            {topProcesses.map((p, i) => (
+              <div key={i} className={styles.processItem}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <Text weight="semibold" truncate size={200} style={{ display: "block" }} title={p.name}>
+                    {p.name.split('.').pop()}
+                  </Text>
+                  <Text size={100} truncate style={{ color: "var(--colorNeutralForeground4)", display: "block" }}>
+                    {p.name}
+                  </Text>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <Badge appearance="tint" color="brand" size="small">
+                    CPU {p.cpu}%
+                  </Badge>
+                  <Badge appearance="tint" color="informative" size="small">
+                    RAM {p.mem}MB
+                  </Badge>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </Card>

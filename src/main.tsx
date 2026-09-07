@@ -18,6 +18,7 @@ import {
 } from "./stores/privacyConsentStore";
 import "./styles/global.css";
 import i18n from "./i18n/config";
+import "./utils/devtools";
 
 // 在应用启动时清除 localStorage 中的 token
 localStorage.removeItem("rom-download-storage");

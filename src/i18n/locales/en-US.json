@@ -1,4 +1,4 @@
-﻿{
+{
   "settings": {
     "language_region": "Language & Region",
     "language_region_desc": "Language, Timezone and Localization settings",
@@ -146,7 +146,9 @@
   },
   "home": {
     "tab_connect": "Connect Device",
-    "tab_info": "Device Info",
+    "tab_info": "Overview",
+    "tab_monitor": "Real-time Monitor",
+    "tab_actions": "Reboot & Tools",
     "demo_mode_title": "Demo Mode",
     "demo_mode_desc": "Showing simulated data. Real data will appear once a device is connected.",
     "select_device_title": "No Device Selected",
@@ -341,6 +343,7 @@
     "tab_image": "Image Flashing",
     "tab_rom": "Fastboot Flashing",
     "tab_rom_manager": "ROM Manager & Extractor",
+    "tab_rom_download": "ROM Download Center",
     "no_device_title": "No Device Detected",
     "no_device_hint": "Please ensure the device is connected",
     "select_device_title": "Please select a device",
@@ -563,6 +566,7 @@
     "no_device_title": "No Device Detected",
     "no_device_hint": "Please ensure device is connected and USB debugging is enabled",
     "device_selection_title": "Device Selection",
+    "device_management_title": "Device Management",
     "devices_available": "{{count}} devices available",
     "checking_support": "Checking device support...",
     "no_devices": "No available devices",
@@ -731,6 +735,7 @@
     "no_device_desc": "Please check if the device is connected and the driver is installed",
     "select_device_label": "Current device: ",
     "no_device_connected": "No device connected",
+    "ai_assistant": "AI Assistant",
     "command_line": "Command Line",
     "logs": "Logs",
     "device_offline_title": "Device Offline",

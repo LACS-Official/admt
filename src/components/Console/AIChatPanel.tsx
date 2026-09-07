@@ -44,6 +44,9 @@ import {
   Checkmark24Regular,
   Open24Regular,
   Dismiss24Regular,
+  Search24Regular,
+  Settings24Regular,
+  Wand24Regular,
 } from "@fluentui/react-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -400,17 +403,29 @@ const AIChatPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
   const [checkedActions, setCheckedActions] = useState<Record<string, boolean[]>>({});
   const [executingMsgId, setExecutingMsgId] = useState<string | null>(null);
   const [executionLogs, setExecutionLogs] = useState<Record<string, string>>({});
   
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
 
-  // Skills 与 MCP 工具调用状态
-  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
-  const [isMcpToolModalOpen, setIsMcpToolModalOpen] = useState(false);
+  // Skills 与 MCP 统一弹窗状态
+  const [isSkillsMcpModalOpen, setIsSkillsMcpModalOpen] = useState(false);
+  const [skillsMcpTab, setSkillsMcpTab] = useState<"skills" | "mcp">("skills");
+
+  // 历史记录独立弹窗状态
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
+
+  // AI 方案与快速配置弹窗状态
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [newPresetNameInput, setNewPresetNameInput] = useState("");
+  const [quickApiKey, setQuickApiKey] = useState("");
+  const [quickModel, setQuickModel] = useState("");
+  const [quickProvider, setQuickProvider] = useState<string>("openai");
+  const [isSavingQuickConfig, setIsSavingQuickConfig] = useState(false);
+  const [presetModalTab, setPresetModalTab] = useState<"presets" | "quickConfig">("presets");
+
   const [isAutoMcpEnabled, setIsAutoMcpEnabled] = useState(true);
   const [activeSkillPrompt, setActiveSkillPrompt] = useState<string | null>(null);
 
@@ -432,10 +447,10 @@ const AIChatPanel: React.FC = () => {
         type: "success",
         message: `已将【${skill.title}】注入为当前会话专属 System 专家设定`,
       });
-      setIsSkillsModalOpen(false);
+      setIsSkillsMcpModalOpen(false);
     } else {
       setInputValue((prev) => (prev ? `${prev}\n\n${skill.systemPrompt}` : skill.systemPrompt));
-      setIsSkillsModalOpen(false);
+      setIsSkillsMcpModalOpen(false);
       if (textareaRef.current) textareaRef.current.focus();
     }
   };
@@ -462,7 +477,7 @@ const AIChatPanel: React.FC = () => {
     if (!mcpTestResult || !selectedMcpTool) return;
     const resultSnippet = `【手动调用 MCP 工具结果】\n工具名: \`${selectedMcpTool.name}\`\n输出内容:\n\`\`\`json\n${JSON.stringify(mcpTestResult, null, 2)}\n\`\`\``;
     setInputValue((prev) => (prev ? `${prev}\n\n${resultSnippet}` : resultSnippet));
-    setIsMcpToolModalOpen(false);
+    setIsSkillsMcpModalOpen(false);
     if (textareaRef.current) textareaRef.current.focus();
   };
 
@@ -533,13 +548,70 @@ const AIChatPanel: React.FC = () => {
     aiPresets,
     activePresetId,
     applyPreset,
+    savePreset,
+    deletePreset,
   } = useAIChatStore();
-  const { setStatusBarMessage } = useAppStore();
+  const { setStatusBarMessage, config, updateConfig, saveToDisk, setCurrentView } = useAppStore();
   const { selectedDevice } = useDeviceStore();
   const { deviceService } = useDeviceService();
+
+  const handleOpenPresetModal = () => {
+    setQuickProvider(config.ai?.provider || "openai");
+    setQuickModel(config.ai?.model || "");
+    setQuickApiKey(config.ai?.apiKey || "");
+    setIsPresetModalOpen(true);
+  };
+
+  const handleSaveAsPreset = () => {
+    if (!newPresetNameInput.trim()) {
+      setStatusBarMessage({ type: "error", message: "请输入方案名称" });
+      return;
+    }
+    const newId = savePreset({
+      name: newPresetNameInput.trim(),
+      provider: (config.ai?.provider as any) || "openai",
+      model: config.ai?.model || "",
+      apiKey: config.ai?.apiKey || "",
+      endpoint: config.ai?.endpoint || "",
+      temperature: config.ai?.temperature ?? 0.7,
+    });
+    applyPreset(newId);
+    setNewPresetNameInput("");
+    setStatusBarMessage({ type: "success", message: `方案「${newPresetNameInput.trim()}」已保存并应用` });
+  };
+
+  const handleSaveQuickConfig = async () => {
+    setIsSavingQuickConfig(true);
+    try {
+      updateConfig({
+        ai: {
+          ...config.ai,
+          provider: quickProvider as any,
+          model: quickModel,
+          apiKey: quickApiKey,
+        }
+      });
+      await saveToDisk();
+      setStatusBarMessage({ type: "success", message: "AI 基础配置已保存并生效" });
+    } catch (e: any) {
+      setStatusBarMessage({ type: "error", message: `保存配置失败: ${e.message || String(e)}` });
+    } finally {
+      setIsSavingQuickConfig(false);
+    }
+  };
   
   const currentConversation = conversations.find(c => c.id === currentConversationId);
   const messages = React.useMemo(() => currentConversation?.messages || [], [currentConversation?.messages]);
+
+  const filteredConversations = React.useMemo(() => {
+    if (!historySearchQuery.trim()) return conversations;
+    const q = historySearchQuery.toLowerCase();
+    return conversations.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        c.messages.some((m) => m.content.toLowerCase().includes(q))
+    );
+  }, [conversations, historySearchQuery]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1075,263 +1147,149 @@ ${slicedLogs}
 
   return (
     <div className={styles.container}>
-      {/* Sidebar - History */}
-      <div className={mergeClasses(styles.sidebar, isSidebarCollapsed && styles.sidebarCollapsed)}>
-        {isSidebarCollapsed ? (
-          /* 折叠后的极简侧边栏 */
-          <div style={{ 
-            display: "flex", 
-            flexDirection: "column", 
-            alignItems: "center", 
-            gap: "20px", 
-            padding: "16px 0", 
-            height: "100%", 
-            boxSizing: "border-box" 
+      {/* Main Chat Area */}
+      <div className={styles.chatArea}>
+        <div className={styles.chatHeader}>
+          {/* 左侧：集合了会话标题、新建与历史对话的统一标题卡片 */}
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "3px 6px 3px 10px",
+            borderRadius: "10px",
+            backgroundColor: "var(--colorNeutralBackground2)",
+            border: `1px solid ${tokens.colorNeutralStroke2}`,
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
+            flexShrink: 0,
           }}>
-            {/* 1. 展开按钮 */}
-            <Tooltip content="展开侧边栏" relationship="label">
-              <Button 
-                icon={<PanelRight24Regular />} 
-                appearance="subtle"
-                onClick={() => setIsSidebarCollapsed(false)}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", maxWidth: "220px" }}>
+              <Bot24Regular style={{ fontSize: "16px", color: "var(--colorBrandForeground1)", flexShrink: 0 }} />
+              <Text weight="semibold" className={styles.historyItemTitle} style={{ fontSize: "13px" }}>
+                {currentConversation?.title || "AI 玩机助手"}
+              </Text>
+            </div>
+
+            <div style={{ width: "1px", height: "14px", backgroundColor: tokens.colorNeutralStroke2, margin: "0 2px" }} />
+
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <Tooltip content="新建对话" relationship="label">
+                <Button
+                  icon={<Add24Regular />}
+                  appearance="subtle"
+                  size="small"
+                  onClick={() => createNewConversation()}
+                  style={{ borderRadius: "6px", height: "24px", padding: "0 6px", fontSize: "12px" }}
+                >
+                  新建
+                </Button>
+              </Tooltip>
+
+              <Tooltip content="打开历史会话记录" relationship="label">
+                <Button
+                  icon={<History24Regular />}
+                  appearance="subtle"
+                  size="small"
+                  onClick={() => setIsHistoryModalOpen(true)}
+                  style={{ borderRadius: "6px", height: "24px", padding: "0 6px", fontSize: "12px" }}
+                >
+                  历史 {conversations.length > 0 ? `(${conversations.length})` : ""}
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+
+          {/* 右侧：运行控制模式组、AI 方案配置选择器及导出按钮 */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", rowGap: "8px" }}>
+            {/* 运行模式切换组 */}
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "8px", 
+              backgroundColor: tokens.colorNeutralBackground2, 
+              border: `1px solid ${tokens.colorNeutralStroke2}`,
+              borderRadius: "8px",
+              padding: "4px 8px",
+              height: "32px",
+              boxSizing: "border-box"
+            }}>
+              <Switch
+                label={isAgentMode ? "智能代理" : "常规问答"}
+                checked={isAgentMode}
+                onChange={(e, data) => setAgentMode(data.checked)}
+                style={{ margin: 0 }}
               />
-            </Tooltip>
-            
-            <Divider style={{ width: "60%" }} />
+              {isAgentMode && <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2 }} />}
+              {isAgentMode && (
+                <Switch
+                  label={isAutoExecute ? "自动执行" : "手动审核"}
+                  checked={isAutoExecute}
+                  onChange={(e, data) => setAutoExecute(data.checked)}
+                  style={{ margin: 0 }}
+                />
+              )}
+            </div>
 
-            {/* 2. 新建会话 */}
-            <Tooltip content="新建会话" relationship="label">
-              <Button 
-                icon={<Add24Regular />} 
-                appearance="primary"
-                shape="circular"
-                size="large"
-                onClick={() => createNewConversation()}
-              />
-            </Tooltip>
+            {/* AI 方案配置与快速切换胶囊 */}
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "6px", 
+              backgroundColor: tokens.colorNeutralBackground2, 
+              border: `1px solid ${tokens.colorNeutralStroke2}`,
+              borderRadius: "8px",
+              padding: "3px 6px",
+              height: "32px",
+              boxSizing: "border-box"
+            }}>
+              <Tooltip content="切换当前使用的 AI 方案" relationship="label">
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Sparkle24Regular style={{ fontSize: "14px", color: "var(--colorBrandForeground1)" }} />
+                  <Select
+                    value={activePresetId || ""}
+                    onChange={(_, data) => {
+                      applyPreset(data.value);
+                      const selectedName = aiPresets.find(p => p.id === data.value)?.name || "自定义配置";
+                      setStatusBarMessage({
+                        type: "success",
+                        message: `当前 AI 方案已切换为: ${selectedName}`,
+                      });
+                    }}
+                    size="small"
+                    style={{ width: "120px", height: "24px", minWidth: "90px", fontSize: "12px" }}
+                  >
+                    <option value="">-- 自定义配置 --</option>
+                    {aiPresets.map(preset => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </Tooltip>
 
-            {/* 3. 对话历史 (点击可展开查看列表) */}
-            <Tooltip content="查看对话历史列表" relationship="label">
-              <Button 
-                icon={<History24Regular />} 
-                appearance="subtle"
-                onClick={() => setIsSidebarCollapsed(false)}
-              />
-            </Tooltip>
+              <Tooltip content="管理方案与快速配置 AI" relationship="label">
+                <Button
+                  icon={<Settings24Regular style={{ fontSize: "14px" }} />}
+                  appearance="subtle"
+                  size="small"
+                  onClick={handleOpenPresetModal}
+                  style={{ minWidth: "24px", width: "24px", height: "24px", padding: 0 }}
+                />
+              </Tooltip>
+            </div>
 
-            {/* 垂直弹性占位 */}
-            <div style={{ flex: 1 }} />
-
-            {/* 4. 批量操作 (纯图标) */}
-            <Tooltip content="批量合并导出所有对话" relationship="label">
+            {/* 导出当前对话 */}
+            <Tooltip content="导出当前对话为 Markdown 格式" relationship="label">
               <Button 
                 icon={<ArrowDownload24Regular />} 
                 appearance="subtle"
-                onClick={handleExportAllConversations}
-                disabled={conversations.length === 0}
+                size="small"
+                onClick={handleExportMarkdown}
+                disabled={!currentConversationId || messages.length === 0}
               />
             </Tooltip>
-
-            {/* 5. 一键清理 (纯图标) */}
-            <Tooltip content="清除所有历史记录" relationship="label">
-              <Button 
-                icon={<Delete24Regular style={{ color: conversations.length > 0 ? tokens.colorPaletteRedForeground1 : undefined }} />} 
-                appearance="subtle"
-                onClick={clearHistory}
-                disabled={conversations.length === 0}
-              />
-            </Tooltip>
-          </div>
-        ) : (
-          /* 展开时的四区分组排版 */
-          <>
-            <div className={styles.sidebarHeader} style={{ paddingBottom: "8px" }}>
-              <div className={styles.sidebarTitle}>
-                <Tooltip content="收起侧边栏" relationship="label">
-                  <Button 
-                    icon={<PanelLeft24Regular />} 
-                    appearance="subtle"
-                    onClick={() => setIsSidebarCollapsed(true)}
-                  />
-                </Tooltip>
-                <Text weight="bold">AI 助手</Text>
-              </div>
-            </div>
-            <Divider />
-
-            <div style={{ padding: "8px 8px 0 8px", display: "flex", flexDirection: "column", gap: "14px", flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-              {/* 1. 会话管理 */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <Text size={100} style={{ color: tokens.colorNeutralForeground4, paddingLeft: "8px", fontWeight: "bold", letterSpacing: "0.5px" }}>
-                  会话管理
-                </Text>
-                <Button 
-                  icon={<Add24Regular />} 
-                  appearance="primary"
-                  onClick={() => createNewConversation()}
-                  style={{ width: "100%", justifyContent: "flex-start" }}
-                >
-                  新建会话
-                </Button>
-              </div>
-
-              {/* 2. 会话列表 */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1, minHeight: 0 }}>
-                <Text size={100} style={{ color: tokens.colorNeutralForeground4, paddingLeft: "8px", fontWeight: "bold", letterSpacing: "0.5px" }}>
-                  最近会话
-                </Text>
-                <div className={styles.historyList} style={{ maxHeight: "calc(100vh - 360px)", overflowY: "auto" }}>
-                  {conversations.map((conv) => (
-                    <div 
-                      key={conv.id} 
-                      className={mergeClasses(
-                        styles.historyItem,
-                        currentConversationId === conv.id && styles.historyItemActive
-                      )}
-                      onClick={() => setCurrentConversation(conv.id)}
-                      style={{ justifyContent: "space-between", padding: "6px 8px" }}
-                    >
-                      <div className={styles.historyItemTitle} style={{ fontSize: "13px" }}>{conv.title}</div>
-                      <Tooltip content="删除会话" relationship="label">
-                        <Button 
-                          size="small" 
-                          appearance="subtle" 
-                          icon={<Delete24Regular style={{ fontSize: "14px" }} />} 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteConversation(conv.id);
-                          }}
-                        />
-                      </Tooltip>
-                    </div>
-                  ))}
-                  {conversations.length === 0 && (
-                    <div style={{ padding: '20px 8px', textAlign: 'center', color: tokens.colorNeutralForeground4, fontSize: "12px" }}>
-                      暂无历史记录
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 3. 批量操作 */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <Text size={100} style={{ color: tokens.colorNeutralForeground4, paddingLeft: "8px", fontWeight: "bold", letterSpacing: "0.5px" }}>
-                  批量操作
-                </Text>
-                <Button 
-                  icon={<ArrowDownload24Regular />} 
-                  appearance="subtle"
-                  onClick={handleExportAllConversations}
-                  disabled={conversations.length === 0}
-                  style={{ width: "100%", justifyContent: "flex-start", paddingLeft: "12px" }}
-                >
-                  批量导出对话
-                </Button>
-              </div>
-
-              {/* 4. 系统清理 (回收站分区) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingBottom: "12px" }}>
-                <Text size={100} style={{ color: tokens.colorNeutralForeground4, paddingLeft: "8px", fontWeight: "bold", letterSpacing: "0.5px" }}>
-                  系统清理
-                </Text>
-                <Button 
-                  icon={<Delete24Regular style={{ color: conversations.length > 0 ? tokens.colorPaletteRedForeground1 : undefined }} />} 
-                  appearance="subtle"
-                  onClick={clearHistory}
-                  disabled={conversations.length === 0}
-                  style={{ 
-                    width: "100%", 
-                    justifyContent: "flex-start", 
-                    paddingLeft: "12px",
-                    color: conversations.length > 0 ? tokens.colorPaletteRedForeground1 : undefined
-                  }}
-                >
-                  清除所有记录
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Main Chat Area */}
-    <div className={styles.chatArea}>
-      <div className={styles.chatHeader}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0, flexWrap: "wrap", rowGap: "8px" }}>
-          <Text weight="semibold" className={styles.historyItemTitle} style={{ flex: "none", maxWidth: "160px" }}>
-            {currentConversation?.title || "AI 玩机助手"}
-          </Text>
-          
-          {/* AI助手控制台控件组 */}
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: "8px", 
-            backgroundColor: tokens.colorNeutralBackground2, 
-            border: `1px solid ${tokens.colorNeutralStroke2}`,
-            borderRadius: "6px",
-            padding: "4px 8px",
-            height: "32px",
-            boxSizing: "border-box"
-          }}>
-            <Switch
-              label={isAgentMode ? "智能代理" : "常规问答"}
-              checked={isAgentMode}
-              onChange={(e, data) => setAgentMode(data.checked)}
-              style={{ margin: 0 }}
-            />
-            {isAgentMode && <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2 }} />}
-            {isAgentMode && (
-              <Switch
-                label={isAutoExecute ? "自动执行" : "手动审核"}
-                checked={isAutoExecute}
-                onChange={(e, data) => setAutoExecute(data.checked)}
-                style={{ margin: 0 }}
-              />
-            )}
-            <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2 }} />
-            <Switch
-              label="MCP智能协同"
-              checked={isAutoMcpEnabled}
-              onChange={(e, data) => setIsAutoMcpEnabled(data.checked)}
-              style={{ margin: 0 }}
-            />
-            {aiPresets.length > 0 && <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2 }} />}
-            {aiPresets.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Select
-                  value={activePresetId || ""}
-                  onChange={(_, data) => {
-                    applyPreset(data.value);
-                    const selectedName = aiPresets.find(p => p.id === data.value)?.name || "自定义配置";
-                    setStatusBarMessage({
-                      type: "success",
-                      message: `当前 AI 方案已切换为: ${selectedName}`,
-                    });
-                  }}
-                  size="small"
-                  style={{ width: "115px", height: "24px", minWidth: "80px" }}
-                >
-                  <option value="">-- 自定义配置 --</option>
-                  {aiPresets.map(preset => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
           </div>
         </div>
-        <Tooltip content="导出当前对话为 Markdown 格式" relationship="label">
-          <Button 
-            icon={<ArrowDownload24Regular />} 
-            appearance="subtle"
-            onClick={handleExportMarkdown}
-            disabled={!currentConversationId || messages.length === 0}
-          />
-        </Tooltip>
-      </div>
 
       {currentConversationId ? (
         <>
@@ -1792,7 +1750,33 @@ ${slicedLogs}
                 />
 
                 <div className={styles.inputToolbar}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {/* MCP 协同开关 (放置在对话框底部位置) */}
+                    <Tooltip content="启用后，AI 可智能协同调用本地 ADB 工具执行诊断、安装、截图等操作" relationship="label">
+                      <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                        backgroundColor: isAutoMcpEnabled ? "var(--colorBrandBackground2)" : "transparent",
+                        border: isAutoMcpEnabled ? "1px solid var(--colorBrandStroke2)" : `1px solid ${tokens.colorNeutralStroke2}`,
+                        transition: "all 0.18s ease",
+                      }}>
+                        <Switch
+                          size="small"
+                          label={
+                            <Text size={200} weight={isAutoMcpEnabled ? "semibold" : "regular"} style={{ color: isAutoMcpEnabled ? "var(--colorBrandForeground1)" : "var(--colorNeutralForeground2)", fontSize: "12px" }}>
+                              MCP 协同
+                            </Text>
+                          }
+                          checked={isAutoMcpEnabled}
+                          onChange={(_, data) => setIsAutoMcpEnabled(data.checked)}
+                          style={{ margin: 0 }}
+                        />
+                      </div>
+                    </Tooltip>
+
                     {selectedDevice && (
                       <Tooltip content="抓取 Logcat 并自动诊断" relationship="label">
                         <Button
@@ -1806,26 +1790,7 @@ ${slicedLogs}
                         </Button>
                       </Tooltip>
                     )}
-                    <Tooltip content="专家提示词库" relationship="label">
-                      <Button
-                        icon={<Sparkle24Regular />}
-                        appearance="subtle"
-                        size="small"
-                        onClick={() => setIsSkillsModalOpen(true)}
-                      >
-                        Skills
-                      </Button>
-                    </Tooltip>
-                    <Tooltip content="MCP 工具箱" relationship="label">
-                      <Button
-                        icon={<Server24Regular />}
-                        appearance="subtle"
-                        size="small"
-                        onClick={() => setIsMcpToolModalOpen(true)}
-                      >
-                        MCP
-                      </Button>
-                    </Tooltip>
+
                     <Tooltip content="添加文件附件 (日志/脚本)" relationship="label">
                       <Button
                         icon={<DocumentAdd24Regular />}
@@ -1871,72 +1836,140 @@ ${slicedLogs}
         )}
       </div>
 
-      {/* Skills 专家库弹窗 (二级弹窗) */}
-      <Dialog open={isSkillsModalOpen} onOpenChange={(_, data) => !data.open && setIsSkillsModalOpen(false)}>
-        <DialogSurface style={{ maxWidth: "720px", width: "90vw" }}>
+      {/* 历史记录独立弹窗 */}
+      <Dialog open={isHistoryModalOpen} onOpenChange={(_, data) => !data.open && setIsHistoryModalOpen(false)}>
+        <DialogSurface style={{ maxWidth: "700px", width: "90vw", borderRadius: "16px" }}>
           <DialogBody>
             <DialogTitle
               action={
-                <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setIsSkillsModalOpen(false)} />
+                <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setIsHistoryModalOpen(false)} />
               }
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Sparkle24Regular style={{ color: "var(--colorBrandForeground1)" }} />
-                <span>AI Skills 专家提示词与领域模型库</span>
+                <History24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+                <span>会话历史记录</span>
+                <Badge size="small" appearance="tint" color="brand">
+                  {conversations.length} 个会话
+                </Badge>
               </div>
             </DialogTitle>
 
-            <DialogContent style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "8px", maxHeight: "480px", overflowY: "auto" }}>
-              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                选择专业领域的 System Prompt 预设，深度增强 AI 在救砖、模块开发、逆向分析等复杂场景的解答专业度：
-              </Text>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                {PRESET_AI_SKILLS.map((skill) => (
-                  <div
-                    key={skill.id}
-                    style={{
-                      padding: "14px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--colorNeutralStroke2)",
-                      backgroundColor: "var(--colorNeutralBackground2)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
+            <DialogContent style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
+              {/* 操作工具条 */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+                <Input
+                  contentBefore={<Search24Regular style={{ fontSize: "16px" }} />}
+                  placeholder="搜索历史会话标题或内容..."
+                  value={historySearchQuery}
+                  onChange={(_, data) => setHistorySearchQuery(data.value)}
+                  style={{ flex: 1, minWidth: "220px" }}
+                  size="small"
+                />
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <Button
+                    size="small"
+                    appearance="primary"
+                    icon={<Add24Regular />}
+                    onClick={() => {
+                      createNewConversation();
+                      setIsHistoryModalOpen(false);
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <Text weight="bold" size={300}>
-                        {skill.title}
-                      </Text>
-                      <Badge size="small" appearance="tint" color="brand">
-                        {skill.category}
-                      </Badge>
-                    </div>
-                    <Text size={200} style={{ color: "var(--colorNeutralForeground3)", lineHeight: "1.4" }}>
-                      {skill.description}
-                    </Text>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                      {skill.tags.map((t, idx) => (
-                        <span key={idx} style={{ fontSize: "11px", padding: "1px 6px", background: "var(--colorNeutralBackground3)", borderRadius: "4px" }}>
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", marginTop: "auto", paddingTop: "6px" }}>
-                      <Button size="small" appearance="primary" onClick={() => handleApplySkill(skill, "system")}>
-                        注入为系统设定
-                      </Button>
-                      <Button size="small" appearance="secondary" onClick={() => handleApplySkill(skill, "input")}>
-                        插入输入框
-                      </Button>
-                    </div>
+                    新建会话
+                  </Button>
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<ArrowDownload24Regular />}
+                    onClick={handleExportAllConversations}
+                    disabled={conversations.length === 0}
+                  >
+                    批量导出
+                  </Button>
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<Delete24Regular style={{ color: conversations.length > 0 ? tokens.colorPaletteRedForeground1 : undefined }} />}
+                    onClick={clearHistory}
+                    disabled={conversations.length === 0}
+                    style={{ color: conversations.length > 0 ? tokens.colorPaletteRedForeground1 : undefined }}
+                  >
+                    清除所有
+                  </Button>
+                </div>
+              </div>
+
+              {/* 历史记录列表 */}
+              <div style={{ maxHeight: "420px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px", paddingRight: "4px" }}>
+                {filteredConversations.length === 0 ? (
+                  <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--colorNeutralForeground4)" }}>
+                    <Chat24Regular style={{ fontSize: "40px", marginBottom: "8px", opacity: 0.5 }} />
+                    <div>{historySearchQuery ? "未检索到匹配的历史会话" : "暂无历史会话记录"}</div>
                   </div>
-                ))}
+                ) : (
+                  filteredConversations.map((conv) => {
+                    const isCurrent = conv.id === currentConversationId;
+                    const lastMsg = conv.messages[conv.messages.length - 1];
+                    return (
+                      <div
+                        key={conv.id}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: "10px",
+                          border: isCurrent ? "1px solid var(--colorBrandStroke1)" : "1px solid var(--colorNeutralStroke2)",
+                          backgroundColor: isCurrent ? "var(--colorBrandBackground2)" : "var(--colorNeutralBackground2)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          cursor: "pointer",
+                          transition: "all 0.18s ease",
+                        }}
+                        onClick={() => {
+                          setCurrentConversation(conv.id);
+                          setIsHistoryModalOpen(false);
+                        }}
+                      >
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1, minWidth: 0, paddingRight: "12px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Text weight={isCurrent ? "semibold" : "medium"} size={300} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {conv.title}
+                            </Text>
+                            {isCurrent && (
+                              <Badge size="small" appearance="filled" color="brand">当前</Badge>
+                            )}
+                            <span style={{ fontSize: "11px", color: "var(--colorNeutralForeground4)", flexShrink: 0 }}>
+                              {conv.messages.length} 条消息
+                            </span>
+                          </div>
+                          {lastMsg && (
+                            <Text size={200} style={{ color: "var(--colorNeutralForeground3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {lastMsg.content.slice(0, 75)}
+                            </Text>
+                          )}
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                          <Tooltip content="删除此会话" relationship="label">
+                            <Button
+                              size="small"
+                              appearance="subtle"
+                              icon={<Delete24Regular style={{ fontSize: "14px" }} />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteConversation(conv.id);
+                              }}
+                            />
+                          </Tooltip>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </DialogContent>
 
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setIsSkillsModalOpen(false)}>
+              <Button appearance="secondary" onClick={() => setIsHistoryModalOpen(false)}>
                 关闭
               </Button>
             </DialogActions>
@@ -1944,121 +1977,231 @@ ${slicedLogs}
         </DialogSurface>
       </Dialog>
 
-      {/* MCP 工具箱手动调用弹窗 (二级弹窗) */}
-      <Dialog open={isMcpToolModalOpen} onOpenChange={(_, data) => !data.open && setIsMcpToolModalOpen(false)}>
-        <DialogSurface style={{ maxWidth: "760px", width: "90vw" }}>
+      {/* Skills 与 MCP 工具箱统一独立弹窗 */}
+      <Dialog open={isSkillsMcpModalOpen} onOpenChange={(_, data) => !data.open && setIsSkillsMcpModalOpen(false)}>
+        <DialogSurface style={{ maxWidth: "780px", width: "90vw", borderRadius: "16px" }}>
           <DialogBody>
             <DialogTitle
               action={
-                <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setIsMcpToolModalOpen(false)} />
+                <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setIsSkillsMcpModalOpen(false)} />
               }
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Server24Regular style={{ color: "var(--colorBrandForeground1)" }} />
-                <span>MCP 工具箱 (手动测试与执行)</span>
+                <Wrench24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+                <span>AI Skills 专家库与 MCP 工具箱</span>
               </div>
             </DialogTitle>
 
-            <DialogContent style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "8px" }}>
-              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                支持在无需 AI 触发的情况下，手动选择已注册的 MCP 工具并传参执行，实时验证返回数据或直接带入对话：
-              </Text>
-
-              {/* 工具选择 */}
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                {ADMT_BUILTIN_MCP_TOOLS.map((t) => (
-                  <Button
-                    key={t.name}
-                    size="small"
-                    appearance={selectedMcpTool?.name === t.name ? "primary" : "secondary"}
-                    onClick={() => {
-                      setSelectedMcpTool(t);
-                      setMcpTestResult(null);
+            <DialogContent style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "6px" }}>
+              {/* 顶部胶囊分段 Tab 切换 */}
+              <div style={{ display: "flex", justifyContent: "center", margin: "4px 0 10px" }}>
+                <div style={{
+                  display: "inline-flex",
+                  padding: "3px",
+                  borderRadius: "9999px",
+                  backgroundColor: "var(--colorNeutralBackground3)",
+                  border: "1px solid var(--colorNeutralStroke2)",
+                  gap: "4px"
+                }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "6px 20px",
+                      borderRadius: "9999px",
+                      border: "none",
+                      fontSize: "13px",
+                      fontWeight: skillsMcpTab === "skills" ? "600" : "500",
+                      cursor: "pointer",
+                      backgroundColor: skillsMcpTab === "skills" ? "var(--colorBrandBackground2)" : "transparent",
+                      color: skillsMcpTab === "skills" ? "var(--colorBrandForeground1)" : "var(--colorNeutralForeground2)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.18s ease"
                     }}
+                    onClick={() => setSkillsMcpTab("skills")}
                   >
-                     {t.name}
-                  </Button>
-                ))}
+                    <Sparkle24Regular style={{ fontSize: "16px" }} />
+                    <span>Skills 专家提示词库 ({PRESET_AI_SKILLS.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "6px 20px",
+                      borderRadius: "9999px",
+                      border: "none",
+                      fontSize: "13px",
+                      fontWeight: skillsMcpTab === "mcp" ? "600" : "500",
+                      cursor: "pointer",
+                      backgroundColor: skillsMcpTab === "mcp" ? "var(--colorBrandBackground2)" : "transparent",
+                      color: skillsMcpTab === "mcp" ? "var(--colorBrandForeground1)" : "var(--colorNeutralForeground2)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.18s ease"
+                    }}
+                    onClick={() => setSkillsMcpTab("mcp")}
+                  >
+                    <Server24Regular style={{ fontSize: "16px" }} />
+                    <span>MCP 本地与协议工具箱 ({ADMT_BUILTIN_MCP_TOOLS.length})</span>
+                  </button>
+                </div>
               </div>
 
-              {selectedMcpTool && (
-                <div style={{ padding: "12px", borderRadius: "8px", backgroundColor: "var(--colorNeutralBackground2)", display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <div>
-                    <strong>工具说明：</strong> {selectedMcpTool.description}
+              {skillsMcpTab === "skills" ? (
+                /* Tab 1: Skills 专家库 */
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                    选择专业领域的 System Prompt 预设，深度增强 AI 在救砖、模块开发、逆向分析等复杂场景的解答专业度：
+                  </Text>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", maxHeight: "450px", overflowY: "auto", paddingRight: "4px" }}>
+                    {PRESET_AI_SKILLS.map((skill) => (
+                      <div
+                        key={skill.id}
+                        style={{
+                          padding: "14px",
+                          borderRadius: "10px",
+                          border: "1px solid var(--colorNeutralStroke2)",
+                          backgroundColor: "var(--colorNeutralBackground2)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "8px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <Text weight="bold" size={300}>
+                            {skill.title}
+                          </Text>
+                          <Badge size="small" appearance="tint" color="brand">
+                            {skill.category}
+                          </Badge>
+                        </div>
+                        <Text size={200} style={{ color: "var(--colorNeutralForeground3)", lineHeight: "1.4" }}>
+                          {skill.description}
+                        </Text>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                          {skill.tags.map((t, idx) => (
+                            <span key={idx} style={{ fontSize: "11px", padding: "1px 6px", background: "var(--colorNeutralBackground3)", borderRadius: "4px" }}>
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                        <div style={{ display: "flex", gap: "8px", marginTop: "auto", paddingTop: "6px" }}>
+                          <Button size="small" appearance="primary" onClick={() => handleApplySkill(skill, "system")}>
+                            注入为系统设定
+                          </Button>
+                          <Button size="small" appearance="secondary" onClick={() => handleApplySkill(skill, "input")}>
+                            插入输入框
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                </div>
+              ) : (
+                /* Tab 2: MCP 工具箱 */
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "460px", overflowY: "auto", paddingRight: "4px" }}>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                    支持在无需 AI 触发的情况下，手动选择已注册的 MCP 工具并传参执行，实时验证返回数据或直接带入对话：
+                  </Text>
 
-                  {selectedMcpTool.name === "admt_execute_adb" && (
-                    <div>
-                      <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>ADB Shell 指令 (无需输入 adb)：</label>
-                      <Input
-                        value={mcpParamInputs.command || ""}
-                        onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, command: d.value }))}
-                        placeholder="例如 getprop ro.product.model 或 pm list packages"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  )}
-
-                  {selectedMcpTool.name === "admt_reboot_device" && (
-                    <div>
-                      <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>重启目标模式 (Target)：</label>
-                      <Select
-                        value={mcpParamInputs.target || "system"}
-                        onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, target: d.value }))}
+                  {/* 工具选择 */}
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {ADMT_BUILTIN_MCP_TOOLS.map((t) => (
+                      <Button
+                        key={t.name}
+                        size="small"
+                        appearance={selectedMcpTool?.name === t.name ? "primary" : "secondary"}
+                        onClick={() => {
+                          setSelectedMcpTool(t);
+                          setMcpTestResult(null);
+                        }}
                       >
-                        <option value="system">重启至系统 (System)</option>
-                        <option value="recovery">重启至 Recovery</option>
-                        <option value="bootloader">重启至 Bootloader (Fastboot)</option>
-                        <option value="edl">重启至 9008 (EDL)</option>
-                      </Select>
-                    </div>
-                  )}
-
-                  {selectedMcpTool.name === "admt_list_packages" && (
-                    <div>
-                      <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>过滤分类：</label>
-                      <Select
-                        value={mcpParamInputs.filter || "all"}
-                        onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, filter: d.value }))}
-                      >
-                        <option value="all">所有应用 (All)</option>
-                        <option value="third_party">第三方用户应用 (3rd-party)</option>
-                        <option value="system">系统内置应用 (System)</option>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <Button
-                      appearance="primary"
-                      disabled={isTestingMcp}
-                      icon={isTestingMcp ? <Spinner size="tiny" /> : <Play24Regular />}
-                      onClick={handleRunManualMcpTool}
-                    >
-                      {isTestingMcp ? "正在执行..." : "立即测试执行"}
-                    </Button>
-                    {mcpTestResult && (
-                      <Button appearance="secondary" onClick={handleInsertMcpResultToChat}>
-                         将输出结果带入对话
+                        {t.name}
                       </Button>
-                    )}
+                    ))}
                   </div>
 
-                  {mcpTestResult && (
-                    <div
-                      style={{
-                        padding: "10px",
-                        borderRadius: "6px",
-                        backgroundColor: "#1e293b",
-                        color: "#f8fafc",
-                        fontFamily: "Consolas, monospace",
-                        fontSize: "12px",
-                        whiteSpace: "pre-wrap",
-                        maxHeight: "180px",
-                        overflowY: "auto",
-                      }}
-                    >
-                      {JSON.stringify(mcpTestResult, null, 2)}
+                  {selectedMcpTool && (
+                    <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)", display: "flex", flexDirection: "column", gap: "10px", border: "1px solid var(--colorNeutralStroke2)" }}>
+                      <div>
+                        <strong>工具说明：</strong> {selectedMcpTool.description}
+                      </div>
+
+                      {selectedMcpTool.name === "admt_execute_adb" && (
+                        <div>
+                          <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>ADB Shell 指令 (无需输入 adb)：</label>
+                          <Input
+                            value={mcpParamInputs.command || ""}
+                            onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, command: d.value }))}
+                            placeholder="例如 getprop ro.product.model 或 pm list packages"
+                            style={{ width: "100%" }}
+                          />
+                        </div>
+                      )}
+
+                      {selectedMcpTool.name === "admt_reboot_device" && (
+                        <div>
+                          <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>重启目标模式 (Target)：</label>
+                          <Select
+                            value={mcpParamInputs.target || "system"}
+                            onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, target: d.value }))}
+                          >
+                            <option value="system">重启至系统 (System)</option>
+                            <option value="recovery">重启至 Recovery</option>
+                            <option value="bootloader">重启至 Bootloader (Fastboot)</option>
+                            <option value="edl">重启至 9008 (EDL)</option>
+                          </Select>
+                        </div>
+                      )}
+
+                      {selectedMcpTool.name === "admt_list_packages" && (
+                        <div>
+                          <label style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>过滤分类：</label>
+                          <Select
+                            value={mcpParamInputs.filter || "all"}
+                            onChange={(_, d) => setMcpParamInputs((prev) => ({ ...prev, filter: d.value }))}
+                          >
+                            <option value="all">所有应用 (All)</option>
+                            <option value="third_party">第三方用户应用 (3rd-party)</option>
+                            <option value="system">系统内置应用 (System)</option>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <Button
+                          appearance="primary"
+                          disabled={isTestingMcp}
+                          icon={isTestingMcp ? <Spinner size="tiny" /> : <Play24Regular />}
+                          onClick={handleRunManualMcpTool}
+                        >
+                          {isTestingMcp ? "正在执行..." : "立即测试执行"}
+                        </Button>
+                        {mcpTestResult && (
+                          <Button appearance="secondary" onClick={handleInsertMcpResultToChat}>
+                            将输出结果带入对话
+                          </Button>
+                        )}
+                      </div>
+
+                      {mcpTestResult && (
+                        <div
+                          style={{
+                            padding: "10px",
+                            borderRadius: "6px",
+                            backgroundColor: "#1e293b",
+                            color: "#f8fafc",
+                            fontFamily: "Consolas, monospace",
+                            fontSize: "12px",
+                            whiteSpace: "pre-wrap",
+                            maxHeight: "180px",
+                            overflowY: "auto",
+                          }}
+                        >
+                          {JSON.stringify(mcpTestResult, null, 2)}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2066,7 +2209,234 @@ ${slicedLogs}
             </DialogContent>
 
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setIsMcpToolModalOpen(false)}>
+              <Button appearance="secondary" onClick={() => setIsSkillsMcpModalOpen(false)}>
+                关闭
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* AI 方案与快速配置弹窗 */}
+      <Dialog open={isPresetModalOpen} onOpenChange={(_, data) => !data.open && setIsPresetModalOpen(false)}>
+        <DialogSurface style={{ maxWidth: "620px", width: "90vw", borderRadius: "16px" }}>
+          <DialogBody>
+            <DialogTitle
+              action={
+                <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setIsPresetModalOpen(false)} />
+              }
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Sparkle24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+                <span>AI 配置方案管理</span>
+              </div>
+            </DialogTitle>
+
+            <DialogContent style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px" }}>
+              {/* 分段标签切换 */}
+              <div style={{
+                display: "flex",
+                gap: "6px",
+                padding: "3px",
+                borderRadius: "9999px",
+                backgroundColor: "var(--colorNeutralBackground3)",
+                width: "fit-content"
+              }}>
+                <Button
+                  size="small"
+                  appearance={presetModalTab === "presets" ? "primary" : "subtle"}
+                  onClick={() => setPresetModalTab("presets")}
+                  style={{ borderRadius: "9999px", fontSize: "12px", height: "26px" }}
+                >
+                  多方案选择与切换 ({aiPresets.length})
+                </Button>
+                <Button
+                  size="small"
+                  appearance={presetModalTab === "quickConfig" ? "primary" : "subtle"}
+                  onClick={() => setPresetModalTab("quickConfig")}
+                  style={{ borderRadius: "9999px", fontSize: "12px", height: "26px" }}
+                >
+                  快捷通道与密钥配置
+                </Button>
+              </div>
+
+              {presetModalTab === "presets" ? (
+                /* Tab 1: 方案列表与保存 */
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {/* 保存当前为新方案 */}
+                  <div style={{
+                    padding: "12px 14px",
+                    borderRadius: "12px",
+                    backgroundColor: "var(--colorNeutralBackground2)",
+                    border: "1px solid var(--colorNeutralStroke2)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px"
+                  }}>
+                    <Text size={200} weight="semibold">将当前参数保存为新方案</Text>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <Input
+                        value={newPresetNameInput}
+                        onChange={(_, d) => setNewPresetNameInput(d.value)}
+                        placeholder="例如：DeepSeek 极速版 或 GPT-4o 工作版"
+                        style={{ flex: 1 }}
+                        size="small"
+                      />
+                      <Button
+                        appearance="primary"
+                        icon={<Add24Regular />}
+                        size="small"
+                        onClick={handleSaveAsPreset}
+                        disabled={!newPresetNameInput.trim()}
+                      >
+                        保存方案
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 方案列表 */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "280px", overflowY: "auto" }}>
+                    <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                      已保存的方案列表（点击可立即切换）：
+                    </Text>
+                    {aiPresets.length === 0 ? (
+                      <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--colorNeutralForeground4)", fontSize: "13px" }}>
+                        暂未保存任何方案，您可以将当前的 API 配置保存为方案以便随时切换。
+                      </div>
+                    ) : (
+                      aiPresets.map(preset => {
+                        const isActive = activePresetId === preset.id;
+                        return (
+                          <div
+                            key={preset.id}
+                            style={{
+                              padding: "10px 14px",
+                              borderRadius: "10px",
+                              border: isActive ? "1px solid var(--colorBrandStroke1)" : "1px solid var(--colorNeutralStroke2)",
+                              backgroundColor: isActive ? "var(--colorBrandBackground2)" : "var(--colorNeutralBackground2)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <Text weight={isActive ? "semibold" : "medium"} size={300}>
+                                  {preset.name}
+                                </Text>
+                                {isActive && (
+                                  <Badge size="small" appearance="filled" color="brand">当前生效</Badge>
+                                )}
+                              </div>
+                              <Text size={100} style={{ color: "var(--colorNeutralForeground3)" }}>
+                                通道: {preset.provider} | 模型: {preset.model || "默认"}
+                              </Text>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {!isActive && (
+                                <Button
+                                  size="small"
+                                  appearance="secondary"
+                                  onClick={() => {
+                                    applyPreset(preset.id);
+                                    setStatusBarMessage({
+                                      type: "success",
+                                      message: `已切换至方案: ${preset.name}`,
+                                    });
+                                  }}
+                                >
+                                  应用
+                                </Button>
+                              )}
+                              <Button
+                                size="small"
+                                appearance="subtle"
+                                icon={<Delete24Regular />}
+                                onClick={() => {
+                                  deletePreset(preset.id);
+                                  setStatusBarMessage({
+                                    type: "info",
+                                    message: `已删除方案: ${preset.name}`,
+                                  });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Tab 2: 快捷参数配置 */
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <Text size={200}>AI 供应商通道：</Text>
+                    <Select
+                      value={quickProvider}
+                      onChange={(_, d) => setQuickProvider(d.value)}
+                    >
+                      <option value="openai">OpenAI</option>
+                      <option value="anthropic">Anthropic (Claude)</option>
+                      <option value="google">Google (Gemini)</option>
+                      <option value="deepseek">DeepSeek</option>
+                      <option value="qwen">阿里通义千问 (Qwen)</option>
+                      <option value="zhipu">智谱AI (GLM)</option>
+                      <option value="siliconflow">硅基流动 (SiliconFlow)</option>
+                      <option value="groq">Groq</option>
+                      <option value="nvidia">英伟达 (Nvidia)</option>
+                      <option value="local">Local 本地模型 (Ollama)</option>
+                    </Select>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <Text size={200}>模型名称 (Model)：</Text>
+                    <Input
+                      value={quickModel}
+                      onChange={(_, d) => setQuickModel(d.value)}
+                      placeholder="例如：deepseek-chat, gpt-4o, qwen-turbo..."
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <Text size={200}>API Key (密钥)：</Text>
+                    <Input
+                      type="password"
+                      value={quickApiKey}
+                      onChange={(_, d) => setQuickApiKey(d.value)}
+                      placeholder="sk-..."
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                    <Button
+                      appearance="subtle"
+                      onClick={() => {
+                        setIsPresetModalOpen(false);
+                        setCurrentView("settings", { tab: "ai-settings" });
+                      }}
+                      style={{ fontSize: "12px", color: "var(--colorBrandForeground1)" }}
+                    >
+                      打开完整 AI 设置面板 ↗
+                    </Button>
+
+                    <Button
+                      appearance="primary"
+                      onClick={handleSaveQuickConfig}
+                      disabled={isSavingQuickConfig}
+                      icon={isSavingQuickConfig ? <Spinner size="tiny" /> : undefined}
+                    >
+                      {isSavingQuickConfig ? "正在保存..." : "保存并应用当前配置"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsPresetModalOpen(false)}>
                 关闭
               </Button>
             </DialogActions>

@@ -65,6 +65,13 @@ pub async fn get_device_properties_batch(serial: &str) -> Result<DevicePropertie
                 "ro.build.id" => properties.build_id = Some(value),
                 "ro.build.display.id" => properties.build_display_id = Some(value),
                 "ro.system.build.version.incremental" => properties.system_version = Some(value),
+                "ro.build.version.incremental" => {
+                    if properties.system_version.is_none() {
+                        properties.system_version = Some(value);
+                    }
+                }
+                "ro.mi.os.version.incremental" => properties.os_version_incremental = Some(value),
+                "ro.mi.os.version.name" => properties.os_version_name = Some(value),
                 "ro.build.version.security_patch" => properties.security_patch_level = Some(value),
                 "ro.build.fingerprint" => properties.build_fingerprint = Some(value),
                 "ro.build.date" => properties.build_date = Some(value),
@@ -101,6 +108,28 @@ pub async fn get_device_properties_batch(serial: &str) -> Result<DevicePropertie
                 "ro.vndk.version" => properties.vndk_version = Some(value),
                 _ => {} // 忽略其他属性
             }
+        }
+    }
+
+    // 智能校准 HyperOS / MIUI 真实系统固件版本
+    // 小米 HyperOS 为了兼容旧版软件，在底层保留了 ro.miui.ui.version.name=V816 和 ro.system.build.version.incremental=V816.x.y.z
+    // 真实的 HyperOS 固件版本号优先取 ro.mi.os.version.incremental (例如 OS1.0.6.0.TKHCNXM)
+    if let Some(hyper_inc) = &properties.os_version_incremental {
+        properties.system_version = Some(hyper_inc.clone());
+    } else if let Some(sys_ver) = &properties.system_version {
+        if sys_ver.starts_with("V816.") {
+            properties.system_version = Some(sys_ver.replacen("V816.", "OS1.", 1));
+        } else if sys_ver.starts_with("816.") {
+            properties.system_version = Some(sys_ver.replacen("816.", "OS1.", 1));
+        }
+    }
+
+    if let Some(hyper_name) = &properties.os_version_name {
+        let clean_name = hyper_name.trim_start_matches("OS").trim();
+        properties.miui_version = Some(format!("HyperOS {}", clean_name));
+    } else if let Some(miui_ver) = &properties.miui_version {
+        if miui_ver == "V816" || miui_ver == "816" {
+            properties.miui_version = Some("HyperOS 1.0".to_string());
         }
     }
 

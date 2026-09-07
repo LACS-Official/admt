@@ -12,12 +12,12 @@ import {
   Code24Regular,
   Archive24Regular,
   Layer24Regular,
+  ArrowDownload24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";
-import ImageFlashCard from "../Tools/ImageFlashCard";
-import XiaomiFlashCard from "../Tools/XiaomiFlashCard";
+import UnifiedFlashCard from "../Tools/UnifiedFlashCard";
 import { RomManagerCard } from "./RomManagerCard";
 import { FastbootPartitionManagerCard } from "./FastbootPartitionManagerCard";
 import { useAppStore } from "../../stores/appStore";
@@ -35,6 +35,7 @@ const useStyles = makeStyles({
   },
   headerTabList: {
     flexShrink: 0,
+    alignSelf: "flex-start",
     backgroundColor: "var(--colorNeutralBackground3)",
     borderRadius: "9999px",
     padding: "4px",
@@ -177,8 +178,7 @@ const useStyles = makeStyles({
 type FlashZoneView =
   | "partition-manager"
   | "rom-manager"
-  | "image-flash"
-  | "xiaomi-flash"
+  | "unified-flash"
   | "unlock-tools";
 
 const FlashZonePanel: React.FC = () => {
@@ -203,7 +203,11 @@ const FlashZonePanel: React.FC = () => {
 
   React.useEffect(() => {
     if (navigationParams?.flashTab) {
-      setCurrentView(navigationParams.flashTab as FlashZoneView);
+      let targetTab = navigationParams.flashTab as string;
+      if (targetTab === "image-flash" || targetTab === "xiaomi-flash") {
+        targetTab = "unified-flash";
+      }
+      setCurrentView(targetTab as FlashZoneView);
       setNavigationParams(undefined);
     }
   }, [navigationParams, setNavigationParams]);
@@ -216,17 +220,12 @@ const FlashZonePanel: React.FC = () => {
     },
     {
       id: "rom-manager" as FlashZoneView,
-      label: t("flash.tab_rom_manager", "ROM 固件管理"),
+      label: t("flash.tab_rom_manager", "ROM 管理"),
       icon: <Archive24Regular />,
     },
     {
-      id: "image-flash" as FlashZoneView,
-      label: t("flash.tab_image", "镜像刷入"),
-      icon: <CloudArrowUp24Regular />,
-    },
-    {
-      id: "xiaomi-flash" as FlashZoneView,
-      label: t("flash.tab_rom", "线刷工具"),
+      id: "unified-flash" as FlashZoneView,
+      label: t("flash.tab_unified_flash", "刷写工具 (镜像/线刷包)"),
       icon: <Flash24Regular />,
     },
     {
@@ -246,39 +245,15 @@ const FlashZonePanel: React.FC = () => {
 
     switch (currentView) {
       case "partition-manager":
-        return (
-          <FastbootPartitionManagerCard
-            device={deviceToUse}
-            onFastbootRequired={triggerOverlay}
-          />
-        );
-      case "unlock-tools":
-        return deviceToUse ? (
-          <XiaomiUnlockCard device={deviceToUse} />
-        ) : (
-          <XiaomiUnlockCard device={null} />
-        );
-      case "image-flash":
-        return deviceToUse ? (
-          <ImageFlashCard device={deviceToUse} onFastbootRequired={triggerOverlay} />
-        ) : (
-          <ImageFlashCard device={null as any} onFastbootRequired={triggerOverlay} />
-        );
-      case "xiaomi-flash":
-        return deviceToUse ? (
-          <XiaomiFlashCard device={deviceToUse} onFastbootRequired={triggerOverlay} />
-        ) : (
-          <XiaomiFlashCard device={null as any} onFastbootRequired={triggerOverlay} />
-        );
+        return <FastbootPartitionManagerCard device={deviceToUse} />;
       case "rom-manager":
         return <RomManagerCard />;
+      case "unified-flash":
+        return <UnifiedFlashCard device={deviceToUse} />;
+      case "unlock-tools":
+        return <XiaomiUnlockCard device={deviceToUse} />;
       default:
-        return (
-          <FastbootPartitionManagerCard
-            device={deviceToUse}
-            onFastbootRequired={triggerOverlay}
-          />
-        );
+        return <FastbootPartitionManagerCard device={deviceToUse} />;
     }
   };
 
@@ -329,25 +304,8 @@ const FlashZonePanel: React.FC = () => {
             </TabList>
 
             <div className={styles.tabContent}>
-            {renderContent()}
-            {showOverlay && (
-              <div className={styles.overlay}>
-                <div className={styles.overlayText}>
-                  <Text size={600} weight="bold">
-                    {t('flash.fastboot_mode_required_title')}
-                  </Text>
-                  <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-                    {t('flash.fastboot_mode_required_desc')}
-                  </Text>
-                  <div className={styles.overlayActions}>
-                    <Button appearance="primary" onClick={() => setShowOverlay(false)}>
-                      {t('common.close')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+              {renderContent()}
+            </div>
           </div>
         </div>
       )}

@@ -47,6 +47,12 @@ fn main() {
         println!("cargo:rustc-link-lib=user32");
         println!("cargo:rustc-link-lib=kernel32");
         println!("cargo:rustc-cfg=windows_platform");
+
+        // 清理后台可能遗留并锁死 tools/adb-bin 文件的残留进程（如卡住的 fastboot 僵尸进程），
+        // 避免 Tauri 复制静态资源时发生 "另一个程序正在使用此文件，进程无法访问。(os error 32)"
+        let _ = Command::new("taskkill")
+            .args(["/F", "/IM", "fastboot.exe", "/T"])
+            .output();
     }
 
     // 设置环境变量区分开发/发布模式

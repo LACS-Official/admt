@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import {
   makeStyles,
-  shorthands,
+  mergeClasses,
   Card,
   Text,
   Spinner,
+  Badge,
   tokens,
   Dialog,
   DialogSurface,
@@ -19,6 +20,11 @@ import {
   Warning24Regular,
   Info24Regular,
   WifiSettingsRegular,
+  ArrowClockwise24Regular,
+  Dismiss24Regular,
+  Desktop24Regular,
+  PlugDisconnected24Regular,
+  AppsListDetail24Regular,
 } from "@fluentui/react-icons";
 
 import { useTranslation } from "react-i18next";
@@ -29,108 +35,85 @@ import { useBatchExecutor } from "../Common/BatchExecutorDialog";
 
 const useStyles = makeStyles({
   card: {
-    height: "200px",
-    minWidth: "200px",
+    padding: "20px 24px",
+    height: "100%",
+    boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
+    gap: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
     borderRadius: "14px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    transition: "border-color 0.2s ease",
-    ":hover": {
-      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
-    },
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.03)",
   },
   cardHeader: {
-    marginBottom: "8px",
     display: "flex",
+    justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: "8px",
   },
-  cardTitle: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "var(--colorNeutralForeground1)",
+  titleSection: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-  },
-  titleIcon: {
-    color: "var(--colorBrandForeground1)",
-    fontSize: "20px",
+    gap: "10px",
   },
   cardContent: {
-    flex: 1,
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gridTemplateRows: "1fr 1fr",
-    gap: "8px",
-    padding: "0 8px 8px 8px",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "12px",
+    flex: 1,
   },
   functionItem: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "8px 10px",
+    justifyContent: "space-between",
+    padding: "12px 14px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    transition: "all 0.15s ease",
+    borderRadius: "12px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     cursor: "pointer",
-    minHeight: "40px",
-    textAlign: "center",
-    minWidth: 0,
+    minHeight: "88px",
+    boxSizing: "border-box",
     position: "relative",
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
-      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
       transform: "translateY(-1px)",
+      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
     },
     ":active": {
       transform: "translateY(0)",
     },
   },
-  functionInfo: {
+  iconBox: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "8px",
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
-    gap: "1px", // 减少间距
-    flex: 1,
-  },
-  functionText: {
-    fontSize: "12px",
-    fontWeight: "600",
-    textAlign: "center",
-    lineHeight: "1.2",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    width: "100%",
+    justifyContent: "center",
+    fontSize: "17px",
   },
   functionTitle: {
-    fontSize: "12px",
+    fontSize: "13px",
     fontWeight: "600",
-    textAlign: "center",
-    lineHeight: "1.2",
+    color: "var(--colorNeutralForeground1)",
+    lineHeight: "1.3",
+  },
+  functionDescription: {
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground3)",
+    lineHeight: "1.4",
+    marginTop: "2px",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    width: "100%",
-  },
-  functionDescription: {
-    display: "none", // 隐藏描述以节省空间
-  },
-  actionButton: {
-    minWidth: "60px",
   },
   disabledItem: {
     opacity: 0.5,
     cursor: "not-allowed",
-    backgroundColor: tokens.colorNeutralBackground3,
     ":hover": {
-      backgroundColor: tokens.colorNeutralBackground3,
-
       transform: "none",
       boxShadow: "none",
     },
@@ -161,9 +144,14 @@ const useStyles = makeStyles({
 interface MiscFunction {
   id: string;
   title: string;
+  description: string;
   isRisky: boolean;
-  isDisabled?: boolean; // 新增禁用状态
+  isDisabled?: boolean;
   action: () => Promise<void>;
+  icon: React.ReactNode;
+  iconBg: string;
+  iconColor: string;
+  badge?: string;
 }
 
 interface MiscellaneousCardProps {
@@ -379,49 +367,74 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device
     {
       id: "restart-adb",
       title: t('misc.restart_adb'),
+      description: "重启 ADB 守护进程",
       isRisky: false,
       action: handleRestartAdb,
+      icon: <ArrowClockwise24Regular />,
+      iconBg: "rgba(0, 113, 227, 0.1)",
+      iconColor: "#0071e3",
+      badge: "常用",
     },
     {
       id: "finish-adb",
       title: t('misc.finish_adb'),
+      description: "终止全部 ADB 进程",
       isRisky: false,
       action: handleFinishAdb,
+      icon: <Dismiss24Regular />,
+      iconBg: "rgba(239, 68, 68, 0.1)",
+      iconColor: "#ef4444",
     },
     {
       id: "install-driver",
       title: t('misc.install_driver'),
+      description: "修复驱动缺失与异常",
       isRisky: true,
       action: handleInstallDriver,
+      icon: <Wrench24Regular />,
+      iconBg: "rgba(245, 158, 11, 0.1)",
+      iconColor: "#f59e0b",
+      badge: "驱动",
     },
     {
       id: "fix-usb3",
       title: t('misc.fix_usb3'),
+      description: "解决 USB 3.0 掉线",
       isRisky: true,
       action: handleFixUsb3,
+      icon: <PlugDisconnected24Regular />,
+      iconBg: "rgba(14, 165, 233, 0.1)",
+      iconColor: "#0ea5e9",
+      badge: "修复",
     },
     {
       id: "open-device-manager",
       title: t('misc.open_device_manager'),
+      description: "打开系统设备管理器",
       isRisky: false,
       action: handleOpenDeviceManager,
-    }, {
+      icon: <Desktop24Regular />,
+      iconBg: "rgba(139, 92, 246, 0.1)",
+      iconColor: "#8b5cf6",
+      badge: "系统",
+    },
+    {
       id: "open-task-manager",
       title: t('misc.open_task_manager'),
+      description: "打开系统任务管理器",
       isRisky: true,
       action: handleOpenTaskManager,
-    }
-
+      icon: <AppsListDetail24Regular />,
+      iconBg: "rgba(99, 102, 241, 0.1)",
+      iconColor: "#6366f1",
+      badge: "系统",
+    },
   ];
 
   const handleFunctionClick = async (func: MiscFunction) => {
     if (executingFunction || func.isDisabled) return;
-
-    // 直接调用对应的处理函数
     await func.action();
   };
-
-
 
   const getItemClassName = (func: MiscFunction) => {
     let className = styles.functionItem;
@@ -431,29 +444,54 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device
     return className;
   };
 
-
-
   return (
     <>
       <Card className={`${styles.card} ${className || ''}`}>
         <div className={styles.cardHeader}>
-          <Info24Regular className={styles.titleIcon} />
-          <Text className={styles.cardTitle}>{t('misc.title')}</Text>
+          <div className={styles.titleSection}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Wrench24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+              <Text weight="semibold" size={400}>{t('misc.title')}</Text>
+            </div>
+          </div>
         </div>
 
-
         <div className={styles.cardContent}>
-          {miscFunctions.map((func) => (
-            <div
-              key={func.id}
-              className={getItemClassName(func)}
-              onClick={() => handleFunctionClick(func)}
-            >
-              <div className={styles.functionText}>
-                <Text className={styles.functionTitle}>{func.title}</Text>
+          {miscFunctions.map((func) => {
+            const isExecuting = executingFunction === func.id;
+            return (
+              <div
+                key={func.id}
+                className={getItemClassName(func)}
+                onClick={() => handleFunctionClick(func)}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%", marginBottom: "8px" }}>
+                  <div
+                    className={styles.iconBox}
+                    style={{
+                      backgroundColor: func.iconBg || "var(--colorNeutralBackground3)",
+                      color: func.iconColor || "var(--colorBrandForeground1)",
+                    }}
+                  >
+                    {func.icon}
+                  </div>
+                </div>
+
+                <div>
+                  <Text className={styles.functionTitle}>
+                    {func.title}
+                  </Text>
+                  <div className={styles.functionDescription}>
+                    {isExecuting ? (
+                      <span style={{ color: "var(--colorBrandForeground1)", fontWeight: 600 }}>正在执行...</span>
+                    ) : (
+                      func.description
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
 

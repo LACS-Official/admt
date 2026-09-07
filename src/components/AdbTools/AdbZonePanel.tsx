@@ -88,6 +88,7 @@ const useStyles = makeStyles({
   },
   headerTabList: {
     flexShrink: 0,
+    alignSelf: "flex-start",
     backgroundColor: "var(--colorNeutralBackground3)",
     borderRadius: "9999px",
     padding: "4px",

@@ -1,4 +1,4 @@
-﻿use crate::error::{AdmtError, Result};
+use crate::error::{AdmtError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -231,6 +231,7 @@ pub async fn execute_adb_command_with_path(
 
     // 执行命令
     let mut cmd = tokio::process::Command::new(adb_path);
+    cmd.kill_on_drop(true);
     cmd.args(&cmd_args)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
@@ -316,6 +317,7 @@ pub async fn execute_fastboot_command_with_path(
 
     // 执行命令
     let mut cmd = tokio::process::Command::new(fastboot_path);
+    cmd.kill_on_drop(true);
     cmd.args(&cmd_args)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());

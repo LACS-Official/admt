@@ -1,4 +1,4 @@
-﻿{
+{
   "settings": {
     "language_region": "語言和地區",
     "language_region_desc": "語言、時區和本地化設置",
@@ -241,6 +241,7 @@
     "tab_image": "鏡像刷入",
     "tab_rom": "線刷工具",
     "tab_rom_manager": "ROM管理 & 解壓",
+    "tab_rom_download": "ROM 下載中心",
     "no_device_title": "未檢測到設備",
     "no_device_hint": "請確保設備已連接",
     "select_device_title": "請選擇一個設備",
@@ -976,6 +977,7 @@
     "no_device_title": "未檢測到設備",
     "no_device_hint": "請確保設備已連接並啟用USB調試",
     "device_selection_title": "設備選擇",
+    "device_management_title": "設備管理",
     "devices_available": "{{count}} 台設備可用",
     "checking_support": "檢查設備支持...",
     "no_devices": "沒有可用的設備",

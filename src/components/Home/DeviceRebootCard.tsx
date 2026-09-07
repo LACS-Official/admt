@@ -1,4 +1,4 @@
-import React, { useState }  from 'react';
+import React, { useState } from 'react';
 import {
   makeStyles,
   shorthands,
@@ -21,6 +21,9 @@ import {
   Power24Regular,
   Warning24Regular,
   ArrowClockwise24Regular,
+  Wrench24Regular,
+  DeveloperBoard24Regular,
+  Flash24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
@@ -29,107 +32,84 @@ import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   card: {
-    height: "200px",
-    minWidth: "200px",
+    padding: "20px 24px",
+    height: "100%",
+    boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
+    gap: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
     borderRadius: "14px",
-    backgroundColor: "var(--colorNeutralBackground2)",
-    transition: "border-color 0.2s ease",
-    ":hover": {
-      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
-    },
+    backgroundColor: "var(--colorNeutralBackground1)",
+    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.03)",
   },
-  content: {
-    flex: 1,
-    padding: "12px",
+  header: {
     display: "flex",
-    flexDirection: "column",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: "8px",
   },
-  deviceStatus: {
+  titleSection: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "10px 12px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "10px",
-    border: "1px solid var(--colorNeutralStroke2)",
+    gap: "10px",
   },
   rebootOptions: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gridTemplateRows: "1fr 1fr",
-    gap: "8px",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "12px",
     flex: 1,
-    alignItems: "stretch",
   },
   rebootOption: {
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "8px 10px",
+    justifyContent: "space-between",
+    padding: "12px 14px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
-    backgroundColor: "var(--colorNeutralBackground1)",
-    transition: "all 0.15s ease",
+    borderRadius: "12px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     cursor: "pointer",
-    minHeight: "40px",
-    textAlign: "center",
-    minWidth: 0,
+    minHeight: "88px",
+    boxSizing: "border-box",
     position: "relative",
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
-      ...shorthands.borderColor("var(--colorNeutralStroke1)"),
       transform: "translateY(-1px)",
+      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
     },
     ":active": {
       transform: "translateY(0)",
     },
   },
   rebootOptionPending: {
-    backgroundColor: "var(--colorPaletteYellowBackground1)",
-    border: "1px solid var(--colorPaletteYellowBorder1)",
+    border: "1px solid var(--colorBrandStroke1)",
+    backgroundColor: "rgba(0, 113, 227, 0.08)",
   },
-  rebootOptionContent: {
+  iconBox: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "8px",
     display: "flex",
-    flexDirection: "row",
     alignItems: "center",
-    gap: "8px",
-    justifyContent: "flex-start",
-    height: "100%",
-    position: "relative",
+    justifyContent: "center",
+    fontSize: "17px",
   },
   rebootOptionTitle: {
-    fontSize: "12px",
+    fontSize: "13px",
     fontWeight: "600",
-    textAlign: "center",
-    lineHeight: "1.2",
+    color: "var(--colorNeutralForeground1)",
+    lineHeight: "1.3",
+  },
+  rebootOptionDesc: {
+    fontSize: "11px",
+    color: "var(--colorNeutralForeground3)",
+    lineHeight: "1.4",
+    marginTop: "2px",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    width: "100%",
-  },
-  rebootOptionBadge: {
-    fontSize: "8px",
-    minHeight: "14px",
-    flexShrink: 0,
-    position: "absolute",
-    top: "2px",
-    right: "2px",
-  },
-  rebootButton: {
-    width: "100%",
-    justifyContent: "flex-start",
-  },
-  warningText: {
-    color: "var(--colorPaletteRedForeground1)",
-    fontSize: "12px",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
   },
 });
 
@@ -139,6 +119,10 @@ interface RebootOption {
   description: string;
   command: string;
   warning?: boolean;
+  icon?: React.ReactNode;
+  iconBg?: string;
+  iconColor?: string;
+  badge?: string;
 }
 
 interface DeviceRebootCardProps {
@@ -161,43 +145,65 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
     {
       id: "normal",
       label: t('reboot.system'),
-      description: t('reboot.system_desc'),
-      command: "system", 
+      description: "重启至 Android 系统",
+      command: "system",
+      icon: <ArrowClockwise24Regular />,
+      iconBg: "rgba(0, 113, 227, 0.1)",
+      iconColor: "#0071e3",
     },
     {
       id: "recovery",
       label: t('reboot.recovery'),
-      description: t('reboot.recovery_desc'),
-      command: "recovery", 
+      description: "升级包刷入与双清恢复",
+      command: "recovery",
       warning: true,
+      icon: <Wrench24Regular />,
+      iconBg: "rgba(99, 102, 241, 0.1)",
+      iconColor: "#6366f1",
+      badge: "引导",
     },
     {
       id: "bootloader",
       label: t('reboot.bootloader'),
-      description: t('reboot.bootloader_desc'),
-      command: "bootloader", 
+      description: "引导加载程序模式",
+      command: "bootloader",
       warning: true,
+      icon: <DeveloperBoard24Regular />,
+      iconBg: "rgba(14, 165, 233, 0.1)",
+      iconColor: "#0ea5e9",
+      badge: "引导",
     },
     {
       id: "fastboot",
       label: t('reboot.fastboot'),
-      description: t('reboot.fastboot_desc'),
-      command: "fastboot", 
-      warning: true,  
+      description: "底层分区与固件线刷",
+      command: "fastboot",
+      warning: true,
+      icon: <Flash24Regular />,
+      iconBg: "rgba(245, 158, 11, 0.1)",
+      iconColor: "#f59e0b",
+      badge: "常用",
     },
     {
       id: "edl",
       label: t('reboot.edl'),
-      description: t('reboot.edl_desc'),
-      command: "edl", 
+      description: "高通 9008 深度救砖",
+      command: "edl",
       warning: true,
+      icon: <Warning24Regular />,
+      iconBg: "rgba(239, 68, 68, 0.1)",
+      iconColor: "#ef4444",
+      badge: "底层",
     },
     {
       id: "poweroff",
       label: t('reboot.poweroff'),
-      description: t('reboot.poweroff_desc'),
+      description: "安全切断电源并关机",
       command: "poweroff",
       warning: true,
+      icon: <Power24Regular />,
+      iconBg: "rgba(107, 114, 128, 0.15)",
+      iconColor: "#6b7280",
     },
   ];
 
@@ -391,41 +397,55 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
 
   return (
     <Card className={styles.card}>
-      <CardHeader
-        header={
+      <div className={styles.header}>
+        <div className={styles.titleSection}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <ArrowClockwise24Regular />
-            <Text weight="semibold">{t('reboot.title')}</Text>
+            <ArrowClockwise24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+            <Text weight="semibold" size={400}>{t('reboot.title')}</Text>
           </div>
-        }
-      />
+        </div>
+      </div>
 
-      <div className={styles.content}>
-        {/* 重启选项列表 */}
-        <div className={styles.rebootOptions}>
-          {getAvailableRebootOptions().map((option) => (
+      <div className={styles.rebootOptions}>
+        {getAvailableRebootOptions().map((option) => {
+          const isPending = pendingRebootOption?.id === option.id;
+          return (
             <div
               key={option.id}
               className={mergeClasses(
                 styles.rebootOption,
-                pendingRebootOption?.id === option.id && styles.rebootOptionPending
+                isPending && styles.rebootOptionPending
               )}
               onClick={() => handleReboot(option)}
             >
-              <div className={styles.rebootOptionContent}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%", marginBottom: "8px" }}>
+                <div
+                  className={styles.iconBox}
+                  style={{
+                    backgroundColor: option.iconBg || "var(--colorNeutralBackground3)",
+                    color: option.iconColor || "var(--colorBrandForeground1)",
+                  }}
+                >
+                  {option.icon || <ArrowClockwise24Regular />}
+                </div>
+              </div>
+
+              <div>
                 <Text className={styles.rebootOptionTitle}>
                   {option.label}
                 </Text>
-                {isRebooting && pendingRebootOption?.id === option.id && (
-                  <Spinner size="tiny" />
-                )}
+                <div className={styles.rebootOptionDesc}>
+                  {isPending ? (
+                    <span style={{ color: "var(--colorBrandForeground1)", fontWeight: 600 }}>再次点击确认执行</span>
+                  ) : (
+                    option.description
+                  )}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
-
-
     </Card>
   );
 };

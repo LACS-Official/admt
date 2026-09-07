@@ -29,6 +29,12 @@ interface AppStoreState extends AppState {
   setNavigationParams: (params: Record<string, any> | undefined) => void;
   isWirelessDebuggingDialogOpen: boolean;
   setWirelessDebuggingDialogOpen: (open: boolean) => void;
+  isCommandLineModalOpen: boolean;
+  setCommandLineModalOpen: (open: boolean) => void;
+  isLogsModalOpen: boolean;
+  setLogsModalOpen: (open: boolean) => void;
+  isDeviceSelectionModalOpen: boolean;
+  setDeviceSelectionModalOpen: (open: boolean) => void;
   saveToDisk: () => Promise<boolean>;
   initialize: () => Promise<void>;
   subscribeToStorageChanges: () => () => void;
@@ -76,6 +82,9 @@ export const useAppStore = create<AppStoreState>()(
       statusBarMessage: null,
       navigationParams: undefined,
       isWirelessDebuggingDialogOpen: false,
+      isCommandLineModalOpen: false,
+      isLogsModalOpen: false,
+      isDeviceSelectionModalOpen: false,
 
       setCurrentView: (view: AppView, params?: Record<string, any>) => set({ currentView: view, navigationParams: params }),
       setNavigationParams: (params: Record<string, any> | undefined) => set({ navigationParams: params }),
@@ -167,6 +176,21 @@ export const useAppStore = create<AppStoreState>()(
       clearStatusBarMessage: () => set({ statusBarMessage: null }),
 
       setWirelessDebuggingDialogOpen: (open: boolean) => set({ isWirelessDebuggingDialogOpen: open }),
+      setCommandLineModalOpen: (open: boolean) => {
+        if (open) {
+          set({ currentView: "command-line", isCommandLineModalOpen: false });
+        } else {
+          set({ isCommandLineModalOpen: false });
+        }
+      },
+      setLogsModalOpen: (open: boolean) => {
+        if (open) {
+          set({ currentView: "logs", isLogsModalOpen: false });
+        } else {
+          set({ isLogsModalOpen: false });
+        }
+      },
+      setDeviceSelectionModalOpen: (open: boolean) => set({ isDeviceSelectionModalOpen: open }),
 
       saveToDisk: async () => {
         const state = get();
