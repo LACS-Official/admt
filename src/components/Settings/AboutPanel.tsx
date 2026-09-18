@@ -360,7 +360,7 @@ const AboutPanel: React.FC = () => {
   const [isThanksDialogOpen, setIsThanksDialogOpen] = useState(false);
   const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
   const { versionInfo, loading: versionLoading } = useVersionInfo();
-  const [fullVersionString, setFullVersionString] = useState('v1.5.1');
+  const [fullVersionString, setFullVersionString] = useState('v1.5.2');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
 
@@ -370,7 +370,7 @@ const AboutPanel: React.FC = () => {
         const fullVersion = await versionManager.getFullVersionString();
         setFullVersionString(`${fullVersion}`);
       } catch {
-        setFullVersionString('v1.5.1');
+        setFullVersionString('v1.5.2');
       }
     };
     loadVersionString();
@@ -416,7 +416,7 @@ const AboutPanel: React.FC = () => {
                     appearance="tint"
                     color="brand"
                   >
-                    {versionLoading ? 'v1.5.1' : fullVersionString}
+                    {versionLoading ? 'v1.5.2' : fullVersionString}
                   </Badge>
                 </div>
 

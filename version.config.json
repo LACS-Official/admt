@@ -1,22 +1,23 @@
 {
-  "version": "1.5.1",
-  "buildNumber": 6,
-  "versionName": "1.5.1",
-  "releaseDate": "2026-08-26",
+  "version": "1.5.2",
+  "buildNumber": 7,
+  "versionName": "1.5.2",
+  "releaseDate": "2026-09-18",
   "description": "统一版本管理配置文件",
   "changelog": [
-    "视觉规范：全面接入 Apple / Craft 人文极简大圆角与药丸胶囊设计系统规范",
-    "交互升级：主页、系统、刷机、Root、在线与插件专区全面适配药丸分段选择器",
-    "体验优化：重构设置面板、欢迎引导页与致谢赞赏视窗物理层级与交互动效",
-    "架构精简：清理历史废弃与冗余组件，优化整体工程结构与运行流畅度"
+    "固件下载：新增多品牌官方系统固件 (ROM) 下载中心，支持按机型分支智能检索",
+    "模块扩展：新增精选在线 Root 模块库，支持一键安装与版本更新检查",
+    "状态监控：概览硬件状态卡片支持独立实时自动刷新与频率自定义",
+    "视觉统一：全面统一概览卡片、电源管理与快捷工具主题色质感",
+    "体验修复：校准澎湃 OS 版本识别，优化赞赏弹窗排版，消除滚动溢出"
   ],
   "environments": {
     "development": {
-      "version": "1.5.1-dev",
+      "version": "1.5.2-dev",
       "enableDebug": true
     },
     "production": {
-      "version": "1.5.1",
+      "version": "1.5.2",
       "enableDebug": false
     }
   },
