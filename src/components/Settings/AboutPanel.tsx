@@ -118,7 +118,7 @@ const useStyles = makeStyles({
       transform: "translateY(-1px)",
     },
   },
-  
+
   // Team side card
   teamCard: {
     borderRadius: "16px",
@@ -239,6 +239,38 @@ const useStyles = makeStyles({
   },
 
   // Dialog styles
+  donationDialog: {
+    width: "660px",
+    maxWidth: "92vw",
+    maxHeight: "85vh",
+    borderRadius: "18px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 20px 48px -8px rgba(0, 0, 0, 0.24)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    boxSizing: "border-box",
+  },
+  donationDialogBody: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    minHeight: 0,
+    overflow: "hidden",
+  },
+  donationDialogContent: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    paddingRight: "6px",
+    "&::-webkit-scrollbar": {
+      width: "5px",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: "var(--colorNeutralStroke1)",
+      borderRadius: "10px",
+    },
+  },
   openSourceDialog: {
     maxWidth: "800px",
     maxHeight: "80vh",
@@ -448,9 +480,6 @@ const AboutPanel: React.FC = () => {
               <img src={lacsbgIcon} alt="teamIcon" className={styles.teamLogo} />
               <div>
                 <Text size={400} weight="bold">{t('settings.team_name')}</Text>
-                <Text size={100} weight="semibold" style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>
-                  Lead And Creative Studio
-                </Text>
               </div>
             </div>
 
@@ -623,10 +652,15 @@ const AboutPanel: React.FC = () => {
 
       {/* 赞助支持弹窗 */}
       <Dialog open={isDonationDialogOpen} onOpenChange={(_, d) => setIsDonationDialogOpen(d.open)}>
-        <DialogSurface className={styles.openSourceDialog}>
-          <DialogBody>
-            <DialogTitle>{t('settings.donate_us')}</DialogTitle>
-            <DialogContent>
+        <DialogSurface className={styles.donationDialog}>
+          <DialogBody className={styles.donationDialogBody}>
+            <DialogTitle>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Heart24Regular style={{ color: "#e11d48" }} />
+                <span>{t('settings.donate_us')}</span>
+              </div>
+            </DialogTitle>
+            <DialogContent className={styles.donationDialogContent}>
               <DonationPanel />
             </DialogContent>
             <DialogActions>

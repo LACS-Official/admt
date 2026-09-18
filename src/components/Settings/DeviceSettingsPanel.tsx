@@ -207,6 +207,52 @@ const DeviceSettingsPanel: React.FC = () => {
                 onChange={(_, data) => handleAutoScreenMirrorChange(data.checked === true)}
               />
             </div>
+
+            <Divider />
+
+            {/* 设备概览自动刷新 */}
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <Text weight="semibold">设备概览自动刷新</Text>
+                <Text className={styles.settingDescription}>
+                  定时自动获取并更新电池、温度、ROM存储及RAM内存状态
+                </Text>
+              </div>
+              <Switch
+                checked={config.overviewAutoRefresh ?? true}
+                onChange={(_, data) => updateConfig({ overviewAutoRefresh: data.checked === true })}
+              />
+            </div>
+
+            <Divider />
+
+            {/* 概览刷新频率 */}
+            <div className={styles.settingRow}>
+              <div className={styles.settingInfo}>
+                <Text weight="semibold">概览刷新频率</Text>
+                <Text className={styles.settingDescription}>
+                  设置设备概览硬件状态指标的自动更新间隔时间
+                </Text>
+              </div>
+              <div className={styles.segmentedPillContainer}>
+                <TabList
+                  selectedValue={String(config.overviewRefreshInterval || 5000)}
+                  onTabSelect={(_, d) => {
+                    const ms = parseInt(d.value as string, 10);
+                    if (!isNaN(ms)) {
+                      updateConfig({ overviewRefreshInterval: ms });
+                    }
+                  }}
+                  appearance="subtle"
+                  disabled={config.overviewAutoRefresh === false}
+                >
+                  <Tab value="2000">2s</Tab>
+                  <Tab value="3000">3s</Tab>
+                  <Tab value="5000">5s</Tab>
+                  <Tab value="10000">10s</Tab>
+                </TabList>
+              </div>
+            </div>
           </div>
         </Card>
 

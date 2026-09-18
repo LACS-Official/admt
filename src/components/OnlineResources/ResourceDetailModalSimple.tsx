@@ -1,4 +1,4 @@
-﻿/*
+/*
 在线资源-资源详情弹窗页面
 */
 import React, { useState, useEffect } from 'react';
@@ -363,7 +363,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
 
   // 使用appfun下载
   const OpenWithAppfun = () => {
-    const url = `https://www.appfun.fun/software/${currentData.id}`;
+    const url = `https://appfun.lacs.cc/software/${currentData.id}`;
     navigator.clipboard.writeText(url).then(() => {
       setStatusBarMessage({
         type: "success",

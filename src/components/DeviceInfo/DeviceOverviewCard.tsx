@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   makeStyles,
@@ -12,6 +12,11 @@ import {
   Spinner,
   Tab,
   TabList,
+  Menu,
+  MenuTrigger,
+  MenuPopover,
+  MenuList,
+  MenuItem,
   tokens,
 } from "@fluentui/react-components";
 import {
@@ -22,7 +27,10 @@ import {
   Flash24Regular,
   Info24Regular,
   WifiSettingsRegular,
-  Sparkle24Regular,
+  DocumentBulletList24Regular,
+  Timer24Regular,
+  Checkmark24Regular,
+  Dismiss24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { deviceService } from "../../services/deviceService";
@@ -119,6 +127,28 @@ const useStyles = makeStyles({
     height: "100%",
     minHeight: 0,
   },
+  metricsSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    flexShrink: 0,
+  },
+  metricsHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "0 2px",
+  },
+  metricsTitleGroup: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  metricsActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
   topMetricsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
@@ -161,6 +191,8 @@ const useStyles = makeStyles({
     justifyContent: "center",
     fontSize: "18px",
     flexShrink: 0,
+    backgroundColor: "var(--colorBrandBackground2)",
+    color: "var(--colorBrandForeground1)",
   },
   // 头部：设备信息与标签页
   headerLeft: {
@@ -529,13 +561,16 @@ const getMemoryUsage = (memoryStorageInfo: MemoryStorageInfo | null) => {
 const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCustomize }) => {
   const { t } = useTranslation();
   const styles = useStyles();
-  const { setStatusBarMessage, setWirelessDebuggingDialogOpen } = useAppStore();
+  const { config, updateConfig, setStatusBarMessage, setWirelessDebuggingDialogOpen } = useAppStore();
   const { dispatchToast } = useToastController();
 
   const [memoryStorageInfo, setMemoryStorageInfo] = useState<MemoryStorageInfo | null>(null);
   const [isLoadingMemoryStorage, setIsLoadingMemoryStorage] = useState(false);
   const [selectedTab, setSelectedTab] = useState("basic");
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const isLoadingRef = useRef(false);
+  isLoadingRef.current = isLoadingMemoryStorage;
 
   // 获取内存和存储信息
   const fetchMemoryStorageInfo = async () => {
@@ -559,6 +594,22 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
   useEffect(() => {
     fetchMemoryStorageInfo();
   }, [device.serial, device.connected]);
+
+  // 概览数据自动刷新定时器
+  useEffect(() => {
+    if (!device.connected || !device.serial || !config.overviewAutoRefresh) {
+      return;
+    }
+
+    const intervalMs = Math.max(1000, config.overviewRefreshInterval || 5000);
+    const timer = setInterval(() => {
+      if (!isLoadingRef.current) {
+        fetchMemoryStorageInfo();
+      }
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [device.connected, device.serial, config.overviewAutoRefresh, config.overviewRefreshInterval]);
 
   // 当设备模式切换到 fastboot 时，自动切换到基本信息标签页
   useEffect(() => {
@@ -610,102 +661,186 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
     <div className={styles.wrapper}>
       <Toaster />
 
-      {/* 独立置顶展示的 4 格硬件状态指示 Bento 卡片 */}
+      {/* 独立置顶展示的 4 格硬件状态指示 Bento 卡片与控制栏 */}
       {device.mode !== "fastboot" && (
-        <div className={styles.topMetricsGrid}>
-          {/* 电量卡片 */}
-          <div className={styles.metricCard}>
-            <div className={styles.metricHeader}>
-              <div className={styles.metricIconWrap} style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "rgb(16, 185, 129)" }}>
-                <Battery024Regular />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Text size={200} style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>电池电量</Text>
-                <Text size={500} weight="bold">{device.properties?.batteryLevel || 0}%</Text>
-              </div>
+        <div className={styles.metricsSection}>
+          <div className={styles.metricsHeader}>
+            <div className={styles.metricsTitleGroup}>
+              <Text weight="semibold" size={300} style={{ color: "var(--colorNeutralForeground1)" }}>
+                硬件实时状态
+              </Text>
+              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                实时监测电量、温度及运行负载
+              </Text>
             </div>
-            <ProgressBar
-              value={(device.properties?.batteryLevel || 0) / 100}
-              color={getBatteryColor(device.properties?.batteryLevel)}
-              style={{ height: "6px", borderRadius: "9999px" }}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
-              <span>{memoryStorageInfo?.battery?.battery_health_status || (device.properties?.batteryLevel ? "供电正常" : "待检测")}</span>
-              <span>{memoryStorageInfo?.battery?.battery_health_percent ? `健康度 ${memoryStorageInfo.battery.battery_health_percent}%` : "标准供电"}</span>
+
+            <div className={styles.metricsActions}>
+              {/* 自动刷新配置菜单 */}
+              <Menu>
+                <MenuTrigger disableButtonEnhancement>
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    icon={<Timer24Regular style={{ color: config.overviewAutoRefresh ? "var(--colorBrandForeground1)" : undefined }} />}
+                    title="自动刷新设置"
+                    style={{
+                      borderRadius: "9999px",
+                      fontSize: "12px",
+                      padding: "2px 10px",
+                      height: "28px",
+                      color: config.overviewAutoRefresh ? "var(--colorBrandForeground1)" : undefined,
+                      backgroundColor: config.overviewAutoRefresh ? "var(--colorBrandBackground2)" : undefined,
+                    }}
+                  >
+                    {config.overviewAutoRefresh ? `自动刷新 ${(config.overviewRefreshInterval || 5000) / 1000}s` : "自动刷新关"}
+                  </Button>
+                </MenuTrigger>
+                <MenuPopover>
+                  <MenuList>
+                    <div style={{ padding: "8px 12px 4px 12px", fontWeight: 600, fontSize: "12px", color: "var(--colorNeutralForeground2)" }}>
+                      卡片数据自动刷新
+                    </div>
+                    <MenuItem
+                      icon={config.overviewAutoRefresh ? <Checkmark24Regular style={{ color: "var(--colorBrandForeground1)" }} /> : <Dismiss24Regular />}
+                      onClick={() => updateConfig({ overviewAutoRefresh: !config.overviewAutoRefresh })}
+                    >
+                      {config.overviewAutoRefresh ? "自动刷新：已开启" : "自动刷新：已关闭"}
+                    </MenuItem>
+                    <div style={{ height: "1px", backgroundColor: "var(--colorNeutralStroke2)", margin: "4px 0" }} />
+                    <div style={{ padding: "4px 12px", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
+                      刷新频率
+                    </div>
+                    {[
+                      { label: "2 秒", value: 2000 },
+                      { label: "3 秒", value: 3000 },
+                      { label: "5 秒 (默认)", value: 5000 },
+                      { label: "10 秒", value: 10000 },
+                      { label: "30 秒", value: 30000 },
+                    ].map((item) => (
+                      <MenuItem
+                        key={item.value}
+                        icon={config.overviewRefreshInterval === item.value ? <Checkmark24Regular style={{ color: "var(--colorBrandForeground1)" }} /> : <span style={{ width: "16px", display: "inline-block" }} />}
+                        onClick={() => updateConfig({ overviewAutoRefresh: true, overviewRefreshInterval: item.value })}
+                      >
+                        {item.label}
+                      </MenuItem>
+                    ))}
+                  </MenuList>
+                </MenuPopover>
+              </Menu>
+
+              {/* 手动刷新卡片数据按钮 */}
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
+                onClick={fetchMemoryStorageInfo}
+                disabled={isLoadingMemoryStorage}
+                title="立即刷新硬件状态"
+                style={{
+                  borderRadius: "9999px",
+                  height: "28px",
+                  minWidth: "28px",
+                  padding: "0 6px",
+                }}
+              />
             </div>
           </div>
 
-          {/* 温度卡片 */}
-          <div className={styles.metricCard}>
-            <div className={styles.metricHeader}>
-              <div className={styles.metricIconWrap} style={{ backgroundColor: "rgba(234, 88, 12, 0.1)", color: "rgb(234, 88, 12)" }}>
-                <DesktopPulse24Regular />
+          <div className={styles.topMetricsGrid}>
+            {/* 电量卡片 */}
+            <div className={styles.metricCard}>
+              <div className={styles.metricHeader}>
+                <div className={styles.metricIconWrap}>
+                  <Battery024Regular />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>电池电量</Text>
+                  <Text size={500} weight="bold">{memoryStorageInfo?.battery?.battery_level ?? device.properties?.batteryLevel ?? 0}%</Text>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Text size={200} style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>设备温度</Text>
-                <Text size={500} weight="bold">
-                  {getTemperatureInfo(memoryStorageInfo).temperature !== null ?
-                    `${getTemperatureInfo(memoryStorageInfo).temperature?.toFixed(1)}°C` :
-                    getTemperatureInfo(memoryStorageInfo).status}
-                </Text>
+              <ProgressBar
+                value={((memoryStorageInfo?.battery?.battery_level ?? device.properties?.batteryLevel ?? 0)) / 100}
+                color="brand"
+                style={{ height: "6px", borderRadius: "9999px" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
+                <span>{memoryStorageInfo?.battery?.battery_health_status || (device.properties?.batteryLevel ? "供电正常" : "待检测")}</span>
+                <span>{memoryStorageInfo?.battery?.battery_health_percent ? `健康度 ${memoryStorageInfo.battery.battery_health_percent}%` : "标准供电"}</span>
               </div>
             </div>
-            <ProgressBar
-              value={(getTemperatureInfo(memoryStorageInfo).temperaturePercent || 0) / 100}
-              color={getTemperatureInfo(memoryStorageInfo).temperature ?
-                getTemperatureColor(getTemperatureInfo(memoryStorageInfo).temperature!) : "success"}
-              style={{ height: "6px", borderRadius: "9999px" }}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
-              <span>传感器状态</span>
-              <span>{getTemperatureInfo(memoryStorageInfo).status}</span>
-            </div>
-          </div>
 
-          {/* 存储卡片 */}
-          <div className={styles.metricCard}>
-            <div className={styles.metricHeader}>
-              <div className={styles.metricIconWrap} style={{ backgroundColor: "rgba(14, 165, 233, 0.1)", color: "rgb(14, 165, 233)" }}>
-                <Storage24Regular />
+            {/* 温度卡片 */}
+            <div className={styles.metricCard}>
+              <div className={styles.metricHeader}>
+                <div className={styles.metricIconWrap}>
+                  <DesktopPulse24Regular />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>设备温度</Text>
+                  <Text size={500} weight="bold">
+                    {getTemperatureInfo(memoryStorageInfo).temperature !== null ?
+                      `${getTemperatureInfo(memoryStorageInfo).temperature?.toFixed(1)}°C` :
+                      getTemperatureInfo(memoryStorageInfo).status}
+                  </Text>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Text size={200} style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>内部存储 (ROM)</Text>
-                <Text size={500} weight="bold">{getStorageInfo(memoryStorageInfo).used}%</Text>
+              <ProgressBar
+                value={(getTemperatureInfo(memoryStorageInfo).temperaturePercent || 0) / 100}
+                color="brand"
+                style={{ height: "6px", borderRadius: "9999px" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
+                <span>传感器状态</span>
+                <span>{getTemperatureInfo(memoryStorageInfo).status}</span>
               </div>
             </div>
-            <ProgressBar
-              value={getStorageInfo(memoryStorageInfo).used / 100}
-              color={getStorageColor(getStorageInfo(memoryStorageInfo).used)}
-              style={{ height: "6px", borderRadius: "9999px" }}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
-              <span>已用空间</span>
-              <span>{getStorageInfo(memoryStorageInfo).text}</span>
-            </div>
-          </div>
 
-          {/* 内存卡片 */}
-          <div className={styles.metricCard}>
-            <div className={styles.metricHeader}>
-              <div className={styles.metricIconWrap} style={{ backgroundColor: "rgba(147, 51, 234, 0.1)", color: "rgb(147, 51, 234)" }}>
-                <Flash24Regular />
+            {/* 存储卡片 */}
+            <div className={styles.metricCard}>
+              <div className={styles.metricHeader}>
+                <div className={styles.metricIconWrap}>
+                  <Storage24Regular />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>内部存储 (ROM)</Text>
+                  <Text size={500} weight="bold">{getStorageInfo(memoryStorageInfo).used}%</Text>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Text size={200} style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>运行内存 (RAM)</Text>
-                <Text size={500} weight="bold">{getMemoryUsage(memoryStorageInfo).used}%</Text>
+              <ProgressBar
+                value={getStorageInfo(memoryStorageInfo).used / 100}
+                color="brand"
+                style={{ height: "6px", borderRadius: "9999px" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
+                <span>已用空间</span>
+                <span>{getStorageInfo(memoryStorageInfo).text}</span>
               </div>
             </div>
-            <ProgressBar
-              value={getMemoryUsage(memoryStorageInfo).used / 100}
-              color={getMemoryColor(getMemoryUsage(memoryStorageInfo).used)}
-              style={{ height: "6px", borderRadius: "9999px" }}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
-              <span>内存负载</span>
-              <span>
-                {memoryStorageInfo?.memory?.memory_used ? formatStorageSize(memoryStorageInfo.memory.memory_used) : ""}
-                {memoryStorageInfo?.memory?.memory_total ? ` / ${formatStorageSize(memoryStorageInfo.memory.memory_total)}` : "读取中"}
-              </span>
+
+            {/* 内存卡片 */}
+            <div className={styles.metricCard}>
+              <div className={styles.metricHeader}>
+                <div className={styles.metricIconWrap}>
+                  <Flash24Regular />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)", display: "block" }}>运行内存 (RAM)</Text>
+                  <Text size={500} weight="bold">{getMemoryUsage(memoryStorageInfo).used}%</Text>
+                </div>
+              </div>
+              <ProgressBar
+                value={getMemoryUsage(memoryStorageInfo).used / 100}
+                color="brand"
+                style={{ height: "6px", borderRadius: "9999px" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
+                <span>内存负载</span>
+                <span>
+                  {memoryStorageInfo?.memory?.memory_used ? formatStorageSize(memoryStorageInfo.memory.memory_used) : ""}
+                  {memoryStorageInfo?.memory?.memory_total ? ` / ${formatStorageSize(memoryStorageInfo.memory.memory_total)}` : "读取中"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -728,10 +863,13 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                       <Button
                         appearance="subtle"
                         size="small"
-                        icon={<Sparkle24Regular style={{ color: tokens.colorBrandForeground1 }} />}
+                        icon={<DocumentBulletList24Regular style={{ color: tokens.colorBrandForeground1 }} />}
                         onClick={handleGenerateAiReport}
                         title="生成设备配置 HTML 报告"
-                      />
+                        style={{ borderRadius: "9999px" }}
+                      >
+                        HTML 报告
+                      </Button>
                       <Button
                         appearance="subtle"
                         size="small"
@@ -766,29 +904,24 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                     <Text weight="semibold" size={400}>设备详细规格参数</Text>
                   </div>
                   {device.connected && (
-                    <div style={{ display: "flex", gap: "4px" }}>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                       <Button
                         appearance="subtle"
                         size="small"
-                        icon={<Sparkle24Regular style={{ color: tokens.colorBrandForeground1 }} />}
+                        icon={<DocumentBulletList24Regular style={{ color: tokens.colorBrandForeground1 }} />}
                         onClick={handleGenerateAiReport}
                         title="生成设备配置 HTML 报告"
-                      />
+                        style={{ borderRadius: "9999px" }}
+                      >
+                        HTML 报告
+                      </Button>
                       <Button
                         appearance="subtle"
                         size="small"
                         icon={<WifiSettingsRegular />}
                         onClick={() => setWirelessDebuggingDialogOpen(true)}
                         title={t('common.wireless_connection', '无线调试连接')}
-                      />
-                      <Button
-                        appearance="subtle"
-                        size="small"
-                        icon={isLoadingMemoryStorage ? <Spinner size="tiny" /> : <ArrowClockwise24Regular />}
-                        onClick={fetchMemoryStorageInfo}
-                        disabled={isLoadingMemoryStorage}
-                        title={t('device_settings.refresh_info', '刷新内存和存储信息')}
-                        className={styles.headerRefreshButton}
+                        style={{ borderRadius: "9999px" }}
                       />
                     </div>
                   )}

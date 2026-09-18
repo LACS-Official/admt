@@ -148,8 +148,8 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
       description: "重启至 Android 系统",
       command: "system",
       icon: <ArrowClockwise24Regular />,
-      iconBg: "rgba(0, 113, 227, 0.1)",
-      iconColor: "#0071e3",
+      iconBg: "var(--colorBrandBackground2)",
+      iconColor: "var(--colorBrandForeground1)",
     },
     {
       id: "recovery",
@@ -158,8 +158,8 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
       command: "recovery",
       warning: true,
       icon: <Wrench24Regular />,
-      iconBg: "rgba(99, 102, 241, 0.1)",
-      iconColor: "#6366f1",
+      iconBg: "var(--colorBrandBackground2)",
+      iconColor: "var(--colorBrandForeground1)",
       badge: "引导",
     },
     {
@@ -169,8 +169,8 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
       command: "bootloader",
       warning: true,
       icon: <DeveloperBoard24Regular />,
-      iconBg: "rgba(14, 165, 233, 0.1)",
-      iconColor: "#0ea5e9",
+      iconBg: "var(--colorBrandBackground2)",
+      iconColor: "var(--colorBrandForeground1)",
       badge: "引导",
     },
     {
@@ -180,8 +180,8 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
       command: "fastboot",
       warning: true,
       icon: <Flash24Regular />,
-      iconBg: "rgba(245, 158, 11, 0.1)",
-      iconColor: "#f59e0b",
+      iconBg: "var(--colorBrandBackground2)",
+      iconColor: "var(--colorBrandForeground1)",
       badge: "常用",
     },
     {
@@ -191,8 +191,8 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
       command: "edl",
       warning: true,
       icon: <Warning24Regular />,
-      iconBg: "rgba(239, 68, 68, 0.1)",
-      iconColor: "#ef4444",
+      iconBg: "var(--colorBrandBackground2)",
+      iconColor: "var(--colorBrandForeground1)",
       badge: "底层",
     },
     {
@@ -202,8 +202,8 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
       command: "poweroff",
       warning: true,
       icon: <Power24Regular />,
-      iconBg: "rgba(107, 114, 128, 0.15)",
-      iconColor: "#6b7280",
+      iconBg: "var(--colorBrandBackground2)",
+      iconColor: "var(--colorBrandForeground1)",
     },
   ];
 

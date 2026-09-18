@@ -58,6 +58,8 @@ const defaultConfig: AppConfig = {
   monitorAutoCsvExport: true,
   cpuMonitorInterval: 1000,
   autoScreenMirror: false,
+  overviewAutoRefresh: true,
+  overviewRefreshInterval: 5000,
   ai: {
     enabled: false,
     provider: "openai",

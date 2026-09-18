@@ -697,21 +697,25 @@ const MainContent: React.FC = () => {
       label: t("sidebar.flash_zone"),
       icon: <CloudArrowUp24Regular />,
     },
+    /* 暂时隐藏 Root 专区入口
     {
       id: "root" as AppView,
       label: t("sidebar.root_zone", "Root专区"),
       icon: <Flash24Regular />,
     },
+    */
     {
       id: "online-resources" as AppView,
       label: t("sidebar.online_resources"),
       icon: <CloudArrowDown24Regular />,
     },
+    /* 暂时隐藏 插件系统 入口
     {
       id: "plugin-system" as AppView,
       label: t("sidebar.plugin_system", "插件系统"),
       icon: <AppsAddIn24Regular />,
     },
+    */
     {
       id: "settings" as AppView,
       label: t("sidebar.settings"),

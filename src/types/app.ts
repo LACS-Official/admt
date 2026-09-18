@@ -27,6 +27,8 @@ export interface AppConfig {
   monitorAutoCsvExport: boolean;
   cpuMonitorInterval: number;
   autoScreenMirror: boolean;
+  overviewAutoRefresh?: boolean;
+  overviewRefreshInterval?: number;
   ai: AIConfig;
   mcpServer?: {
     enabled: boolean;
