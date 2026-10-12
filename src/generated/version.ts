@@ -2,11 +2,11 @@
 // 生成时间: 2026-08-26T11:58:00.000Z
 
 export const VERSION_INFO = {
-  version: '1.5.2',
-  buildNumber: 7,
-  versionName: '1.5.2',
-  releaseDate: '2026-09-18',
-  buildDate: '2026-09-18T14:00:00.000Z',
+  version: '1.5.3',
+  buildNumber: 8,
+  versionName: '1.5.3',
+  releaseDate: '2026-10-12',
+  buildDate: '2026-10-12T09:40:00.000Z',
   environment: 'production'
 };
 
