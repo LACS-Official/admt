@@ -165,14 +165,31 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
       }
 
       case "admt_take_screenshot": {
-        return {
-          success: true,
-          toolName,
-          result: {
-            message: "设备截图指令已发送，图像已成功捕获",
-            timestamp: new Date().toISOString(),
-          },
-        };
+        const targetSerial = serial || selectedDevice?.serial;
+        if (!targetSerial) {
+          return { success: false, toolName, result: null, error: "未检测到已连接的 Android 设备" };
+        }
+        try {
+          const imgBase64 = await invoke<string>("capture_device_screen", {
+            deviceSerial: targetSerial,
+          });
+          return {
+            success: true,
+            toolName,
+            result: {
+              message: `已成功截取设备 [${targetSerial}] 实时屏幕`,
+              imageBase64: imgBase64,
+              timestamp: new Date().toISOString(),
+            },
+          };
+        } catch (e: any) {
+          return {
+            success: false,
+            toolName,
+            result: null,
+            error: `截屏执行异常: ${e.message || String(e)}`,
+          };
+        }
       }
 
       case "fetch_web_content": {

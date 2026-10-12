@@ -85,25 +85,42 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground1)",
     letterSpacing: "-0.01em",
   },
-  modeBadge: {
+  modeSwitcher: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "6px",
-    padding: "3px 10px",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    padding: "2px",
+    borderRadius: "9999px",
+    gap: "2px",
+  },
+  modeTab: {
+    padding: "3px 12px",
     borderRadius: "9999px",
     fontSize: "11px",
     fontWeight: "600",
+    cursor: "pointer",
+    userSelect: "none",
+    color: "var(--colorNeutralForeground3)",
+    transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
     letterSpacing: "0.02em",
+    "&:hover": {
+      color: "var(--colorNeutralForeground1)",
+    },
   },
-  modeBadgeAdb: {
-    backgroundColor: "rgba(0, 113, 227, 0.1)",
+  modeTabActiveAdb: {
+    backgroundColor: "var(--colorNeutralBackground1)",
     color: "#0071e3",
-    border: "1px solid rgba(0, 113, 227, 0.2)",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
   },
-  modeBadgeFastboot: {
-    backgroundColor: "rgba(139, 92, 246, 0.1)",
+  modeTabActiveFastboot: {
+    backgroundColor: "var(--colorNeutralBackground1)",
     color: "#8b5cf6",
-    border: "1px solid rgba(139, 92, 246, 0.2)",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  },
+  modeTabActiveSsh: {
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "#10b981",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
   },
   // Device Selector Dropdown Button
   deviceSelectorWrapper: {
@@ -416,8 +433,23 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
   const deviceDropdownRef = useRef<HTMLDivElement>(null);
 
   // Device mode & status helpers
-  const isFastbootMode =
+  const isDeviceFastboot =
     selectedDevice?.mode === "fastboot" || selectedDevice?.mode === "fastbootd";
+
+  const [terminalMode, setTerminalMode] = useState<"adb" | "fastboot" | "ssh">(() =>
+    isDeviceFastboot ? "fastboot" : "adb"
+  );
+
+  const isFastbootMode = terminalMode === "fastboot";
+
+  // Automatically adapt mode when device connects/switches mode (unless currently in SSH)
+  useEffect(() => {
+    if (selectedDevice?.mode === "fastboot" || selectedDevice?.mode === "fastbootd") {
+      setTerminalMode("fastboot");
+    } else if (selectedDevice?.mode === "sys" || selectedDevice?.mode === "rec") {
+      setTerminalMode((prev) => (prev === "ssh" ? "ssh" : "adb"));
+    }
+  }, [selectedDevice?.mode]);
 
   const getDeviceDisplayName = (device: DeviceInfo | null) => {
     if (!device) return t("command_panel.device_unknown", "未知设备");
@@ -583,7 +615,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
 
   // Execute Command
   const executeCommand = async (cmdToRun?: string) => {
-    const rawCmd = (cmdToRun !== undefined ? cmdToRun : command).trim();
+    let rawCmd = (cmdToRun !== undefined ? cmdToRun : command).trim();
 
     if (!rawCmd) {
       setStatusBarMessage({
@@ -593,47 +625,88 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       return;
     }
 
-    if (!selectedDevice) {
-      setStatusBarMessage({
-        type: "error",
-        message: t("command_panel.select_device_first", "请先选择一个设备"),
-      });
-      setOutput((prev) => prev + `[!] 错误: 请先连接或选择目标设备\n\n`);
-      return;
+    // 自动剥离命令头部的 adb / fastboot / ssh 前缀，并自适应匹配对应模式
+    let effectiveMode = terminalMode;
+    const prefixMatch = rawCmd.match(/^(adb|fastboot|ssh)(?:\s+|$)/i);
+    if (prefixMatch) {
+      const prefix = prefixMatch[1].toLowerCase() as "adb" | "fastboot" | "ssh";
+      rawCmd = rawCmd.replace(/^(?:adb|fastboot|ssh)(?:\s*)/i, "").trim();
+      effectiveMode = prefix;
+      if (terminalMode !== prefix) {
+        setTerminalMode(prefix);
+      }
     }
 
-    // Save to history
-    setHistory((prev) => [rawCmd, ...prev.filter((c) => c !== rawCmd)].slice(0, 50));
+    // 若剥离前缀后为空，提供默认帮助参数
+    if (!rawCmd) {
+      if (effectiveMode === "ssh") {
+        rawCmd = "-V";
+      } else {
+        rawCmd = "help";
+      }
+    }
+
+    // Save to history (保存用户输入的原始文本)
+    const historyItem = cmdToRun !== undefined ? cmdToRun.trim() : command.trim();
+    setHistory((prev) => [historyItem, ...prev.filter((c) => c !== historyItem)].slice(0, 50));
     setHistoryIndex(-1);
     setCommand("");
     setIsExecuting(true);
 
     const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
-    const cmdPrefix = isFastbootMode ? "fastboot" : "adb";
-    const promptHeader = `\n[${time}] $ ${cmdPrefix} -s ${selectedDevice.serial} ${rawCmd}\n`;
+    const parts = rawCmd.split(/\s+/).filter(Boolean);
+    let commandName = parts[0] || "";
+    let args = parts.slice(1);
+
+    const isGlobalAdb =
+      !selectedDevice ||
+      ["devices", "connect", "disconnect", "kill-server", "start-server", "version", "help", "pair", "mdns", "server"].includes(
+        commandName.toLowerCase()
+      );
+    const isGlobalFastboot =
+      !selectedDevice ||
+      ["devices", "help", "version"].includes(commandName.toLowerCase());
+
+    let promptHeader = "";
+    if (effectiveMode === "ssh") {
+      promptHeader = `\n[${time}] $ ssh ${rawCmd}\n`;
+    } else if (effectiveMode === "fastboot") {
+      const serialPart = !isGlobalFastboot && selectedDevice ? ` -s ${selectedDevice.serial}` : "";
+      promptHeader = `\n[${time}] $ fastboot${serialPart} ${rawCmd}\n`;
+    } else {
+      const serialPart = !isGlobalAdb && selectedDevice ? ` -s ${selectedDevice.serial}` : "";
+      promptHeader = `\n[${time}] $ adb${serialPart} ${rawCmd}\n`;
+    }
 
     setOutput((prev) => prev + promptHeader);
 
     try {
-      const parts = rawCmd.split(" ");
-      const commandName = parts[0];
-      const args = parts.slice(1);
-
       let result;
-      if (isFastbootMode) {
+      if (effectiveMode === "ssh") {
+        result = await deviceService.executeSshCommand(commandName, args, 30);
+      } else if (effectiveMode === "fastboot") {
+        const targetSerial = isGlobalFastboot ? "" : selectedDevice?.serial || "";
         result = await deviceService.executeFastbootCommand(
-          selectedDevice.serial,
+          targetSerial,
           commandName,
           args,
           30
         );
       } else {
-        result = await deviceService.executeAdbCommand(
-          selectedDevice.serial,
-          commandName,
-          args,
-          30
-        );
+        if (isGlobalAdb) {
+          result = await deviceService.executeAdbCommandDirect(
+            commandName,
+            args,
+            30
+          );
+        } else {
+          result = await deviceService.executeAdbCommand(
+            selectedDevice!.serial,
+            commandName,
+            args,
+            30
+          );
+        }
       }
 
       if (result.success) {
@@ -912,14 +985,35 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
             )}
           </div>
 
-          {/* 模式标签 */}
-          <div
-            className={mergeClasses(
-              styles.modeBadge,
-              isFastbootMode ? styles.modeBadgeFastboot : styles.modeBadgeAdb
-            )}
-          >
-            {isFastbootMode ? "FASTBOOT" : "ADB"}
+          {/* 模式切换器 */}
+          <div className={styles.modeSwitcher}>
+            <div
+              className={mergeClasses(
+                styles.modeTab,
+                terminalMode === "adb" && styles.modeTabActiveAdb
+              )}
+              onClick={() => setTerminalMode("adb")}
+            >
+              ADB
+            </div>
+            <div
+              className={mergeClasses(
+                styles.modeTab,
+                terminalMode === "fastboot" && styles.modeTabActiveFastboot
+              )}
+              onClick={() => setTerminalMode("fastboot")}
+            >
+              FASTBOOT
+            </div>
+            <div
+              className={mergeClasses(
+                styles.modeTab,
+                terminalMode === "ssh" && styles.modeTabActiveSsh
+              )}
+              onClick={() => setTerminalMode("ssh")}
+            >
+              SSH
+            </div>
           </div>
         </div>
 
@@ -1015,8 +1109,13 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
           {!output ? (
             <div className={styles.terminalIntro}>
               <span className={styles.terminalIntroTitle}>ADMT Terminal Console</span>
-              <span>• 当前设备: {selectedDevice ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})` : "未连接"}</span>
-              <span>• 运行模式: {isFastbootMode ? "Fastboot Protocol" : "Android Debug Bridge (ADB)"}</span>
+              <span>
+                • 当前目标: {selectedDevice ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})` : (terminalMode === "ssh" ? "本地/远程网络目标" : "全局执行模式 (未指定单设备)")}
+              </span>
+              <span>
+                • 运行模式: {terminalMode === "ssh" ? "Secure Shell (SSH)" : terminalMode === "fastboot" ? "Fastboot Protocol" : "Android Debug Bridge (ADB)"}
+              </span>
+              <span>• 命令输入: 支持直接输入命令或携带 adb / fastboot / ssh 前缀（系统将自动识别并去除前缀）</span>
               <span>• 快捷键支持: 按 [Enter] 立即执行命令，按 [↑ / ↓] 键快速切换历史命令</span>
             </div>
           ) : (
@@ -1028,7 +1127,9 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
         <div className={styles.promptBar}>
           <div className={styles.promptPrefix}>
             <span>$</span>
-            <span className={styles.promptPrefixTarget}>{isFastbootMode ? "fastboot" : "adb"}</span>
+            <span className={styles.promptPrefixTarget}>
+              {terminalMode === "ssh" ? "ssh" : terminalMode === "fastboot" ? "fastboot" : "adb"}
+            </span>
           </div>
 
           <Input
@@ -1036,11 +1137,13 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
             onChange={(_, data) => setCommand(data.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              isFastbootMode
+              terminalMode === "ssh"
+                ? "输入 SSH 参数或命令 (如 openstick 或 -p 22 root@host uname -a)..."
+                : terminalMode === "fastboot"
                 ? "输入 Fastboot 命令 (如 devices, oem unlock, getvar all)..."
-                : "输入 ADB 命令 (如 shell getprop ro.product.model, logcat -d, devices)..."
+                : "输入 ADB 命令 (如 devices, connect 192.168.1.x, shell getprop)..."
             }
-            disabled={isExecuting || !selectedDevice}
+            disabled={isExecuting}
             className={styles.commandInput}
           />
 
@@ -1048,7 +1151,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
             appearance="primary"
             icon={<Play20Regular />}
             onClick={() => executeCommand()}
-            disabled={isExecuting || !command.trim() || !selectedDevice}
+            disabled={isExecuting || !command.trim()}
             className={styles.runButton}
           >
             {isExecuting ? "执行中..." : "执行"}
@@ -1065,7 +1168,9 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
         <DialogSurface style={{ width: "880px", maxWidth: "90vw", borderRadius: "16px" }}>
           <DialogBody>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <DialogTitle>快捷命令库 ({isFastbootMode ? "Fastboot" : "ADB"})</DialogTitle>
+              <DialogTitle>
+                快捷命令库 ({terminalMode === "ssh" ? "SSH" : terminalMode === "fastboot" ? "Fastboot" : "ADB"})
+              </DialogTitle>
             </div>
 
             <DialogContent className={styles.dialogBody}>

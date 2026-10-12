@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   makeStyles,
   mergeClasses,
+  shorthands,
   Text,
   Spinner,
   tokens,
@@ -163,12 +164,84 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorInformationBackground2)",
     color: "var(--colorInformationForeground2)",
   },
+  downloadPill: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "3px 10px",
+    borderRadius: "9999px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+    fontSize: "11px",
+    cursor: "pointer",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      ...shorthands.borderColor("var(--colorBrandStroke1)"),
+    },
+  },
+  downloadIconWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--colorBrandForeground1)",
+    fontSize: "14px",
+  },
+  downloadInfoWrap: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: "120px",
+    maxWidth: "180px",
+  },
+  downloadTitleRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontSize: "11px",
+  },
+  downloadFileName: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: "100px",
+    fontWeight: "500",
+    color: "var(--colorNeutralForeground1)",
+  },
+  downloadPercent: {
+    fontSize: "10px",
+    color: "var(--colorBrandForeground1)",
+    fontWeight: "600",
+    marginLeft: "4px",
+  },
+  downloadTrack: {
+    width: "100%",
+    height: "3px",
+    borderRadius: "9999px",
+    backgroundColor: "var(--colorNeutralStroke2)",
+    overflow: "hidden",
+  },
+  downloadBar: {
+    height: "100%",
+    borderRadius: "9999px",
+    backgroundColor: "var(--colorBrandBackground)",
+    transition: "width 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+  },
+  pageHintTag: {
+    padding: "1px 6px",
+    borderRadius: "9999px",
+    fontSize: "10px",
+    fontWeight: "600",
+    backgroundColor: "rgba(0,0,0,0.06)",
+    marginRight: "6px",
+  },
 });
 
 const StatusBar: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { isLoading, notifications, removeNotification, statusBarMessage, clearStatusBarMessage, config } = useAppStore();
+  const { isLoading, notifications, removeNotification, statusBarMessage, clearStatusBarMessage, config, globalDownload, setCurrentView } = useAppStore();
   
   // 引导状态
   const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
@@ -441,18 +514,34 @@ const StatusBar: React.FC = () => {
     }
   };
 
-  // 获取状态栏消息的颜色
+  // 获取状态栏消息的颜色（符合 Apple 极简与设计规范，深浅模式柔和自适应）
   const getStatusBarMessageColor = (type: StatusBarMessage['type']) => {
     switch (type) {
       case "success":
-        return { backgroundColor: "#d4edda", color: "#155724", border: "1px solid #c3e6cb" };
+        return {
+          backgroundColor: "var(--colorSuccessBackground2, rgba(16, 124, 65, 0.1))",
+          color: "var(--colorSuccessForeground2, #107c41)",
+          borderTop: "1px solid var(--colorNeutralStroke2)"
+        };
       case "warning":
-        return { backgroundColor: "#fff3cd", color: "#856404", border: "1px solid #ffeaa7" };
+        return {
+          backgroundColor: "var(--colorWarningBackground2, rgba(234, 134, 0, 0.12))",
+          color: "var(--colorWarningForeground2, #d83b01)",
+          borderTop: "1px solid var(--colorNeutralStroke2)"
+        };
       case "error":
-        return { backgroundColor: "#f8d7da", color: "#721c24", border: "1px solid #f5c6cb" };
+        return {
+          backgroundColor: "var(--colorErrorBackground2, rgba(216, 59, 1, 0.12))",
+          color: "var(--colorErrorForeground2, #d13438)",
+          borderTop: "1px solid var(--colorNeutralStroke2)"
+        };
       case "info":
       default:
-        return { backgroundColor: "#d1ecf1", color: "#0c5460", border: "1px solid #bee5eb" };
+        return {
+          backgroundColor: "var(--colorInformationBackground2, rgba(0, 113, 227, 0.08))",
+          color: "var(--colorInformationForeground2, #0071e3)",
+          borderTop: "1px solid var(--colorNeutralStroke2)"
+        };
     }
   };
 
@@ -480,6 +569,43 @@ const StatusBar: React.FC = () => {
 
         {/* 右侧状态信息 */}
         <div className={styles.rightSection}>
+          {/* 全局下载任务动态指示微胶囊 */}
+          {globalDownload && (
+            <div 
+              className={styles.downloadPill}
+              onClick={() => setCurrentView("online-resources", { activeTab: "downloads" })}
+              title="点击查看下载管理"
+            >
+              <div className={styles.downloadIconWrap}>
+                {globalDownload.status === 'downloading' ? (
+                  <Spinner size="extra-tiny" />
+                ) : globalDownload.status === 'completed' ? (
+                  <Checkmark24Filled style={{ color: "var(--colorPaletteGreenForeground1)", fontSize: "14px" }} />
+                ) : (
+                  <Dismiss24Regular style={{ color: "var(--colorPaletteRedForeground1)", fontSize: "14px" }} />
+                )}
+              </div>
+              <div className={styles.downloadInfoWrap}>
+                <div className={styles.downloadTitleRow}>
+                  <span className={styles.downloadFileName} title={globalDownload.fileName}>
+                    {globalDownload.status === 'completed' ? '下载完成' : globalDownload.status === 'failed' ? '下载失败' : globalDownload.fileName}
+                  </span>
+                  <span className={styles.downloadPercent}>
+                    {globalDownload.status === 'completed' ? '100%' : `${globalDownload.progress}%`}
+                  </span>
+                </div>
+                {globalDownload.status === 'downloading' && (
+                  <div className={styles.downloadTrack}>
+                    <div
+                      className={styles.downloadBar}
+                      style={{ width: `${Math.max(4, Math.min(100, globalDownload.progress))}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* 引导按钮 */}
           <Menu>
             <MenuTrigger disableButtonEnhancement>
@@ -548,6 +674,11 @@ const StatusBar: React.FC = () => {
           }}
         >
           {statusBarMessage.icon || getStatusBarMessageIcon(statusBarMessage.type)}
+          {statusBarMessage.source && (
+            <span className={styles.pageHintTag}>
+              {statusBarMessage.type === 'warning' ? '高危提示' : statusBarMessage.type === 'error' ? '错误' : '提示'}
+            </span>
+          )}
           <Text size={200} style={{ flex: 1, fontWeight: "500", color: "inherit" }}>
             {statusBarMessage.message}
           </Text>
@@ -566,6 +697,7 @@ const StatusBar: React.FC = () => {
               opacity: 0.7,
               transition: "opacity 0.2s ease",
               marginRight: "4px",
+              color: "inherit",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
@@ -580,7 +712,7 @@ const StatusBar: React.FC = () => {
           
           {/* 关闭按钮 */}
           <button
-            onClick={clearStatusBarMessage}
+            onClick={() => clearStatusBarMessage(statusBarMessage.source)}
             style={{
               background: "none",
               border: "none",
@@ -592,9 +724,11 @@ const StatusBar: React.FC = () => {
               justifyContent: "center",
               opacity: 0.7,
               transition: "opacity 0.2s ease",
+              color: "inherit",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+            title="关闭提示"
           >
             <Dismiss24Regular style={{ fontSize: "16px" }} />
           </button>

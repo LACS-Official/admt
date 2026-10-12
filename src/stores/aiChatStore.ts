@@ -4,9 +4,13 @@ import { useAppStore } from "./appStore";
 
 export interface Message {
   id: string;
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant" | "system" | "tool";
   content: string;
   timestamp: string;
+  tool_calls?: any[];
+  tool_call_id?: string;
+  toolName?: string;
+  toolResult?: any;
 }
 
 export interface Conversation {
@@ -38,6 +42,7 @@ interface AIChatState {
   // Actions
   createNewConversation: () => string;
   addMessage: (conversationId: string, message: Omit<Message, "id" | "timestamp">) => string;
+  updateMessage: (conversationId: string, messageId: string, updates: Partial<Message>) => void;
   deleteConversation: (id: string) => void;
   setCurrentConversation: (id: string | null) => void;
   updateConversationTitle: (id: string, title: string) => void;
@@ -117,6 +122,23 @@ export const useAIChatStore = create<AIChatState>()(
         });
 
         return newMessage.id;
+      },
+
+      updateMessage: (conversationId, messageId, updates) => {
+        set((state) => ({
+          conversations: state.conversations.map((conv) => {
+            if (conv.id === conversationId) {
+              return {
+                ...conv,
+                messages: conv.messages.map((m) =>
+                  m.id === messageId ? { ...m, ...updates } : m
+                ),
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return conv;
+          }),
+        }));
       },
 
       deleteConversation: (id) => {

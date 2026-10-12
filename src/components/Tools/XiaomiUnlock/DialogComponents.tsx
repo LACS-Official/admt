@@ -42,16 +42,22 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <DialogSurface>
         <DialogTitle>{t('unlock.confirm_risky_op')}</DialogTitle>
         <DialogContent>
-          <DialogBody>
+          <DialogBody style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <Text>
               {t('unlock.will_execute', { label: selectedTool?.label })}
-              {" "}
+            </Text>
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: "8px",
+                backgroundColor: "var(--colorNeutralBackground2)",
+                border: "1px solid var(--colorNeutralStroke2)",
+                fontSize: "12px",
+                color: "var(--colorNeutralForeground2)",
+              }}
+            >
               {t('unlock.risk_notice')}
-            </Text>
-            <br />
-            <Text weight="semibold" style={{ color: "var(--colorPaletteRedForeground1)" }}>
-              {t('unlock.warning_desc')}
-            </Text>
+            </div>
           </DialogBody>
         </DialogContent>
         <DialogActions>

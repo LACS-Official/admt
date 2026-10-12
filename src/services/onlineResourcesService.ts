@@ -1,6 +1,7 @@
 import { OnlineSoftware, OnlineSoftwareResponse, DownloadTask } from '../types/app';
 import { tauriHttpService } from './tauriHttpService';
 import { logService } from './logService';
+import { useAppStore } from '../stores/appStore';
 
 export interface OnlineResourcesConfig {
   apiBaseUrl: string;
@@ -356,6 +357,19 @@ class OnlineResourcesService {
       this.downloadTasks.set(task.id, task);
       this.persistTasks();
 
+      // 联动全局状态栏与下载指示器
+      useAppStore.getState().setStatusBarMessage({
+        type: 'info',
+        message: `开始下载: ${task.fileName}`,
+        duration: 2000,
+      });
+      useAppStore.getState().setGlobalDownload({
+        taskId: task.id,
+        fileName: task.fileName,
+        progress: 0,
+        status: 'downloading',
+      });
+
       let lastDownloadedSize = 0;
       let lastUpdateTime = Date.now();
 
@@ -386,6 +400,15 @@ class OnlineResourcesService {
           lastUpdateTime = now;
 
           this.downloadTasks.set(task.id, task);
+
+          // 实时更新全局下载微胶囊进度
+          useAppStore.getState().setGlobalDownload({
+            taskId: task.id,
+            fileName: task.fileName,
+            progress: Math.min(99, Math.round(progress)),
+            status: 'downloading',
+            speedText: task.downloadSpeed ? `${(task.downloadSpeed / (1024 * 1024)).toFixed(1)} MB/s` : undefined,
+          });
         }
       });
 
@@ -398,6 +421,7 @@ class OnlineResourcesService {
           this.downloadTasks.set(task.id, task);
           progressUnlisten();
           cancelUnlisten();
+          useAppStore.getState().setGlobalDownload(null);
         }
       });
 
@@ -419,6 +443,26 @@ class OnlineResourcesService {
       this.downloadTasks.set(task.id, task);
       this.persistTasks();
 
+      // 触发全局成功通知与动效
+      useAppStore.getState().setGlobalDownload({
+        taskId: task.id,
+        fileName: task.fileName,
+        progress: 100,
+        status: 'completed',
+      });
+      useAppStore.getState().setStatusBarMessage({
+        type: 'success',
+        message: `下载完成: ${task.fileName}`,
+        duration: 3500,
+      });
+
+      // 3.5秒后平滑隐藏全局指示胶囊
+      setTimeout(() => {
+        if (useAppStore.getState().globalDownload?.taskId === task.id) {
+          useAppStore.getState().setGlobalDownload(null);
+        }
+      }, 3500);
+
       // 清理事件监听器
       progressUnlisten();
       cancelUnlisten();
@@ -432,6 +476,24 @@ class OnlineResourcesService {
       task.endTime = new Date();
       this.downloadTasks.set(task.id, task);
       this.persistTasks();
+
+      useAppStore.getState().setGlobalDownload({
+        taskId: task.id,
+        fileName: task.fileName,
+        progress: 0,
+        status: 'failed',
+      });
+      useAppStore.getState().setStatusBarMessage({
+        type: 'error',
+        message: `下载失败: ${task.fileName} (${task.error})`,
+        duration: 4000,
+      });
+
+      setTimeout(() => {
+        if (useAppStore.getState().globalDownload?.taskId === task.id) {
+          useAppStore.getState().setGlobalDownload(null);
+        }
+      }, 4000);
 
       logService.error(` 下载失败: ${task.fileName}`, '在线资源服务', { error: task.error });
       throw error;

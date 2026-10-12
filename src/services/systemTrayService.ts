@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系统托盘服务
  * 提供最小化到系统托盘的功能，包括托盘图标、右键菜单等
  */
@@ -162,13 +162,9 @@ export class SystemTrayService {
         tooltip: '玩机管家 (ADMT)',
         icon: 'icons/tray-icon.png',
         menuItems: [
-          { id: 'show', label: '显示主界面', enabled: true },
+          { id: 'show', label: '显示主页面', enabled: true },
           { id: 'separator1', label: '-' },
-          { id: 'reboot_sys', label: '重启设备至系统', enabled: true },
-          { id: 'reboot_bootloader', label: '重启至 Fastboot 模式', enabled: true },
-          { id: 'reboot_recovery', label: '重启至 Recovery 模式', enabled: true },
-          { id: 'separator2', label: '-' },
-          { id: 'exit', label: '退出玩机管家', enabled: true }
+          { id: 'exit', label: '退出程序', enabled: true }
         ]
       };
 
@@ -227,6 +223,7 @@ export class SystemTrayService {
       switch (menuId) {
         case 'show':
         case 'custom-show':
+        case '显示主页面':
         case '显示主界面':
         case '显示窗口':
           await this.showWindow();
@@ -264,6 +261,7 @@ export class SystemTrayService {
           break;
         case 'exit':
         case 'custom-exit':
+        case '退出程序':
         case '退出应用':
         case '退出玩机管家':
           await this.performGracefulExit(0);

@@ -512,7 +512,7 @@ const StatusBar: React.FC = () => {
           
           {/* 关闭按钮 */}
           <button
-            onClick={clearStatusBarMessage}
+            onClick={() => clearStatusBarMessage()}
             style={{
               background: "none",
               border: "none",

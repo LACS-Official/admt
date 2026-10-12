@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { PatchEngineType } from "./oneClickRootService";
+import { useAppStore } from "../stores/appStore";
 
 export interface ToolVersionInfo {
   id: string;
@@ -363,13 +364,24 @@ class RootToolsService {
     onProgress: (percent: number, status: string) => void
   ): Promise<{ success: boolean; filePath?: string; message: string }> {
     onProgress(10, `准备连接节点下载: ${tool.filename}...`);
+    const taskId = `root_tool_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+    useAppStore.getState().setStatusBarMessage({
+      type: "info",
+      message: `开始下载工具: ${tool.filename}`,
+      duration: 2000,
+    });
+    useAppStore.getState().setGlobalDownload({
+      taskId,
+      fileName: tool.filename,
+      progress: 10,
+      status: "downloading",
+    });
 
     let finalUrl = tool.downloadUrl;
     if (useMirror && finalUrl.includes("github.com") && !finalUrl.startsWith(GH_PROXY_PREFIX)) {
       finalUrl = `${GH_PROXY_PREFIX}${finalUrl}`;
     }
-
-    const taskId = `root_tool_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
     try {
       let unlistenProgress: (() => void) | null = null;
@@ -380,6 +392,12 @@ class RootToolsService {
           if (payload && typeof payload.progress === "number") {
             const pct = Math.min(99, Math.max(10, Math.round(payload.progress)));
             onProgress(pct, `正在下载 ${tool.filename}: ${pct}%`);
+            useAppStore.getState().setGlobalDownload({
+              taskId,
+              fileName: tool.filename,
+              progress: pct,
+              status: "downloading",
+            });
           }
         });
 
@@ -401,6 +419,24 @@ class RootToolsService {
         this.saveCache();
 
         onProgress(100, `工具包已成功就绪: ${tool.filename}`);
+
+        useAppStore.getState().setGlobalDownload({
+          taskId,
+          fileName: tool.filename,
+          progress: 100,
+          status: "completed",
+        });
+        useAppStore.getState().setStatusBarMessage({
+          type: "success",
+          message: `工具包下载就绪: ${tool.filename}`,
+          duration: 3500,
+        });
+        setTimeout(() => {
+          if (useAppStore.getState().globalDownload?.taskId === taskId) {
+            useAppStore.getState().setGlobalDownload(null);
+          }
+        }, 3500);
+
         return {
           success: true,
           filePath: savedFilePath,
@@ -421,6 +457,24 @@ class RootToolsService {
         this.downloadedCache.add(tool.id);
         this.saveCache();
         onProgress(100, `工具包已缓存就绪: ${tool.filename}`);
+
+        useAppStore.getState().setGlobalDownload({
+          taskId,
+          fileName: tool.filename,
+          progress: 100,
+          status: "completed",
+        });
+        useAppStore.getState().setStatusBarMessage({
+          type: "success",
+          message: `工具包已缓存就绪: ${tool.filename}`,
+          duration: 3500,
+        });
+        setTimeout(() => {
+          if (useAppStore.getState().globalDownload?.taskId === taskId) {
+            useAppStore.getState().setGlobalDownload(null);
+          }
+        }, 3500);
+
         return {
           success: true,
           message: `工具包已缓存就绪: ${tool.filename}`,
@@ -428,6 +482,22 @@ class RootToolsService {
       }
     } catch (err: any) {
       const errMsg = err.message || String(err);
+      useAppStore.getState().setGlobalDownload({
+        taskId,
+        fileName: tool.filename,
+        progress: 0,
+        status: "failed",
+      });
+      useAppStore.getState().setStatusBarMessage({
+        type: "error",
+        message: `下载失败: ${tool.filename} (${errMsg})`,
+        duration: 4000,
+      });
+      setTimeout(() => {
+        if (useAppStore.getState().globalDownload?.taskId === taskId) {
+          useAppStore.getState().setGlobalDownload(null);
+        }
+      }, 4000);
       onProgress(0, `下载失败: ${errMsg}`);
       return {
         success: false,

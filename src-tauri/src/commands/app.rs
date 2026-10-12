@@ -3,8 +3,21 @@ use tauri::Manager;
 
 /// 退出应用
 #[tauri::command]
-pub async fn exit_app(exit_code: i32) -> Result<()> {
+pub async fn exit_app(
+    exit_code: i32,
+    app_handle: tauri::AppHandle,
+) -> Result<()> {
     log::info!("应用退出请求，退出码: {}", exit_code);
+
+    // 1. 清理所有活动中的投屏与后台子进程
+    if let Some(mirror_mgr) = app_handle.try_state::<crate::adb::scrcpy::screen_mirror::MirrorManager>() {
+        mirror_mgr.cleanup_all();
+    }
+
+    // 2. 终止按键映射与卸载系统钩子
+    if let Some(key_mapping) = app_handle.try_state::<crate::adb::scrcpy::key_mapping::KeyMappingManager>() {
+        let _ = crate::adb::scrcpy::key_mapping::stop_key_mapping(key_mapping).await;
+    }
 
     // 给一些时间让前端接收到响应
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;

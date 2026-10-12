@@ -46,6 +46,7 @@ import {
 import { fastbootPartitionService } from "../../services/fastbootPartitionService";
 import { AIImageInspectorModal } from "./AIImageInspectorModal";
 import { useTranslation } from "react-i18next";
+import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
   container: {
@@ -320,6 +321,7 @@ export const FastbootPartitionManagerCard: React.FC<
 > = ({ device, onFastbootRequired }) => {
   const styles = useStyles();
   const { t } = useTranslation();
+  const { setStatusBarMessage, clearStatusBarMessage } = useAppStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [partitions, setPartitions] = useState<FastbootPartitionItem[]>([]);
@@ -327,6 +329,25 @@ export const FastbootPartitionManagerCard: React.FC<
   const [isAbDevice, setIsAbDevice] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  // 联动状态栏提示演示模式
+  useEffect(() => {
+    const isDisconnected = !device || !device.connected;
+    if (isDisconnected) {
+      setStatusBarMessage({
+        type: "info",
+        source: "fastboot-partition:demo",
+        message: "当前为演示模式：未连接设备，显示预置标准核心分区表，连接设备并进入 Fastboot 即可执行底层操作。",
+        duration: 0,
+      });
+    } else {
+      clearStatusBarMessage("fastboot-partition:demo");
+    }
+
+    return () => {
+      clearStatusBarMessage("fastboot-partition:demo");
+    };
+  }, [device?.connected, setStatusBarMessage, clearStatusBarMessage]);
 
   // 多选与当前激活分区
   const [selectedPartitionNames, setSelectedPartitionNames] = useState<Set<string>>(new Set());
@@ -873,10 +894,12 @@ export const FastbootPartitionManagerCard: React.FC<
                     : device.mode === "rec"
                     ? "Recovery 模式"
                     : device.mode
-                  : "离线浏览模式"}
+                  : "演示模式"}
               </Badge>
               <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
-                已载入标准核心分区表，支持镜像预选、解包与离线分析；执行刷写、备份或擦除等底层操作时需切换至 Fastboot。
+                {device && device.connected
+                  ? "已载入标准核心分区表，支持镜像预选、解包与离线分析；执行刷写、备份或擦除等底层操作时需切换至 Fastboot。"
+                  : "当前为演示模式：显示预置标准核心分区表，连接真实设备并进入 Fastboot 后将自动切换为实时分区。"}
               </Text>
             </div>
           </div>
@@ -1057,7 +1080,7 @@ export const FastbootPartitionManagerCard: React.FC<
                           disabled={isExecuting}
                         />
                       </Tooltip>
-                      <Tooltip content="擦除该分区数据 (危险)" relationship="label">
+                      <Tooltip content="擦除该分区数据" relationship="label">
                         <Button
                           size="small"
                           appearance="subtle"
@@ -1333,22 +1356,35 @@ export const FastbootPartitionManagerCard: React.FC<
         }}
       />
 
-      {/* 单分区擦除危险二次确认对话框 */}
+      {/* 单分区擦除确认对话框 */}
       <Dialog open={eraseDialogOpen} onOpenChange={(_, d) => setEraseDialogOpen(d.open)}>
-        <DialogSurface>
+        <DialogSurface style={{ borderRadius: "14px", maxWidth: "440px" }}>
           <DialogTitle>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--colorPaletteRedForeground1)" }}>
-              <Warning24Regular />
-              <span>高危操作：确认擦除分区？</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Delete24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
+              <span>确认擦除分区</span>
             </div>
           </DialogTitle>
-          <DialogBody>
+          <DialogBody style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "12px 0" }}>
             <Text size={300}>
-              您即将擦除分区 <strong>[{partitionToErase?.name}]</strong>。
-              <br />
-              <br />
-              擦除关键系统分区可能导致设备无法开机甚至变砖，请确保您清楚此操作的后果！
+              即将执行命令 <code>fastboot erase {partitionToErase?.name}</code>
             </Text>
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: "8px",
+                backgroundColor: "var(--colorNeutralBackground2)",
+                border: "1px solid var(--colorNeutralStroke2)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                fontSize: "12px",
+                color: "var(--colorNeutralForeground2)",
+              }}
+            >
+              <div><strong>目标分区:</strong> {partitionToErase?.name}</div>
+              <div><strong>数据影响:</strong> 分区内所有既有扇区将被清空</div>
+            </div>
           </DialogBody>
           <DialogActions>
             <Button appearance="secondary" onClick={() => setEraseDialogOpen(false)}>
@@ -1365,29 +1401,26 @@ export const FastbootPartitionManagerCard: React.FC<
         </DialogSurface>
       </Dialog>
 
-      {/* 批量擦除危险二次确认对话框 */}
+      {/* 批量擦除确认对话框 */}
       <Dialog open={batchEraseDialogOpen} onOpenChange={(_, d) => setBatchEraseDialogOpen(d.open)}>
-        <DialogSurface>
+        <DialogSurface style={{ borderRadius: "14px", maxWidth: "460px" }}>
           <DialogTitle>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--colorPaletteRedForeground1)" }}>
-              <Warning24Regular />
-              <span>高危操作：批量擦除多个分区？</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Delete24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
+              <span>确认批量擦除分区 ({selectedPartitionNames.size})</span>
             </div>
           </DialogTitle>
-          <DialogBody>
+          <DialogBody style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "12px 0" }}>
             <Text size={300}>
-              您即将批量擦除以下 <strong>{selectedPartitionNames.size}</strong> 个分区：
-              <br />
-              <br />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "8px 0" }}>
-                {Array.from(selectedPartitionNames).map((n) => (
-                  <Badge key={n} color="danger" appearance="tint">
-                    {n}
-                  </Badge>
-                ))}
-              </div>
-              此操作不可逆，请务必确认已做好完整备份！
+              即将顺序擦除以下选中的分区，对应数据将被清空：
             </Text>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", maxHeight: "120px", overflowY: "auto", padding: "4px 0" }}>
+              {Array.from(selectedPartitionNames).map((n) => (
+                <Badge key={n} color="danger" appearance="tint">
+                  {n}
+                </Badge>
+              ))}
+            </div>
           </DialogBody>
           <DialogActions>
             <Button appearance="secondary" onClick={() => setBatchEraseDialogOpen(false)}>

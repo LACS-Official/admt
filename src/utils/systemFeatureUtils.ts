@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系统功能工具模块
  * 提供系统托盘和开机自启动功能的工具函数和错误处理
  */
@@ -297,9 +297,9 @@ export class SystemFeatureRecovery {
       await systemTrayService().initialize({
         tooltip: '玩机管家',
         menuItems: [
-          { id: 'show', label: '显示窗口' },
+          { id: 'show', label: '显示主页面' },
           { id: 'separator1', label: '-' },
-          { id: 'exit', label: '退出应用' }
+          { id: 'exit', label: '退出程序' }
         ]
       });
 

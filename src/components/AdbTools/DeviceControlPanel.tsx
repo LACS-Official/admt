@@ -345,7 +345,7 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
 }) => {
   const styles = useStyles();
   const { deviceService } = useDeviceService();
-  const { setStatusBarMessage } = useAppStore();
+  const { setStatusBarMessage, clearStatusBarMessage } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<"keys" | "display" | "system" | "battery">("keys");
   const [, setExecutingCmd] = useState<string | null>(null);
@@ -386,6 +386,24 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
 
   const isDeviceAvailable = !!device?.connected && device?.mode === "sys";
 
+  // 联动状态栏提示设备不可用状态
+  useEffect(() => {
+    if (!isDeviceAvailable) {
+      setStatusBarMessage({
+        type: "warning",
+        source: "device-control:mode",
+        message: "设备未连接或当前未处于系统正常开机模式 (sys)，部分 ADB 系统级指令可能暂不可用。",
+        duration: 0,
+      });
+    } else {
+      clearStatusBarMessage("device-control:mode");
+    }
+
+    return () => {
+      clearStatusBarMessage("device-control:mode");
+    };
+  }, [isDeviceAvailable, setStatusBarMessage, clearStatusBarMessage]);
+
   // Polling hardware & network state
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
@@ -397,6 +415,7 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
           setWifiSsid(status.wifiSsid);
           setMobileDataEnabled(status.mobileDataEnabled);
           setAirplaneModeEnabled(status.airplaneModeEnabled);
+
 
           const rot = await deviceService.executeAdbCommand(device.serial, "shell", [
             "settings",
@@ -598,8 +617,8 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
       key === "win"
         ? "window_animation_scale"
         : key === "trans"
-        ? "transition_animation_scale"
-        : "animator_duration_scale";
+          ? "transition_animation_scale"
+          : "animator_duration_scale";
 
     try {
       await deviceService.executeAdbCommand(device.serial, "shell", [
@@ -720,13 +739,6 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
           </div>
         </div>
       </div>
-
-      {!isDeviceAvailable && (
-        <div className={styles.emptyBanner}>
-          <Info20Regular />
-          <span>设备未连接或当前未处于系统正常开机模式 (sys)，部分 ADB 系统级指令可能暂不可用。</span>
-        </div>
-      )}
 
       {/* 主体滚动区域 */}
       <div className={styles.scrollBody}>
@@ -1257,10 +1269,10 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
                     {realBattery.chargingMode === "ac"
                       ? "直流充电"
                       : realBattery.chargingMode === "usb"
-                      ? "USB 充电"
-                      : realBattery.chargingMode === "wireless"
-                      ? "无线供电"
-                      : "放电中"}
+                        ? "USB 充电"
+                        : realBattery.chargingMode === "wireless"
+                          ? "无线供电"
+                          : "放电中"}
                   </span>
                 </div>
 

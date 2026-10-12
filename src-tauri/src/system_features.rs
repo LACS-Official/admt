@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系统功能模块
  * 包含系统托盘和开机自启动的简化实现
  */
@@ -106,7 +106,7 @@ pub async fn create_system_tray<R: Runtime>(
         menu
     } else {
         let menu = Menu::new(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
-        let show_item = MenuItem::with_id(&app, "show", "显示主窗口", true, None::<&str>)
+        let show_item = MenuItem::with_id(&app, "show", "显示主页面", true, None::<&str>)
             .map_err(|e| format!("Failed to create show item: {}", e))?;
         menu.append(&show_item)
             .map_err(|e| format!("Failed to append show item: {}", e))?;
@@ -114,7 +114,7 @@ pub async fn create_system_tray<R: Runtime>(
             .map_err(|e| format!("Failed to create separator: {}", e))?;
         menu.append(&separator)
             .map_err(|e| format!("Failed to append separator: {}", e))?;
-        let exit_item = MenuItem::with_id(&app, "exit", "退出玩机管家", true, None::<&str>)
+        let exit_item = MenuItem::with_id(&app, "exit", "退出程序", true, None::<&str>)
             .map_err(|e| format!("Failed to create exit item: {}", e))?;
         menu.append(&exit_item)
             .map_err(|e| format!("Failed to append exit item: {}", e))?;
@@ -130,13 +130,16 @@ pub async fn create_system_tray<R: Runtime>(
             println!(" 托盘菜单项点击: {}", id_str);
             let _ = app_handle.emit("tray-menu-click", &id_str);
 
-            if id_str == "show" || id_str == "custom-显示窗口" {
+            if id_str == "show" || id_str == "custom-显示窗口" || id_str == "显示主页面" || id_str == "显示主界面" {
                 if let Some(window) = app_handle.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.unminimize();
                     let _ = window.set_focus();
                 }
-            } else if id_str == "exit" || id_str == "custom-退出应用" {
+            } else if id_str == "exit" || id_str == "custom-退出应用" || id_str == "退出程序" || id_str == "退出玩机管家" {
+                if let Some(mirror_mgr) = app_handle.try_state::<crate::adb::scrcpy::screen_mirror::MirrorManager>() {
+                    mirror_mgr.cleanup_all();
+                }
                 std::process::exit(0);
             }
         })
@@ -551,3 +554,34 @@ impl<T> Pipe<T> for T {
         f(self)
     }
 }
+
+/// 获取系统主题（支持 Windows 注册表和系统检测，返回 "dark" 或 "light"）
+#[tauri::command]
+pub async fn get_system_theme<R: Runtime>(app: AppHandle<R>) -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        if let Ok(key) = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize") {
+            if let Ok(val) = key.get_value::<u32, _>("AppsUseLightTheme") {
+                if val == 0 {
+                    return Ok("dark".to_string());
+                } else {
+                    return Ok("light".to_string());
+                }
+            }
+        }
+    }
+
+    if let Some(window) = app.get_webview_window("main") {
+        if let Ok(theme) = window.theme() {
+            return match theme {
+                tauri::Theme::Dark => Ok("dark".to_string()),
+                tauri::Theme::Light => Ok("light".to_string()),
+                _ => Ok("light".to_string()),
+            };
+        }
+    }
+
+    Ok("light".to_string())
+}
+

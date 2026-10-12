@@ -350,10 +350,30 @@ const AISettingsPanel: React.FC = () => {
         headers["Authorization"] = `Bearer ${apiKey}`;
       }
 
-      const response = await fetch(url, {
+      let response: Response;
+      const requestOptions = {
         method: "GET",
         headers,
-      });
+      };
+
+      try {
+        response = await fetch(url, requestOptions);
+      } catch (httpErr: any) {
+        if (
+          typeof window !== "undefined" &&
+          window.fetch &&
+          (httpErr?.message?.includes("not allowed on the configured scope") ||
+            httpErr?.message?.includes("scope"))
+        ) {
+          logService.warn("Tauri http 插件权限拦截，已回退至原生 fetch 获取模型", "AISettings", {
+            error: httpErr.message,
+            url,
+          });
+          response = await window.fetch(url, requestOptions);
+        } else {
+          throw httpErr;
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: 获取失败`);
@@ -478,7 +498,7 @@ const AISettingsPanel: React.FC = () => {
       model: config.ai?.model || "",
       apiKey: apiKey || "",
       endpoint: endpoint || "",
-      temperature: temperature ?? 0.7,
+      temperature: temperature ?? 1.0,
     });
     setNewPresetName("");
     setStatusBarMessage({
@@ -555,7 +575,8 @@ const AISettingsPanel: React.FC = () => {
         headers["Authorization"] = `Bearer ${apiKey}`;
       }
 
-      const response = await fetch(url, {
+      let response: Response;
+      const requestOptions = {
         method: provider === "anthropic" || isOpenAICompatiblePost ? "POST" : "GET",
         headers,
         body: provider === "anthropic" ? JSON.stringify({
@@ -567,11 +588,30 @@ const AISettingsPanel: React.FC = () => {
             provider === "deepseek" ? "deepseek-chat" :
               provider === "groq" ? "llama3-8b-8192" :
                 provider === "qwen" ? "qwen-turbo" :
-                  provider === "siliconflow" ? "deepseek-ai/DeepSeek-V3" : "gpt-3.5-turbo",
+                  provider === "siliconflow" ? "deepseek-ai/DeepSeek-V3" : "gpt-5.6-terra",
           max_tokens: 1,
           messages: [{ role: "user", content: "hi" }]
         }) : undefined,
-      });
+      };
+
+      try {
+        response = await fetch(url, requestOptions);
+      } catch (httpErr: any) {
+        if (
+          typeof window !== "undefined" &&
+          window.fetch &&
+          (httpErr?.message?.includes("not allowed on the configured scope") ||
+            httpErr?.message?.includes("scope"))
+        ) {
+          logService.warn("Tauri http 插件权限拦截，已回退至原生 fetch", "AISettings", {
+            error: httpErr.message,
+            url,
+          });
+          response = await window.fetch(url, requestOptions);
+        } else {
+          throw httpErr;
+        }
+      }
 
       if (response.ok) {
         setTestStatus({ type: "idle" });
@@ -613,18 +653,6 @@ const AISettingsPanel: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        {/* 标题栏 */}
-        <div className={styles.headerSection}>
-          <div className={styles.titleWrapper}>
-            <Bot24Regular style={{ color: "var(--colorBrandForeground1)", fontSize: "24px" }} />
-            <div>
-              <div className={styles.titleText}>{t("settings.ai_settings")}</div>
-              <div className={styles.subtitleText}>
-                配置人工智能玩机助手的服务通道、模型与 API 密钥。方案切换与更多设置已聚合至 AI 助手。
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* 双列布局：左侧核心基础服务配置，右侧三个高级扩展设置 */}
         <div className={styles.mainGrid}>
@@ -642,7 +670,7 @@ const AISettingsPanel: React.FC = () => {
 
             <div className={styles.cardContent}>
               {/* 供应商与当前生效方案 */}
-              <div className={styles.gridTwoCols}>
+              <div>
                 <Field label={t("settings.ai_provider")}>
                   <Select
                     value={config.ai?.provider ?? "openai"}
@@ -684,32 +712,19 @@ const AISettingsPanel: React.FC = () => {
                     <option value="local">Local 本地模型 (Ollama)</option>
                   </Select>
                 </Field>
-
-                <Field label="当前激活方案">
-                  <Select
-                    value={activePresetId || ""}
-                    onChange={(_, data) => {
-                      if (data.value) {
-                        applyPreset(data.value);
-                        const name = aiPresets.find(p => p.id === data.value)?.name;
-                        setStatusBarMessage({
-                          type: "success",
-                          message: `已切换至方案: ${name}`,
-                        });
-                      } else {
-                        applyPreset("");
-                      }
-                    }}
-                  >
-                    <option value="">-- 自定义配置--</option>
-                    {aiPresets.map(preset => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.name} ({preset.provider})
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
               </div>
+
+              {/* 接口地址 */}
+              <Field
+                label={t("settings.ai_endpoint")}
+              >
+                <Input
+                  className={styles.input}
+                  value={config.ai?.endpoint ?? ""}
+                  onChange={(_, data) => handleAIUpdate({ endpoint: data.value })}
+                  placeholder="https://api.openai.com/v1"
+                />
+              </Field>
 
               {/* 模型名称 */}
               <Field
@@ -799,10 +814,10 @@ const AISettingsPanel: React.FC = () => {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Text weight="semibold" size={300} style={{ display: "block", marginBottom: "2px" }}>
-                    高级参数与端点
+                    高级参数与采样
                   </Text>
                   <Text size={200} style={{ color: "var(--colorNeutralForeground3)", lineHeight: "1.4" }}>
-                    自定义代理 Endpoint、Temperature 温度采样。
+                    调节生成采样温度 (Temperature) 等核心推理参数。
                   </Text>
                 </div>
               </div>
@@ -883,31 +898,21 @@ const AISettingsPanel: React.FC = () => {
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Settings24Regular style={{ color: "var(--colorBrandForeground1)" }} />
-                <span>高级参数与端点设置</span>
+                <span>高级模型参数设置</span>
               </div>
             </DialogTitle>
 
             <DialogContent style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "10px" }}>
-              {/* Endpoint */}
-              <Field label={t("settings.ai_endpoint")} hint="支持自建反向代理地址或本地服务 (如 Ollama: http://127.0.0.1:11434/v1)">
-                <Input
-                  className={styles.input}
-                  value={config.ai?.endpoint ?? ""}
-                  onChange={(_, data) => handleAIUpdate({ endpoint: data.value })}
-                  placeholder="https://api.openai.com/v1"
-                />
-              </Field>
-
               {/* Temperature */}
               <Field
-                label={`生成温度 (Temperature): ${config.ai?.temperature ?? 0.7}`}
-                hint="较低值更严谨精确，较高值更具创造性（建议 0.5 ~ 0.8）"
+                label={`生成温度 (Temperature): ${config.ai?.temperature ?? 1.0}`}
+                hint="较低值更严谨精确，默认值为 1.0（部分新模型仅支持 1.0）"
               >
                 <Slider
                   min={0}
                   max={2}
                   step={0.1}
-                  value={config.ai?.temperature ?? 0.7}
+                  value={config.ai?.temperature ?? 1.0}
                   onChange={(_, data) => handleAIUpdate({ temperature: data.value })}
                 />
               </Field>

@@ -151,8 +151,22 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
   const styles = useStyles();
   const { deviceService } = useDeviceService();
   const { setFlashing, updateDevice } = useDeviceStore();
-  const { config, updateConfig, setStatusBarMessage, setCurrentView } = useAppStore();
+  const { config, updateConfig, setStatusBarMessage, clearStatusBarMessage, setCurrentView } = useAppStore();
   const { t } = useTranslation();
+
+  // 页面高危提示移至状态栏显示，退出该页面时自动清理
+  useEffect(() => {
+    setStatusBarMessage({
+      type: "warning",
+      source: "tools:image-flash",
+      message: `${t('flash.risk_warning_title')}: ${t('flash.risk_warning_desc')}`,
+      duration: 0,
+    });
+
+    return () => {
+      clearStatusBarMessage("tools:image-flash");
+    };
+  }, [setStatusBarMessage, clearStatusBarMessage, t]);
 
   
   // 选择的镜像文件（使用 Tauri 原生文件选择，保留真实路径）
@@ -437,20 +451,6 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
       <Card className={styles.card}>
         
         <div className={styles.content}>
-          {/* 警告提示 */}
-          <div className={styles.warningSection}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-              <Text weight="semibold" style={{ color: "var(--colorPaletteRedForeground1)" }}>
-                {t('flash.risk_warning_title')}
-              </Text>
-            </div>
-            <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
-              {t('flash.risk_warning_desc')}
-            </Text>
-
-          </div>
-
           {/* 文件选择与分区选择合并 */}
           <div className={styles.section}>
             <div className={styles.inputRow}>
@@ -598,22 +598,18 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
                   <Text weight="semibold" size={400}>{t('flash.confirm_dialog_desc')}</Text>
                 </div>
                 
-                <div style={{ padding: "12px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "6px", borderLeft: "4px solid var(--colorPaletteRedBorder2)" }}>
+                <div style={{ padding: "12px 14px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "8px", border: "1px solid var(--colorNeutralStroke2)", display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
                   <div><strong>{t('flash.device_label')}</strong> {device?.properties?.model || t('mirror.unknown_device')} ({device?.serial || t('mirror.unknown_device')})</div>
                   <div><strong>{t('flash.file_label')}</strong> {selectedFileName || '未选择'}</div>
                   <div><strong>{t('flash.partition_label')}</strong> {partitions.find(p => p.value === selectedPartition)?.label}</div>
                   <div><strong>{t('flash.mode_label')}</strong> {flashMode === 'ab' ? t('flash.mode_ab') : flashMode === 'a' ? t('flash.mode_a') : flashMode === 'b' ? t('flash.mode_b') : t('flash.mode_direct')}</div>
                 </div>
-                
-                <Text size={300} style={{ color: "var(--colorPaletteRedForeground2)" }}>
-                  {t('flash.confirm_warning')}
-                </Text>
 
                 <Checkbox 
                   checked={isConfirmed}
                   onChange={(_, data) => setIsConfirmed(data.checked === true)}
                   label={t('flash.confirm_backup_checkbox')}
-                  style={{ marginTop: "8px" }}
+                  style={{ marginTop: "4px" }}
                 />
               </div>
             </DialogBody>

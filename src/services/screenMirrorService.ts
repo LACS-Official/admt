@@ -109,14 +109,10 @@ export class ScreenMirrorService {
     try {
       console.log("Stopping screen mirror for device:", deviceSerial);
 
-      // 1. 调用后端专门的停止命令（它会清理进程和 MirrorManager 状态）
+      // 1. 调用后端专门的停止命令（它会清理进程和 MirrorManager 状态并移除端口映射）
       const result = await invoke<boolean>("stop_screen_mirror", {
         deviceSerial,
       });
-
-      // 2. 同时也尝试停止前端的进程监控（如果还在的话）
-      // 注意：这里需要根据 deviceSerial 找到对应的 sessionId
-      // 简化处理，如果是通过 deviceSerial 停止，我们可以让 store 来处理解注册
 
       return result;
     } catch (error) {
@@ -125,6 +121,19 @@ export class ScreenMirrorService {
         error,
       );
       throw new Error(`停止投屏失败: ${error}`);
+    }
+  }
+
+  /**
+   * 停止所有活跃的投屏会话并清理残留进程
+   */
+  static async stopAllMirrors(): Promise<boolean> {
+    try {
+      console.log("Stopping all screen mirrors...");
+      return await invoke<boolean>("stop_all_screen_mirrors");
+    } catch (error) {
+      console.error("Failed to stop all screen mirrors:", error);
+      return false;
     }
   }
 

@@ -17,6 +17,8 @@ import {
     MenuPopover,
     MenuList,
     MenuItem,
+    TabList,
+    Tab,
 } from "@fluentui/react-components";
 import {
     Phone24Regular,
@@ -31,17 +33,26 @@ import {
     MoreHorizontal24Regular,
     Options24Regular,
     Sparkle24Regular,
+    Keyboard24Regular,
+    ArrowDownload24Regular,
+    ArrowUpload24Regular,
+    Copy24Regular,
+    Edit24Regular,
+    Power24Regular,
+    Navigation24Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
+import { useKeyMappingStore } from "../../stores/keyMappingStore";
 import { useAppStore } from "../../stores/appStore";
-import { 
-    ScreenMirrorDevice, 
+import {
+    ScreenMirrorDevice,
     SCREEN_MIRROR_QUALITY_PRESETS,
     ScreenMirrorSession,
     ScreenMirrorConfig
 } from "../../types/screenMirror";
 import ScreenMirrorService from "../../services/screenMirrorService";
+import KeyMappingStudio from "./KeyMapping/KeyMappingStudio";
 import { DeviceInfo } from "../../types/device";
 import { useTranslation } from "react-i18next";
 
@@ -246,6 +257,101 @@ const useStyles = makeStyles({
         gap: "4px",
         flexShrink: 0,
     },
+    keyMappingBar: {
+        backgroundColor: "var(--colorNeutralBackground2)",
+        borderRadius: "14px",
+        padding: "14px 16px",
+        border: "1px solid var(--colorNeutralStroke2)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    },
+    keyMappingBarActive: {
+        ...shorthands.borderColor("var(--colorBrandStroke1)"),
+        boxShadow: "0 2px 10px rgba(0, 113, 227, 0.08)",
+    },
+    keyMappingHeader: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "10px",
+    },
+    keyMappingTitleGroup: {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+    },
+    keyMappingModeSwitch: {
+        display: "inline-flex",
+        alignItems: "center",
+        backgroundColor: "var(--colorNeutralBackground3)",
+        padding: "3px",
+        borderRadius: "9999px",
+        gap: "4px",
+    },
+    modeSwitchButton: {
+        padding: "5px 14px",
+        borderRadius: "9999px",
+        fontSize: "12px",
+        fontWeight: "500",
+        cursor: "pointer",
+        border: "none",
+        backgroundColor: "transparent",
+        color: "var(--colorNeutralForeground2)",
+        transition: "all 0.18s cubic-bezier(0.4, 0, 0.2, 1)",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+    },
+    modeSwitchButtonActiveNormal: {
+        backgroundColor: "var(--colorNeutralBackground1)",
+        color: "var(--colorNeutralForeground1)",
+        fontWeight: "600",
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+    },
+    modeSwitchButtonActiveGaming: {
+        backgroundColor: "var(--colorBrandBackground)",
+        color: "#ffffff",
+        fontWeight: "600",
+        boxShadow: "0 2px 8px rgba(0, 113, 227, 0.25)",
+    },
+    keyBadgesScroll: {
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        flexWrap: "wrap",
+        minHeight: "26px",
+    },
+    keyBadgeItem: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "5px",
+        padding: "3px 8px",
+        borderRadius: "6px",
+        backgroundColor: "var(--colorNeutralBackground1)",
+        border: "1px solid var(--colorNeutralStroke2)",
+        fontSize: "11px",
+        color: "var(--colorNeutralForeground1)",
+        fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, "Cascadia Code", monospace',
+        transition: "transform 0.15s ease",
+    },
+    keyBadgeKey: {
+        fontWeight: "700",
+        color: "var(--colorBrandForeground1)",
+    },
+    keyBadgeName: {
+        color: "var(--colorNeutralForeground2)",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    },
+    pulseDot: {
+        width: "7px",
+        height: "7px",
+        borderRadius: "9999px",
+        backgroundColor: "var(--colorBrandBackground)",
+        boxShadow: "0 0 6px var(--colorBrandBackground)",
+    },
 });
 
 // --- Internal MirrorControlCard Component ---
@@ -258,6 +364,8 @@ interface MirrorControlCardProps {
     streamingDevices: string[];
     activeSessions: ScreenMirrorSession[];
     onStopMirror: (sessionId: string) => void;
+    onStopAllMirrors: () => void;
+    onSwitchToKeyMapping: () => void;
 }
 
 const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
@@ -269,12 +377,183 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
     streamingDevices,
     activeSessions,
     onStopMirror,
+    onStopAllMirrors,
+    onSwitchToKeyMapping,
 }) => {
     const styles = useStyles();
     const { t } = useTranslation();
     const { config, updateConfig, resetConfig, applyQualityPreset, isFullscreen, toggleFullscreen } = useScreenMirrorStore();
     const { setStatusBarMessage } = useAppStore();
+    const {
+        profiles,
+        activeProfileId,
+        isRunning: isKeyMappingRunning,
+        selectProfile,
+        startMapping,
+        stopMapping,
+        exportProfile,
+        importProfile,
+    } = useKeyMappingStore();
+
+    const activeProfile = profiles.find(p => p.id === activeProfileId) || profiles[0];
+    const quickFileInputRef = useRef<HTMLInputElement>(null);
     const [recordingSerials, setRecordingSerials] = useState<Record<string, boolean>>({});
+
+    // 获取当前进行投屏的设备 Serial
+    const currentStreamingSerial = streamingDevices.find(s => s === selectedDevice?.serial) || streamingDevices[0] || selectedDevice?.serial;
+
+    // 模式切换
+    const handleSwitchMode = async (targetMode: 'normal' | 'mapping') => {
+        if (targetMode === 'mapping') {
+            if (!currentStreamingSerial) {
+                setStatusBarMessage({
+                    type: "warning",
+                    message: t('mirror.warn_start_mirror_first', '请先启动设备投屏，以便启用按键映射'),
+                    duration: 3500,
+                });
+                return;
+            }
+            try {
+                await startMapping(currentStreamingSerial);
+                setStatusBarMessage({
+                    type: "success",
+                    message: t('mirror.mapping_started_notice', `键鼠映射已生效 [${activeProfile?.name || '默认配置'}]，聚焦投屏窗口即可操作`),
+                    duration: 3500,
+                });
+            } catch (err: any) {
+                setStatusBarMessage({
+                    type: "error",
+                    message: `启动键鼠映射失败: ${err.message || err}`,
+                    duration: 4000,
+                });
+            }
+        } else {
+            try {
+                await stopMapping();
+                setStatusBarMessage({
+                    type: "info",
+                    message: t('mirror.normal_mode_notice', '已恢复原生触控模式 (已停止键鼠映射)'),
+                    duration: 3000,
+                });
+            } catch (err: any) {
+                console.error("Failed to stop key mapping:", err);
+            }
+        }
+    };
+
+    // 配置预设切换并热重载
+    const handleProfileSelect = async (profileId: string) => {
+        selectProfile(profileId);
+        if (isKeyMappingRunning && currentStreamingSerial) {
+            setTimeout(async () => {
+                try {
+                    await startMapping(currentStreamingSerial);
+                    setStatusBarMessage({
+                        type: "success",
+                        message: `已切换配置方案并实时重载`,
+                        duration: 2500,
+                    });
+                } catch (e) {
+                    console.error("Failed to hot reload mapping:", e);
+                }
+            }, 60);
+        }
+    };
+
+    // 导出文件
+    const handleExportFile = () => {
+        if (!activeProfile) return;
+        const jsonStr = exportProfile(activeProfile);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const safeName = activeProfile.name.replace(/[^\w\u4e00-\u9fa5_-]/g, "_");
+        a.download = `${safeName}_keymapping.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setStatusBarMessage({
+            type: "success",
+            message: `已导出按键配置 [${activeProfile.name}.json]`,
+            duration: 3000,
+        });
+    };
+
+    // 复制导出到剪贴板
+    const handleExportClipboard = async () => {
+        if (!activeProfile) return;
+        const jsonStr = exportProfile(activeProfile);
+        try {
+            await navigator.clipboard.writeText(jsonStr);
+            setStatusBarMessage({
+                type: "success",
+                message: `已复制配置 [${activeProfile.name}] 到剪贴板`,
+                duration: 3000,
+            });
+        } catch {
+            setStatusBarMessage({
+                type: "error",
+                message: "写入剪贴板失败，请检查浏览器权限",
+                duration: 3000,
+            });
+        }
+    };
+
+    // 从本地文件导入
+    const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const content = evt.target?.result as string;
+            if (!content) return;
+            try {
+                await importProfile(content);
+                setStatusBarMessage({
+                    type: "success",
+                    message: `已成功导入按键配置: ${file.name}`,
+                    duration: 3000,
+                });
+            } catch (err: any) {
+                setStatusBarMessage({
+                    type: "error",
+                    message: `导入失败: ${err.message || err}`,
+                    duration: 3500,
+                });
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
+    };
+
+    // 从剪贴板导入
+    const handleClipboardImport = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (!text) {
+                setStatusBarMessage({
+                    type: "warning",
+                    message: "剪贴板为空",
+                    duration: 2500,
+                });
+                return;
+            }
+            await importProfile(text);
+            setStatusBarMessage({
+                type: "success",
+                message: "已从剪贴板成功导入配置",
+                duration: 3000,
+            });
+        } catch (err: any) {
+            setStatusBarMessage({
+                type: "error",
+                message: `导入失败: ${err.message || err}`,
+                duration: 3500,
+            });
+        }
+    };
 
     const handleDeviceClick = (device: ScreenMirrorDevice) => {
         if (selectedDevice?.serial === device.serial) {
@@ -315,9 +594,9 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
         return Object.keys(SCREEN_MIRROR_QUALITY_PRESETS).find(key => {
             const preset = SCREEN_MIRROR_QUALITY_PRESETS[key];
             return preset.resolution === config.quality.resolution &&
-                   preset.bitrate === config.quality.bitrate &&
-                   preset.framerate === config.quality.framerate &&
-                   preset.codec === config.quality.codec;
+                preset.bitrate === config.quality.bitrate &&
+                preset.framerate === config.quality.framerate &&
+                preset.codec === config.quality.codec;
         }) || "custom";
     }, [config.quality]);
 
@@ -346,9 +625,21 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                         <Phone24Regular />
                         <Text weight="semibold" size={300}>{t('mirror.device_management_title', '设备管理')}</Text>
                     </div>
-                    <Badge appearance="tint" color="brand">
-                        {devices.length}
-                    </Badge>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {streamingDevices.length > 0 && (
+                            <Button
+                                size="small"
+                                appearance="subtle"
+                                shape="circular"
+                                icon={<Power24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />}
+                                onClick={onStopAllMirrors}
+                                title={t('mirror.stop_all_mirrors', '停止全部投屏并清理后台进程')}
+                            />
+                        )}
+                        <Badge appearance="tint" color="brand">
+                            {devices.length}
+                        </Badge>
+                    </div>
                 </div>
 
                 {isLoading ? (
@@ -389,12 +680,46 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                                             <div className={styles.deviceMeta}>
                                                 {device.resolution && <Badge size="small" appearance="outline">{device.resolution}</Badge>}
                                                 {isStreaming && <Badge size="small" color="danger" appearance="filled">{t('mirror.mirroring', '投屏中')}</Badge>}
+                                                {isStreaming && isKeyMappingRunning && (
+                                                    <Badge size="small" color="brand" appearance="filled">
+                                                        {t('mirror.mapping_badge', '按键映射中')}
+                                                    </Badge>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                     <div className={styles.deviceActions} onClick={(e) => e.stopPropagation()}>
                                         {isStreaming ? (
                                             <>
+                                                {/* 一键切换键鼠映射 */}
+                                                <Button
+                                                    appearance={isKeyMappingRunning ? "primary" : "subtle"}
+                                                    size="small"
+                                                    shape="circular"
+                                                    icon={<Keyboard24Regular />}
+                                                    style={{
+                                                        backgroundColor: isKeyMappingRunning ? "var(--colorBrandBackground)" : undefined,
+                                                        color: isKeyMappingRunning ? "#ffffff" : undefined,
+                                                    }}
+                                                    onClick={async () => {
+                                                        if (isKeyMappingRunning) {
+                                                            await stopMapping();
+                                                            setStatusBarMessage({
+                                                                type: "info",
+                                                                message: t('mirror.normal_mode_notice', '已恢复原生触控模式'),
+                                                                duration: 2500,
+                                                            });
+                                                        } else {
+                                                            await startMapping(device.serial);
+                                                            setStatusBarMessage({
+                                                                type: "success",
+                                                                message: t('mirror.mapping_started_notice', `键鼠映射已生效 [${activeProfile?.name || '默认配置'}]`),
+                                                                duration: 3000,
+                                                            });
+                                                        }
+                                                    }}
+                                                    title={isKeyMappingRunning ? t('mirror.stop_mapping_tooltip', '关闭按键映射') : t('mirror.start_mapping_tooltip', '为此设备启用按键映射')}
+                                                />
                                                 <Button
                                                     appearance="subtle"
                                                     size="small"
@@ -465,15 +790,16 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
 
             {/* 右侧设置区域 */}
             <div className={styles.rightPane}>
-                <div className={styles.sectionHeader}>
-                    <div className={styles.headerTitleWrap}>
-                        <Settings24Regular />
-                        <Text weight="semibold" size={400}>{t('mirror.settings_title')}</Text>
-                    </div>
-                    <Button size="small" appearance="subtle" icon={<ArrowReset24Regular />} onClick={resetConfig}>
-                        {t('mirror.reset_to_default')}
-                    </Button>
-                </div>
+                {/* 隐藏的快捷配置文件选择器 */}
+                <input
+                    type="file"
+                    ref={quickFileInputRef}
+                    accept=".json"
+                    onChange={handleFileImport}
+                    style={{ display: "none" }}
+                />
+
+
 
                 <div className={styles.settingsGrid}>
                     {/* 视频与画质卡片 */}
@@ -482,7 +808,7 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                             <Sparkle24Regular style={{ color: "var(--colorBrandForeground1)" }} />
                             <span>{t('mirror.video_quality')}</span>
                         </div>
-                        
+
                         <Field label={t('mirror.quality_preset')} size="small" style={{ minWidth: 0 }}>
                             <Dropdown
                                 style={{ minWidth: "100%", width: "100%" }}
@@ -659,6 +985,14 @@ const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequ
         prepareDevicesForMirroring();
     }, [connectedDevices.length]);
 
+    const [activeTab, setActiveTab] = useState<'mirror' | 'keymapping'>('mirror');
+    const { isRunning: isKeyMappingRunning, stopMapping, loadProfiles } = useKeyMappingStore();
+    const { setStatusBarMessage } = useAppStore();
+
+    useEffect(() => {
+        loadProfiles();
+    }, [loadProfiles]);
+
     const handleStartMirror = async (device: ScreenMirrorDevice) => {
         if (!device || !canStartMirroring(device.serial)) return;
         const realDevice = connectedDevices.find(d => d.serial === device.serial);
@@ -672,6 +1006,9 @@ const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequ
             const session = await ScreenMirrorService.startMirror(device.serial, config, (sessionId) => {
                 handleProcessTerminated(sessionId);
                 ScreenMirrorService.stopMirror(device.serial).catch(console.error);
+                if (useKeyMappingStore.getState().isRunning) {
+                    useKeyMappingStore.getState().stopMapping().catch(console.error);
+                }
             });
             addActiveSession(session);
         } catch (error: any) {
@@ -702,6 +1039,9 @@ const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequ
         if (!session) return;
         setLoading(true);
         try {
+            if (isKeyMappingRunning) {
+                await stopMapping();
+            }
             await ScreenMirrorService.stopMirror(session.deviceSerial);
             removeActiveSession(session.id);
         } catch (error: any) {
@@ -712,24 +1052,91 @@ const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequ
         }
     };
 
+    const handleStopAllMirrors = async () => {
+        setLoading(true);
+        try {
+            if (isKeyMappingRunning) {
+                await stopMapping();
+            }
+            await ScreenMirrorService.stopAllMirrors();
+            setActiveSessions([]);
+            setStatusBarMessage({
+                type: "info",
+                message: t('mirror.all_mirrors_stopped', '已停止全部投屏并清理后台进程'),
+                duration: 3000,
+            });
+        } catch (error: any) {
+            console.error("Failed to stop all screen mirrors:", error);
+            setError(t('mirror.stop_all_failed', { error: String(error) }));
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className={styles.container}>
+            {/* 顶部胶囊分段导航 (遵循 AGENTS.md 规范) */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <TabList
+                    selectedValue={activeTab}
+                    onTabSelect={(_, d) => setActiveTab(d.value as 'mirror' | 'keymapping')}
+                    style={{
+                        backgroundColor: "var(--colorNeutralBackground3)",
+                        padding: "3px",
+                        borderRadius: "9999px",
+                        display: "inline-flex",
+                    }}
+                >
+                    <Tab value="mirror" icon={<Settings24Regular />}>
+                        {t('mirror.tab_settings', '投屏与画质设置')}
+                    </Tab>
+                    <Tab value="keymapping" icon={<Keyboard24Regular />}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{t('mirror.tab_keymapping', '按键映射 (Beta)')}</span>
+                            <Badge appearance="tint" color="informative" size="small">
+                                Beta
+                            </Badge>
+                        </div>
+                    </Tab>
+                </TabList>
+
+                {isKeyMappingRunning && (
+                    <Badge appearance="filled" color="brand" shape="rounded">
+                        {t('mirror.keymapping_active', '按键映射运行中')}
+                    </Badge>
+                )}
+            </div>
+
             {error && (
                 <div style={{ padding: "8px 12px", borderRadius: "8px", backgroundColor: "var(--colorPaletteRedBackground1)", border: "1px solid var(--colorPaletteRedBorder1)" }}>
                     <Text style={{ color: "var(--colorPaletteRedForeground1)", fontSize: "13px" }}>{error}</Text>
                 </div>
             )}
             <div style={{ flex: 1, minHeight: 0 }}>
-                <MirrorControlCard
-                    devices={supportedDevices}
-                    selectedDevice={mirrorDevice}
-                    onSelectDevice={handleDeviceSelect}
-                    onDeviceAction={handleDeviceAction}
-                    isLoading={isLoading}
-                    streamingDevices={streamingDevices}
-                    activeSessions={activeSessions}
-                    onStopMirror={handleStopMirror}
-                />
+                {activeTab === 'mirror' ? (
+                    <MirrorControlCard
+                        devices={supportedDevices}
+                        selectedDevice={mirrorDevice}
+                        onSelectDevice={handleDeviceSelect}
+                        onDeviceAction={handleDeviceAction}
+                        isLoading={isLoading}
+                        streamingDevices={streamingDevices}
+                        activeSessions={activeSessions}
+                        onStopMirror={handleStopMirror}
+                        onStopAllMirrors={handleStopAllMirrors}
+                        onSwitchToKeyMapping={() => setActiveTab('keymapping')}
+                    />
+                ) : (
+                    <KeyMappingStudio
+                        device={device || connectedDevices[0] || (mirrorDevice ? {
+                            id: mirrorDevice.serial,
+                            serial: mirrorDevice.serial,
+                            name: mirrorDevice.name || mirrorDevice.serial,
+                            connected: true,
+                            mode: 'sys',
+                        } as any : null)}
+                    />
+                )}
             </div>
         </div>
     );

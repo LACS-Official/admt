@@ -36,7 +36,7 @@ use crate::commands::{
 
 use crate::adb::app::app_management::*;
 use crate::adb::command::adb_command_runer::{
-    execute_adb_command, execute_adb_command_direct, execute_batch_file, execute_batch_file_stream,
+    execute_adb_command, execute_adb_command_direct, execute_ssh_command, execute_batch_file, execute_batch_file_stream,
     finish_adb_service,
 };
 use crate::adb::command::adb_system_controler::{
@@ -44,9 +44,14 @@ use crate::adb::command::adb_system_controler::{
 };
 use crate::adb::device::device_reboot::reboot_device;
 use crate::adb::file::file::{list_device_files, pull_file, push_file};
+use crate::adb::scrcpy::key_mapping::{
+    capture_device_screen, delete_key_mapping_profile, get_key_mapping_profiles,
+    is_key_mapping_active, save_key_mapping_profile, simulate_key_mapping_touch,
+    start_key_mapping, stop_key_mapping, KeyMappingManager,
+};
 use crate::adb::scrcpy::screen_mirror::{
     check_screen_mirror_support, diagnose_scrcpy, get_active_mirror_sessions, is_device_mirroring,
-    start_screen_mirror, stop_screen_mirror, MirrorManager,
+    start_screen_mirror, stop_screen_mirror, stop_all_screen_mirrors, MirrorManager,
 };
 use crate::adb_commands::{get_adb_tools_info, verify_adb_tools_integrity};
 use crate::cache::cache_cleanup_task;
@@ -69,10 +74,21 @@ use tauri_plugin_dialog::DialogExt;
 pub fn run() {
     tauri::Builder::default()
         .manage(MirrorManager::new())
+        .manage(KeyMappingManager::new())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir { file_name: Some("admt".into()) }),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
+                ])
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                .build(),
+        )
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -108,6 +124,7 @@ pub fn run() {
             scan_devices,
             execute_adb_command,
             execute_adb_command_direct,
+            execute_ssh_command,
             get_resource_path,
             read_resource_file,
             execute_adb_command_with_path,
@@ -155,8 +172,18 @@ pub fn run() {
             diagnose_scrcpy,
             start_screen_mirror,
             stop_screen_mirror,
+            stop_all_screen_mirrors,
             get_active_mirror_sessions,
             is_device_mirroring,
+            // 投屏按键映射
+            start_key_mapping,
+            stop_key_mapping,
+            is_key_mapping_active,
+            get_key_mapping_profiles,
+            save_key_mapping_profile,
+            delete_key_mapping_profile,
+            simulate_key_mapping_touch,
+            capture_device_screen,
             validate_activation_code_format,
             activate_application,
             check_activation_status,
@@ -231,6 +258,7 @@ pub fn run() {
             system_features::is_auto_start_supported,
             system_features::get_auto_start_config,
             system_features::validate_auto_start,
+            system_features::get_system_theme,
             exit_app,
             terminate_process,
             check_process_alive,

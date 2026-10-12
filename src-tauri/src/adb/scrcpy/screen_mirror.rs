@@ -20,6 +20,36 @@ impl MirrorManager {
             sessions: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+
+    /// 清理并终止所有活动的投屏进程及相关隧道
+    pub fn cleanup_all(&self) {
+        let mut sessions = self.sessions.lock().unwrap();
+        for (serial, (mut child, _session)) in sessions.drain() {
+            log::info!("Cleaning up scrcpy mirror process for device: {}", serial);
+            #[cfg(windows)]
+            {
+                let pid = child.id();
+                use std::os::windows::process::CommandExt;
+                let _ = std::process::Command::new("taskkill")
+                    .args(&["/F", "/T", "/PID", &pid.to_string()])
+                    .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                    .status();
+            }
+            let _ = child.kill();
+            let _ = child.wait();
+
+            // 移除设备反向端口映射
+            let adb_path = crate::cache::get_cached_adb_path();
+            let mut cmd = std::process::Command::new(&adb_path);
+            cmd.args(&["-s", &serial, "reverse", "--remove-all"]);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.creation_flags(0x08000000);
+            }
+            let _ = cmd.status();
+        }
+    }
 }
 
 /// 屏幕镜像设备信息
@@ -339,6 +369,8 @@ pub async fn start_screen_mirror(
         format!("{}M", config.quality.bitrate),
         "--max-fps".to_string(),
         config.quality.framerate.to_string(),
+        "--window-title".to_string(),
+        format!("ADMT - {}", device_serial),
     ];
 
     if config.show_touches {
@@ -496,20 +528,39 @@ pub async fn stop_screen_mirror(
 
         session.status = "stopping".to_string();
 
+        #[cfg(windows)]
+        {
+            let pid = child.id();
+            use std::os::windows::process::CommandExt;
+            let _ = std::process::Command::new("taskkill")
+                .args(&["/F", "/T", "/PID", &pid.to_string()])
+                .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                .status();
+        }
+
         // 2. 终止进程
         match child.kill() {
             Ok(_) => {
                 log::info!("Successfully killed scrcpy process for {}", device_serial);
-                // 等待进程退出以释放资源
                 let _ = child.wait();
-                Ok(true)
             }
             Err(e) => {
                 log::error!("Failed to kill scrcpy process for {}: {}", device_serial, e);
-                // 即使失败，我们也认为它处于异常状态并从管理中移除
-                Err(AdmtError::Process(format!("Failed to stop process: {}", e)))
             }
         }
+
+        // 3. 清理设备反向映射端口
+        let adb_path = crate::cache::get_cached_adb_path();
+        let mut cmd = std::process::Command::new(&adb_path);
+        cmd.args(&["-s", &device_serial, "reverse", "--remove-all"]);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+        let _ = cmd.status();
+
+        Ok(true)
     } else {
         log::warn!(
             "No active mirror session found for device: {}",
@@ -517,6 +568,16 @@ pub async fn stop_screen_mirror(
         );
         Ok(false)
     }
+}
+
+/// 终止所有活跃的投屏会话
+#[tauri::command]
+pub async fn stop_all_screen_mirrors(
+    state: State<'_, MirrorManager>,
+) -> Result<bool> {
+    log::info!("Stopping all active screen mirror sessions");
+    state.cleanup_all();
+    Ok(true)
 }
 
 /// 获取当前所有活跃的投屏会话

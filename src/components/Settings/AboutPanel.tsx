@@ -512,30 +512,6 @@ const AboutPanel: React.FC = () => {
           </Card>
         </div>
 
-        {/* --- High Information Density: System Specs & Environment --- */}
-        <Card className={styles.specsCard}>
-          <div className={styles.specsHeader}>
-            <Desktop24Regular style={{ color: "var(--colorBrandForeground1)" }} />
-            <Text weight="semibold" size={300}>
-              运行规格与技术环境
-            </Text>
-          </div>
-
-          <div className={styles.specsGrid}>
-            <div className={styles.specItem}>
-              <span className={styles.specLabel}>核心技术栈</span>
-              <span className={styles.specValue}>Tauri v2 (Rust) + React 18</span>
-            </div>
-            <div className={styles.specItem}>
-              <span className={styles.specLabel}>运行平台</span>
-              <span className={styles.specValue}>Windows x86_64-pc-msvc</span>
-            </div>
-            <div className={styles.specItem}>
-              <span className={styles.specLabel}>调试环境</span>
-              <span className={styles.specValue}>ADB v1.0.41 + Fastboot (嵌入集成)</span>
-            </div>
-          </div>
-        </Card>
 
         {/* --- Community & Social Bento Chips --- */}
         <div className={styles.communitySection}>

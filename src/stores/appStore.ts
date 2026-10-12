@@ -10,12 +10,24 @@ export interface StatusBarMessage {
   message: string;
   icon?: React.ReactNode;
   timestamp: Date;
-  duration?: number; // 显示持续时间，毫秒
+  duration?: number; // 显示持续时间，毫秒（0 表示常驻，随页面生命周期清除）
+  source?: string;   // 来源标识，例如 'home:demo' 或 'tools:image-flash'
+}
+
+// 全局下载状态
+export interface GlobalDownloadStatus {
+  taskId: string;
+  fileName: string;
+  progress: number; // 0 - 100
+  status: 'downloading' | 'completed' | 'failed';
+  speedText?: string;
+  totalSizeText?: string;
 }
 
 interface AppStoreState extends AppState {
   notifications: NotificationMessage[];
   statusBarMessage: StatusBarMessage | null;
+  globalDownload: GlobalDownloadStatus | null;
   navigationParams?: Record<string, any>; // 用于视图间传递参数
   setCurrentView: (view: AppView, params?: Record<string, any>) => void;
   setLoading: (isLoading: boolean) => void;
@@ -24,8 +36,9 @@ interface AppStoreState extends AppState {
   addNotification: (notification: Omit<NotificationMessage, "id" | "timestamp">) => void;
   removeNotification: (id: string) => void;
   clearNotifications: () => void;
-  setStatusBarMessage: (message: Omit<StatusBarMessage, "id" | "timestamp"> | null) => void;
-  clearStatusBarMessage: () => void;
+  setStatusBarMessage: (message: (Omit<StatusBarMessage, "id" | "timestamp"> & { source?: string }) | null) => void;
+  clearStatusBarMessage: (source?: string) => void;
+  setGlobalDownload: (status: GlobalDownloadStatus | null) => void;
   setNavigationParams: (params: Record<string, any> | undefined) => void;
   isWirelessDebuggingDialogOpen: boolean;
   setWirelessDebuggingDialogOpen: (open: boolean) => void;
@@ -63,10 +76,10 @@ const defaultConfig: AppConfig = {
   ai: {
     enabled: false,
     provider: "openai",
-    model: "gpt-3.5-turbo",
+    model: "",
     apiKey: "",
     endpoint: "https://api.openai.com/v1",
-    temperature: 0.7,
+    temperature: 1.0,
   },
 };
 
@@ -82,6 +95,7 @@ export const useAppStore = create<AppStoreState>()(
       error: undefined,
       notifications: [],
       statusBarMessage: null,
+      globalDownload: null,
       navigationParams: undefined,
       isWirelessDebuggingDialogOpen: false,
       isCommandLineModalOpen: false,
@@ -115,14 +129,6 @@ export const useAppStore = create<AppStoreState>()(
         set((state) => ({
           notifications: [...state.notifications, newNotification],
         }));
-
-        // 注释掉自动移除逻辑，由StatusBar组件手动管理
-        // if (notification.autoClose !== false) {
-        //   const duration = notification.duration || 5000;
-        //   setTimeout(() => {
-        //     get().removeNotification(id);
-        //   }, duration);
-        // }
       },
 
       removeNotification: (id: string) =>
@@ -139,7 +145,7 @@ export const useAppStore = create<AppStoreState>()(
         }
 
         // 根据 type 自动匹配默认持续时间（毫秒）。
-        // 若外部已显式传入 duration，则优先生效，不会被覆盖。
+        // 若外部显式传入 duration（如 0 表示常驻，随离开页面时清除），则优先生效。
         const defaultDurationByType: Record<StatusBarMessage['type'], number> = {
           info: 1500,
           success: 1500,
@@ -148,20 +154,19 @@ export const useAppStore = create<AppStoreState>()(
         };
 
         const resolvedDuration =
-          message.duration ?? defaultDurationByType[message.type];
+          message.duration !== undefined ? message.duration : defaultDurationByType[message.type];
 
         const id = Date.now().toString();
         const newMessage: StatusBarMessage = {
           ...message,
           id,
           timestamp: new Date(),
-          // 应用自动匹配的持续时间（可被外部传入覆盖）
           duration: resolvedDuration,
         };
 
         set({ statusBarMessage: newMessage });
 
-        // 如果设置了持续时间，自动清除消息
+        // 如果设置了持续时间且大于0，自动清除消息（如果是0，则常驻直到页面退出时清除）
         if (newMessage.duration && newMessage.duration > 0) {
           setTimeout(() => {
             set((state) => {
@@ -175,7 +180,19 @@ export const useAppStore = create<AppStoreState>()(
         }
       },
 
-      clearStatusBarMessage: () => set({ statusBarMessage: null }),
+      clearStatusBarMessage: (source?: string) => {
+        set((state) => {
+          if (!source) {
+            return { statusBarMessage: null };
+          }
+          if (state.statusBarMessage?.source === source) {
+            return { statusBarMessage: null };
+          }
+          return state;
+        });
+      },
+
+      setGlobalDownload: (status: GlobalDownloadStatus | null) => set({ globalDownload: status }),
 
       setWirelessDebuggingDialogOpen: (open: boolean) => set({ isWirelessDebuggingDialogOpen: open }),
       setCommandLineModalOpen: (open: boolean) => {
@@ -235,19 +252,27 @@ export const useAppStore = create<AppStoreState>()(
           const savedConfig = await invoke<any>("get_app_config");
           if (savedConfig && savedConfig.userConfig) {
             const userConfig = savedConfig.userConfig;
-            set((state) => ({
-              config: {
-                ...state.config,
-                language: userConfig.language || state.config.language,
-                theme: userConfig.theme || state.config.theme,
-                autoStartEnabled: userConfig.autoStart ?? state.config.autoStartEnabled,
-                autoScreenMirror: userConfig.autoScreenMirror ?? state.config.autoScreenMirror,
-                ai: userConfig.ai ? {
-                  ...state.config.ai,
-                  ...userConfig.ai
-                } : state.config.ai
+            set((state) => {
+              let aiConfig = userConfig.ai ? {
+                ...state.config.ai,
+                ...userConfig.ai
+              } : state.config.ai;
+
+              if (aiConfig.model === "gpt-3.5-turbo") {
+                aiConfig = { ...aiConfig, model: "" };
               }
-            }));
+
+              return {
+                config: {
+                  ...state.config,
+                  language: userConfig.language || state.config.language,
+                  theme: userConfig.theme || state.config.theme,
+                  autoStartEnabled: userConfig.autoStart ?? state.config.autoStartEnabled,
+                  autoScreenMirror: userConfig.autoScreenMirror ?? state.config.autoScreenMirror,
+                  ai: aiConfig
+                }
+              };
+            });
           }
         } catch (error) {
           console.error("Failed to load config from disk:", error);
@@ -304,14 +329,19 @@ export const useAppStore = create<AppStoreState>()(
         currentView: state.currentView,
       }),
       merge: (persistedState: any, currentState) => {
+        const aiConfig = {
+          ...currentState.config.ai,
+          ...(persistedState?.config?.ai || {}),
+        };
+        // 自动迁移已退役的 gpt-3.5-turbo 为空，由用户自定义选择
+        if (aiConfig.model === "gpt-3.5-turbo") {
+          aiConfig.model = "";
+        }
+
         const mergedConfig = {
           ...currentState.config,
           ...(persistedState?.config || {}),
-          // 确保 AI 配置存在并合并
-          ai: {
-            ...currentState.config.ai,
-            ...(persistedState?.config?.ai || {}),
-          }
+          ai: aiConfig,
         };
         
         return {

@@ -153,11 +153,71 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   );
 };
 
+function useSystemThemeAutoSync() {
+  const followSystemTheme = useThemeStore((s) => s.followSystemTheme);
+  const updateThemeBasedOnSystem = useThemeStore((s) => s.updateThemeBasedOnSystem);
+
+  useEffect(() => {
+    if (!followSystemTheme) return;
+
+    // 1. 立即执行一次同步
+    updateThemeBasedOnSystem();
+
+    // 2. 监听 matchMedia
+    let mediaQuery: MediaQueryList | null = null;
+    let mqHandler: (() => void) | null = null;
+    if (typeof window !== "undefined" && window.matchMedia) {
+      mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      mqHandler = () => {
+        if (useThemeStore.getState().followSystemTheme) {
+          updateThemeBasedOnSystem();
+        }
+      };
+      mediaQuery.addEventListener("change", mqHandler);
+    }
+
+    // 3. 监听 Tauri 窗口原生主题变化事件
+    let unlistenTheme: (() => void) | null = null;
+    getCurrentWebviewWindow()
+      .onThemeChanged(() => {
+        if (useThemeStore.getState().followSystemTheme) {
+          updateThemeBasedOnSystem();
+        }
+      })
+      .then((unlisten) => {
+        unlistenTheme = unlisten;
+      })
+      .catch(() => {});
+
+    // 4. 窗口获得焦点时检查（在 Windows 设置切换主题后点击应用即可生效）
+    const handleFocus = () => {
+      if (useThemeStore.getState().followSystemTheme) {
+        updateThemeBasedOnSystem();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+
+    // 5. 极低开销轮询检查（每 2.5 秒一次）
+    const intervalId = window.setInterval(() => {
+      if (useThemeStore.getState().followSystemTheme) {
+        updateThemeBasedOnSystem();
+      }
+    }, 2500);
+
+    return () => {
+      if (mediaQuery && mqHandler) {
+        mediaQuery.removeEventListener("change", mqHandler);
+      }
+      if (unlistenTheme) {
+        unlistenTheme();
+      }
+      window.removeEventListener("focus", handleFocus);
+      window.clearInterval(intervalId);
+    };
+  }, [followSystemTheme, updateThemeBasedOnSystem]);
+}
+
 function AppWithTheme() {
-  const {
-    followSystemTheme,
-    updateThemeBasedOnSystem,
-  } = useThemeStore();
   const [, setHasAcceptedTerms] = useState(true);
   const { setCurrentPhase } = useStartupFlowStore();
   const {
@@ -167,17 +227,6 @@ function AppWithTheme() {
   } = usePrivacyConsentStore();
   const { config } = useAppStore();
 
-  // 监听系统主题变化
-  useEffect(() => {
-    if (followSystemTheme) {
-      updateThemeBasedOnSystem();
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      const handler = () => updateThemeBasedOnSystem();
-      mediaQuery.addEventListener("change", handler);
-      return () => mediaQuery.removeEventListener("change", handler);
-    }
-  }, [followSystemTheme, updateThemeBasedOnSystem]);
-  
   useEffect(() => {
     if (config.language && i18n.language !== config.language) {
       i18n.changeLanguage(config.language);
@@ -228,6 +277,9 @@ function DeviceSelectionWindowWithTheme() {
 
 function Root() {
   const [label, setLabel] = useState<string | null>(null);
+
+  // 全局系统主题自动同步
+  useSystemThemeAutoSync();
 
   // Subscribe to across-window state changes so that ANY window gets them.
   const { subscribeToStorageChanges: themeStorageChanges } = useThemeStore();

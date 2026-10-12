@@ -47,6 +47,7 @@ import {
   Search24Regular,
   Settings24Regular,
   Wand24Regular,
+  RecordStop20Regular,
 } from "@fluentui/react-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -54,7 +55,7 @@ import { useTranslation } from "react-i18next";
 import { useAIChatStore } from "../../stores/aiChatStore";
 import { useAppStore } from "../../stores/appStore";
 import { logService } from "../../services/logService";
-import { aiService } from "../../services/aiService";
+import { aiService, ChatToolCall } from "../../services/aiService";
 import { useMcpStore, ADMT_BUILTIN_MCP_TOOLS, PRESET_AI_SKILLS, AISkillResource, McpToolDefinition } from "../../stores/mcpStore";
 import { executeMcpTool } from "../../services/mcpExecutor";
 import { listen, emit } from "@tauri-apps/api/event";
@@ -401,6 +402,9 @@ const AIChatPanel: React.FC = () => {
   const { t } = useTranslation();
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
+  const [executingToolInfo, setExecutingToolInfo] = useState<{ name: string; args: any } | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [checkedActions, setCheckedActions] = useState<Record<string, boolean[]>>({});
@@ -648,6 +652,98 @@ const AIChatPanel: React.FC = () => {
     }
   }, [inputValue]);
 
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    setStreamingText("");
+    setExecutingToolInfo(null);
+  };
+
+  const runFollowupAssistantStream = async (convId: string, controller: AbortController) => {
+    try {
+      const conv = useAIChatStore.getState().conversations.find((c) => c.id === convId);
+      if (!conv) return;
+
+      const chatHistory = conv.messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+        tool_call_id: msg.tool_call_id,
+        tool_calls: msg.tool_calls,
+      }));
+
+      let systemMessage = activeSkillPrompt || (isAgentMode ? AGENT_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT);
+      if (selectedDevice) {
+        systemMessage += `\n\n【目标设备状态】\n序列号: ${selectedDevice.serial}\n型号: ${selectedDevice.properties?.model || "Android"}`;
+      }
+
+      const finalMessages = [
+        { role: "system" as const, content: systemMessage },
+        ...chatHistory,
+      ];
+
+      let followupText = "";
+      setStreamingText("");
+
+      const response = await aiService.chatStream({
+        messages: finalMessages,
+        signal: controller.signal,
+        onChunk: (chunk) => {
+          followupText += chunk;
+          setStreamingText(followupText);
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+          }
+        },
+      });
+
+      setStreamingText("");
+      if (response.content || followupText) {
+        addMessage(convId, {
+          role: "assistant",
+          content: response.content || followupText,
+        });
+      }
+    } catch (err: any) {
+      logService.error("Tool Calling 后续总结请求失败", "AIChat", { error: err.message, category: "ai" });
+    }
+  };
+
+  const handleManualExecuteToolCall = async (convId: string, toolCall: any) => {
+    if (!convId || isLoading) return;
+    setIsLoading(true);
+    let parsedArgs: any = {};
+    try {
+      parsedArgs = JSON.parse(toolCall.function?.arguments || "{}");
+    } catch {
+      parsedArgs = {};
+    }
+
+    setExecutingToolInfo({ name: toolCall.function?.name, args: parsedArgs });
+    try {
+      const execRes = await executeMcpTool(toolCall.function?.name, parsedArgs);
+      addMessage(convId, {
+        role: "tool",
+        tool_call_id: toolCall.id,
+        toolName: toolCall.function?.name,
+        toolResult: execRes.result,
+        content: JSON.stringify(execRes.result ?? execRes.error ?? "执行完成"),
+      });
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      await runFollowupAssistantStream(convId, controller);
+    } catch (e: any) {
+      logService.error("手动执行工具调用失败", "AIChat", { error: e.message, category: "ai" });
+    } finally {
+      setIsLoading(false);
+      setExecutingToolInfo(null);
+      abortControllerRef.current = null;
+    }
+  };
+
   const handleSendMessage = async () => {
     if ((!inputValue.trim() && attachedFiles.length === 0) || isLoading) return;
 
@@ -669,35 +765,95 @@ const AIChatPanel: React.FC = () => {
 
     addMessage(convId, { role: "user", content: userContent });
     setIsLoading(true);
+    setStreamingText("");
+    setExecutingToolInfo(null);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
-      const chatHistory = messages.map(msg => ({
-        role: msg.role as "user" | "assistant" | "system",
-        content: msg.content
+      const conv = useAIChatStore.getState().conversations.find((c) => c.id === convId);
+      const chatHistory = (conv ? conv.messages : []).map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        tool_call_id: msg.tool_call_id,
+        tool_calls: msg.tool_calls,
       }));
 
-      // Prepend dynamic system message with Skills & Auto MCP tools injection
+      // 动态注入 System 设定与当前已连接物理设备上下文
       let systemMessage = activeSkillPrompt || (isAgentMode ? AGENT_SYSTEM_PROMPT : CHAT_SYSTEM_PROMPT);
-      if (isAutoMcpEnabled) {
-        const mcpToolsDesc = ADMT_BUILTIN_MCP_TOOLS.map(t => `- ${t.name}: ${t.description}`).join("\n");
-        systemMessage += `\n\n【已协同接入的 MCP 工具能力】\n${mcpToolsDesc}\n如果用户需要执行 ADB、查询设备、截图或调用系统工具，请在回答中给出明确的指导与执行步骤。`;
+      if (selectedDevice) {
+        systemMessage += `\n\n【当前目标 Android 设备上下文】\n序列号: ${selectedDevice.serial}\n型号: ${selectedDevice.properties?.model || "Android Device"}\n系统版本: Android ${selectedDevice.properties?.androidVersion || "未知"}\n模式: ${selectedDevice.mode}\n连接状态: ${selectedDevice.connected ? "已连接" : "离线"}`;
       }
+
       const finalMessages = [
         { role: "system" as const, content: systemMessage },
         ...chatHistory,
-        { role: "user" as const, content: userContent }
       ];
 
-      const response = await aiService.chat(finalMessages);
+      let accumulated = "";
+      let toolCallsReceived: ChatToolCall[] = [];
 
-      if (response.error) {
+      const response = await aiService.chatStream({
+        messages: finalMessages,
+        tools: isAutoMcpEnabled ? ADMT_BUILTIN_MCP_TOOLS : undefined,
+        signal: controller.signal,
+        onChunk: (chunk) => {
+          accumulated += chunk;
+          setStreamingText(accumulated);
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+          }
+        },
+        onToolCalls: (calls) => {
+          toolCallsReceived = calls;
+        },
+      });
+
+      setStreamingText("");
+
+      if (response.error && response.error !== "用户已中止生成") {
         throw new Error(response.error);
       }
-      
-      const assistantMsgId = addMessage(convId, { role: "assistant", content: response.content });
 
-      if (isAgentMode && isAutoExecute) {
-        const agentData = parseAgentResponse(response.content);
+      if (response.error === "用户已中止生成") {
+        if (accumulated) {
+          addMessage(convId, { role: "assistant", content: `${accumulated}\n\n*(已中止生成)*` });
+        }
+        return;
+      }
+      
+      const assistantMsgId = addMessage(convId, {
+        role: "assistant",
+        content: response.content || accumulated,
+        tool_calls: toolCallsReceived.length > 0 ? toolCallsReceived.map(tc => ({
+          id: tc.id,
+          type: "function",
+          function: { name: tc.name, arguments: JSON.stringify(tc.arguments) }
+        })) : undefined
+      });
+
+      // 原生 Tool Calling (Function Calling) 闭环回路
+      if (toolCallsReceived.length > 0) {
+        if (isAutoExecute) {
+          for (const tc of toolCallsReceived) {
+            setExecutingToolInfo({ name: tc.name, args: tc.arguments });
+            const execRes = await executeMcpTool(tc.name, tc.arguments);
+            addMessage(convId, {
+              role: "tool",
+              tool_call_id: tc.id,
+              toolName: tc.name,
+              toolResult: execRes.result,
+              content: JSON.stringify(execRes.result ?? execRes.error ?? "执行完成"),
+            });
+          }
+          setExecutingToolInfo(null);
+          await runFollowupAssistantStream(convId, controller);
+        }
+      }
+      // 向下兼容旧版 Prompt JSON Agent
+      else if (isAgentMode && isAutoExecute) {
+        const agentData = parseAgentResponse(response.content || accumulated);
         if (agentData && agentData.actions && agentData.actions.length > 0) {
           setCheckedActions(prev => ({
             ...prev,
@@ -710,6 +866,7 @@ const AIChatPanel: React.FC = () => {
       }
 
     } catch (error: any) {
+      if (controller.signal.aborted) return;
       logService.error("AI 聊天界面请求失败", "AIChat", { 
         error: error.message, 
         stack: error.stack,
@@ -719,10 +876,13 @@ const AIChatPanel: React.FC = () => {
       });
       addMessage(convId || "", { 
         role: "assistant", 
-        content: ` 请求失败: ${error.message}\n\n建议检查：\n1. 网络连接是否正常\n2. API Key 及 Endpoint 是否正确\n3. 如果是本地模型，确保服务已开启` 
+        content: `请求失败: ${error.message}\n\n建议排查：\n1. 网络连接与代理服务是否畅通\n2. 设置中的 API Key 与 Endpoint 是否正确有效\n3. 如果是本地 Ollama / LM Studio 模型，确认后台服务已就绪` 
       });
     } finally {
       setIsLoading(false);
+      setStreamingText("");
+      setExecutingToolInfo(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -996,16 +1156,34 @@ Logcat 错误日志:
 ${slicedLogs}
 \`\`\``;
 
-      const response = await aiService.chat([
-        { role: "system", content: "你是一个资深的 Android 崩溃日志诊断专家。请仔细阅读 Logcat 日志，找出崩溃根源并给出修复方案。" },
-        { role: "user", content: prompt }
-      ]);
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      let logcatAccumulated = "";
+      setStreamingText("");
 
-      if (response.error) {
+      const response = await aiService.chatStream({
+        messages: [
+          { role: "system", content: "你是一个资深的 Android 崩溃日志诊断专家。请仔细阅读 Logcat 日志，找出崩溃根源并给出修复方案。" },
+          { role: "user", content: prompt }
+        ],
+        signal: controller.signal,
+        onChunk: (chunk) => {
+          logcatAccumulated += chunk;
+          setStreamingText(logcatAccumulated);
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+          }
+        },
+      });
+
+      setStreamingText("");
+      if (response.error && response.error !== "用户已中止生成") {
         throw new Error(response.error);
       }
 
-      addMessage(convId, { role: "assistant", content: response.content });
+      if (response.content || logcatAccumulated) {
+        addMessage(convId, { role: "assistant", content: response.content || logcatAccumulated });
+      }
 
     } catch (error: any) {
       logService.error("Logcat 诊断失败", "AIChat", { error: error.message, category: "ai" });
@@ -1469,6 +1647,57 @@ ${slicedLogs}
                       )}
                     >
                       {(() => {
+                        // 1. 原生 Tool 执行结果卡片
+                        if (msg.role === "tool") {
+                          return (
+                            <div style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                              width: "100%",
+                              minWidth: "260px",
+                              padding: "10px 12px",
+                              borderRadius: "10px",
+                              backgroundColor: "var(--colorNeutralBackground3)",
+                              border: "1px solid var(--colorNeutralStroke2)",
+                              fontSize: "12px",
+                              fontFamily: "var(--fontFamilyMonospace)",
+                            }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "600", color: "var(--colorNeutralForeground1)" }}>
+                                  <Wrench24Regular style={{ fontSize: "16px", color: "var(--colorBrandForeground1)" }} />
+                                  <span>工具执行结果: {msg.toolName || "本地工具"}</span>
+                                </div>
+                                <Badge appearance="tint" color="brand" size="small">已完成</Badge>
+                              </div>
+                              {msg.toolResult?.imageBase64 ? (
+                                <div style={{ marginTop: "4px" }}>
+                                  <img
+                                    src={msg.toolResult.imageBase64}
+                                    alt="Screen Preview"
+                                    style={{ maxWidth: "260px", maxHeight: "360px", borderRadius: "8px", border: "1px solid var(--colorNeutralStroke1)" }}
+                                  />
+                                </div>
+                              ) : (
+                                <pre style={{
+                                  margin: 0,
+                                  padding: "8px 10px",
+                                  borderRadius: "6px",
+                                  backgroundColor: "var(--colorNeutralBackground1)",
+                                  overflowX: "auto",
+                                  maxHeight: "160px",
+                                  whiteSpace: "pre-wrap",
+                                  wordBreak: "break-all",
+                                  color: "var(--colorNeutralForeground2)",
+                                }}>
+                                  {typeof msg.toolResult === "object" ? JSON.stringify(msg.toolResult, null, 2) : msg.content}
+                                </pre>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        // 2. 旧版基于 Prompt 的 Agent 解析向下兼容
                         if (msg.role !== "user") {
                           const agentData = parseAgentResponse(msg.content);
                           if (agentData) {
@@ -1592,70 +1821,129 @@ ${slicedLogs}
                         }
                         
                         return (
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              code({ inline, className, children, ...props }: any) {
-                                const match = /language-(\w+)/.exec(className || "");
-                                const rawCode = String(children).replace(/\n$/, "");
-                                
-                                if (!inline && rawCode.length > 0) {
-                                  const isCommand = match && ["bash", "sh", "batch", "powershell"].includes(match[1]) || rawCode.startsWith("adb ") || rawCode.startsWith("fastboot ");
-                                  return (
-                                    <div style={{ 
-                                      border: `1px solid ${tokens.colorNeutralStroke2}`, 
-                                      borderRadius: "6px", 
-                                      overflow: "hidden", 
-                                      margin: "8px 0" 
-                                    }}>
-                                      <div style={{ 
-                                        display: "flex", 
-                                        justifyContent: "space-between", 
-                                        alignItems: "center", 
-                                        padding: "4px 8px", 
-                                        backgroundColor: "var(--colorNeutralBackground3)",
-                                        borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
-                                      }}>
-                                        <Text size={200} style={{ fontFamily: "monospace" }}>
-                                          {match ? match[1] : "code"}
-                                        </Text>
-                                        <div style={{ display: "flex", gap: "4px" }}>
-                                          <Tooltip content="复制完整代码" relationship="label">
-                                            <Button 
-                                              size="small" 
-                                              appearance="subtle" 
-                                              icon={<Copy24Regular style={{ fontSize: "16px" }} />} 
-                                              onClick={() => navigator.clipboard.writeText(rawCode)}
-                                            />
-                                          </Tooltip>
-                                          {isCommand && (
-                                            <Tooltip content="在命令行工具中运行" relationship="label">
-                                              <Button 
-                                                size="small" 
-                                                appearance="subtle" 
-                                                icon={<Play24Regular style={{ fontSize: "16px" }} />} 
-                                                onClick={() => handleRunCommand(rawCode)}
-                                              />
-                                            </Tooltip>
-                                          )}
+                          <>
+                            {msg.content && (
+                              <ReactMarkdown 
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  code({ inline, className, children, ...props }: any) {
+                                    const match = /language-(\w+)/.exec(className || "");
+                                    const rawCode = String(children).replace(/\n$/, "");
+                                    
+                                    if (!inline && rawCode.length > 0) {
+                                      const isCommand = match && ["bash", "sh", "batch", "powershell"].includes(match[1]) || rawCode.startsWith("adb ") || rawCode.startsWith("fastboot ");
+                                      return (
+                                        <div style={{ 
+                                          border: `1px solid ${tokens.colorNeutralStroke2}`, 
+                                          borderRadius: "6px", 
+                                          overflow: "hidden", 
+                                          margin: "8px 0" 
+                                        }}>
+                                          <div style={{ 
+                                            display: "flex", 
+                                            justifyContent: "space-between", 
+                                            alignItems: "center", 
+                                            padding: "4px 8px", 
+                                            backgroundColor: "var(--colorNeutralBackground3)",
+                                            borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
+                                          }}>
+                                            <Text size={200} style={{ fontFamily: "monospace" }}>
+                                              {match ? match[1] : "code"}
+                                            </Text>
+                                            <div style={{ display: "flex", gap: "4px" }}>
+                                              <Tooltip content="复制完整代码" relationship="label">
+                                                <Button 
+                                                  size="small" 
+                                                  appearance="subtle" 
+                                                  icon={<Copy24Regular style={{ fontSize: "16px" }} />} 
+                                                  onClick={() => navigator.clipboard.writeText(rawCode)}
+                                                />
+                                              </Tooltip>
+                                              {isCommand && (
+                                                <Tooltip content="在命令行工具中运行" relationship="label">
+                                                  <Button 
+                                                    size="small" 
+                                                    appearance="subtle" 
+                                                    icon={<Play24Regular style={{ fontSize: "16px" }} />} 
+                                                    onClick={() => handleRunCommand(rawCode)}
+                                                  />
+                                                </Tooltip>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div style={{ padding: 0 }}>
+                                            <pre className={className} style={{ margin: 0, padding: "8px", overflowX: "auto" }}>
+                                              <code className={className} {...props}>
+                                                {children}
+                                              </code>
+                                            </pre>
+                                          </div>
                                         </div>
+                                      );
+                                    }
+                                    return <code className={className} {...props}>{children}</code>;
+                                  }
+                                }}
+                              >
+                                {msg.content}
+                              </ReactMarkdown>
+                            )}
+
+                            {/* 3. 原生 Tool Calling 调用卡片（手动确认模式下提供即时执行入口） */}
+                            {msg.tool_calls && msg.tool_calls.length > 0 && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: msg.content ? "8px" : 0 }}>
+                                {msg.tool_calls.map((tc, tcIdx) => {
+                                  let argsObj: any = {};
+                                  try {
+                                    argsObj = JSON.parse(tc.function?.arguments || "{}");
+                                  } catch {
+                                    argsObj = tc.function?.arguments;
+                                  }
+                                  return (
+                                    <div key={tcIdx} style={{
+                                      padding: "10px 12px",
+                                      borderRadius: "10px",
+                                      backgroundColor: "var(--colorNeutralBackground3)",
+                                      border: "1px solid var(--colorNeutralStroke2)",
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: "6px"
+                                    }}>
+                                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "600", fontSize: "12px" }}>
+                                          <Wrench24Regular style={{ fontSize: "16px", color: "var(--colorBrandForeground1)" }} />
+                                          <span>请求调用工具: <code>{tc.function?.name}</code></span>
+                                        </div>
+                                        {!isAutoExecute && (
+                                          <Button
+                                            size="small"
+                                            appearance="primary"
+                                            icon={<Play24Regular />}
+                                            onClick={() => handleManualExecuteToolCall(currentConversationId || "", tc)}
+                                            disabled={isLoading}
+                                          >
+                                            执行并反馈
+                                          </Button>
+                                        )}
                                       </div>
-                                      <div style={{ padding: 0 }}>
-                                        <pre className={className} style={{ margin: 0, padding: "8px", overflowX: "auto" }}>
-                                          <code className={className} {...props}>
-                                            {children}
-                                          </code>
-                                        </pre>
-                                      </div>
+                                      <pre style={{
+                                        margin: 0,
+                                        padding: "6px 8px",
+                                        borderRadius: "6px",
+                                        backgroundColor: "var(--colorNeutralBackground1)",
+                                        fontSize: "11px",
+                                        fontFamily: "var(--fontFamilyMonospace)",
+                                        maxHeight: "100px",
+                                        overflowX: "auto"
+                                      }}>
+                                        {JSON.stringify(argsObj, null, 2)}
+                                      </pre>
                                     </div>
                                   );
-                                }
-                                return <code className={className} {...props}>{children}</code>;
-                              }
-                            }}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
+                                })}
+                              </div>
+                            )}
+                          </>
                         );
                       })()}
                     </div>
@@ -1679,10 +1967,33 @@ ${slicedLogs}
                 ))
               )}
               {isLoading && (
-                <div className={styles.messageGroup + " " + styles.botMessage}>
+                <div className={mergeClasses(styles.messageGroup, styles.botMessage)}>
                   <Avatar icon={<Bot24Regular />} color="colorful" />
-                  <div className={styles.messageContent + " " + styles.botContent}>
-                    <Spinner size="tiny" label="正在思考..." />
+                  <div className={mergeClasses(styles.messageContent, styles.botContent, styles.markdownWrapper)}>
+                    {executingToolInfo ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 0" }}>
+                        <Spinner size="tiny" />
+                        <Text size={200} style={{ color: "var(--colorBrandForeground1)", fontFamily: "var(--fontFamilyMonospace)" }}>
+                          正在执行玩机工具: <code>{executingToolInfo.name}</code>...
+                        </Text>
+                      </div>
+                    ) : streamingText ? (
+                      <div>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {streamingText}
+                        </ReactMarkdown>
+                        <span style={{
+                          display: "inline-block",
+                          width: "6px",
+                          height: "14px",
+                          backgroundColor: "var(--colorBrandForeground1)",
+                          marginLeft: "4px",
+                          verticalAlign: "middle",
+                        }} />
+                      </div>
+                    ) : (
+                      <Spinner size="tiny" label="正在思考..." />
+                    )}
                   </div>
                 </div>
               )}
@@ -1806,15 +2117,27 @@ ${slicedLogs}
                     <span style={{ fontSize: "11px", color: "var(--colorNeutralForeground4)" }}>
                       Enter 发送 / Shift+Enter 换行
                     </span>
-                    <Button 
-                      icon={<Send24Regular />} 
-                      appearance="primary" 
-                      size="medium"
-                      onClick={handleSendMessage}
-                      disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
-                    >
-                      发送
-                    </Button>
+                    {isLoading ? (
+                      <Button 
+                        icon={<RecordStop20Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />} 
+                        appearance="secondary" 
+                        size="medium"
+                        onClick={handleStopGeneration}
+                        style={{ borderRadius: "9999px" }}
+                      >
+                        停止生成
+                      </Button>
+                    ) : (
+                      <Button 
+                        icon={<Send24Regular />} 
+                        appearance="primary" 
+                        size="medium"
+                        onClick={handleSendMessage}
+                        disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
+                      >
+                        发送
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

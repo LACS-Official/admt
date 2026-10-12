@@ -188,12 +188,31 @@ const HomePage: React.FC = () => {
   const styles = useStyles();
   const { devices, selectedDevice, isScanning } = useDeviceStore();
   const { t } = useTranslation();
-  const { setStatusBarMessage } = useAppStore();
+  const { setStatusBarMessage, clearStatusBarMessage } = useAppStore();
 
   const connectedDevices = devices.filter((d) => d.connected);
 
   // 标签页状态：info | monitor | actions | connect
   const [activeTab, setActiveTab] = useState<string>("connect");
+
+  // 演示模式提示联动状态栏：处于演示模式时在底部状态栏提示，离开页面或连接真实设备时自动清除
+  useEffect(() => {
+    const isDemo = !selectedDevice;
+    if (isDemo) {
+      setStatusBarMessage({
+        type: "info",
+        source: "home:demo",
+        message: `${t("home.demo_mode_title")}: ${t("home.demo_mode_desc")}`,
+        duration: 0,
+      });
+    } else {
+      clearStatusBarMessage("home:demo");
+    }
+
+    return () => {
+      clearStatusBarMessage("home:demo");
+    };
+  }, [selectedDevice, setStatusBarMessage, clearStatusBarMessage, t]);
 
   // 监听设备连接状态，自动切换标签页
   useEffect(() => {
@@ -229,23 +248,11 @@ const HomePage: React.FC = () => {
 
   // 设备概览面板
   const renderOverviewTab = () => {
-    const isDemo = !selectedDevice;
     const displayDevice = selectedDevice || mockDevice;
 
     return (
       <div className={styles.tabPanel}>
         <div className={styles.deviceSection}>
-          {isDemo && (
-            <motion.div
-              className={styles.demoInfoBar}
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className={styles.demoBadge}>{t("home.demo_mode_title")}</div>
-              <Text size={300}>{t("home.demo_mode_desc")}</Text>
-            </motion.div>
-          )}
-
           <div
             className={mergeClasses(styles.deviceOverviewSection, "card-enter")}
             id="tour-home-overview"

@@ -171,7 +171,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   onDownload,
 }) => {
   const styles = useStyles();
-  const { setStatusBarMessage } = useAppStore();
+  const { setStatusBarMessage, globalDownload } = useAppStore();
   const [detailData, setDetailData] = useState<OnlineSoftware | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -527,6 +527,42 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
           )}
         </DialogContent>
         
+        {/* 动态下载进度与微动效条 */}
+        {(isDownloading || (globalDownload && globalDownload.status === 'downloading')) && (
+          <div style={{ padding: '0 24px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--colorBrandForeground1)', fontWeight: 500 }}>
+                <Spinner size="extra-tiny" />
+                正在下载资源中...
+              </span>
+              <span style={{ fontWeight: 600, color: 'var(--colorBrandForeground1)' }}>
+                {globalDownload?.progress || 15}%
+                {globalDownload?.speedText && (
+                  <span style={{ fontSize: '11px', color: 'var(--colorNeutralForeground3)', marginLeft: '6px', fontWeight: 400 }}>
+                    {globalDownload.speedText}
+                  </span>
+                )}
+              </span>
+            </div>
+            <div style={{
+              width: '100%',
+              height: '4px',
+              borderRadius: '9999px',
+              backgroundColor: 'var(--colorNeutralStroke2)',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${Math.max(6, Math.min(100, globalDownload?.progress || 15))}%`,
+                height: '100%',
+                borderRadius: '9999px',
+                backgroundColor: 'var(--colorBrandBackground)',
+                transition: 'width 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
+                backgroundImage: 'linear-gradient(90deg, var(--colorBrandBackground), var(--colorBrandBackgroundHover))',
+              }} />
+            </div>
+          </div>
+        )}
+
         <DialogActions>
           <Button appearance="secondary" onClick={onClose}>
             关闭

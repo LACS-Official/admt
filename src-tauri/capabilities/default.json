@@ -73,14 +73,26 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://api-g.lacs.cc/**" },
-        { "url": "https://api.openai.com/**" },
-        { "url": "https://api.anthropic.com/**" },
-        { "url": "https://generativelanguage.googleapis.com/**" },
-        { "url": "https://integrate.api.nvidia.com/**" },
-        { "url": "http://localhost:**" },
-        { "url": "http://127.0.0.1:**" }
+        { "url": "https://*" },
+        { "url": "http://*" },
+        { "url": "*://*" },
+        { "url": "https://api.deepseek.com/*" },
+        { "url": "https://*.deepseek.com/*" },
+        { "url": "https://api.openai.com/*" },
+        { "url": "https://api.anthropic.com/*" },
+        { "url": "https://generativelanguage.googleapis.com/*" },
+        { "url": "https://integrate.api.nvidia.com/*" },
+        { "url": "https://open.bigmodel.cn/*" },
+        { "url": "https://api.moonshot.cn/*" },
+        { "url": "https://api.siliconflow.cn/*" },
+        { "url": "https://dashscope.aliyuncs.com/*" },
+        { "url": "https://api.groq.com/*" },
+        { "url": "https://openrouter.ai/*" },
+        { "url": "https://api-g.lacs.cc/*" },
+        { "url": "http://localhost:*" },
+        { "url": "http://127.0.0.1:*" }
       ]
-    }
+    },
+    "log:default"
   ]
 }

@@ -235,30 +235,18 @@ const DisplaySettingsPanel: React.FC = () => {
 
   const [showColorPicker, setShowColorPicker] = useState(false);
 
-  // 监听系统主题变化
+  // 当开启跟随系统时，确保立即执行一次同步
   useEffect(() => {
     if (followSystemTheme) {
       updateThemeBasedOnSystem();
     }
+  }, [followSystemTheme, updateThemeBasedOnSystem]);
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => {
-      if (followSystemTheme) {
-        updateThemeBasedOnSystem();
-        updateConfig({
-          theme: mediaQuery.matches ? "dark" : "light"
-        });
-      }
-    };
-
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, [followSystemTheme, updateThemeBasedOnSystem, updateConfig]);
-
-  const handleThemeTabSelect = (val: string) => {
+  const handleThemeTabSelect = async (val: string) => {
     if (val === 'system') {
       setFollowSystemTheme(true);
-      updateThemeBasedOnSystem();
+      await updateThemeBasedOnSystem();
+      updateConfig({ theme: "auto" });
     } else {
       setFollowSystemTheme(false);
       const isDark = val === 'dark';

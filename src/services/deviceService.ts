@@ -1,4 +1,4 @@
-﻿import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef } from "react";
 import { useDeviceStore } from "../stores/deviceStore";
 import { useAppStore } from "../stores/appStore";
@@ -113,6 +113,26 @@ export class DeviceService {
         return result;
       } catch (error) {
         console.error("Failed to execute ADB command:", error);
+        throw error;
+      }
+    });
+  }
+
+  async executeAdbCommandDirect(
+    command: string,
+    args: string[] = [],
+    timeout?: number
+  ): Promise<CommandResult> {
+    return await adbToolsManager.executeWithFallback(async () => {
+      try {
+        const result = await invoke<CommandResult>("execute_adb_command_direct", {
+          command,
+          args,
+          timeout,
+        });
+        return result;
+      } catch (error) {
+        console.error("Failed to execute direct ADB command:", error);
         throw error;
       }
     });
@@ -356,6 +376,24 @@ export class DeviceService {
         throw error;
       }
     });
+  }
+
+  async executeSshCommand(
+    command: string,
+    args: string[] = [],
+    timeout?: number
+  ): Promise<CommandResult> {
+    try {
+      const result = await invoke<CommandResult>("execute_ssh_command", {
+        command,
+        args,
+        timeout,
+      });
+      return result;
+    } catch (error) {
+      console.error("[DeviceService] Failed to execute SSH command:", error);
+      throw error;
+    }
   }
 
   async fastbootFlashImage(serial: string, imagePath: string, partition: string): Promise<CommandResult> {

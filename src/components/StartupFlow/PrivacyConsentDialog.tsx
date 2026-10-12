@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { admtLogo512 } from "../../assets/icons";
 import { wechatpay, alipay } from "../../assets/icons";
+import DonationPanel from "../Settings/DonationPanel";
 import {
   Button,
   Checkbox,
@@ -47,7 +48,6 @@ import { useAppStore } from "../../stores/appStore";
 import { systemTrayManager } from "../../services/systemTrayManager";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import confetti from "canvas-confetti";
 
 const useStyles = makeStyles({
   container: {
@@ -56,9 +56,7 @@ const useStyles = makeStyles({
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, rgba(0, 113, 227, 0.06) 0%, var(--colorNeutralBackground1) 50%, rgba(0, 113, 227, 0.04) 100%)",
-    backgroundSize: "400% 400%",
-    animation: "gradientBG 15s ease infinite",
+    backgroundColor: "var(--colorNeutralBackground2)",
     position: "relative",
     overflow: "hidden",
   },
@@ -71,7 +69,7 @@ const useStyles = makeStyles({
     borderRadius: "20px",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
-    boxShadow: "0 24px 64px -12px rgba(0, 0, 0, 0.14)",
+    boxShadow: "0 24px 64px -12px rgba(0, 0, 0, 0.12), 0 0 1px 1px rgba(0, 0, 0, 0.04)",
     overflow: "hidden",
   },
   leftPanel: {
@@ -231,16 +229,38 @@ const useStyles = makeStyles({
     borderRight: "1px solid var(--colorNeutralStroke2)",
   },
   qrImage: {
-    width: "160px",
-    height: "160px",
-    borderRadius: "14px",
+    width: "180px",
+    height: "180px",
+    borderRadius: "16px",
     objectFit: "cover",
     border: "1px solid var(--colorNeutralStroke2)",
-    boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.06)",
-    transition: "transform 0.2s ease",
-    ":hover": {
-      transform: "scale(1.03)",
-    },
+    boxShadow: "0 6px 20px -4px rgba(0, 0, 0, 0.08)",
+  },
+  segmentedTabs: {
+    display: "flex",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    borderRadius: "9999px",
+    padding: "3px",
+    gap: "4px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    marginBottom: "8px",
+  },
+  segmentTab: {
+    padding: "4px 16px",
+    borderRadius: "9999px",
+    fontSize: "12px",
+    fontWeight: 500,
+    cursor: "pointer",
+    border: "none",
+    backgroundColor: "transparent",
+    color: "var(--colorNeutralForeground2)",
+    transition: "all 0.15s ease",
+  },
+  segmentTabActive: {
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "var(--colorBrandForeground1)",
+    fontWeight: 600,
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
   },
   sponsorshipContent: {
     display: "flex",
@@ -270,6 +290,31 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "4px",
   },
+  donationDialog: {
+    width: "660px",
+    maxWidth: "92vw",
+    maxHeight: "85vh",
+    borderRadius: "18px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    boxShadow: "0 20px 48px -8px rgba(0, 0, 0, 0.24)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    boxSizing: "border-box",
+  },
+  donationDialogBody: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    minHeight: 0,
+    overflow: "hidden",
+  },
+  donationDialogContent: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    paddingRight: "6px",
+  },
 });
 
 interface PrivacyConsentDialogProps {
@@ -287,21 +332,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
   const { t, i18n } = useTranslation();
   const [acceptedAll, setAcceptedAll] = useState(false);
   const [step, setStep] = useState<"privacy" | "sponsorship">("privacy");
+  const [sponsorshipChannel, setSponsorshipChannel] = useState<"alipay" | "wechat">("alipay");
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isDonationDialogOpen, setIsDonationDialogOpen] = useState(false);
   const { config, updateConfig } = useAppStore();
-  const celebrationIntervalRef = React.useRef<any>(null);
-  const isAcceptedRef = React.useRef(false);
-
-  // 组件卸载时清理定时器
-  React.useEffect(() => {
-    return () => {
-      // 只有在非正常接受（如直接关闭或强行切换）时才在这里清理
-      // 正常接受流程中，我们允许烟花继续燃放一会，它内部有自清理逻辑
-      if (celebrationIntervalRef.current && !isAcceptedRef.current) {
-        clearInterval(celebrationIntervalRef.current);
-      }
-    };
-  }, []);
 
   const {
     acceptPrivacyPolicy,
@@ -319,73 +353,23 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
   };
 
   const openDonationPage = () => {
-    window.open("https://www.lacs.cc/donate", "_blank");
+    // 优先打开内置原生赞助/捐赠弹窗，同时尝试拉起外部浏览器备用
+    setIsDonationDialogOpen(true);
+    try {
+      import("@tauri-apps/plugin-shell")
+        .then(({ open }) => open("https://www.lacs.cc/donate"))
+        .catch(() => {});
+    } catch {
+      // 忽略在无网络环境或受限环境下的浏览器弹窗
+    }
   };
 
   const handleFinalAccept = () => {
-    isAcceptedRef.current = true;
-    // 触发庆祝烟花
-    fireCelebration();
-
-    // 延迟一点时间再调用后续逻辑，让用户能看到烟花开始
-    // 在这期间不调用 completePrivacySetup，避免组件立即卸载
-    setTimeout(() => {
-      acceptPrivacyPolicy();
-      acceptUserAgreement();
-      acceptDataCollection();
-      completePrivacySetup();
-      onAccept();
-    }, 1500);
-  };
-
-  const fireCelebration = () => {
-    const duration = 5 * 1000;
-    const animationEnd = Date.now() + duration;
-    const defaults = {
-      startVelocity: 30,
-      spread: 360,
-      ticks: 60,
-      zIndex: 10000,
-    };
-
-    const randomInRange = (min: number, max: number) => {
-      return Math.random() * (max - min) + min;
-    };
-
-    const interval: any = setInterval(function () {
-      const timeLeft = animationEnd - Date.now();
-
-      if (timeLeft <= 0) {
-        clearInterval(interval);
-        celebrationIntervalRef.current = null;
-        return;
-      }
-
-      const particleCount = 50 * (timeLeft / duration);
-
-      // 随机喷发位置
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-      });
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-      });
-
-      // 每隔一次增加一次中心大喷发
-      if (Math.random() > 0.7) {
-        confetti({
-          ...defaults,
-          particleCount: particleCount * 2,
-          origin: { x: 0.5, y: 0.5 },
-        });
-      }
-    }, 250);
-
-    celebrationIntervalRef.current = interval;
+    acceptPrivacyPolicy();
+    acceptUserAgreement();
+    acceptDataCollection();
+    completePrivacySetup();
+    onAccept();
   };
 
   const handleReject = async () => {
@@ -445,17 +429,6 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
       <AnimatePresence>
         {open && (
           <div className={styles.container} data-tauri-drag-region>
-            {/* Background Animations */}
-            <style>
-              {`
-                @keyframes gradientBG {
-                  0% { background-position: 0% 50%; }
-                  50% { background-position: 100% 50%; }
-                  100% { background-position: 0% 50%; }
-                }
-              `}
-            </style>
-
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -508,47 +481,53 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                         </Text>
                       </motion.div>
                       <div className={styles.versionTag}>
-                        领创工作室全栈开发
+                        {t("welcome.version_tag", "领创工作室全栈开发")}
                       </div>
                     </motion.div>
                   ) : (
                     <motion.div
                       key="sponsorship-left"
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
                       style={{
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
-                        gap: tokens.spacingVerticalL,
+                        gap: tokens.spacingVerticalM,
                         width: "100%",
                       }}
                     >
-                      <Text className={styles.sponsorshipTitle} block>
-                        支付宝 ↓
-                      </Text>
-                      <motion.img
-                        src={alipay}
-                        alt="Alipay"
-                        className={styles.qrImage}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                      />
-                      {/* 分割线 */}
+                      <div className={styles.segmentedTabs}>
+                        <button
+                          type="button"
+                          className={`${styles.segmentTab} ${sponsorshipChannel === "alipay" ? styles.segmentTabActive : ""}`}
+                          onClick={() => setSponsorshipChannel("alipay")}
+                        >
+                          {t("donation.alipay", "支付宝")}
+                        </button>
+                        <button
+                          type="button"
+                          className={`${styles.segmentTab} ${sponsorshipChannel === "wechat" ? styles.segmentTabActive : ""}`}
+                          onClick={() => setSponsorshipChannel("wechat")}
+                        >
+                          {t("donation.wechat_pay", "微信支付")}
+                        </button>
+                      </div>
 
-                      <Text className={styles.sponsorshipTitle} block>
-                        微信 ↓
-                      </Text>
                       <motion.img
-                        src={wechatpay}
-                        alt="Wechat"
+                        key={sponsorshipChannel}
+                        src={sponsorshipChannel === "alipay" ? alipay : wechatpay}
+                        alt={sponsorshipChannel}
                         className={styles.qrImage}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.4 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.2 }}
                       />
+
+                      <Text size={200} style={{ color: "var(--colorNeutralForeground3)", marginTop: "4px" }}>
+                        {sponsorshipChannel === "alipay" ? t("welcome.sponsorship_alipay", "支付宝扫码支持") : t("welcome.sponsorship_wechat", "微信扫码支持")}
+                      </Text>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -641,7 +620,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                             }}
                           >
                             <Play24Regular />
-                            <Label>通知音效</Label>
+                            <Label>{t("welcome.sound_effect", "通知音效")}</Label>
                           </div>
                           <Switch
                             checked={config.soundEnabled}
@@ -660,7 +639,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                             }}
                           >
                             <ArrowMinimize24Regular />
-                            <Label>系统托盘</Label>
+                            <Label>{t("welcome.system_tray", "系统托盘")}</Label>
                           </div>
                           <Switch
                             checked={config.systemTrayEnabled}
@@ -738,11 +717,10 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                         transition={{ delay: 0.1 }}
                       >
                         <Text className={styles.sponsorshipTitle} block>
-                          支持开源 · 自愿赞助
+                          {t("welcome.sponsorship_title", "支持开源 · 自愿赞助")}
                         </Text>
                         <Text className={styles.sponsorshipDescription} block>
-                          玩机管家是一款由<b>领创工作室</b>维护的开源免费项目。
-                          致力于为 Android 玩机爱好者与开发者提供高效、纯净、强大的现代化工具箱。
+                          {t("welcome.sponsorship_desc", "玩机管家是一款由领创工作室维护的开源免费项目。致力于为 Android 玩机爱好者与开发者提供高效、纯净、强大的现代化工具箱。")}
                         </Text>
                       </motion.div>
 
@@ -757,15 +735,14 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                           size={300}
                           block
                         >
-                          开源项目，完全免费使用
+                          {t("welcome.free_title", "开源项目，完全免费使用")}
                         </Text>
                         <Text
                           size={200}
                           block
                           style={{ color: "var(--colorNeutralForeground2)" }}
                         >
-                          本软件所有核心功能完全免费开放，捐赠与否均可体验完整功能。
-                          赞助资金将全部用于服务器带宽、开源维护与版本迭代。
+                          {t("welcome.free_desc", "本软件所有核心功能完全免费开放，捐赠与否均可体验完整功能。赞助资金将全部用于服务器带宽、开源维护与版本迭代。")}
                         </Text>
                       </motion.div>
 
@@ -780,14 +757,14 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                           size={300}
                           block
                         >
-                          致谢与社区捐赠榜
+                          {t("welcome.thanks_title", "致谢与社区捐赠榜")}
                         </Text>
                         <Text
                           size={200}
                           block
                           style={{ color: "var(--colorNeutralForeground2)" }}
                         >
-                          无论金额大小，每一份支持都是我们持续迭代的动力。已赞助用户将记录于社区鸣谢榜。
+                          {t("welcome.thanks_desc", "无论金额大小，每一份支持都是我们持续迭代的动力。已赞助用户将记录于社区鸣谢榜。")}
                         </Text>
                       </motion.div>
 
@@ -803,7 +780,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                             onClick={openDonationPage}
                             icon={<Heart24Regular />}
                           >
-                            打开捐赠墙
+                            {t("welcome.open_donation", "打开捐赠墙")}
                           </Button>
                           <Button
                             appearance="primary"
@@ -812,7 +789,7 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                             onClick={handleFinalAccept}
                             icon={<CheckmarkCircle24Regular />}
                           >
-                            我已了解，进入应用
+                            {t("welcome.enter_app", "我已了解，进入应用")}
                           </Button>
                         </div>
                       </div>
@@ -862,6 +839,35 @@ const PrivacyConsentDialog: React.FC<PrivacyConsentDialogProps> = ({
                 }}
               >
                 {t("common.confirm_exit")}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* 捐赠墙 / 赞助支持弹窗 */}
+      <Dialog
+        open={isDonationDialogOpen}
+        onOpenChange={(_, d) => setIsDonationDialogOpen(d.open)}
+      >
+        <DialogSurface className={styles.donationDialog}>
+          <DialogBody className={styles.donationDialogBody}>
+            <DialogTitle>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Heart24Regular style={{ color: "#e11d48" }} />
+                <span>{t("welcome.open_donation", "社区捐赠榜")}</span>
+              </div>
+            </DialogTitle>
+            <DialogContent className={styles.donationDialogContent}>
+              <DonationPanel />
+            </DialogContent>
+            <DialogActions>
+              <Button
+                appearance="primary"
+                className={styles.pillButton}
+                onClick={() => setIsDonationDialogOpen(false)}
+              >
+                {t("common.close", "关闭")}
               </Button>
             </DialogActions>
           </DialogBody>

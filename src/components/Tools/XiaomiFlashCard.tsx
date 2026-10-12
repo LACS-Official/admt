@@ -1,4 +1,4 @@
-import React, { useState }  from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
   Card,
@@ -148,10 +148,21 @@ type FlashStatus = "idle" | "checking" | "flashing" | "success" | "error";
 const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootRequired }) => {
   const styles = useStyles();
   useDeviceService();
-  const { setFlashing } = useDeviceStore();
-  const { config, updateConfig } = useAppStore();
-  const { setStatusBarMessage } = useAppStore();
+  const { config, updateConfig, setStatusBarMessage, clearStatusBarMessage } = useAppStore();
   const { t } = useTranslation();
+
+  // 页面高危提示移至状态栏显示，退出该页面时自动清理
+  useEffect(() => {
+    setStatusBarMessage({
+      type: "warning",
+      source: "tools:xiaomi-flash",
+      message: `${t('flash.xiaomi_risk_title')}: ${t('flash.xiaomi_risk_desc1')} ${t('flash.xiaomi_risk_desc2')}`,
+      duration: 0,
+    });
+    return () => {
+      clearStatusBarMessage("tools:xiaomi-flash");
+    };
+  }, [setStatusBarMessage, clearStatusBarMessage, t]);
 
   
   const [selectedPackage, setSelectedPackage] = useState<string>("");
@@ -332,20 +343,6 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
       <Card className={styles.card}>
         
         <div className={styles.content}>
-          {/* 风险提示卡片 */}
-          <div className={styles.warningSection}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Warning24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
-              <Text weight="semibold">{t('flash.xiaomi_risk_title')}</Text>
-            </div>
-            <Text size={300} style={{ marginTop: "8px" }}>
-              {t('flash.xiaomi_risk_desc1')}
-            </Text>
-            <Text size={300} style={{ marginTop: "4px" }}>
-              {t('flash.xiaomi_risk_desc2')}
-            </Text>
-          </div>
-
           {/* 线刷包选择 */}
           <div className={styles.section}>
             <Text weight="semibold">{t('flash.xiaomi_step1')}</Text>

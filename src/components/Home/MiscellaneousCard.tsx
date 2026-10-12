@@ -29,7 +29,6 @@ import {
 
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
-import { useDeviceStore } from "../../stores/deviceStore";
 import { invoke } from "@tauri-apps/api/core";
 import { useBatchExecutor } from "../Common/BatchExecutorDialog";
 
@@ -159,12 +158,10 @@ interface MiscellaneousCardProps {
   device?: any;
 }
 
-const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device: propDevice }) => {
+const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { selectedDevice: storeDevice } = useDeviceStore();
-  const selectedDevice = propDevice || storeDevice;
-  const { setStatusBarMessage, setWirelessDebuggingDialogOpen } = useAppStore();
+  const { setStatusBarMessage, setCurrentView } = useAppStore();
   const { BatchExecutorDialog } = useBatchExecutor();
 
   const [executingFunction, setExecutingFunction] = useState<string | null>(null);
@@ -181,15 +178,6 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device
     description: string,
     isRisky: boolean = false
   ) => {
-    if (selectedDevice?.serial === "DEMO-ADB-001") {
-      setStatusBarMessage({
-        type: "warning",
-        message: t('adb.demo_mode'),
-        duration: 3000,
-      });
-      return;
-    }
-
     if (isRisky) {
       setStatusBarMessage({
         type: "warning",
@@ -239,7 +227,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device
   const handleRestartAdb = async () => {
     setStatusBarMessage({
       type: "info",
-      message: t('misc.usb_fix_running'),
+      message: `${t('misc.restart_adb')}...`,
     });
     await executeCommand(
       "restart-adb",
@@ -253,6 +241,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className, device
       type: "info",
       message: t('misc.driver_tip'),
     });
+    setCurrentView("online-resources");
   };
 
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 隐私政策同意状态管理
  * 管理用户对隐私政策、用户协议和数据收集的同意状态
  */
@@ -89,13 +89,13 @@ export interface PrivacyConsentActions {
   updateToLatestVersions: () => void;
 }
 
-// 默认数据收集类型设置
+// 默认数据收集类型设置（默认开启匿名诊断与改进数据）
 const defaultDataCollectionTypes: DataCollectionTypes = {
-  deviceData: false,
-  userBehavior: false,
-  analytics: false,
-  crashReporting: false,
-  performanceMetrics: false,
+  deviceData: true,
+  userBehavior: true,
+  analytics: true,
+  crashReporting: true,
+  performanceMetrics: true,
 };
 
 // 初始状态
@@ -154,7 +154,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
             userBehavior: true,
             analytics: true,
             crashReporting: true,
-            performanceMetrics: false,
+            performanceMetrics: true,
           },
         });
         console.log(' 用户已同意数据收集');
@@ -226,7 +226,7 @@ export const usePrivacyConsentStore = create<PrivacyConsentState & PrivacyConsen
             userBehavior: true,
             analytics: true,
             crashReporting: true,
-            performanceMetrics: false,
+            performanceMetrics: true,
           },
           shouldExitApp: false,
         });

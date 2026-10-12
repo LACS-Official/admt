@@ -11,7 +11,7 @@
  * 8. 保留所有接口兼容性
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   makeStyles,
   shorthands,
@@ -113,7 +113,20 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
   const styles = useStyles();
   const { t } = useTranslation();
   const deviceService = useDeviceService();
-  const { setStatusBarMessage } = useAppStore();
+  const { setStatusBarMessage, clearStatusBarMessage } = useAppStore();
+
+  // 页面高危提示移至状态栏显示，退出该页面时自动清理
+  useEffect(() => {
+    setStatusBarMessage({
+      type: "warning",
+      source: "tools:xiaomi-unlock",
+      message: t('unlock.risk_warning'),
+      duration: 0,
+    });
+    return () => {
+      clearStatusBarMessage("tools:xiaomi-unlock");
+    };
+  }, [setStatusBarMessage, clearStatusBarMessage, t]);
   
   // 重构点：简化状态管理，移除未使用的状态
   const [isExecuting, setIsExecuting] = useState(false);
@@ -299,13 +312,6 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
       <Card className={styles.card}>
         
         <div className={styles.content}>
-          {/* 危险操作警告 */}
-          <div className={styles.warningSection}>
-            <Warning24Regular className={styles.warningIcon} />
-            <Text size={200}>
-              {t('unlock.risk_warning')}
-            </Text>
-          </div>
           {/* 工具列表 */}
           <div className={styles.toolsGrid}>
             {xiaomiTools.map((tool) => (

@@ -226,6 +226,34 @@ const DonationPanel: React.FC = () => {
         </Text>
       </div>
 
+      <div style={{ display: "flex", justifyContent: "center", marginTop: "4px" }}>
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              import("@tauri-apps/plugin-shell")
+                .then(({ open }) => open("https://www.lacs.cc/donate"))
+                .catch(() => window.open("https://www.lacs.cc/donate", "_blank"));
+            } catch {
+              window.open("https://www.lacs.cc/donate", "_blank");
+            }
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--colorBrandForeground1)",
+            fontSize: "12px",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            textDecoration: "underline",
+          }}
+        >
+          访问网页端在线捐赠榜 (https://www.lacs.cc/donate)
+        </button>
+      </div>
+
       <div className={styles.footer}>
         <Text>© 2026 LACS Studio. All Rights Reserved.</Text>
       </div>

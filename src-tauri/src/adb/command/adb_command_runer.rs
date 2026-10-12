@@ -177,6 +177,168 @@ pub async fn execute_adb_command_direct(
     utils_execute_adb_command(&cmd_args, timeout).await
 }
 
+/// 判断是否为交互式 SSH 登录会话（即未提供要在远端执行的命令）
+fn is_interactive_ssh(all_args: &[String]) -> (bool, String) {
+    let mut i = 0;
+    let mut target_host = String::new();
+    let mut command_tokens = Vec::new();
+
+    // 接收参数值的标准 SSH 选项
+    let opt_with_arg = [
+        "-B", "-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J",
+        "-L", "-l", "-m", "-O", "-o", "-p", "-Q", "-R", "-S", "-W", "-w",
+    ];
+
+    while i < all_args.len() {
+        let arg = &all_args[i];
+        if arg == "--" {
+            i += 1;
+            while i < all_args.len() {
+                if target_host.is_empty() {
+                    target_host = all_args[i].clone();
+                } else {
+                    command_tokens.push(all_args[i].clone());
+                }
+                i += 1;
+            }
+            break;
+        }
+
+        if arg.starts_with('-') {
+            let matches_opt = opt_with_arg.iter().any(|&opt| arg == opt);
+            if matches_opt {
+                i += 2; // 跳过选项及其值
+                continue;
+            } else {
+                i += 1;
+                continue;
+            }
+        } else {
+            if target_host.is_empty() {
+                target_host = arg.clone();
+            } else {
+                command_tokens.push(arg.clone());
+            }
+            i += 1;
+        }
+    }
+
+    let is_interactive = !target_host.is_empty() && command_tokens.is_empty();
+    (is_interactive, target_host)
+}
+
+/// 执行SSH命令
+#[tauri::command]
+pub async fn execute_ssh_command(
+    command: String,
+    args: Vec<String>,
+    timeout: Option<u64>,
+) -> Result<CommandResult> {
+    log::info!("Executing SSH command: {} {:?}", command, args);
+
+    let mut all_args = Vec::new();
+    if !command.is_empty() {
+        all_args.push(command);
+    }
+    all_args.extend(args);
+
+    let (is_interactive, host) = is_interactive_ssh(&all_args);
+    if is_interactive {
+        #[cfg(windows)]
+        {
+            let ssh_args_escaped: Vec<String> = all_args
+                .iter()
+                .map(|a| {
+                    if a.contains(' ') || a.contains('"') {
+                        format!("\"{}\"", a.replace('"', "\\\""))
+                    } else {
+                        a.clone()
+                    }
+                })
+                .collect();
+            let ssh_cmd_line = format!("ssh {}", ssh_args_escaped.join(" "));
+            let window_title = format!("SSH - {}", host);
+
+            let mut spawn_cmd = std::process::Command::new("cmd");
+            spawn_cmd.args([
+                "/C",
+                "start",
+                &window_title,
+                "cmd.exe",
+                "/C",
+                &format!(
+                    "title {} & {} & echo. & echo [SSH 会话已结束] & pause",
+                    window_title, ssh_cmd_line
+                ),
+            ]);
+
+            match spawn_cmd.spawn() {
+                Ok(_) => {
+                    return Ok(CommandResult {
+                        success: true,
+                        output: format!(
+                            "[✓] 已在独立终端窗口中启动交互式 SSH 会话\n目标: {}\n执行命令: {}\n提示: 请在弹出的控制台窗口中进行交互操作；会话结束后按任意键即可退出。",
+                            host, ssh_cmd_line
+                        ),
+                        error: None,
+                        exit_code: Some(0),
+                    });
+                }
+                Err(e) => {
+                    return Ok(CommandResult {
+                        success: false,
+                        output: String::new(),
+                        error: Some(format!("启动外部 SSH 终端失败: {}", e)),
+                        exit_code: Some(1),
+                    });
+                }
+            }
+        }
+    }
+
+    let timeout_duration = std::time::Duration::from_secs(timeout.unwrap_or(30));
+    let mut cmd = tokio::process::Command::new("ssh");
+    cmd.kill_on_drop(true);
+
+    cmd.args(&all_args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    #[cfg(windows)]
+    {
+        #[allow(unused_imports)]
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    match tokio::time::timeout(timeout_duration, cmd.output()).await {
+        Ok(Ok(output)) => {
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+            Ok(CommandResult {
+                success: output.status.success(),
+                output: stdout,
+                error: if stderr.is_empty() { None } else { Some(stderr) },
+                exit_code: output.status.code(),
+            })
+        }
+        Ok(Err(e)) => Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some(format!("SSH 执行失败: {}", e)),
+            exit_code: Some(1),
+        }),
+        Err(_) => Ok(CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("SSH 命令执行超时 (30s)".to_string()),
+            exit_code: Some(124),
+        }),
+    }
+}
+
 /// 结束ADB服务
 #[tauri::command]
 pub async fn finish_adb_service() -> Result<CommandResult> {

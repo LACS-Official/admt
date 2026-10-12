@@ -33,7 +33,6 @@ import {
   Sparkle20Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
-import confetti from "canvas-confetti";
 // import DeviceSelectionDialog from "./DeviceSelectionDialog";
 import { getDeviceIcon } from "../../assets/icons";
 import UnlinkIcon from "../../assets/icons/devices/Unlink.gif";
@@ -836,46 +835,9 @@ const MainContent: React.FC = () => {
     console.log(" MainContent useEffect 被触发");
     trackMainContentEntry();
 
-    // 首次进入应用的庆祝彩带 (如果刚刚同意了隐私政策，且开启了设置)
-    const celebrationDone = sessionStorage.getItem(
-      "app_entrance_celebration_done",
-    );
-    if (!celebrationDone && showConfetti) {
-      const duration = 2 * 1000;
-      const end = Date.now() + duration;
-
-      const frame = () => {
-        confetti({
-          particleCount: 2,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-          zIndex: 10000,
-        });
-        confetti({
-          particleCount: 2,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-          zIndex: 10000,
-        });
-
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      };
-
-      // 稍微延迟一下，确保主页面已经完全稳定并显示在最上层
-      // 这里的 1200ms 大于 StartupTransition 的过渡时间 (800ms)
-      setTimeout(() => {
-        // 再次检查确认没执行过，避免重复
-        if (!sessionStorage.getItem("app_entrance_celebration_done")) {
-          frame();
-          sessionStorage.setItem("app_entrance_celebration_done", "true");
-        }
-      }, 1200);
-    }
-  }, [showConfetti]); // 允许 showConfetti 变化时触发，但 sessionStorage 会确保本会话只执行一次
+    // 标记进入主页面
+    sessionStorage.setItem("app_entrance_celebration_done", "true");
+  }, []);
 
   // 系统托盘初始化 - 单例模式管理，确保只在应用启动时初始化一次
   useEffect(() => {
