@@ -438,8 +438,12 @@ export const FastbootPartitionManagerCard: React.FC<
   }, [deviceSerial, appendLog]);
 
   useEffect(() => {
-    loadPartitions();
-  }, [device?.serial, device?.mode, loadPartitions]);
+    if (deviceSerial && isFastbootMode) {
+      loadPartitions();
+    } else {
+      setPartitions([]);
+    }
+  }, [deviceSerial, isFastbootMode, loadPartitions]);
 
   // 当激活分区改变时，自动适配参数
   useEffect(() => {

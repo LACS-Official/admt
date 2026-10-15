@@ -118,6 +118,14 @@ fn get_partition_description(name: &str) -> (&'static str, bool, &'static str) {
 pub async fn get_fastboot_partitions(serial: String) -> Result<FastbootPartitionListResult> {
     log::info!("[fastboot_partition] get_fastboot_partitions: {}", serial);
 
+    if serial.trim().is_empty() {
+        return Ok(FastbootPartitionListResult {
+            current_slot: None,
+            is_ab_device: false,
+            partitions: Vec::new(),
+        });
+    }
+
     let props = get_fastboot_device_properties(serial.clone()).await.unwrap_or_default();
     let current_slot = props.current_slot.clone();
     let is_ab = props.slot_count.as_deref().map(|c| c != "0" && c != "1").unwrap_or(false)
