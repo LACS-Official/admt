@@ -1,4 +1,4 @@
-﻿/**
+/**
  * React错误修复工具
  * 解决React项目中的常见错误问题
  */
@@ -82,7 +82,7 @@ export class ReactDependencyChecker {
         versions,
         issues
       };
-    } catch (error) {
+    } catch (_error) {
       issues.push(`版本检查失败: `);
       return {
         isConsistent: false,
@@ -149,22 +149,9 @@ export class SecurityInitializationManager {
 
   private static async fallbackInitialization(): Promise<void> {
     try {
-      // 创建默认配置
-      const defaultConfig = {
-        api_base_url: 'https://api.example.com',
-        api_key: 'default-key-' + Date.now(),
-        app_id: 'admt-app',
-        app_secret: 'default-secret-' + Date.now(),
-        signature_secret: 'default-signature-' + Date.now(),
-        enable_signature: false,
-        enable_strict_user_agent: false,
-        app_version: '1.0.0',
-        software_id: 1
-      };
-
-      console.log(' 使用默认安全配置');
+      console.log(' 使用默认安全配置降级启动');
       
-      // 这里可以设置一个标志，表示使用的是降级配置
+      // 这里设置一个标志，表示使用的是降级配置
       (window as any).__ADMT_FALLBACK_CONFIG__ = true;
       
     } catch (fallbackError) {
@@ -195,30 +182,22 @@ export class SecurityInitializationManager {
 }
 
 /**
- * useCallback错误修复器
+ * 安全属性访问与回调工具
  */
-export class UseCallbackErrorFixer {
+export class SafeExecutionHelper {
   /**
-   * 安全的useCallback包装器
+   * 安全执行回调函数
    */
-  static safeUseCallback<T extends (...args: any[]) => any>(
+  static safeExecute<T extends (...args: any[]) => any>(
     callback: T,
-    deps: React.DependencyList,
-    fallback?: T
-  ): T {
+    args: Parameters<T>,
+    fallback?: ReturnType<T>
+  ): ReturnType<T> | undefined {
     try {
-      const React = require('react');
-      return React.useCallback(callback, deps);
+      return callback(...args);
     } catch (error) {
-      console.error('useCallback错误:', error);
-      
-      // 返回降级函数
-      if (fallback) {
-        return fallback;
-      }
-      
-      // 返回原始回调函数
-      return callback;
+      console.error('回调执行错误:', error);
+      return fallback;
     }
   }
 

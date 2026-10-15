@@ -755,7 +755,7 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
         type: "error",
         message: t('file_manager.msg_pull_fail', { error }),
       });
-    } finally { };
+    }
   };
 
   const handleBatchDownload = async () => {

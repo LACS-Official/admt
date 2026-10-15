@@ -124,3 +124,10 @@ src-tauri/target
 *.jks
 tauri.key
 .env*.local
+
+# Tools Archives & Installers
+src-tauri/tools/*.zip
+src-tauri/tools/*.tar.gz
+output/*.exe
+*.exe
+!src-tauri/tools/**/*.exe

@@ -10,7 +10,7 @@ export const windowService = {
     console.log("尝试打开 AI 聊天窗口...");
     try {
       const label = "ai-chat";
-      let aiWindow = await WebviewWindow.getByLabel(label);
+      const aiWindow = await WebviewWindow.getByLabel(label);
       
       if (aiWindow) {
         console.log("找到存量 AI 窗口，正在显示并置于焦点...");

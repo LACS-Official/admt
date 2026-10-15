@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAppStore } from "../stores/appStore";
 import { useStartupFlowStore } from "../stores/startupFlowStore";
 import { usePrivacyConsentStore } from "../stores/privacyConsentStore";
@@ -8,7 +8,6 @@ import { adbToolsManager } from "../services/adbToolsManager";
 import { preloadService } from "../services/preloadService";
 import { SecurityConfigManager } from "../config/securityConfig";
 import { unifiedVersionService } from "../services/unifiedVersionService";
-import { activationService } from "../services/activationService";
 import { usageTrackingService } from "../services/usageTrackingService";
 import { deviceService } from "../services/deviceService";
 import { useConfigStore } from "../stores/configStore";
@@ -318,15 +317,9 @@ export const useAppStartup = () => {
     console.log('隐私政策已同意');
     markPrivacyConsentCompleted();
 
-    // 检查激活状态，如果已激活（Stubbed服务总是返回true）则跳过激活验证阶段
-    const status = activationService.checkActivationStatus();
-    if (status.isActivated && !status.isExpired) {
-      console.log(' 检测到已激活状态，直接跳过激活验证阶段');
-      handleActivationSuccess(status);
-    } else {
-      setCurrentPhase('activation-verification');
-    }
-  }, [setCurrentPhase, markPrivacyConsentCompleted, handleActivationSuccess]);
+    // 开源纯净版：默认已授权，直接推进后续流程
+    handleActivationSuccess({ isActivated: true, isExpired: false, status: 'activated' });
+  }, [markPrivacyConsentCompleted, handleActivationSuccess]);
 
   // 处理数据收集同意
   const handleDataCollectionConsent = useCallback((consent: boolean) => {

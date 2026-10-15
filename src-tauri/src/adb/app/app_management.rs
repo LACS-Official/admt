@@ -887,25 +887,23 @@ pub async fn get_current_app(serial: String) -> Result<Option<InstalledApp>> {
     }
 
     let lines: Vec<&str> = activity_result.output.lines().collect();
-    // 查找包含 ResumedActivity 的行
-    let resumed = lines
+    // 查找包含 ResumedActivity 的行并解析出包名
+    let package_name = lines
         .iter()
-        .find(|l| l.contains("ResumedActivity") || l.contains("mResumedActivity"));
+        .find_map(|line| {
+            if line.contains("ResumedActivity")
+                || line.contains("mResumedActivity")
+                || line.contains("topResumedActivity")
+            {
+                parse_resumed_package_name(line)
+            } else {
+                None
+            }
+        });
 
-    if resumed.is_none() {
-        return Ok(None);
-    }
-
-    // 解析形如 com.example/.MainActivity 或 com.example/com.example.MainActivity
-    let package_name = if let Some(matched) = resumed.unwrap().find(" ") {
-        let after_space = &resumed.unwrap()[matched + 1..];
-        if let Some(slash_pos) = after_space.find('/') {
-            after_space[..slash_pos].to_string()
-        } else {
-            return Ok(None);
-        }
-    } else {
-        return Ok(None);
+    let package_name = match package_name {
+        Some(pkg) => pkg,
+        None => return Ok(None),
     };
 
     // 获取应用详细信息
@@ -1085,3 +1083,52 @@ pub async fn export_apk(
 
     Ok(pull_result)
 }
+
+/// 解析 ResumedActivity 文本行中的 Android 应用包名
+pub fn parse_resumed_package_name(line: &str) -> Option<String> {
+    for token in line.split_whitespace() {
+        let token_part = token.split('{').last().unwrap_or(token);
+        let token_part = token_part.trim_matches(|c| c == '{' || c == '}' || c == '(' || c == ')' || c == '"' || c == '\'');
+        if let Some(slash_pos) = token_part.find('/') {
+            let candidate = &token_part[..slash_pos];
+            if candidate.contains('.')
+                && candidate
+                    .chars()
+                    .all(|c| c.is_alphanumeric() || c == '.' || c == '_')
+            {
+                return Some(candidate.to_string());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_resumed_package_name() {
+        let line1 = "  mResumedActivity: ActivityRecord{9b7921d u0 com.android.settings/.Settings t1}";
+        assert_eq!(
+            parse_resumed_package_name(line1),
+            Some("com.android.settings".to_string())
+        );
+
+        let line2 = "  ResumedActivity: ActivityRecord{1c81896 u0 com.google.android.apps.nexuslauncher/.NexusLauncherActivity t2}";
+        assert_eq!(
+            parse_resumed_package_name(line2),
+            Some("com.google.android.apps.nexuslauncher".to_string())
+        );
+
+        let line3 = "  topResumedActivity=ActivityRecord{d1e2f3 u0 com.tencent.mm/com.tencent.mm.ui.LauncherUI t42}";
+        assert_eq!(
+            parse_resumed_package_name(line3),
+            Some("com.tencent.mm".to_string())
+        );
+
+        let line4 = "Some random line without component";
+        assert_eq!(parse_resumed_package_name(line4), None);
+    }
+}
+

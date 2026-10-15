@@ -1,71 +1,87 @@
-use crate::activation::{ActivationRequest, ActivationResponse, ActivationValidator, AppConfig};
 use crate::cache::get_cache_manager;
 use crate::error::{AdmtError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tauri::Manager;
 
-/// 验证激活码格式
-#[tauri::command]
-pub async fn validate_activation_code_format(activation_code: String) -> Result<bool> {
-    let validator = ActivationValidator::new();
-    Ok(validator.validate_format(&activation_code))
+fn default_true() -> bool {
+    true
 }
 
-/// 激活应用
-#[tauri::command]
-pub async fn activate_application(request: ActivationRequest) -> Result<ActivationResponse> {
-    log::info!(
-        "Processing activation request for user: {}",
-        request.user_config.username
-    );
-
-    let validator = ActivationValidator::new();
-    let response = validator.activate(request).await?;
-
-    Ok(response)
+/// 用户偏好配置
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UserConfiguration {
+    #[serde(default)]
+    pub username: String,
+    #[serde(default)]
+    pub language: String,
+    #[serde(default)]
+    pub theme: String,
+    #[serde(default, rename = "autoStart")]
+    pub auto_start: bool,
+    #[serde(default, rename = "checkUpdates")]
+    pub check_updates: bool,
+    #[serde(default, rename = "enableTelemetry")]
+    pub enable_telemetry: bool,
+    pub ai: Option<serde_json::Value>,
 }
 
-/// 检查激活状态
+/// 应用全局配置（开源纯净版，无需商业验证）
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AppConfig {
+    #[serde(default = "default_true", rename = "isActivated")]
+    pub is_activated: bool,
+    #[serde(default, rename = "activationStatus")]
+    pub activation_status: String,
+    #[serde(default, rename = "userConfig")]
+    pub user_config: UserConfiguration,
+    #[serde(default, rename = "features")]
+    pub features: Vec<String>,
+    #[serde(default)]
+    pub version: String,
+}
+
+/// 验证激活码格式（兼容旧接口，开源版本恒真）
+#[tauri::command]
+pub async fn validate_activation_code_format(_activation_code: String) -> Result<bool> {
+    Ok(true)
+}
+
+/// 激活应用（开源版本默认已激活）
+#[tauri::command]
+pub async fn activate_application(_request: serde_json::Value) -> Result<serde_json::Value> {
+    Ok(serde_json::json!({
+        "success": true,
+        "status": "activated",
+        "message": "开源版本已默认激活"
+    }))
+}
+
+/// 检查激活状态（开源版本永不过期、免激活）
 #[tauri::command]
 pub async fn check_activation_status() -> Result<serde_json::Value> {
-    log::info!("Checking activation status...");
-
-    // 返回详细的激活状态信息
-    let status = serde_json::json!({
-        "isActivated": false,
+    Ok(serde_json::json!({
+        "isActivated": true,
         "isExpired": false,
-        "needsActivation": true,
-        "message": "需要激活应用"
-    });
-
-    Ok(status)
+        "needsActivation": false,
+        "message": "开源版本无需激活"
+    }))
 }
 
-/// 验证本地存储的激活数据完整性
+/// 验证本地存储数据（开源版本无害化处理）
 #[tauri::command]
-pub async fn validate_local_activation_data(encrypted_data: String) -> Result<bool> {
-    log::info!("Validating local activation data integrity");
+pub async fn validate_local_activation_data(_encrypted_data: String) -> Result<bool> {
+    Ok(true)
+}
 
-    // 这里可以添加更复杂的验证逻辑
-    // 目前简单检查数据是否为空
-    if encrypted_data.trim().is_empty() {
-        log::warn!("Empty activation data provided");
-        return Ok(false);
-    }
-
-    // 检查数据格式是否为有效的base64
-    use base64::{engine::general_purpose, Engine as _};
-    match general_purpose::STANDARD.decode(&encrypted_data) {
-        Ok(_) => {
-            log::info!("Local activation data format is valid");
-            Ok(true)
-        }
-        Err(e) => {
-            log::warn!("Invalid activation data format: {}", e);
-            Ok(false)
-        }
-    }
+/// 检查激活到期时间（开源版本永不到期）
+#[tauri::command]
+pub async fn check_activation_expiry(_activation_data: String) -> Result<serde_json::Value> {
+    Ok(serde_json::json!({
+        "isExpired": false,
+        "remainingTime": 3153600000_i64,
+        "message": "开源版本永不到期"
+    }))
 }
 
 /// 生成设备指纹用于激活验证

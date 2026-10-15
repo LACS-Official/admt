@@ -1,23 +1,23 @@
 {
-  "version": "1.5.3",
-  "buildNumber": 8,
-  "versionName": "1.5.3",
-  "releaseDate": "2026-10-12",
+  "version": "1.5.4",
+  "buildNumber": 9,
+  "versionName": "1.5.4",
+  "releaseDate": "2026-10-15",
   "description": "统一版本管理配置文件",
   "changelog": [
-    "投屏映射：新增投屏按键映射工作室 (Beta)，支持方向轮盘与自定义按键触控下发",
-    "下载动效：上线全局动态下载进度胶囊与状态栏多流程提示体系",
-    "极简规范：全面剔除大段免责与惊悚红字，操作确认聚焦底层命令与客观参数",
-    "体验修复：修复显示设置跟随系统深浅模式自动同步，精简系统托盘右键菜单",
-    "AI模型校准：移除退役默认模型，校准生成采样温度 (Fix #2)"
+    "开源纯净化：彻底剔除闭源商业授权系统残留，应用全局默认免激活",
+    "权限管理：补齐 Rust 侧原生 Windows 管理员权限检测与一键 UAC 提权重启支持",
+    "Boot修补：强化 Magisk 真实 Ramdisk 注入，智能识别 Android 13+ GKI 架构与 init_boot",
+    "隐私守正：遥测数据完全本地化留存，绝不向任何外部服务器上报用户设备指纹",
+    "去假存真：投屏性能参数全面清理 Math.random() 假数据，按规范输出明确技术状态"
   ],
   "environments": {
     "development": {
-      "version": "1.5.3-dev",
+      "version": "1.5.4-dev",
       "enableDebug": true
     },
     "production": {
-      "version": "1.5.3",
+      "version": "1.5.4",
       "enableDebug": false
     }
   },

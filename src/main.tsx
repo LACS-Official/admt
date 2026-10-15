@@ -23,10 +23,10 @@ import "./utils/devtools";
 // 在应用启动时清除 localStorage 中的 token
 localStorage.removeItem("rom-download-storage");
 
-import CommandLineWindow from "./components/Console/CommandLineWindow";
-import LogsWindow from "./components/Console/LogsWindow";
-import AIChatWindow from "./components/Console/AIChatWindow";
-import DeviceSelectionWindow from "./components/MainContent/DeviceSelectionWindow";
+const CommandLineWindow = React.lazy(() => import("./components/Console/CommandLineWindow"));
+const LogsWindow = React.lazy(() => import("./components/Console/LogsWindow"));
+const AIChatWindow = React.lazy(() => import("./components/Console/AIChatWindow"));
+const DeviceSelectionWindow = React.lazy(() => import("./components/MainContent/DeviceSelectionWindow"));
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useDeviceStore } from "./stores/deviceStore";
 import { useAIChatStore } from "./stores/aiChatStore";
@@ -260,19 +260,43 @@ function AppWithTheme() {
 }
 
 function CommandLineWindowWithTheme() {
-  return <ThemeProvider><CommandLineWindow /></ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <React.Suspense fallback={null}>
+        <CommandLineWindow />
+      </React.Suspense>
+    </ThemeProvider>
+  );
 }
 
 function LogsWindowWithTheme() {
-  return <ThemeProvider><LogsWindow /></ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <React.Suspense fallback={null}>
+        <LogsWindow />
+      </React.Suspense>
+    </ThemeProvider>
+  );
 }
 
 function AIChatWindowWithTheme() {
-  return <ThemeProvider><AIChatWindow /></ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <React.Suspense fallback={null}>
+        <AIChatWindow />
+      </React.Suspense>
+    </ThemeProvider>
+  );
 }
 
 function DeviceSelectionWindowWithTheme() {
-  return <ThemeProvider><DeviceSelectionWindow /></ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <React.Suspense fallback={null}>
+        <DeviceSelectionWindow />
+      </React.Suspense>
+    </ThemeProvider>
+  );
 }
 
 function Root() {

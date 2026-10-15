@@ -406,7 +406,6 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
 
   // Polling hardware & network state
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval>;
     const fetchStatus = async () => {
       if (isDeviceAvailable && device) {
         try {
@@ -431,7 +430,7 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
     };
 
     fetchStatus();
-    timer = setInterval(fetchStatus, 6000);
+    const timer = setInterval(fetchStatus, 6000);
     return () => clearInterval(timer);
   }, [isDeviceAvailable, device, deviceService]);
 

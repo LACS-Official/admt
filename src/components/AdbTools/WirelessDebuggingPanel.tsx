@@ -414,6 +414,9 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
                    <Text size={200}>{t('wireless.qr_pairing_step1')}</Text>
                    <Text size={200}>{t('wireless.qr_pairing_step2')}</Text>
                    <Text size={200}>{t('wireless.qr_pairing_step3')}</Text>
+                   <Text size={200} style={{ color: "var(--colorNeutralForeground3)", marginTop: "4px", lineHeight: "1.4" }}>
+                     {t('wireless.qr_pairing_fallback_tip')}
+                   </Text>
                 </div>
 
                 <Button appearance="secondary" onClick={stopQrPairing}>

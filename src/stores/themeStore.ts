@@ -51,7 +51,9 @@ export const useThemeStore = create<ThemeState>()(
             isDark = false;
             detected = true;
           }
-        } catch (_) {}
+        } catch (_) {
+          // ignore system theme check failure
+        }
 
         // 2. 备用：从 Tauri 窗口 API 检测
         if (!detected) {
@@ -63,7 +65,9 @@ export const useThemeStore = create<ThemeState>()(
               isDark = winTheme === 'dark';
               detected = true;
             }
-          } catch (_) {}
+          } catch (_) {
+            // ignore window theme check failure
+          }
         }
 
         // 3. 兜底：window.matchMedia

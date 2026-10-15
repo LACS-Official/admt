@@ -68,7 +68,9 @@ export class SystemTrayService {
           await svc.stop();
           console.log(' 已停止屏幕镜像服务');
         }
-      } catch (_) {}
+      } catch (_) {
+        // ignore screen mirror stop errors
+      }
 
       // 尝试停止 ADB/工具管理器
       try {
@@ -83,7 +85,9 @@ export class SystemTrayService {
             break;
           }
         }
-      } catch (_) {}
+      } catch (_) {
+        // ignore adb tools stop errors
+      }
 
       // 可在此处按需加入更多需要停止的服务（如日志流、设备监控等）
       // try { const mod = await import('../services/deviceService'); await mod.deviceService?.shutdown?.(); } catch (_) {}

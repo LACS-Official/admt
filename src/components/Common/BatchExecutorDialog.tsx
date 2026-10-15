@@ -198,6 +198,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
 
   // 解析 ANSI 转义序列并生成富文本片段
   const parseAnsiToHtml = (text: string): React.ReactNode[] => {
+    // eslint-disable-next-line no-control-regex
     const ansiRegex = /\x1b\[(\d+)m/g;
     const fragments: React.ReactNode[] = [];
     let lastIndex = 0;
@@ -559,6 +560,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
   const handleCopyOutput = async () => {
     try {
       // 移除 ANSI 转义序列，只复制纯文本
+      // eslint-disable-next-line no-control-regex
       const plainText = output.replace(/\x1b\[\d+m/g, '');
       await navigator.clipboard.writeText(plainText);
       setStatusBarMessage({

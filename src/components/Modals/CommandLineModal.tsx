@@ -7,7 +7,8 @@ import {
 } from "@fluentui/react-components";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
-import { CommandExecutePanel } from "../Others/CommandExecutePanel";
+
+const CommandExecutePanel = React.lazy(() => import("../Others/CommandExecutePanel"));
 
 const useStyles = makeStyles({
   dialogSurface: {
@@ -71,11 +72,13 @@ export const CommandLineModal: React.FC = () => {
     >
       <DialogSurface className={styles.dialogSurface}>
         <DialogBody className={styles.dialogBody}>
-          <CommandExecutePanel
-            onClose={() => setCommandLineModalOpen(false)}
-            initialCommand={pendingCommand}
-            onClearInitialCommand={() => setPendingCommand(null)}
-          />
+          <React.Suspense fallback={null}>
+            <CommandExecutePanel
+              onClose={() => setCommandLineModalOpen(false)}
+              initialCommand={pendingCommand}
+              onClearInitialCommand={() => setPendingCommand(null)}
+            />
+          </React.Suspense>
         </DialogBody>
       </DialogSurface>
     </Dialog>

@@ -115,7 +115,7 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
 
       case "admt_reboot_device": {
         const target = args.target || "system";
-        let subCmd = "reboot";
+        const subCmd = "reboot";
         let subArgs: string[] = [];
 
         if (target === "recovery") subArgs = ["recovery"];
@@ -137,7 +137,7 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
 
       case "admt_list_packages": {
         const filter = args.filter || "all";
-        let subArgs = ["list", "packages"];
+        const subArgs = ["list", "packages"];
         if (filter === "third_party") subArgs.push("-3");
         if (filter === "system") subArgs.push("-s");
         if (filter === "disabled") subArgs.push("-d");

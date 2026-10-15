@@ -1243,7 +1243,7 @@ ${slicedLogs}
 
       const filePath = await save({
         filters: [{ name: "Markdown", extensions: ["md"] }],
-        defaultPath: `ADMT_AI_对话历史备份_${new Date().toLocaleDateString().replace(/[\/:]/g, "-")}.md`,
+        defaultPath: `ADMT_AI_对话历史备份_${new Date().toLocaleDateString().replace(/[/:]/g, "-")}.md`,
       });
 
       if (filePath) {

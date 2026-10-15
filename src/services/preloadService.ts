@@ -32,31 +32,11 @@ class PreloadService {
    */
   private getPreloadResources(): PreloadResource[] {
     return [
-      // 高优先级：主页面组件
-      {
-        type: 'component',
-        path: 'MainContent',
-        priority: 'high',
-        preload: () => import('../components/MainContent/MainContent'),
-      },
-      {
-        type: 'component',
-        path: 'HomePage',
-        priority: 'high',
-        preload: () => import('../components/Home/HomePage'),
-      },
-      {
-        type: 'component',
-        path: 'DeviceOverviewCard',
-        priority: 'high',
-        preload: () => import('../components/DeviceInfo/DeviceOverviewCard'),
-      },
-
-      // 中优先级：常用组件
+      // 常用重型懒加载组件预热
       {
         type: 'component',
         path: 'AdbZonePanel',
-        priority: 'medium',
+        priority: 'high',
         preload: () => import('../components/AdbTools/AdbZonePanel'),
       },
       {

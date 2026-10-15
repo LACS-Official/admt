@@ -33,7 +33,7 @@ export class WirelessService {
               logService.info("设备已重新上线", "无线调试");
               break;
             }
-          } catch (e) {
+          } catch (_e) {
             // 继续等待
           }
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -93,7 +93,7 @@ export class WirelessService {
             return pureIpMatch[1];
           }
         }
-      } catch (e) {
+      } catch (_e) {
         // 继续尝试下一个命令
       }
     }
@@ -130,6 +130,7 @@ export class WirelessService {
       return result;
     } catch (error) {
       logService.error(`无线配对失败: ${error}`, "无线调试");
+      throw error;
     }
   }
 

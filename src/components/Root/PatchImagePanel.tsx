@@ -164,8 +164,7 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
             setIsPatching(false);
         }
     } else {
-        // TODO: Implement online patching logic
-        alert(t('root.patch_online_not_implemented'));
+        setStatusText(t('root.patch_online_not_implemented'));
     }
   };
 
@@ -228,14 +227,20 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
 
             <Field label={t('root.patch_mode')}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", height: "32px" }}>
-                <Switch 
-                  checked={isOffline} 
-                  onChange={(_, data) => setIsOffline(data.checked)}
-                  label={isOffline ? t('root.mode_offline') : t('root.mode_online')}
-                />
+                <Text size={200} style={{ color: "var(--colorBrandForeground1)", fontWeight: 500 }}>
+                  脱机安全模式（本地修补）
+                </Text>
               </div>
             </Field>
           </div>
+
+          {imagePath && imagePath.toLowerCase().endsWith("boot.img") && !imagePath.toLowerCase().includes("init_boot") && (
+            <div style={{ marginBottom: "12px", padding: "8px 14px", borderRadius: "10px", backgroundColor: "rgba(0, 113, 227, 0.06)", border: "1px solid rgba(0, 113, 227, 0.15)" }}>
+              <Text size={200} style={{ color: "var(--colorBrandForeground1)" }}>
+                提示：若设备为 Android 13/14+ (GKI 2.0 架构)，通常应修补 <b>init_boot.img</b> 分区；Android 12 及以下机型修补 <b>boot.img</b> 分区。
+              </Text>
+            </div>
+          )}
 
           <Field label={t('root.image_path')} validationMessage={t('root.image_placeholder')}>
             <div className={styles.inputGroup}>

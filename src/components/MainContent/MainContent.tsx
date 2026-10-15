@@ -18,6 +18,7 @@ import {
   DialogActions,
   Button,
   tokens,
+  Spinner,
 } from "@fluentui/react-components";
 import {
   Code24Regular,
@@ -42,22 +43,30 @@ import { useThemeStore } from "../../stores/themeStore";
 import { useDeviceService } from "../../services/deviceService";
 import { AppView } from "../../types/app";
 import HomePage from "../Home/HomePage";
-import AdbZonePanel from "../AdbTools/AdbZonePanel";
-import FlashZonePanel from "../FlashZone/FlashZonePanel";
-import RootPanel from "../Root/RootPanel";
-import ExtendedFeaturesPanel from "../ExtendedFeatures/ExtendedFeaturesPanel";
-import OnlineZonePanel from "../OnlineResources/OnlineZonePanel";
-import PluginSystemPanel from "../PluginSystem/PluginSystemPanel";
-import SettingsPanel from "../Settings/SettingsPanel";
-import CommandExecutePanel from "../Others/CommandExecutePanel";
-import LogsPanel from "../Others/LogsPanel";
-import AIChatPanel from "../Console/AIChatPanel";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
-import WirelessDebuggingPanel from "../AdbTools/WirelessDebuggingPanel";
-import { DeviceSelectionModal } from "../Modals";
+import { DeviceSelectionModal } from "../Modals/DeviceSelectionModal";
 import AutoMirrorManager from "../Common/AutoMirrorManager";
 import { systemTrayManager } from "../../services/systemTrayManager";
+
+// 动态懒加载非首屏重型子面板，降低首屏体积并提升启动性能
+const AdbZonePanel = React.lazy(() => import("../AdbTools/AdbZonePanel"));
+const FlashZonePanel = React.lazy(() => import("../FlashZone/FlashZonePanel"));
+const RootPanel = React.lazy(() => import("../Root/RootPanel"));
+const ExtendedFeaturesPanel = React.lazy(() => import("../ExtendedFeatures/ExtendedFeaturesPanel"));
+const OnlineZonePanel = React.lazy(() => import("../OnlineResources/OnlineZonePanel"));
+const PluginSystemPanel = React.lazy(() => import("../PluginSystem/PluginSystemPanel"));
+const SettingsPanel = React.lazy(() => import("../Settings/SettingsPanel"));
+const CommandExecutePanel = React.lazy(() => import("../Others/CommandExecutePanel"));
+const LogsPanel = React.lazy(() => import("../Others/LogsPanel"));
+const AIChatPanel = React.lazy(() => import("../Console/AIChatPanel"));
+const WirelessDebuggingPanel = React.lazy(() => import("../AdbTools/WirelessDebuggingPanel"));
+
+const PanelFallback: React.FC = () => (
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", width: "100%", minHeight: "200px" }}>
+    <Spinner size="medium" />
+  </div>
+);
 
 const useStyles = makeStyles({
   container: {
@@ -1285,7 +1294,9 @@ const MainContent: React.FC = () => {
             }}
             style={{ width: "100%", height: "100%", overflow: "hidden" }}
           >
-            {renderContent()}
+            <React.Suspense fallback={<PanelFallback />}>
+              {renderContent()}
+            </React.Suspense>
           </motion.div>
         </AnimatePresence>
       </div>
@@ -1369,16 +1380,18 @@ const MainContent: React.FC = () => {
               {t('wireless.title')}
             </DialogTitle>
             <DialogContent>
-              <WirelessDebuggingPanel 
-                device={selectedDevice} 
-                onAdbRequired={() => {
-                  setWirelessDebuggingDialogOpen(false);
-                  setStatusBarMessage({
-                    type: "warning",
-                    message: t('adb.adb_mode_required_desc'),
-                  });
-                }} 
-              />
+              <React.Suspense fallback={<PanelFallback />}>
+                <WirelessDebuggingPanel 
+                  device={selectedDevice} 
+                  onAdbRequired={() => {
+                    setWirelessDebuggingDialogOpen(false);
+                    setStatusBarMessage({
+                      type: "warning",
+                      message: t('adb.adb_mode_required_desc'),
+                    });
+                  }} 
+                />
+              </React.Suspense>
             </DialogContent>
           </DialogBody>
         </DialogSurface>

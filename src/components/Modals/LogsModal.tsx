@@ -7,7 +7,8 @@ import {
 } from "@fluentui/react-components";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
-import { LogsPanel } from "../Others/LogsPanel";
+
+const LogsPanel = React.lazy(() => import("../Others/LogsPanel"));
 
 const useStyles = makeStyles({
   dialogSurface: {
@@ -57,7 +58,9 @@ export const LogsModal: React.FC = () => {
     >
       <DialogSurface className={styles.dialogSurface}>
         <DialogBody className={styles.dialogBody}>
-          <LogsPanel onClose={() => setLogsModalOpen(false)} />
+          <React.Suspense fallback={null}>
+            <LogsPanel onClose={() => setLogsModalOpen(false)} />
+          </React.Suspense>
         </DialogBody>
       </DialogSurface>
     </Dialog>

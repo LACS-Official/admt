@@ -78,7 +78,7 @@ class AIService {
       }
 
       let body: any;
-      let headers: Record<string, string> = {
+      const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
 
@@ -373,7 +373,9 @@ class AIService {
                   partialToolCalls[idx].argumentsStr += parsed.delta.partial_json || "";
                 }
               }
-            } catch (e) {}
+            } catch (e) {
+              // ignore JSON parse error for incomplete SSE chunk
+            }
           }
           // 处理 Google SSE
           else if (provider === "google") {
@@ -394,7 +396,9 @@ class AIService {
                   argumentsStr: JSON.stringify(part.functionCall.args || {}),
                 };
               }
-            } catch (e) {}
+            } catch (e) {
+              // ignore JSON parse error for incomplete SSE chunk
+            }
           }
         }
       }

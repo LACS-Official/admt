@@ -16,6 +16,8 @@ import {
   CheckmarkCircle24Regular,
   ErrorCircle24Regular,
   LockClosed24Regular,
+  ShieldCheckmark24Regular,
+  ShieldError24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
@@ -24,7 +26,7 @@ import { useAppStore } from "../../stores/appStore";
 import BatchExecutorDialog from "../Common/BatchExecutorDialog";
 import { useTranslation } from "react-i18next";
 
-import { readDir } from "@tauri-apps/plugin-fs";
+import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 
 
@@ -48,7 +50,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "6px",
+    borderRadius: "14px",
     backgroundColor: "var(--colorNeutralBackground1)",
   },
   packageSection: {
@@ -64,7 +66,7 @@ const useStyles = makeStyles({
   packageInfo: {
     padding: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "4px",
+    borderRadius: "12px",
     fontSize: "13px",
     lineHeight: 1.5,
   },
@@ -74,7 +76,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "4px",
+    borderRadius: "12px",
     fontSize: "13px",
   },
   progressSection: {
@@ -90,7 +92,7 @@ const useStyles = makeStyles({
     fontSize: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "8px",
+    borderRadius: "12px",
     padding: "12px",
     maxHeight: "300px",
     overflow: "auto",
@@ -101,13 +103,31 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorPaletteRedBackground1)",
     border: "1px solid var(--colorPaletteRedBorder1)",
     padding: "16px",
-    borderRadius: "8px",
+    borderRadius: "12px",
   },
   infoSection: {
     backgroundColor: "var(--colorPaletteBlueBackground1)",
     border: "1px solid var(--colorPaletteBlueBorder1)",
     padding: "16px",
-    borderRadius: "8px",
+    borderRadius: "12px",
+  },
+  arbDangerAlert: {
+    padding: "12px 16px",
+    borderRadius: "12px",
+    backgroundColor: "rgba(235, 87, 87, 0.12)",
+    border: "1px solid rgba(235, 87, 87, 0.4)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+  },
+  arbSafeAlert: {
+    padding: "10px 14px",
+    borderRadius: "12px",
+    backgroundColor: "rgba(39, 174, 96, 0.12)",
+    border: "1px solid rgba(39, 174, 96, 0.35)",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   },
   actions: {
     display: "flex",
@@ -135,6 +155,7 @@ const useStyles = makeStyles({
   actionButton: {
     minHeight: "36px",
     width: "100%",
+    borderRadius: "9999px",
   },
 });
 
@@ -181,6 +202,56 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
   const [batchWorkingDirectory, setBatchWorkingDirectory] = useState<string>("");
   const [originalAutoDetect, setOriginalAutoDetect] = useState<boolean>(config.autoDetectDevices);
 
+  const [deviceAnti, setDeviceAnti] = useState<string | null>(null);
+  const [romAnti, setRomAnti] = useState<string | null>(null);
+  const [romProduct, setRomProduct] = useState<string | null>(null);
+  const [arbStatus, setArbStatus] = useState<"safe" | "danger" | "unknown">("unknown");
+
+  // 监听设备变化，在 Fastboot 模式下自动读取设备 ARB 硬件等级
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchDeviceArb = async () => {
+      if (!device || (device.mode !== "fastboot" && device.mode !== "fastbootd")) {
+        setDeviceAnti(null);
+        return;
+      }
+      try {
+        const res = await invoke<{ success: boolean; anti: string | null }>("fastboot_get_anti_rollback", {
+          serial: device.serial,
+        });
+        if (!isCancelled && res && res.anti) {
+          setDeviceAnti(res.anti);
+        } else if (!isCancelled) {
+          setDeviceAnti(null);
+        }
+      } catch {
+        if (!isCancelled) setDeviceAnti(null);
+      }
+    };
+    fetchDeviceArb();
+    return () => {
+      isCancelled = true;
+    };
+  }, [device]);
+
+  // ARB 防回滚比对
+  useEffect(() => {
+    if (deviceAnti && romAnti) {
+      const devNum = parseInt(deviceAnti, 10);
+      const romNum = parseInt(romAnti, 10);
+      if (!isNaN(devNum) && !isNaN(romNum)) {
+        if (devNum > romNum) {
+          setArbStatus("danger");
+          return;
+        } else {
+          setArbStatus("safe");
+          return;
+        }
+      }
+    }
+    setArbStatus("unknown");
+  }, [deviceAnti, romAnti]);
+
   // 检查设备是否处于 Fastboot 或 Fastbootd 模式
   const checkMode = () => {
     if (!device) {
@@ -196,8 +267,6 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
 
     return true;
   };
-
-
 
   const handleBatchDialogClose = () => {
     setBatchDialogOpen(false);
@@ -234,107 +303,36 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
       ];
       const missing = required.filter(r => !names.includes(r));
       setMissingFiles(missing);
-
-      // 将选择结果映射到旧字段以沿用展示（包名等后续仍为模拟）
       setSelectedPackage(dir.split(/[/\\]/).pop() || dir);
-      // 清空旧的解析/状态
-      setPackageInfo(null);
-      setDeviceCompatible(null);
+
+      // 读取 flash_all.bat 解析 ARB 和 product
+      try {
+        const batPath = `${dir}\\flash_all.bat`;
+        const content = await readTextFile(batPath);
+        const antiMatch = content.match(/CURRENT_ANTI_VER\s*=\s*(\d+)/i);
+        if (antiMatch) {
+          setRomAnti(antiMatch[1]);
+        } else {
+          setRomAnti(null);
+        }
+
+        const productMatch = content.match(/\^product:\s*\*([a-zA-Z0-9_-]+)/i) || content.match(/TARGET_PRODUCT\s*=\s*([a-zA-Z0-9_-]+)/i);
+        if (productMatch) {
+          setRomProduct(productMatch[1]);
+        } else {
+          setRomProduct(null);
+        }
+      } catch {
+        setRomAnti(null);
+        setRomProduct(null);
+      }
+
       setFlashLog("");
       setFlashStatus("idle");
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error(t('flash.read_dir_fail'), e);
       setMissingFiles([t('flash.read_dir_fail')]);
     }
-  };
-
-  const _handlePackageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      const packagePath = file.webkitRelativePath.split('/')[0];
-      
-      try {
-        // 检查是否包含必要的线刷文件
-        const hasFlashScript = Array.from(files).some(f => 
-          f.name === 'flash_all.bat' || f.name === 'flash_all.sh'
-        );
-        
-        if (!hasFlashScript) {
-          alert(t('flash.script_missing') + " (flash_all.bat/flash_all.sh)");
-          return;
-        }
-
-        setSelectedPackage(packagePath);
-        
-        // 解析包信息
-        const info = await parsePackageInfo(files);
-        setPackageInfo(info);
-        
-        // 检查设备兼容性
-        const compatible = await checkDeviceCompatibility(info, device);
-        setDeviceCompatible(compatible);
-        
-        setFlashLog("");
-        setFlashStatus("idle");
-        
-      } catch (error) {
-        console.error(t('flash.package_incomplete'), error);
-        alert(t('flash.package_incomplete') + " " + (error instanceof Error ? error.message : String(error)));
-      }
-    }
-  };
-
-  const parsePackageInfo = async (files: FileList): Promise<Record<string, unknown>> => {
-    // 模拟解析线刷包信息
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          version: "V14.0.6.0.TKACNXM",
-          codename: "star",
-          model: "Mi Mix 3",
-          region: "CN",
-          android: "11",
-          size: Array.from(files).reduce((total, file) => total + file.size, 0),
-          fileCount: files.length,
-        });
-      }, 1000);
-    });
-  };
-
-  const checkDeviceCompatibility = async (packageInfo: Record<string, unknown>, device: DeviceInfo): Promise<boolean> => {
-    // 模拟设备兼容性检查
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // 简单的兼容性检查逻辑
-        const deviceModel = device?.properties?.model?.toLowerCase() || '';
-        const packageCodename = (packageInfo.codename as string || "").toLowerCase();
-        
-        resolve(deviceModel.includes(packageCodename) || packageCodename.includes("star"));
-      }, 500);
-    });
-  };
-
-  const _handleFlashStart = (_fileName: string, _title: string, _clearData: boolean, _relock: boolean) => {
-    // 此函数不再使用，已由直接调用BatchExecutorDialog替代
-  };
-
-  const _handleFlashConfirm = async () => {
-    // 此函数不再使用，已由BatchExecutorDialog组件处理
-  };
-
-  const getStatusBadge = () => {
-    switch (flashStatus) {
-      case "checking":
-        return <Badge appearance="outline" color="brand" icon={<Spinner size="tiny" />} style={{ display: 'flex', flexDirection: 'row' }}>{t('flash.status_checking')}</Badge>;
-      case "flashing":
-        return <Badge appearance="outline" color="important" icon={<Spinner size="tiny" />} style={{ display: 'flex', flexDirection: 'row' }}>{t('flash.status_flashing')}</Badge>;
-      case "success":
-        return <Badge appearance="outline" color="success" icon={<CheckmarkCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>{t('flash.status_success')}</Badge>;
-      case "error":
-        return <Badge appearance="outline" color="danger" icon={<ErrorCircle24Regular />} style={{ display: 'flex', flexDirection: 'row' }}>{t('flash.status_failed')}</Badge>;
-        }
   };
 
 
@@ -364,8 +362,9 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                           setSelectedFolderPath("");
                           setMissingFiles([]);
                           setSelectedPackage("");
-                          setPackageInfo(null);
-                          setDeviceCompatible(null);
+                          setRomAnti(null);
+                          setRomProduct(null);
+                          setArbStatus("unknown");
                         }}>{t('common.clear')}</Button>
                   </>
                 )}
@@ -411,6 +410,43 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                       flash_all_lock.bat ({t('common.lock')})
                     </Badge>
                   </div>
+
+                  {/* ARB 防回滚安全告警与状态展示 */}
+                  {arbStatus === "danger" && (
+                    <div className={styles.arbDangerAlert} style={{ marginTop: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <ShieldError24Regular style={{ color: 'var(--colorPaletteRedForeground1)', flexShrink: 0 }} />
+                        <Text weight="semibold" style={{ color: 'var(--colorPaletteRedForeground1)' }}>
+                          {t('flash.arb_danger_desc')}
+                        </Text>
+                      </div>
+                      <Text size={200} style={{ color: 'var(--colorNeutralForeground2)' }}>
+                        {t('flash.arb_device_level')}: {deviceAnti} | {t('flash.arb_rom_level')}: {romAnti}
+                      </Text>
+                    </div>
+                  )}
+
+                  {arbStatus === "safe" && (
+                    <div className={styles.arbSafeAlert} style={{ marginTop: '12px' }}>
+                      <ShieldCheckmark24Regular style={{ color: 'var(--colorPaletteGreenForeground1)', flexShrink: 0 }} />
+                      <Text size={200} style={{ color: 'var(--colorPaletteGreenForeground1)' }}>
+                        {t('flash.arb_safe_desc')} ({t('flash.arb_device_level')}: {deviceAnti}, {t('flash.arb_rom_level')}: {romAnti})
+                      </Text>
+                    </div>
+                  )}
+
+                  {romAnti && arbStatus === "unknown" && (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
+                      <Badge appearance="outline" color="informative">
+                        {t('flash.arb_rom_level')}: {romAnti}
+                      </Badge>
+                      {romProduct && (
+                        <Badge appearance="outline" color="informative">
+                          目标型号: {romProduct}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -445,7 +481,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                       className={styles.actionButton}
                       appearance="primary" 
                       icon={<Play24Regular />} 
-                      disabled={!selectedFolderPath || missingFiles.includes('flash_all.bat') || isFlashing}
+                      disabled={!selectedFolderPath || missingFiles.includes('flash_all.bat') || isFlashing || arbStatus === "danger"}
                       onClick={() => {
                         if (!checkMode()) return;
                         setBatchDialogTitle(`${t('flash.flash_clean')} (flash_all.bat)`);
@@ -468,7 +504,7 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                       appearance="outline"
                       style={{ color: "var(--colorPaletteGreenForeground1)", borderColor: "var(--colorPaletteGreenBorder1)" }}
                       icon={<Play24Regular />} 
-                      disabled={!selectedFolderPath || missingFiles.includes('flash_all_except_storage.bat') || isFlashing}
+                      disabled={!selectedFolderPath || missingFiles.includes('flash_all_except_storage.bat') || isFlashing || arbStatus === "danger"}
                       onClick={() => {
                         if (!checkMode()) return;
                         setBatchDialogTitle(`${t('flash.flash_keep')} (flash_all_except_storage.bat)`);
@@ -488,10 +524,10 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
                   <div className={styles.actionButtonContainer}>
                     <Button 
                       className={styles.actionButton}
-                      appearance="primary"
+                      appearance="primary" 
                       style={{ backgroundColor: "var(--colorPaletteRedBackground3)", borderColor: "var(--colorPaletteRedBorderActive)" }}
                       icon={<LockClosed24Regular />} 
-                      disabled={!selectedFolderPath || missingFiles.includes('flash_all_lock.bat') || isFlashing}
+                      disabled={!selectedFolderPath || missingFiles.includes('flash_all_lock.bat') || isFlashing || arbStatus === "danger"}
                       onClick={() => {
                         if (!checkMode()) return;
                         setBatchDialogTitle(`${t('flash.flash_lock')} (flash_all_lock.bat)`);

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * API配置文件
  * 管理所有API相关的配置信息
  */
@@ -79,16 +79,6 @@ export const API_ENDPOINTS = {
     CREATE: (softwareId: number) => `/app/software/id/${softwareId}/announcements`,
     UPDATE: (softwareId: number, announcementId: number) => `/app/software/id/${softwareId}/announcements/${announcementId}`,
     DELETE: (softwareId: number, announcementId: number) => `/app/software/id/${softwareId}/announcements/${announcementId}`,
-  },
-  
-  // 激活码管理
-  ACTIVATION: {
-    GENERATE: '/api/activation-codes',
-    VERIFY: '/api/activation-codes/verify',
-    LIST: '/api/activation-codes',
-    STATS: '/api/activation-codes/stats',
-    CLEANUP: '/api/activation-codes/cleanup',
-    CLEANUP_UNUSED: '/api/activation-codes/cleanup-unused',
   },
   
   // 健康检查

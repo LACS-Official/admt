@@ -1,4 +1,3 @@
-mod activation;
 mod adb;
 mod adb_commands;
 mod cache;
@@ -21,6 +20,7 @@ use crate::commands::{
     check_file_exists, check_process_alive, cleanup_downloads, clear_all_cache, delete_file,
     diagnose_adb_fastboot_paths, download_and_extract_software, download_apk, download_file,
     execute_adb_command_with_path, execute_script_in_new_window, exit_app, fastboot_flash_image,
+    fastboot_get_anti_rollback, fastboot_get_var,
     get_apk_files, get_app_config, get_app_environment, get_cache_stats,
     get_default_download_directory, get_detailed_device_fingerprint, get_device_connection_info,
     get_device_fingerprint, get_device_memory_storage_info, get_device_partitions,
@@ -30,8 +30,9 @@ use crate::commands::{
     invalidate_device_cache, is_debug_mode, open_devtools, open_folder, launch_software_resource, read_chat_text_file, read_json_file,
     read_resource_file, save_app_config, scan_devices, set_window_always_on_top, terminate_process,
     validate_activation_code_format, validate_local_activation_data, validate_security_config,
-    verify_command_safety, watch_config_file, write_json_file, parse_local_rom,
+    check_activation_expiry, verify_command_safety, watch_config_file, write_json_file, parse_local_rom,
     extract_local_partition, parse_online_rom, extract_online_partition,
+    is_admin, restart_as_admin, get_autostart_config,
 };
 
 use crate::adb::app::app_management::*;
@@ -154,6 +155,8 @@ pub fn run() {
             check_adb_availability,
             check_fastboot_availability,
             fastboot_flash_image,
+            fastboot_get_anti_rollback,
+            fastboot_get_var,
             diagnose_adb_fastboot_paths,
             get_device_performance_info,
             get_device_memory_storage_info,
@@ -188,7 +191,7 @@ pub fn run() {
             activate_application,
             check_activation_status,
             validate_local_activation_data,
-            crate::activation::check_activation_expiry,
+            check_activation_expiry,
             get_device_fingerprint,
             get_app_config,
             save_app_config,
@@ -198,6 +201,9 @@ pub fn run() {
             get_system_arch,
             open_devtools,
             is_debug_mode,
+            is_admin,
+            restart_as_admin,
+            get_autostart_config,
             set_window_always_on_top,
             get_window_always_on_top,
             get_app_environment,

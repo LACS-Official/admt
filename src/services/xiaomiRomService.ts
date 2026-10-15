@@ -393,8 +393,8 @@ export async function fetchXiaomiRomByRegionalPage(
     const seriesHtml = await seriesRes.text();
     const romLinks = [
       ...new Set(
-        seriesHtml.match(/https:\/\/xiaomirom\.com\/rom\/[^\/<>\s"']+\//g) ||
-          seriesHtml.match(/\/rom\/[^\/<>\s"']+\//g) ||
+        seriesHtml.match(/https:\/\/xiaomirom\.com\/rom\/[^/<>\s"']+\//g) ||
+          seriesHtml.match(/\/rom\/[^/<>\s"']+\//g) ||
           []
       ),
     ].map((l) => (l.startsWith("http") ? l : `https://xiaomirom.com${l}`));
@@ -426,7 +426,7 @@ export async function fetchXiaomiRomByRegionalPage(
       /<td align=left>([^<]+)<\/td><td align=left>([^<]+)<\/td><td align=left>([^<]+)<\/td><td align=left>([^<]+)<\/td><td align=right>([^<]+)<\/td><td align=left>([^<]+)<\/td><td align=left>([^<]+)<\/td>/g;
     const downloadLinkMatches = [
       ...pageHtml.matchAll(
-        /<p>([a-zA-Z0-9_\-\.]+?\.(?:tgz|zip))\s*\|\s*<a href=([^>]+)>下载<\/a><\/p>/gi
+        /<p>([a-zA-Z0-9_\-.]+?\.(?:tgz|zip))\s*\|\s*<a href=([^>]+)>下载<\/a><\/p>/gi
       ),
     ];
 
@@ -761,7 +761,7 @@ export function getRomMirrors(originalUrl: string): RomMirrorItem[] {
     const u = new URL(originalUrl);
     path = u.pathname;
   } catch {
-    path = originalUrl.replace(/^https?:\/\/[^\/]+/, "");
+    path = originalUrl.replace(/^https?:\/\/[^/]+/, "");
   }
 
   if (!path.startsWith("/")) {

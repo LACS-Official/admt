@@ -300,7 +300,7 @@ const OtherSettingsPanel: React.FC = () => {
 
   const handleRestoreDefaults = () => {
     const defaultSettings = {
-      language: "zh-CN" as "zh-CN",
+      language: "zh-CN" as const,
       systemTrayEnabled: false,
       autoStartEnabled: false,
       soundEnabled: true,

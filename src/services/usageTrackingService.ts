@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 用户使用数据追踪服务
  * 根据API使用指南实现用户行为统计功能
  * 仅在用户同意隐私政策后发送数据
@@ -207,49 +207,32 @@ export class UsageTrackingService {
   }
 
   /**
-   * 发送使用数据到API
+   * 记录使用数据（开源纯净策略：100% 存储于本地，不外发网络请求）
    */
   private async sendUsageData(data: UsageData): Promise<boolean> {
     try {
-      const endpoint = '/api/user-behavior/usage';
-
-      console.log(' 发送使用数据到端点:', endpoint);
-      console.log(' 使用数据:', {
-        softwareId: data.softwareId,
-        softwareName: data.softwareName,
-        softwareVersion: data.softwareVersion,
-        deviceFingerprint: data.deviceFingerprint.substring(0, 8) + '...',
-        used: data.used
-      });
-
-      // 检查IP级别频率限制（10秒内只能发送一次）
-      if (!this.canSendRequest('usage')) {
-        console.log('⏰ IP频率限制：10秒内已发送过使用数据请求，跳过本次发送');
-        return true; // 返回true避免重复尝试
-      }
-
-      // 使用tauriHttpService发送POST请求到用户行为统计API
-      const response = await tauriHttpService.post<ApiResponse>(endpoint, data, {
-        timeout: 10000,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+      const localStatsKey = 'admt_local_usage_stats';
+      const existing = localStorage.getItem(localStatsKey);
+      let count = 1;
+      if (existing) {
+        try {
+          const parsed = JSON.parse(existing);
+          count = (parsed.count || 0) + 1;
+        } catch {
+          count = 1;
         }
-      });
-
-      if (!response.success) {
-        throw new Error(response.error || '服务器返回错误');
       }
 
-      console.log(' 使用数据发送成功:', response.data?.message || '成功');
+      localStorage.setItem(localStatsKey, JSON.stringify({
+        lastUsed: new Date().toISOString(),
+        version: data.softwareVersion,
+        count,
+      }));
 
-      // 记录请求时间用于频率限制
-      this.recordRequestTime('usage');
-
+      console.log(`[UsageTracking] 本地会话统计更新完成 (累计使用: ${count} 次)`);
       return true;
-
     } catch (error) {
-      console.error(' 发送使用数据失败:', error);
+      console.warn('[UsageTracking] 本地统计记录异常:', error);
       return false;
     }
   }

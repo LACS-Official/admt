@@ -655,8 +655,8 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
 
     const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
     const parts = rawCmd.split(/\s+/).filter(Boolean);
-    let commandName = parts[0] || "";
-    let args = parts.slice(1);
+    const commandName = parts[0] || "";
+    const args = parts.slice(1);
 
     const isGlobalAdb =
       !selectedDevice ||
@@ -908,7 +908,10 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
   const handleDeleteCategory = async (cat: CommandCategory) => {
     if (!commandsConfig) return;
     if (cat.commands.length > 0) {
-      alert("请先删除该分类下的所有命令");
+      setStatusBarMessage({
+        type: "warning",
+        message: "请先删除该分类下的所有命令",
+      });
       return;
     }
     if (!window.confirm(`确定要删除分类 "${cat.name}" 吗？`)) return;

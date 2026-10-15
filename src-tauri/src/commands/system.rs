@@ -1033,3 +1033,90 @@ pub async fn get_device_performance_info(serial: String) -> Result<serde_json::V
 pub async fn get_device_memory_storage_info(serial: String) -> Result<serde_json::Value> {
     get_device_performance_info(serial).await
 }
+
+/// 检查当前进程是否以管理员权限运行
+#[tauri::command]
+pub async fn is_admin() -> Result<bool> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let output = std::process::Command::new("net")
+            .arg("session")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .creation_flags(0x08000000)
+            .status();
+        match output {
+            Ok(status) => Ok(status.success()),
+            Err(_) => Ok(false),
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        Ok(false)
+    }
+}
+
+/// 以管理员权限重新启动应用程序
+#[tauri::command]
+pub async fn restart_as_admin(app: tauri::AppHandle) -> Result<bool> {
+    #[cfg(windows)]
+    {
+        let current_exe = std::env::current_exe().map_err(|e| AdmtError::Io(e.to_string()))?;
+        use std::os::windows::process::CommandExt;
+        let status = std::process::Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-WindowStyle", "Hidden",
+                "-Command",
+                &format!("Start-Process -FilePath '{}' -Verb RunAs", current_exe.display())
+            ])
+            .creation_flags(0x08000000)
+            .status();
+        if let Ok(s) = status {
+            if s.success() {
+                app.exit(0);
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+    #[cfg(not(windows))]
+    {
+        Ok(false)
+    }
+}
+
+/// 获取自启动配置信息
+#[tauri::command]
+pub async fn get_autostart_config(_app: tauri::AppHandle) -> Result<serde_json::Value> {
+    let current_exe = std::env::current_exe().map_err(|e| AdmtError::Io(e.to_string()))?;
+    let path = current_exe.to_string_lossy().to_string();
+
+    #[cfg(windows)]
+    {
+        use winreg::enums::*;
+        use winreg::RegKey;
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        let run_key = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
+        let enabled = if let Ok(key) = run_key {
+            key.get_raw_value("com.lacs.admt").is_ok() || key.get_raw_value("玩机管家").is_ok()
+        } else {
+            false
+        };
+        Ok(serde_json::json!({
+            "enabled": enabled,
+            "path": path,
+            "registry_path": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+        }))
+    }
+    #[cfg(not(windows))]
+    {
+        Ok(serde_json::json!({
+            "enabled": false,
+            "path": path,
+            "registry_path": ""
+        }))
+    }
+}
+

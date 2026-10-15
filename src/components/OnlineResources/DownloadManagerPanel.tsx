@@ -1,4 +1,4 @@
-﻿/*
+/*
 在线资源-下载管理卡片页面
 */
 import React, { useState, useEffect } from 'react';
@@ -230,7 +230,7 @@ interface DownloadManagerPanelProps {
   onBack: () => void;
 }
 
-export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ }) => {
+export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBack: _onBack }) => {
   const styles = useStyles();
   const [tasks, setTasks] = useState<DownloadTask[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<DownloadTask[]>([]);

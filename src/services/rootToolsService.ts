@@ -150,7 +150,9 @@ class RootToolsService {
           this.realVersionsCache.set(k as PatchEngineType, v as ToolVersionInfo[]);
         }
       }
-    } catch (_e) {}
+    } catch (_e) {
+      // ignore cache load error
+    }
   }
 
   private saveCache() {
@@ -171,7 +173,9 @@ class RootToolsService {
         "admt_root_engine_versions_cache_v2",
         JSON.stringify(versionsObj)
       );
-    } catch (_e) {}
+    } catch (_e) {
+      // ignore cache save error
+    }
   }
 
   public isToolDownloaded(toolId: string): boolean {
@@ -271,7 +275,9 @@ class RootToolsService {
           });
         }
       }
-    } catch (_err) {}
+    } catch (_err) {
+      // ignore official magisk fetch error
+    }
 
     // 2. 尝试从 GitHub Releases 获取历史与最新列表
     try {
@@ -281,7 +287,9 @@ class RootToolsService {
           results.push(ghv);
         }
       }
-    } catch (_err) {}
+    } catch (_err) {
+      // ignore github releases error
+    }
 
     return results;
   }

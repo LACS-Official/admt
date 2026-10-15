@@ -57,9 +57,9 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     gap: "12px",
-    padding: "16px",
+    padding: "16px 18px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "8px",
+    borderRadius: "14px",
     backgroundColor: "var(--colorNeutralBackground1)",
   },
   inputRow: {
@@ -87,7 +87,7 @@ const useStyles = makeStyles({
   fileInfo: {
     padding: "12px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "6px",
+    borderRadius: "12px",
     fontSize: "12px",
     fontFamily: "monospace",
     display: "flex",
@@ -107,7 +107,7 @@ const useStyles = makeStyles({
     fontSize: "12px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
+    borderRadius: "12px",
     padding: "8px",
     maxHeight: "200px",
     overflow: "auto",
@@ -117,7 +117,7 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorPaletteRedBackground1)",
     border: "1px solid var(--colorPaletteRedBorder1)",
     padding: "12px",
-    borderRadius: "6px",
+    borderRadius: "12px",
   },
   actions: {
     display: "flex",
@@ -136,7 +136,7 @@ const useStyles = makeStyles({
     borderTop: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground2)",
     marginTop: "auto",
-    borderRadius: "0 0 8px 8px",
+    borderRadius: "0 0 14px 14px",
   },
 });
 
@@ -306,7 +306,10 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
       const lower = path.toLowerCase();
       const valid = [".img", ".bin", ".raw", ".sparse"].some(ext => lower.endsWith(ext));
       if (!valid) {
-        alert(t('flash.unsupported_format'));
+        setStatusBarMessage({
+          type: "warning",
+          message: t('flash.unsupported_format'),
+        });
         return;
       }
       const name = path.split(/[/\\]/).pop() || path;
@@ -380,7 +383,9 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
         if (!chk.success) {
           setFlashLog(prev => prev + `${t('flash.log_fastboot_unavailable')}: ${chk.error || chk.output}\n`);
         }
-      } catch (_) {}
+      } catch (_) {
+        // ignore fastboot availability check error
+      }
 
       // 计算目标分区列表
       const targets: string[] = (() => {
@@ -554,8 +559,13 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
               appearance="subtle"
               icon={<Info24Regular />}
               onClick={() => {
-                const { open: openUrl } = require('@tauri-apps/plugin-shell');
-                openUrl('https://admt.lacs.cc/guide/flash-image');
+                import('@tauri-apps/plugin-shell').then(({ open: openShell }) => {
+                  openShell('https://admt.lacs.cc/guide/flash-image').catch(() => {
+                    window.open('https://admt.lacs.cc/guide/flash-image', '_blank');
+                  });
+                }).catch(() => {
+                  window.open('https://admt.lacs.cc/guide/flash-image', '_blank');
+                });
               }}
             >
               刷机教程
@@ -598,7 +608,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
                   <Text weight="semibold" size={400}>{t('flash.confirm_dialog_desc')}</Text>
                 </div>
                 
-                <div style={{ padding: "12px 14px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "8px", border: "1px solid var(--colorNeutralStroke2)", display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
+                <div style={{ padding: "12px 14px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "12px", border: "1px solid var(--colorNeutralStroke2)", display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
                   <div><strong>{t('flash.device_label')}</strong> {device?.properties?.model || t('mirror.unknown_device')} ({device?.serial || t('mirror.unknown_device')})</div>
                   <div><strong>{t('flash.file_label')}</strong> {selectedFileName || '未选择'}</div>
                   <div><strong>{t('flash.partition_label')}</strong> {partitions.find(p => p.value === selectedPartition)?.label}</div>

@@ -1,4 +1,4 @@
-﻿use crate::device::CommandResult;
+use crate::device::CommandResult;
 use crate::error::{AdmtError, Result};
 use serde_json::json;
 use std::fs;
@@ -110,6 +110,26 @@ async fn patch_magisk(
         }
 
         let _ = cmd.output().await;
+
+        // 若解包出 ramdisk.cpio 且提取到 magiskinit，执行真实注入
+        let ramdisk = work_dir.join("ramdisk.cpio");
+        let magiskinit = work_dir.join("magiskinit");
+        if ramdisk.exists() && magiskinit.exists() {
+            let _ = window.emit(
+                "patch-progress",
+                json!({"status": "修补 Ramdisk 并注入 magiskinit...", "progress": 65}),
+            );
+            let mut cpio_cmd = Command::new(&work_magiskboot);
+            cpio_cmd.current_dir(work_dir)
+                .args(["cpio", "ramdisk.cpio", "add 0750 init magiskinit", "patch"])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped());
+            #[cfg(windows)]
+            {
+                cpio_cmd.creation_flags(0x08000000);
+            }
+            let _ = cpio_cmd.output().await;
+        }
 
         let _ = window.emit(
             "patch-progress",
@@ -282,6 +302,10 @@ fn extract_magisk_bins(apk_path: &Path, out_dir: &Path) -> Result<()> {
 
         if name.contains("lib/arm64-v8a/libmagisk64.so") {
             let mut out = fs::File::create(out_dir.join("magisk64"))
+                .map_err(|e| AdmtError::Io(e.to_string()))?;
+            io::copy(&mut file, &mut out).map_err(|e| AdmtError::Io(e.to_string()))?;
+        } else if name.contains("lib/arm64-v8a/libmagiskinit.so") {
+            let mut out = fs::File::create(out_dir.join("magiskinit"))
                 .map_err(|e| AdmtError::Io(e.to_string()))?;
             io::copy(&mut file, &mut out).map_err(|e| AdmtError::Io(e.to_string()))?;
         } else if name.contains("lib/armeabi-v7a/libmagisk32.so") {

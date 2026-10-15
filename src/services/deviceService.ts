@@ -1,12 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { useDeviceStore } from "../stores/deviceStore";
 import { useAppStore } from "../stores/appStore";
 import { DeviceInfo, DeviceProperties, CommandResult, InstalledApp, ApkInfo, BatchOperation, DeviceFile } from "../types/device";
 import { logService } from "./logService";
 import { enhancedLogService } from "./enhancedLogService";
 import { deviceConnectionTrackingService } from "./deviceConnectionTrackingService";
-import { generateDeviceUniqueIdFromProperties } from "../utils/deviceIdentification";
 import { adbToolsManager } from "./adbToolsManager";
 
 export class DeviceService {
@@ -730,30 +729,18 @@ export class DeviceService {
 
   // APK下载相关方法
   async downloadApk(url: string, fileName: string, isDirect: boolean): Promise<string> {
-    try {
-      const filePath = await invoke<string>("download_apk", {
-        url,
-        fileName,
-        isDirect,
-      });
-      return filePath;
-    } catch (error) {
-      // console.error("Failed to download APK:", error);
-      throw error;
-    }
+    return await invoke<string>("download_apk", {
+      url,
+      fileName,
+      isDirect,
+    });
   }
 
   async getDownloadSize(url: string, isDirect: boolean): Promise<number> {
-    try {
-      const size = await invoke<number>("get_download_size", {
-        url,
-        isDirect,
-      });
-      return size;
-    } catch (error) {
-      // console.error("Failed to get download size:", error);
-      throw error;
-    }
+    return await invoke<number>("get_download_size", {
+      url,
+      isDirect,
+    });
   }
 
   /**

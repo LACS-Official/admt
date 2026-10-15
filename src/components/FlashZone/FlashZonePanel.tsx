@@ -259,56 +259,28 @@ const FlashZonePanel: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {false ? (
-        <div className={styles.noDevice}>
-          <Code24Regular
-            style={{
-              fontSize: "48px",
-              color: "var(--colorNeutralForeground3)",
-            }}
-          />
-          <Text size={400}>{t("flash.no_device_title")}</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            {t("flash.no_device_hint")}
-          </Text>
-        </div>
-      ) : false ? (
-        <div className={styles.noDevice}>
-          <Settings24Regular
-            style={{
-              fontSize: "48px",
-              color: "var(--colorNeutralForeground3)",
-            }}
-          />
-          <Text size={400}>{t("flash.select_device_title")}</Text>
-          <Text size={300} style={{ color: "var(--colorNeutralForeground2)" }}>
-            {t("flash.select_device_hint")}
-          </Text>
-        </div>
-      ) : (
-        <div className={styles.content}>
-          <div className={styles.tabContainer}>
-            <TabList
-              id="tour-flash-tabs"
-              selectedValue={currentView}
-              onTabSelect={(_, data) =>
-                setCurrentView(data.value as FlashZoneView)
-              }
-              className={styles.headerTabList}
-            >
-              {tabs.map((tab) => (
-                <Tab key={tab.id} value={tab.id} icon={tab.icon}>
-                  {tab.label}
-                </Tab>
-              ))}
-            </TabList>
+      <div className={styles.content}>
+        <div className={styles.tabContainer}>
+          <TabList
+            id="tour-flash-tabs"
+            selectedValue={currentView}
+            onTabSelect={(_, data) =>
+              setCurrentView(data.value as FlashZoneView)
+            }
+            className={styles.headerTabList}
+          >
+            {tabs.map((tab) => (
+              <Tab key={tab.id} value={tab.id} icon={tab.icon}>
+                {tab.label}
+              </Tab>
+            ))}
+          </TabList>
 
-            <div className={styles.tabContent}>
-              {renderContent()}
-            </div>
+          <div className={styles.tabContent}>
+            {renderContent()}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

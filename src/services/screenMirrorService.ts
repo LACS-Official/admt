@@ -184,25 +184,14 @@ export class ScreenMirrorService {
   }
 
   /**
-   * 获取投屏统计信息
+   * 获取投屏统计信息（等待后端真实管道支持，杜绝假随机数）
    */
   static async getSessionStats(
     sessionId: string,
   ): Promise<ScreenMirrorStats | null> {
     try {
-      // TODO: 实现统计信息获取
-      console.log(`Getting stats for session ${sessionId}`);
-
-      // 暂时返回模拟数据
-      return {
-        sessionId,
-        duration: Math.floor(Date.now() / 1000) % 3600, // 模拟运行时间
-        framesReceived: Math.floor(Math.random() * 10000),
-        framesDropped: Math.floor(Math.random() * 100),
-        averageFps: 30 + Math.random() * 10,
-        currentBitrate: 2 + Math.random() * 3,
-        networkLatency: 10 + Math.random() * 50,
-      };
+      console.info(`[ScreenMirror] 会话 ${sessionId} 性能统计等待数据源支持`);
+      return null;
     } catch (error) {
       console.error(`Failed to get session stats:`, error);
       return null;

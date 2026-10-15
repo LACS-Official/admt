@@ -718,7 +718,9 @@ rm -f "${remoteZip}"
         if (cached) {
           return JSON.parse(cached);
         }
-      } catch (_e) {}
+      } catch (_e) {
+        // ignore cache read error
+      }
     }
 
     const modules = JSON.parse(JSON.stringify(DEFAULT_ONLINE_CORE_MODULES)) as OnlineCoreModuleInfo[];
@@ -773,7 +775,9 @@ rm -f "${remoteZip}"
 
     try {
       localStorage.setItem("admt_online_core_modules_cache_v1", JSON.stringify(modules));
-    } catch (_e) {}
+    } catch (_e) {
+      // ignore cache write error
+    }
 
     return modules;
   }

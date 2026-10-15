@@ -21,7 +21,6 @@ import {
   ArrowClockwise24Regular,
 } from '@fluentui/react-icons';
 import { useAppConfigStore } from '../../stores/welcomeStore';
-import { activationService } from '../../services/activationService';
 
 const useStyles = makeStyles({
   container: {
@@ -73,14 +72,6 @@ export const UserConfigPreserver: React.FC<UserConfigPreserverProps> = ({
   // 检查是否有保留的用户配置
   useEffect(() => {
     const checkPreservedConfig = () => {
-      // 从激活服务获取保留的配置
-      const activationStatus = activationService.checkActivationStatus();
-      
-      // 如果当前配置中有用户配置且应用未激活，说明是过期后保留的配置
-      if (config.userConfig && (!activationStatus.isActivated || activationStatus.isExpired)) {
-        setPreservedConfig(config.userConfig);
-        setShowPreservedConfig(true);
-      }
       
       // 也检查本地存储中是否有过期处理时保留的配置
       try {
@@ -137,7 +128,7 @@ export const UserConfigPreserver: React.FC<UserConfigPreserverProps> = ({
       theme: '主题',
       autoStart: '开机自启',
       checkUpdates: '检查更新',
-      enableTelemetry: '遥测数据',
+      enableTelemetry: '实时状态',
     };
     return labels[key] || key;
   };

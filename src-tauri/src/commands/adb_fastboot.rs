@@ -226,3 +226,92 @@ pub async fn execute_adb_command_with_path(
     crate::adb_commands::execute_adb_command_with_path(&adb_path, &serial, &command, &args, timeout)
         .await
 }
+
+/// 获取指定设备的 Fastboot ARB (防回滚) 等级
+#[tauri::command]
+pub async fn fastboot_get_anti_rollback(serial: Option<String>) -> Result<serde_json::Value> {
+    let mut args_vec = Vec::new();
+    if let Some(ref s) = serial {
+        if !s.is_empty() {
+            args_vec.push("-s");
+            args_vec.push(s.as_str());
+        }
+    }
+    args_vec.push("getvar");
+    args_vec.push("anti");
+
+    match execute_fastboot_command(&args_vec, Some(10)).await {
+        Ok(res) => {
+            let combined = format!("{}\n{}", res.output, res.error.clone().unwrap_or_default());
+            let mut anti_version = None;
+            for line in combined.lines() {
+                let trimmed = line.trim();
+                let clean = trimmed.strip_prefix("(bootloader)").map(|s| s.trim()).unwrap_or(trimmed);
+                if let Some(val) = clean.strip_prefix("anti:") {
+                    let v = val.trim();
+                    if !v.is_empty() {
+                        anti_version = Some(v.to_string());
+                        break;
+                    }
+                }
+            }
+            Ok(serde_json::json!({
+                "success": res.success,
+                "anti": anti_version,
+                "raw": combined
+            }))
+        }
+        Err(e) => {
+            Ok(serde_json::json!({
+                "success": false,
+                "anti": null,
+                "error": e.to_string()
+            }))
+        }
+    }
+}
+
+/// 获取 Fastboot 指定变量
+#[tauri::command]
+pub async fn fastboot_get_var(serial: Option<String>, var_name: String) -> Result<serde_json::Value> {
+    let mut args_vec = Vec::new();
+    if let Some(ref s) = serial {
+        if !s.is_empty() {
+            args_vec.push("-s");
+            args_vec.push(s.as_str());
+        }
+    }
+    args_vec.push("getvar");
+    args_vec.push(var_name.as_str());
+
+    match execute_fastboot_command(&args_vec, Some(10)).await {
+        Ok(res) => {
+            let combined = format!("{}\n{}", res.output, res.error.clone().unwrap_or_default());
+            let mut var_value = None;
+            let prefix = format!("{}:", var_name);
+            for line in combined.lines() {
+                let trimmed = line.trim();
+                let clean = trimmed.strip_prefix("(bootloader)").map(|s| s.trim()).unwrap_or(trimmed);
+                if let Some(val) = clean.strip_prefix(&prefix) {
+                    let v = val.trim();
+                    if !v.is_empty() {
+                        var_value = Some(v.to_string());
+                        break;
+                    }
+                }
+            }
+            Ok(serde_json::json!({
+                "success": res.success,
+                "value": var_value,
+                "raw": combined
+            }))
+        }
+        Err(e) => {
+            Ok(serde_json::json!({
+                "success": false,
+                "value": null,
+                "error": e.to_string()
+            }))
+        }
+    }
+}
