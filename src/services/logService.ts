@@ -16,6 +16,8 @@ import {
   debug as pluginDebug,
   attachLogger,
 } from "@tauri-apps/plugin-log";
+import { useAppStore } from "../stores/appStore";
+import { LogRecordingLevel } from "../types/app";
 
 // 兼容性接口导出
 export type { LogLevel, LogCategory, StructuredLogEntry, DeviceEvent, FirmwareFlashEvent, LogRetentionPolicy, LogStats };
@@ -42,6 +44,41 @@ export class LogService {
     errorLogs: 180,
     maxMemoryLogs: 2000,
   };
+
+  /**
+   * 判断指定日志级别是否允许被记录（由 软件设置-基础设置 决定，默认记录错误和警告）
+   */
+  public isLevelAllowed(level: LogLevel): boolean {
+    try {
+      const recordingLevels: LogRecordingLevel[] =
+        useAppStore.getState().config.logRecordingLevels ?? ["error", "warning"];
+
+      if (level === "fatal" || level === "error") {
+        return recordingLevels.includes("error");
+      }
+      if (level === "warning") {
+        return recordingLevels.includes("warning");
+      }
+      if (level === "info") {
+        return recordingLevels.includes("info");
+      }
+      if (level === "debug") {
+        return recordingLevels.includes("debug");
+      }
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * 应用当前采集级别策略，修剪内存中不符合级别的日志并通知监听器
+   */
+  public applyRecordedLevelsFilter(): void {
+    this.logs = this.logs.filter((entry) => this.isLevelAllowed(entry.level));
+    this.seenIds = new Set(this.logs.map((entry) => entry.id));
+    this.notifyListeners();
+  }
 
   constructor() {
     this.sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -102,6 +139,10 @@ export class LogService {
             mappedLevel = "info";
         }
 
+        if (!this.isLevelAllowed(mappedLevel)) {
+          return;
+        }
+
         let cleanMsg = message.trim();
         let source = "Rust";
         let category: LogCategory = "system";
@@ -149,6 +190,9 @@ export class LogService {
     source: string;
     message: string;
   }): void {
+    if (!this.isLevelAllowed(params.level)) {
+      return;
+    }
     const id = `rust_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const entry: StructuredLogEntry = {
       id,
@@ -171,6 +215,7 @@ export class LogService {
    * 写入内部日志队列并通知订阅者与多窗口
    */
   private pushLogEntry(entry: StructuredLogEntry, broadcast: boolean = true): void {
+    if (!this.isLevelAllowed(entry.level)) return;
     if (this.seenIds.has(entry.id)) return;
     this.seenIds.add(entry.id);
 
@@ -193,6 +238,7 @@ export class LogService {
    * 处理远端窗口通过 BroadcastChannel 广播过来的日志
    */
   private handleRemoteLog(entry: StructuredLogEntry): void {
+    if (!this.isLevelAllowed(entry.level)) return;
     if (this.seenIds.has(entry.id)) return;
     this.seenIds.add(entry.id);
 
@@ -238,6 +284,9 @@ export class LogService {
     errorCode?: string;
     stackTrace?: string;
   }): void {
+    if (!this.isLevelAllowed(params.level)) {
+      return;
+    }
     const id = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     const entry: StructuredLogEntry = {
       id,

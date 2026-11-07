@@ -46,6 +46,7 @@ interface AIChatState {
   deleteConversation: (id: string) => void;
   setCurrentConversation: (id: string | null) => void;
   updateConversationTitle: (id: string, title: string) => void;
+  clearConversationMessages: (id: string) => void;
   clearHistory: () => void;
   subscribeToStorageChanges: () => () => void;
   setAgentMode: (mode: boolean) => void;
@@ -154,6 +155,14 @@ export const useAIChatStore = create<AIChatState>()(
         set((state) => ({
           conversations: state.conversations.map((c) => 
              c.id === id ? { ...c, title, updatedAt: new Date().toISOString() } : c
+          ),
+        }));
+      },
+
+      clearConversationMessages: (id) => {
+        set((state) => ({
+          conversations: state.conversations.map((c) =>
+            c.id === id ? { ...c, messages: [], updatedAt: new Date().toISOString() } : c
           ),
         }));
       },

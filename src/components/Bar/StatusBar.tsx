@@ -12,6 +12,7 @@ import {
   MenuList,
   MenuItem,
   MenuPopover,
+  Tooltip,
 } from "@fluentui/react-components";
 import {
   Checkmark24Regular,
@@ -22,6 +23,7 @@ import {
   Copy24Regular,
   Checkmark24Filled,
   QuestionCircle24Regular,
+  Star20Filled,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import AppTour from "../Common/AppTour";
@@ -65,9 +67,35 @@ const useStyles = makeStyles({
   leftSection: {
     display: "flex",
     alignItems: "center",
-    gap: "16px",
+    gap: "12px",
     flex: "1",
     minWidth: "0",
+  },
+  githubStarButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "3px 10px",
+    borderRadius: "9999px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "var(--colorNeutralForeground1)",
+    fontSize: "11px",
+    fontWeight: "500",
+    cursor: "pointer",
+    transition: "all 0.18s ease",
+    userSelect: "none",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.03)",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      border: "1px solid var(--colorBrandStroke1)",
+      color: "var(--colorBrandForeground1)",
+      transform: "translateY(-1px)",
+      boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
+    },
+    "&:active": {
+      transform: "translateY(0)",
+    },
   },
   centerSection: {
     display: "flex",
@@ -545,6 +573,21 @@ const StatusBar: React.FC = () => {
     }
   };
 
+  const handleOpenGithubStar = async () => {
+    const url = "https://github.com/LACS-Official/admt";
+    try {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl(url);
+    } catch {
+      try {
+        const { open } = await import("@tauri-apps/plugin-shell");
+        await open(url);
+      } catch {
+        window.open(url, "_blank");
+      }
+    }
+  };
+
   return (
     <div className={styles.statusBar}>
       {/* 默认内容 */}
@@ -554,6 +597,17 @@ const StatusBar: React.FC = () => {
       )}>
         {/* 左侧状态信息 */}
         <div className={styles.leftSection}>
+          <Tooltip content="前往 GitHub 为玩机管家点亮 Star 支持开源" relationship="label" positioning="above">
+            <button
+              type="button"
+              className={styles.githubStarButton}
+              onClick={handleOpenGithubStar}
+            >
+              <Star20Filled style={{ color: "#f59e0b", fontSize: "14px" }} />
+              <span>Star 本项目</span>
+            </button>
+          </Tooltip>
+
           {isLoading && (
             <div className={styles.statusItem}>
               <Spinner size="extra-small" className={styles.spinner} />

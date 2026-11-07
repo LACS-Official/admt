@@ -27,12 +27,14 @@ import {
   Dismiss24Regular,
   Open24Regular,
   Apps24Regular,
+  Add20Regular,
+  Delete24Regular,
 } from "@fluentui/react-icons";
+import { Input, Textarea, Field } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 import { useMcpStore, PRESET_AI_SKILLS } from "../../stores/mcpStore";
 import { AISkillResource } from "../../types/mcp";
 import { useAppStore } from "../../stores/appStore";
-import UnderDevelopmentOverlay from "../Common/UnderDevelopmentOverlay";
 
 const useStyles = makeStyles({
   container: {
@@ -111,10 +113,11 @@ const useStyles = makeStyles({
   content: {
     flex: 1,
     overflowY: "auto",
-    paddingRight: "4px",
+    padding: "6px 8px 24px 4px",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
+    boxSizing: "border-box",
   },
   grid: {
     display: "grid",
@@ -202,14 +205,29 @@ export const SkillsResourcesPanel: React.FC = () => {
   const { setStatusBarMessage } = useAppStore();
 
   const skills = useMcpStore((state) => state.skills);
+  const customSkills = useMcpStore((state) => state.customSkills || []);
+  const addCustomSkill = useMcpStore((state) => state.addCustomSkill);
+  const deleteCustomSkill = useMcpStore((state) => state.deleteCustomSkill);
+  const { setCurrentView } = useAppStore();
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [detailSkill, setDetailSkill] = useState<AISkillResource | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newCategory, setNewCategory] = useState("flash");
+  const [newTags, setNewTags] = useState("");
+  const [newPrompt, setNewPrompt] = useState("");
+
+  const allSkills = useMemo(() => {
+    return [...customSkills, ...skills];
+  }, [customSkills, skills]);
 
   const categories = [
     { id: "all", label: "全部技能" },
+    { id: "custom", label: "自定义技能" },
     { id: "flash", label: " 救砖与刷机" },
     { id: "magisk", label: " Magisk/Root" },
     { id: "reverse", label: " 逆向工程" },
@@ -219,7 +237,8 @@ export const SkillsResourcesPanel: React.FC = () => {
   ];
 
   const filteredSkills = useMemo(() => {
-    return skills.filter((s) => {
+    return allSkills.filter((s) => {
+      if (selectedCategory === "custom") return s.id.startsWith("custom_skill_");
       const matchCat = selectedCategory === "all" || s.category === selectedCategory;
       const q = searchQuery.trim().toLowerCase();
       const matchSearch =
@@ -230,7 +249,7 @@ export const SkillsResourcesPanel: React.FC = () => {
         s.author.toLowerCase().includes(q);
       return matchCat && matchSearch;
     });
-  }, [skills, selectedCategory, searchQuery]);
+  }, [allSkills, selectedCategory, searchQuery]);
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -296,57 +315,50 @@ export const SkillsResourcesPanel: React.FC = () => {
       </div>
 
       {/* 技能卡片列表 (一行 2 个) */}
-      <div className={styles.content} style={{ position: "relative", flex: 1, minHeight: 0 }}>
-        <div style={{
-          opacity: 0.4,
-          pointerEvents: "none",
-          filter: "blur(3px)",
-          transition: "all 0.3s ease",
-          height: "100%",
-          overflow: "hidden",
-        }}>
-          <div className={styles.grid}>
-            {filteredSkills.map((skill) => (
-              <div key={skill.id} className={styles.skillCard}>
-                <div className={styles.cardTop}>
-                  <Badge appearance="tint" color="brand" size="small">
-                    {skill.category.toUpperCase()}
-                  </Badge>
-                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                    作者: {skill.author}
-                  </Text>
-                </div>
-
-                <div className={styles.skillTitle}>{skill.title}</div>
-                <div className={styles.skillDesc}>{skill.description}</div>
-
-                <div className={styles.tagList}>
-                  {skill.tags.map((tag, idx) => (
-                    <span key={idx} className={styles.tagChip}>
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className={styles.cardActions}>
-                  <Button
-                    size="small"
-                    appearance="primary"
-                    icon={<Open24Regular />}
-                  >
-                    查看详情与 Prompt
-                  </Button>
-                </div>
+      <div className={styles.content}>
+        <div className={styles.grid}>
+          {filteredSkills.map((skill) => (
+            <div
+              key={skill.id}
+              className={styles.skillCard}
+              onClick={() => setDetailSkill(skill)}
+            >
+              <div className={styles.cardTop}>
+                <Badge appearance="tint" color="brand" size="small">
+                  {skill.category.toUpperCase()}
+                </Badge>
+                <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                  作者: {skill.author}
+                </Text>
               </div>
-            ))}
-          </div>
-        </div>
 
-        <UnderDevelopmentOverlay
-          featureKey="online_skills"
-          title={t("skills.under_dev_title", "AI 技能 (Skills) 库开发中...")}
-          description={t("skills.under_dev_desc", "针对 Android 玩机与逆向调试的专业 LLM System Prompts / Agent 技能库正在内测构建。")}
-        />
+              <div className={styles.skillTitle}>{skill.title}</div>
+              <div className={styles.skillDesc}>{skill.description}</div>
+
+              <div className={styles.tagList}>
+                {skill.tags.map((tag, idx) => (
+                  <span key={idx} className={styles.tagChip}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+
+              <div className={styles.cardActions}>
+                <Button
+                  size="small"
+                  appearance="primary"
+                  icon={<Open24Regular />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDetailSkill(skill);
+                  }}
+                >
+                  查看详情与 Prompt
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Skills 详情弹窗 (二级弹窗) */}
@@ -396,6 +408,20 @@ export const SkillsResourcesPanel: React.FC = () => {
               </DialogContent>
 
               <DialogActions>
+                {detailSkill.id.startsWith("custom_skill_") && (
+                  <Button
+                    appearance="subtle"
+                    style={{ color: "var(--colorPaletteRedForeground1)" }}
+                    icon={<Delete24Regular />}
+                    onClick={() => {
+                      deleteCustomSkill(detailSkill.id);
+                      setDetailSkill(null);
+                      setStatusBarMessage({ type: "success", message: "已删除自定义技能" });
+                    }}
+                  >
+                    删除技能
+                  </Button>
+                )}
                 <Button appearance="subtle" onClick={() => exportPromptToFile(detailSkill)}>
                   导出为 .md 文件
                 </Button>

@@ -33,6 +33,7 @@ use crate::commands::{
     check_activation_expiry, verify_command_safety, watch_config_file, write_json_file, parse_local_rom,
     extract_local_partition, parse_online_rom, extract_online_partition,
     is_admin, restart_as_admin, get_autostart_config,
+            get_host_network_info, execute_host_command, yuanbao_search,
 };
 
 use crate::adb::app::app_management::*;
@@ -131,6 +132,7 @@ pub fn run() {
             execute_adb_command_with_path,
             verify_command_safety,
             read_chat_text_file,
+            yuanbao_search,
             execute_fastboot_command,
             execute_fastboot_command_with_path,
             switch_ab_partition,
@@ -204,6 +206,8 @@ pub fn run() {
             is_admin,
             restart_as_admin,
             get_autostart_config,
+            get_host_network_info,
+            execute_host_command,
             set_window_always_on_top,
             get_window_always_on_top,
             get_app_environment,

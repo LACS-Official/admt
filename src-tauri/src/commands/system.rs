@@ -1120,3 +1120,251 @@ pub async fn get_autostart_config(_app: tauri::AppHandle) -> Result<serde_json::
     }
 }
 
+/// 获取主机电脑网络及系统环境信息（供 AI 助手及网络诊断模块调用）
+#[tauri::command]
+pub async fn get_host_network_info() -> Result<serde_json::Value> {
+    let hostname = std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "localhost".to_string());
+
+    let mut local_ip = "127.0.0.1".to_string();
+    if let Ok(socket) = std::net::UdpSocket::bind("0.0.0.0:0") {
+        if socket.connect("8.8.8.8:80").is_ok() {
+            if let Ok(addr) = socket.local_addr() {
+                local_ip = addr.ip().to_string();
+            }
+        }
+    }
+
+    Ok(serde_json::json!({
+        "hostname": hostname,
+        "local_ip": local_ip,
+        "os": std::env::consts::OS,
+        "arch": std::env::consts::ARCH,
+        "status": "online"
+    }))
+}
+
+#[cfg(windows)]
+fn decode_process_output(bytes: &[u8]) -> String {
+    if bytes.is_empty() {
+        return String::new();
+    }
+
+    // 1. 若输出本身为合法 UTF-8，直接转换
+    if let Ok(s) = std::str::from_utf8(bytes) {
+        return s.to_string();
+    }
+
+    // 2. Windows 平台：尝试使用控制台 OEM 代码页（如简体中文 CP936/GBK）解码
+    extern "system" {
+        fn MultiByteToWideChar(
+            CodePage: u32,
+            dwFlags: u32,
+            lpMultiByteStr: *const u8,
+            cbMultiByte: i32,
+            lpWideCharStr: *mut u16,
+            cchWideChar: i32,
+        ) -> i32;
+        fn GetOEMCP() -> u32;
+        fn GetACP() -> u32;
+    }
+
+    let oem_cp = unsafe { GetOEMCP() };
+    let len = unsafe {
+        MultiByteToWideChar(
+            oem_cp,
+            0,
+            bytes.as_ptr(),
+            bytes.len() as i32,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+
+    if len > 0 {
+        let mut wide_buf = vec![0u16; len as usize];
+        let res = unsafe {
+            MultiByteToWideChar(
+                oem_cp,
+                0,
+                bytes.as_ptr(),
+                bytes.len() as i32,
+                wide_buf.as_mut_ptr(),
+                len,
+            )
+        };
+        if res > 0 {
+            return String::from_utf16_lossy(&wide_buf);
+        }
+    }
+
+    // 3. 尝试 ANSI 代码页 (ACP)
+    let acp = unsafe { GetACP() };
+    let len_acp = unsafe {
+        MultiByteToWideChar(
+            acp,
+            0,
+            bytes.as_ptr(),
+            bytes.len() as i32,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+
+    if len_acp > 0 {
+        let mut wide_buf = vec![0u16; len_acp as usize];
+        let res = unsafe {
+            MultiByteToWideChar(
+                acp,
+                0,
+                bytes.as_ptr(),
+                bytes.len() as i32,
+                wide_buf.as_mut_ptr(),
+                len_acp,
+            )
+        };
+        if res > 0 {
+            return String::from_utf16_lossy(&wide_buf);
+        }
+    }
+
+    // 4. 兜底策略：使用 UTF-8 lossy
+    String::from_utf8_lossy(bytes).to_string()
+}
+
+#[cfg(not(windows))]
+fn decode_process_output(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).to_string()
+}
+
+/// 在宿主电脑上直接执行 CMD 或 PowerShell 命令行指令
+#[tauri::command]
+pub async fn execute_host_command(
+    command: String,
+    shell: Option<String>,
+) -> Result<crate::device::CommandResult> {
+    let raw_cmd = command.trim().to_string();
+    if raw_cmd.is_empty() {
+        return Ok(crate::device::CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("命令内容为空".to_string()),
+            exit_code: Some(1),
+        });
+    }
+
+    // 基础高危破坏性指令防护
+    let lower = raw_cmd.to_lowercase();
+    if lower.contains("format ")
+        || lower.contains("rmdir /s /q c:\\")
+        || lower.contains("del /f /s /q c:\\")
+        || lower.contains("rm -rf /")
+    {
+        return Ok(crate::device::CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("安全拦截：该指令包含破坏宿主系统的严重风险，已被 ADMT 安全网关拒绝执行".to_string()),
+            exit_code: Some(1),
+        });
+    }
+
+    let shell_choice = shell.unwrap_or_else(|| {
+        #[cfg(windows)]
+        { "powershell".to_string() }
+        #[cfg(not(windows))]
+        { "sh".to_string() }
+    });
+
+    let task = tokio::task::spawn_blocking(move || {
+        use std::process::Command;
+
+        let mut cmd = if shell_choice.eq_ignore_ascii_case("cmd") {
+            let mut c = Command::new("cmd");
+            c.args(&["/C", &raw_cmd]);
+            c
+        } else if shell_choice.eq_ignore_ascii_case("powershell") {
+            let mut c = Command::new("powershell");
+            c.args(&[
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                &raw_cmd,
+            ]);
+            c
+        } else {
+            #[cfg(windows)]
+            {
+                let mut c = Command::new("powershell");
+                c.args(&[
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    &raw_cmd,
+                ]);
+                c
+            }
+            #[cfg(not(windows))]
+            {
+                let mut c = Command::new("sh");
+                c.args(&["-c", &raw_cmd]);
+                c
+            }
+        };
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+
+        cmd.output()
+    });
+
+    match tokio::time::timeout(std::time::Duration::from_secs(30), task).await {
+        Ok(Ok(Ok(output))) => {
+            let stdout = decode_process_output(&output.stdout).trim().to_string();
+            let stderr = decode_process_output(&output.stderr).trim().to_string();
+            let exit_code = output.status.code().unwrap_or(0);
+            let success = output.status.success();
+
+            // 核心修复：java -version 等部分命令行工具习惯性将版本及运行信息输出至 stderr
+            let combined = if stdout.is_empty() {
+                stderr.clone()
+            } else if stderr.is_empty() {
+                stdout.clone()
+            } else {
+                format!("{}\n{}", stdout, stderr)
+            };
+
+            Ok(crate::device::CommandResult {
+                success,
+                output: combined,
+                error: if stderr.is_empty() { None } else { Some(stderr) },
+                exit_code: Some(exit_code),
+            })
+        }
+        Ok(Ok(Err(e))) => Ok(crate::device::CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some(format!("执行终端指令失败: {}", e)),
+            exit_code: Some(1),
+        }),
+        Ok(Err(e)) => Ok(crate::device::CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some(format!("任务调度异常: {}", e)),
+            exit_code: Some(1),
+        }),
+        Err(_) => Ok(crate::device::CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("终端指令执行超时 (超过 30 秒限制)".to_string()),
+            exit_code: Some(124),
+        }),
+    }
+}

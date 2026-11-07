@@ -35,6 +35,7 @@ import {
   Apps20Regular,
 } from "@fluentui/react-icons";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
 import { DeviceInfo, DeviceMode } from "../../types/device";
@@ -49,6 +50,10 @@ import {
   loadFastbootCommandsConfig,
   saveFastbootCommandsConfig,
   watchFastbootConfigFile,
+  loadPowerShellCommandsConfig,
+  savePowerShellCommandsConfig,
+  loadCmdCommandsConfig,
+  saveCmdCommandsConfig,
 } from "../../utils/configLoader";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "react-i18next";
@@ -117,9 +122,14 @@ const useStyles = makeStyles({
     color: "#8b5cf6",
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
   },
-  modeTabActiveSsh: {
+  modeTabActivePs: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    color: "#10b981",
+    color: "#0284c7",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  },
+  modeTabActiveCmd: {
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "#d97706",
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
   },
   // Device Selector Dropdown Button
@@ -436,18 +446,18 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
   const isDeviceFastboot =
     selectedDevice?.mode === "fastboot" || selectedDevice?.mode === "fastbootd";
 
-  const [terminalMode, setTerminalMode] = useState<"adb" | "fastboot" | "ssh">(() =>
+  const [terminalMode, setTerminalMode] = useState<"adb" | "fastboot" | "powershell" | "cmd">(() =>
     isDeviceFastboot ? "fastboot" : "adb"
   );
 
   const isFastbootMode = terminalMode === "fastboot";
 
-  // Automatically adapt mode when device connects/switches mode (unless currently in SSH)
+  // Automatically adapt mode when device connects/switches mode (unless currently in SSH / PowerShell / CMD)
   useEffect(() => {
     if (selectedDevice?.mode === "fastboot" || selectedDevice?.mode === "fastbootd") {
-      setTerminalMode("fastboot");
+      setTerminalMode((prev) => (prev === "powershell" || prev === "cmd" ? prev : "fastboot"));
     } else if (selectedDevice?.mode === "sys" || selectedDevice?.mode === "rec") {
-      setTerminalMode((prev) => (prev === "ssh" ? "ssh" : "adb"));
+      setTerminalMode((prev) => (prev === "powershell" || prev === "cmd" ? prev : "adb"));
     }
   }, [selectedDevice?.mode]);
 
@@ -522,11 +532,15 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
     const loadConfig = async () => {
       try {
         let conf;
-        if (isFastbootMode) {
+        if (terminalMode === "fastboot") {
           conf = await loadFastbootCommandsConfig();
           stopWatching = await watchFastbootConfigFile((newConf) => {
             setCommandsConfig(newConf);
           });
+        } else if (terminalMode === "powershell") {
+          conf = await loadPowerShellCommandsConfig();
+        } else if (terminalMode === "cmd") {
+          conf = await loadCmdCommandsConfig();
         } else {
           conf = await loadAdbCommandsConfig();
           stopWatching = await watchConfigFile((newConf) => {
@@ -544,7 +558,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
     return () => {
       if (stopWatching) stopWatching();
     };
-  }, [isFastbootMode]);
+  }, [terminalMode]);
 
   // Listen for AI assistant command triggers
   useEffect(() => {
@@ -625,12 +639,12 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       return;
     }
 
-    // 自动剥离命令头部的 adb / fastboot / ssh 前缀，并自适应匹配对应模式
+    // 自动剥离命令头部的 adb / fastboot / powershell / cmd 前缀，并自适应匹配对应模式
     let effectiveMode = terminalMode;
-    const prefixMatch = rawCmd.match(/^(adb|fastboot|ssh)(?:\s+|$)/i);
+    const prefixMatch = rawCmd.match(/^(adb|fastboot|powershell|cmd)(?:\s+|$)/i);
     if (prefixMatch) {
-      const prefix = prefixMatch[1].toLowerCase() as "adb" | "fastboot" | "ssh";
-      rawCmd = rawCmd.replace(/^(?:adb|fastboot|ssh)(?:\s*)/i, "").trim();
+      const prefix = prefixMatch[1].toLowerCase() as "adb" | "fastboot" | "powershell" | "cmd";
+      rawCmd = rawCmd.replace(/^(?:adb|fastboot|powershell|cmd)(?:\s*)/i, "").trim();
       effectiveMode = prefix;
       if (terminalMode !== prefix) {
         setTerminalMode(prefix);
@@ -639,8 +653,10 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
 
     // 若剥离前缀后为空，提供默认帮助参数
     if (!rawCmd) {
-      if (effectiveMode === "ssh") {
-        rawCmd = "-V";
+      if (effectiveMode === "powershell") {
+        rawCmd = "$PSVersionTable.PSVersion";
+      } else if (effectiveMode === "cmd") {
+        rawCmd = "ver";
       } else {
         rawCmd = "help";
       }
@@ -668,8 +684,10 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       ["devices", "help", "version"].includes(commandName.toLowerCase());
 
     let promptHeader = "";
-    if (effectiveMode === "ssh") {
-      promptHeader = `\n[${time}] $ ssh ${rawCmd}\n`;
+    if (effectiveMode === "powershell") {
+      promptHeader = `\n[${time}] PS> ${rawCmd}\n`;
+    } else if (effectiveMode === "cmd") {
+      promptHeader = `\n[${time}] C:\\> ${rawCmd}\n`;
     } else if (effectiveMode === "fastboot") {
       const serialPart = !isGlobalFastboot && selectedDevice ? ` -s ${selectedDevice.serial}` : "";
       promptHeader = `\n[${time}] $ fastboot${serialPart} ${rawCmd}\n`;
@@ -681,9 +699,12 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
     setOutput((prev) => prev + promptHeader);
 
     try {
-      let result;
-      if (effectiveMode === "ssh") {
-        result = await deviceService.executeSshCommand(commandName, args, 30);
+      let result: { success: boolean; output?: string; error?: string };
+      if (effectiveMode === "powershell" || effectiveMode === "cmd") {
+        result = await invoke<{ success: boolean; output: string; error?: string; exit_code?: number }>(
+          "execute_host_command",
+          { command: rawCmd, shell: effectiveMode }
+        );
       } else if (effectiveMode === "fastboot") {
         const targetSerial = isGlobalFastboot ? "" : selectedDevice?.serial || "";
         result = await deviceService.executeFastbootCommand(
@@ -741,6 +762,13 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       let aiCmd = initialCommand.trim();
       if (aiCmd.startsWith("adb ")) aiCmd = aiCmd.substring(4).trim();
       else if (aiCmd.startsWith("fastboot ")) aiCmd = aiCmd.substring(9).trim();
+      else if (aiCmd.startsWith("powershell ")) {
+        setTerminalMode("powershell");
+        aiCmd = aiCmd.substring(11).trim();
+      } else if (aiCmd.startsWith("cmd ")) {
+        setTerminalMode("cmd");
+        aiCmd = aiCmd.substring(4).trim();
+      }
       aiCmd = aiCmd.replace(/^-s\s+(?:"[^"]*"|\S+)\s+/, "");
       executeCommand(aiCmd);
       onClearInitialCommand?.();
@@ -832,6 +860,13 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
     setIsEditDialogOpen(true);
   };
 
+  const getSaveCommandsConfigFn = () => {
+    if (terminalMode === "fastboot") return saveFastbootCommandsConfig;
+    if (terminalMode === "powershell") return savePowerShellCommandsConfig;
+    if (terminalMode === "cmd") return saveCmdCommandsConfig;
+    return saveAdbCommandsConfig;
+  };
+
   const handleSaveCommandOrCategory = async () => {
     if (!commandsConfig) return;
 
@@ -869,7 +904,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
         }
       }
 
-      const saveFn = isFastbootMode ? saveFastbootCommandsConfig : saveAdbCommandsConfig;
+      const saveFn = getSaveCommandsConfigFn();
       const success = await saveFn(updatedConfig);
 
       if (success) {
@@ -896,7 +931,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
         updatedConfig.categories[catIdx].commands = updatedConfig.categories[catIdx].commands.filter(
           (c) => c.id !== cmd.id
         );
-        const saveFn = isFastbootMode ? saveFastbootCommandsConfig : saveAdbCommandsConfig;
+        const saveFn = getSaveCommandsConfigFn();
         await saveFn(updatedConfig);
         setCommandsConfig(updatedConfig);
       }
@@ -919,7 +954,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
     try {
       const updatedConfig = { ...commandsConfig };
       updatedConfig.categories = updatedConfig.categories.filter((c) => c.id !== cat.id);
-      const saveFn = isFastbootMode ? saveFastbootCommandsConfig : saveAdbCommandsConfig;
+      const saveFn = getSaveCommandsConfigFn();
       await saveFn(updatedConfig);
       setCommandsConfig(updatedConfig);
     } catch (err) {
@@ -938,18 +973,37 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
           <div className={styles.deviceSelectorWrapper} ref={deviceDropdownRef}>
             <div
               className={styles.deviceSelectorBtn}
-              onClick={() => setIsDeviceDropdownOpen(!isDeviceDropdownOpen)}
+              onClick={() => {
+                if (terminalMode !== "powershell" && terminalMode !== "cmd") {
+                  setIsDeviceDropdownOpen(!isDeviceDropdownOpen);
+                }
+              }}
+              style={{
+                cursor: (terminalMode === "powershell" || terminalMode === "cmd") ? "default" : "pointer",
+              }}
+              title={
+                (terminalMode === "powershell" || terminalMode === "cmd")
+                  ? "当前处于本地系统终端模式，直接在电脑本机运行命令"
+                  : "点击切换目标 Android 设备"
+              }
             >
               <span
                 className={styles.statusDot}
-                style={{ backgroundColor: getDeviceStatusColor(selectedDevice) }}
+                style={{
+                  backgroundColor:
+                    (terminalMode === "powershell" || terminalMode === "cmd")
+                      ? "#0284c7"
+                      : getDeviceStatusColor(selectedDevice),
+                }}
               />
               <span>
-                {selectedDevice
+                {(terminalMode === "powershell" || terminalMode === "cmd")
+                  ? "本地主机 (Windows 宿主环境)"
+                  : selectedDevice
                   ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})`
                   : "未连接设备"}
               </span>
-              <ChevronDown16Regular />
+              {(terminalMode !== "powershell" && terminalMode !== "cmd") && <ChevronDown16Regular />}
             </div>
 
             {isDeviceDropdownOpen && (
@@ -996,6 +1050,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
                 terminalMode === "adb" && styles.modeTabActiveAdb
               )}
               onClick={() => setTerminalMode("adb")}
+              title="Android 调试桥命令行"
             >
               ADB
             </div>
@@ -1005,18 +1060,31 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
                 terminalMode === "fastboot" && styles.modeTabActiveFastboot
               )}
               onClick={() => setTerminalMode("fastboot")}
+              title="Fastboot 刷机与引导命令行"
             >
               FASTBOOT
             </div>
             <div
               className={mergeClasses(
                 styles.modeTab,
-                terminalMode === "ssh" && styles.modeTabActiveSsh
+                terminalMode === "powershell" && styles.modeTabActivePs
               )}
-              onClick={() => setTerminalMode("ssh")}
+              onClick={() => setTerminalMode("powershell")}
+              title="Windows 本机 PowerShell 终端"
             >
-              SSH
+              POWERSHELL
             </div>
+            <div
+              className={mergeClasses(
+                styles.modeTab,
+                terminalMode === "cmd" && styles.modeTabActiveCmd
+              )}
+              onClick={() => setTerminalMode("cmd")}
+              title="Windows 本机命令提示符 (CMD)"
+            >
+              CMD
+            </div>
+
           </div>
         </div>
 
@@ -1113,12 +1181,12 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
             <div className={styles.terminalIntro}>
               <span className={styles.terminalIntroTitle}>ADMT Terminal Console</span>
               <span>
-                • 当前目标: {selectedDevice ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})` : (terminalMode === "ssh" ? "本地/远程网络目标" : "全局执行模式 (未指定单设备)")}
+                • 当前目标: {terminalMode === "powershell" || terminalMode === "cmd" ? "本地主机 (Windows 宿主环境)" : selectedDevice ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})` : "全局执行模式 (未指定单设备)"}
               </span>
               <span>
-                • 运行模式: {terminalMode === "ssh" ? "Secure Shell (SSH)" : terminalMode === "fastboot" ? "Fastboot Protocol" : "Android Debug Bridge (ADB)"}
+                • 运行模式: {terminalMode === "powershell" ? "Windows PowerShell 宿主环境" : terminalMode === "cmd" ? "Windows 命令提示符 (CMD)" : terminalMode === "fastboot" ? "Fastboot Protocol" : "Android Debug Bridge (ADB)"}
               </span>
-              <span>• 命令输入: 支持直接输入命令或携带 adb / fastboot / ssh 前缀（系统将自动识别并去除前缀）</span>
+              <span>• 命令输入: 支持直接输入命令或携带 adb / fastboot / powershell / cmd 前缀（系统将自动识别并去除前缀）</span>
               <span>• 快捷键支持: 按 [Enter] 立即执行命令，按 [↑ / ↓] 键快速切换历史命令</span>
             </div>
           ) : (
@@ -1129,9 +1197,9 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
         {/* 底部命令行输入栏 */}
         <div className={styles.promptBar}>
           <div className={styles.promptPrefix}>
-            <span>$</span>
+            <span>{terminalMode === "powershell" ? "PS>" : terminalMode === "cmd" ? "C:\>" : "$"}</span>
             <span className={styles.promptPrefixTarget}>
-              {terminalMode === "ssh" ? "ssh" : terminalMode === "fastboot" ? "fastboot" : "adb"}
+              {terminalMode}
             </span>
           </div>
 
@@ -1140,8 +1208,10 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
             onChange={(_, data) => setCommand(data.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              terminalMode === "ssh"
-                ? "输入 SSH 参数或命令 (如 openstick 或 -p 22 root@host uname -a)..."
+              terminalMode === "powershell"
+                ? "输入 PowerShell 命令或脚本 (如 Get-Process, ipconfig, Test-NetConnection)..."
+                : terminalMode === "cmd"
+                ? "输入 CMD 批处理命令 (如 ping, ipconfig, tasklist, systeminfo)..."
                 : terminalMode === "fastboot"
                 ? "输入 Fastboot 命令 (如 devices, oem unlock, getvar all)..."
                 : "输入 ADB 命令 (如 devices, connect 192.168.1.x, shell getprop)..."
@@ -1172,7 +1242,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
           <DialogBody>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <DialogTitle>
-                快捷命令库 ({terminalMode === "ssh" ? "SSH" : terminalMode === "fastboot" ? "Fastboot" : "ADB"})
+                快捷命令库 ({terminalMode.toUpperCase()})
               </DialogTitle>
             </div>
 

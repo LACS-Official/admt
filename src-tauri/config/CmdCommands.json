@@ -1,0 +1,93 @@
+{
+  "categories": [
+    {
+      "id": "cmd_network",
+      "name": "网络诊断常用",
+      "description": "CMD 经典网络诊断与连通性命令",
+      "commands": [
+        {
+          "id": "cmd_ping",
+          "label": "Ping 连通性测试",
+          "command": "ping lacs.cc -n 4",
+          "description": "发送 4 个 ICMP 数据包测试网络延迟与丢包率"
+        },
+        {
+          "id": "cmd_ipconfig_all",
+          "label": "查看完整 IP 配置",
+          "command": "ipconfig /all",
+          "description": "输出本机所有物理网卡与虚拟网卡的完整网络配置"
+        },
+        {
+          "id": "cmd_netstat_ano",
+          "label": "查看活动连接与PID",
+          "command": "netstat -ano",
+          "description": "显示所有活动网络连接以及对应的占用 PID"
+        },
+        {
+          "id": "cmd_flushdns",
+          "label": "刷新本地 DNS 缓存",
+          "command": "ipconfig /flushdns",
+          "description": "清除本地 Windows DNS 解析器缓存内容"
+        },
+        {
+          "id": "cmd_route_print",
+          "label": "打印本地路由表",
+          "command": "route print",
+          "description": "输出 Windows 本地 IPv4 / IPv6 活动路由信息"
+        }
+      ]
+    },
+    {
+      "id": "cmd_system",
+      "name": "系统维护与任务",
+      "description": "系统版本、信息采集与任务管理",
+      "commands": [
+        {
+          "id": "cmd_ver",
+          "label": "查看 Windows 版本",
+          "command": "ver",
+          "description": "输出当前 Windows 系统的内部主次版本号"
+        },
+        {
+          "id": "cmd_systeminfo",
+          "label": "完整系统信息报告",
+          "command": "systeminfo",
+          "description": "输出操作系统配置、补丁信息、内存与网络适配器详报"
+        },
+        {
+          "id": "cmd_tasklist",
+          "label": "查看当前进程列表",
+          "command": "tasklist",
+          "description": "列出系统中正在运行的所有应用程序和任务映像"
+        },
+        {
+          "id": "cmd_sfc_verify",
+          "label": "验证系统完整性",
+          "command": "sfc /verifyonly",
+          "description": "只扫描并检查所有受保护系统文件的完整性，不执行自动修复"
+        }
+      ]
+    },
+    {
+      "id": "cmd_disk_env",
+      "name": "磁盘与环境状态",
+      "description": "存储卷状态与当前环境变量",
+      "commands": [
+        {
+          "id": "cmd_logicaldisk",
+          "label": "逻辑磁盘空闲容量",
+          "command": "wmic logicaldisk get caption,volumename,freespace,size",
+          "description": "查询各个驱动器盘符的卷名、空闲空间与总大小"
+        },
+        {
+          "id": "cmd_env_vars",
+          "label": "查看所有环境变量",
+          "command": "set",
+          "description": "输出当前命令提示符会话中的全部系统与用户环境变量"
+        }
+      ]
+    }
+  ],
+  "version": "1.0",
+  "lastUpdated": "2026-11-07"
+}

@@ -827,3 +827,315 @@ export async function watchFastbootConfigFile(callback: (config: AdbCommandsConf
     return () => {};
   }
 }
+
+// ==================== PowerShell 快捷命令配置 ====================
+
+export function getDefaultPowerShellCommandsConfig(): AdbCommandsConfig {
+  return {
+    categories: [
+      {
+        id: "ps_network",
+        name: "网络与连通诊断",
+        description: "PowerShell 网络状态与连通性检测命令",
+        commands: [
+          {
+            id: "ps_test_net",
+            label: "测试端口连通性",
+            command: "Test-NetConnection -ComputerName lacs.cc -Port 443",
+            description: "测试指定主机端口的 TCP 握手状态与延迟"
+          },
+          {
+            id: "ps_get_ip",
+            label: "查看网卡IP配置",
+            command: "Get-NetIPAddress -AddressFamily IPv4 | Format-Table InterfaceAlias, IPAddress",
+            description: "获取所有活动网卡的 IPv4 地址列表"
+          },
+          {
+            id: "ps_flush_dns",
+            label: "清空 DNS 缓存",
+            command: "Clear-DnsClientCache",
+            description: "立即清除本机的 DNS 解析客户端缓存"
+          },
+          {
+            id: "ps_listen_ports",
+            label: "查看监听端口与PID",
+            command: "Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table",
+            description: "列出所有处于 Listen 状态的 TCP 端口和对应的进程 PID"
+          },
+          {
+            id: "ps_traceroute",
+            label: "路由跃点追踪",
+            command: "Test-NetConnection -ComputerName 1.1.1.1 -TraceRoute",
+            description: "追踪到目标 IP 的网络跃点路径"
+          }
+        ]
+      },
+      {
+        id: "ps_process",
+        name: "进程与资源分析",
+        description: "查看系统高占用进程与服务状态",
+        commands: [
+          {
+            id: "ps_top_cpu",
+            label: "CPU 占用 Top 10 进程",
+            command: "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 Id, ProcessName, CPU, WorkingSet64 | Format-Table",
+            description: "按 CPU 时间降序列出前 10 个系统进程"
+          },
+          {
+            id: "ps_top_ram",
+            label: "内存占用 Top 10 进程",
+            command: "Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Id, ProcessName, @{Name='RAM(MB)';Expression={[math]::Round($_.WorkingSet64/1MB,1)}} | Format-Table",
+            description: "按物理工作集内存降序列出前 10 个进程（单位 MB）"
+          },
+          {
+            id: "ps_running_services",
+            label: "查看运行中的服务",
+            command: "Get-Service | Where-Object {$_.Status -eq 'Running'} | Select-Object -First 20 Name, DisplayName, Status | Format-Table",
+            description: "筛选查看系统中正在运行的前 20 个 Windows 系统服务"
+          }
+        ]
+      },
+      {
+        id: "ps_system",
+        name: "系统与硬件信息",
+        description: "查看系统版本、驱动器与硬件参数",
+        commands: [
+          {
+            id: "ps_version",
+            label: "PowerShell 环境版本",
+            command: "$PSVersionTable",
+            description: "输出当前 PowerShell 引擎与运行环境版本表"
+          },
+          {
+            id: "ps_os_info",
+            label: "操作系统概要",
+            command: "Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture, LastBootUpTime | Format-List",
+            description: "查看 Windows 系统名称、内部版本号与最近开机时间"
+          },
+          {
+            id: "ps_drives",
+            label: "磁盘驱动器可用空间",
+            command: "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{N='Free(GB)';E={[math]::round($_.Free/1GB,2)}}, @{N='Total(GB)';E={[math]::round(($_.Used+$_.Free)/1GB,2)}} | Format-Table",
+            description: "统计所有本地文件系统盘符的总容量与可用空间"
+          },
+          {
+            id: "ps_bios",
+            label: "主板与 BIOS 信息",
+            command: "Get-CimInstance Win32_BIOS | Select-Object Manufacturer, Name, SerialNumber, Version | Format-List",
+            description: "获取主板制造商、BIOS 版本及序列号"
+          }
+        ]
+      }
+    ],
+    version: "1.0",
+    lastUpdated: "2026-11-07"
+  };
+}
+
+export async function loadPowerShellCommandsConfig(): Promise<AdbCommandsConfig> {
+  try {
+    try {
+      const config = await invoke<AdbCommandsConfig>('read_json_file', { 
+        path: 'config/PowerShellCommands.json' 
+      });
+      return config;
+    } catch {
+      try {
+        const resourceDirPath = await resourceDir();
+        const content = await readTextFile(`${resourceDirPath}/config/PowerShellCommands.json`);
+        return JSON.parse(content) as AdbCommandsConfig;
+      } catch {
+        try {
+          const appDataDirPath = await appDataDir();
+          const content = await readTextFile(`${appDataDirPath}/config/PowerShellCommands.json`);
+          return JSON.parse(content) as AdbCommandsConfig;
+        } catch {
+          try {
+            const content = await readTextFile('./src-tauri/config/PowerShellCommands.json');
+            return JSON.parse(content) as AdbCommandsConfig;
+          } catch {
+            return getDefaultPowerShellCommandsConfig();
+          }
+        }
+      }
+    }
+  } catch {
+    return getDefaultPowerShellCommandsConfig();
+  }
+}
+
+export async function savePowerShellCommandsConfig(config: AdbCommandsConfig): Promise<boolean> {
+  try {
+    config.lastUpdated = new Date().toISOString().split('T')[0];
+    const configContent = JSON.stringify(config, null, 2);
+    try {
+      await invoke('write_json_file', { 
+        path: 'config/PowerShellCommands.json',
+        content: configContent
+      });
+      return true;
+    } catch {
+      try {
+        await writeTextFile('./src-tauri/config/PowerShellCommands.json', configContent);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  } catch {
+    return false;
+  }
+}
+
+// ==================== CMD 快捷命令配置 ====================
+
+export function getDefaultCmdCommandsConfig(): AdbCommandsConfig {
+  return {
+    categories: [
+      {
+        id: "cmd_network",
+        name: "网络诊断常用",
+        description: "CMD 经典网络诊断与连通性命令",
+        commands: [
+          {
+            id: "cmd_ping",
+            label: "Ping 连通性测试",
+            command: "ping lacs.cc -n 4",
+            description: "发送 4 个 ICMP 数据包测试网络延迟与丢包率"
+          },
+          {
+            id: "cmd_ipconfig_all",
+            label: "查看完整 IP 配置",
+            command: "ipconfig /all",
+            description: "输出本机所有物理网卡与虚拟网卡的完整网络配置"
+          },
+          {
+            id: "cmd_netstat_ano",
+            label: "查看活动连接与PID",
+            command: "netstat -ano",
+            description: "显示所有活动网络连接以及对应的占用 PID"
+          },
+          {
+            id: "cmd_flushdns",
+            label: "刷新本地 DNS 缓存",
+            command: "ipconfig /flushdns",
+            description: "清除本地 Windows DNS 解析器缓存内容"
+          },
+          {
+            id: "cmd_route_print",
+            label: "打印本地路由表",
+            command: "route print",
+            description: "输出 Windows 本地 IPv4 / IPv6 活动路由信息"
+          }
+        ]
+      },
+      {
+        id: "cmd_system",
+        name: "系统维护与任务",
+        description: "系统版本、信息采集与任务管理",
+        commands: [
+          {
+            id: "cmd_ver",
+            label: "查看 Windows 版本",
+            command: "ver",
+            description: "输出当前 Windows 系统的内部主次版本号"
+          },
+          {
+            id: "cmd_systeminfo",
+            label: "完整系统信息报告",
+            command: "systeminfo",
+            description: "输出操作系统配置、补丁信息、内存与网络适配器详报"
+          },
+          {
+            id: "cmd_tasklist",
+            label: "查看当前进程列表",
+            command: "tasklist",
+            description: "列出系统中正在运行的所有应用程序和任务映像"
+          },
+          {
+            id: "cmd_sfc_verify",
+            label: "验证系统完整性",
+            command: "sfc /verifyonly",
+            description: "只扫描并检查所有受保护系统文件的完整性，不执行自动修复"
+          }
+        ]
+      },
+      {
+        id: "cmd_disk_env",
+        name: "磁盘与环境状态",
+        description: "存储卷状态与当前环境变量",
+        commands: [
+          {
+            id: "cmd_logicaldisk",
+            label: "逻辑磁盘空闲容量",
+            command: "wmic logicaldisk get caption,volumename,freespace,size",
+            description: "查询各个驱动器盘符的卷名、空闲空间与总大小"
+          },
+          {
+            id: "cmd_env_vars",
+            label: "查看所有环境变量",
+            command: "set",
+            description: "输出当前命令提示符会话中的全部系统与用户环境变量"
+          }
+        ]
+      }
+    ],
+    version: "1.0",
+    lastUpdated: "2026-11-07"
+  };
+}
+
+export async function loadCmdCommandsConfig(): Promise<AdbCommandsConfig> {
+  try {
+    try {
+      const config = await invoke<AdbCommandsConfig>('read_json_file', { 
+        path: 'config/CmdCommands.json' 
+      });
+      return config;
+    } catch {
+      try {
+        const resourceDirPath = await resourceDir();
+        const content = await readTextFile(`${resourceDirPath}/config/CmdCommands.json`);
+        return JSON.parse(content) as AdbCommandsConfig;
+      } catch {
+        try {
+          const appDataDirPath = await appDataDir();
+          const content = await readTextFile(`${appDataDirPath}/config/CmdCommands.json`);
+          return JSON.parse(content) as AdbCommandsConfig;
+        } catch {
+          try {
+            const content = await readTextFile('./src-tauri/config/CmdCommands.json');
+            return JSON.parse(content) as AdbCommandsConfig;
+          } catch {
+            return getDefaultCmdCommandsConfig();
+          }
+        }
+      }
+    }
+  } catch {
+    return getDefaultCmdCommandsConfig();
+  }
+}
+
+export async function saveCmdCommandsConfig(config: AdbCommandsConfig): Promise<boolean> {
+  try {
+    config.lastUpdated = new Date().toISOString().split('T')[0];
+    const configContent = JSON.stringify(config, null, 2);
+    try {
+      await invoke('write_json_file', { 
+        path: 'config/CmdCommands.json',
+        content: configContent
+      });
+      return true;
+    } catch {
+      try {
+        await writeTextFile('./src-tauri/config/CmdCommands.json', configContent);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  } catch {
+    return false;
+  }
+}

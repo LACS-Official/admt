@@ -5,7 +5,17 @@ export interface AIConfig {
   apiKey: string;
   endpoint: string;
   temperature: number;
+  yuanbaoSearch?: {
+    enabled: boolean;
+    apiKey: string;
+    endpoint?: string;
+    searchMode?: number;
+    freshness?: "noLimit" | "oneDay" | "oneWeek" | "oneMonth" | "oneYear";
+    resultCount?: number;
+  };
 }
+
+export type LogRecordingLevel = "error" | "warning" | "info" | "debug";
 
 export interface AppConfig {
   theme: "light" | "dark" | "auto";
@@ -14,6 +24,7 @@ export interface AppConfig {
   scanInterval: number;
   deviceDetectionInterval: number;
   logLevel: "debug" | "info" | "warn" | "error";
+  logRecordingLevels?: LogRecordingLevel[];
   adbPath?: string;
   fastbootPath?: string;
   systemTrayEnabled: boolean;

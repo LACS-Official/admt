@@ -127,7 +127,8 @@ const TitleBar: React.FC = () => {
   const [isMaximized, setIsMaximized] = React.useState(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = React.useState(false);
   const [isUpdating, setIsUpdating] = React.useState(false);
-  const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
+  const isSearchModalOpen = useAppStore((state) => state.isSearchModalOpen);
+  const setSearchModalOpen = useAppStore((state) => state.setSearchModalOpen);
   
   // 从设置获取当前搜索快捷键，默认为 Ctrl+K
   const searchHotkey = config.globalSearchHotkey || 'Ctrl+K';
@@ -147,7 +148,7 @@ const TitleBar: React.FC = () => {
         
       if (modifierMatch && e.key.toLowerCase() === letter) {
         e.preventDefault();
-        setIsSearchModalOpen(true);
+        setSearchModalOpen(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -335,7 +336,7 @@ const TitleBar: React.FC = () => {
                   appearance="subtle"
                   icon={<Search24Regular />}
                   className={styles.titleBarButton}
-                  onClick={() => setIsSearchModalOpen(true)}
+                  onClick={() => setSearchModalOpen(true)}
                   id="tour-search-button"
                 />
               </Tooltip>
@@ -429,7 +430,7 @@ const TitleBar: React.FC = () => {
         </div>
       </div>
 
-      <SearchModal isOpen={isSearchModalOpen} onOpenChange={setIsSearchModalOpen} />
+      <SearchModal isOpen={isSearchModalOpen} onOpenChange={setSearchModalOpen} />
     </>
   );
 };

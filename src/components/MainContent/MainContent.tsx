@@ -19,6 +19,7 @@ import {
   Button,
   tokens,
   Spinner,
+  Tooltip,
 } from "@fluentui/react-components";
 import {
   Code24Regular,
@@ -32,6 +33,9 @@ import {
   Flash24Regular,
   Bot24Regular,
   Sparkle20Regular,
+  PanelLeftContract24Regular,
+  PanelLeftExpand24Regular,
+  Prompt24Regular,
 } from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 // import DeviceSelectionDialog from "./DeviceSelectionDialog";
@@ -80,6 +84,7 @@ const useStyles = makeStyles({
   },
   sidebar: {
     width: "180px", 
+    minWidth: "180px",
     maxWidth: "250px",
     backgroundColor: "var(--colorNeutralBackground2)", 
     borderRight: "1px solid var(--colorNeutralStroke2)", 
@@ -88,6 +93,138 @@ const useStyles = makeStyles({
     overflow: "hidden",
     position: "relative",
     zIndex: 10,
+    transition: "width 0.2s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    flexShrink: 0,
+  },
+  sidebarCollapsed: {
+    width: "60px",
+    minWidth: "60px",
+    maxWidth: "60px",
+  },
+  sidebarHeaderBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 12px 6px 14px",
+    boxSizing: "border-box",
+  },
+  sidebarHeaderBarCollapsed: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "10px 0 6px 0",
+    boxSizing: "border-box",
+  },
+  sidebarBrandWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  sidebarBrandName: {
+    fontSize: "11px",
+    fontWeight: "600",
+    letterSpacing: "0.04em",
+    color: "var(--colorNeutralForeground3)",
+    textTransform: "uppercase",
+    userSelect: "none",
+  },
+  sidebarCollapseBtn: {
+    background: "transparent",
+    border: "none",
+    padding: "4px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--colorNeutralForeground3)",
+    transition: "all 0.15s ease",
+    "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      color: "var(--colorNeutralForeground1)",
+    },
+  },
+  tabListCollapsed: {
+    padding: "8px 0 16px 0",
+    alignItems: "center",
+  },
+  tabCollapsed: {
+    width: "42px",
+    minWidth: "42px",
+    maxWidth: "42px",
+    height: "40px",
+    minHeight: "40px",
+    padding: "0",
+    justifyContent: "center",
+    "& .fui-Tab__icon": {
+      marginRight: "0 !important",
+      fontSize: "18px",
+    },
+  },
+  buttonGroupContainerCollapsed: {
+    padding: "8px 6px",
+    alignItems: "center",
+  },
+  aiActionButtonCollapsed: {
+    width: "42px",
+    minWidth: "42px",
+    maxWidth: "42px",
+    height: "36px",
+    padding: "0",
+    justifyContent: "center",
+  },
+  consoleButtonGroupCollapsed: {
+    flexDirection: "column",
+    gap: "6px",
+    alignItems: "center",
+  },
+  actionButtonCollapsed: {
+    width: "42px",
+    minWidth: "42px",
+    maxWidth: "42px",
+    height: "32px",
+    padding: "0",
+    justifyContent: "center",
+  },
+  deviceInfoCollapsed: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "8px 0",
+    borderBottom: "1px solid var(--colorNeutralStroke3)",
+    margin: "0 8px 6px 8px",
+  },
+  deviceIconSectionCollapsed: {
+    position: "relative",
+    width: "36px",
+    height: "36px",
+    borderRadius: "8px",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+    "&:hover": {
+      border: "1px solid var(--colorBrandStroke1)",
+      backgroundColor: "var(--colorNeutralBackground1Hover)",
+      transform: "scale(1.05)",
+    },
+  },
+  deviceIconImageCollapsed: {
+    width: "22px",
+    height: "22px",
+    objectFit: "contain",
+  },
+  deviceStatusDot: {
+    position: "absolute",
+    bottom: "-2px",
+    right: "-2px",
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    border: "2px solid var(--colorNeutralBackground2)",
   },
   deviceInfo: {
     padding: tokens.spacingHorizontalXS, // 增加内边距
@@ -682,6 +819,8 @@ const MainContent: React.FC = () => {
   const setCommandLineModalOpen = useAppStore((state) => state.setCommandLineModalOpen);
   const setLogsModalOpen = useAppStore((state) => state.setLogsModalOpen);
   const setDeviceSelectionModalOpen = useAppStore((state) => state.setDeviceSelectionModalOpen);
+  const isSidebarCollapsed = useAppStore((state) => state.isSidebarCollapsed);
+  const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
 
   const selectedDevice = useDeviceStore((state) => state.selectedDevice);
   const devices = useDeviceStore((state) => state.devices);
@@ -1016,6 +1155,32 @@ const MainContent: React.FC = () => {
     }
   }, [connectedDevices, selectedDevice, handleDeviceSelect]);
 
+  const getDeviceName = () => {
+    if (!selectedDevice) return "";
+    if (
+      selectedDevice.mode === "fastboot" ||
+      selectedDevice.mode === "fastbootd"
+    ) {
+      return selectedDevice.properties?.productName || selectedDevice.serial;
+    }
+    return (
+      selectedDevice.properties?.marketName ||
+      selectedDevice.properties?.model ||
+      selectedDevice.serial
+    );
+  };
+
+  const getDeviceCodeName = () => {
+    if (!selectedDevice) return "";
+    if (
+      selectedDevice.mode === "fastboot" ||
+      selectedDevice.mode === "fastbootd"
+    ) {
+      return selectedDevice.properties?.productName || selectedDevice.serial;
+    }
+    return selectedDevice.properties?.deviceName || "";
+  };
+
   const renderDeviceInfo = () => {
     if (connectedDevices.length === 0) {
       return (
@@ -1063,35 +1228,6 @@ const MainContent: React.FC = () => {
     }
 
     const deviceIcon = getDeviceIcon(selectedDevice.mode);
-
-    // 获取设备名称，对于fastboot模式，使用fastboot getvar product命令获取
-    const getDeviceName = () => {
-      // 对于fastboot模式，优先使用product_name
-      if (
-        selectedDevice.mode === "fastboot" ||
-        selectedDevice.mode === "fastbootd"
-      ) {
-        return selectedDevice.properties?.productName || selectedDevice.serial;
-      }
-      // 对于其他模式，使用原有的逻辑
-      return (
-        selectedDevice.properties?.marketName ||
-        selectedDevice.properties?.model ||
-        selectedDevice.serial
-      );
-    };
-
-
-    const getDeviceCodeName = () => {
-      if (
-        selectedDevice.mode === "fastboot" ||
-        selectedDevice.mode === "fastbootd"
-      ) {
-        // 对于fastboot模式，使用product_name作为设备代号
-        return selectedDevice.properties?.productName || selectedDevice.serial;
-      }
-      return selectedDevice.properties?.deviceName || "";
-    };
 
     return (
       <div className={styles.deviceInfo} id="tour-device-info">
@@ -1206,74 +1342,149 @@ const MainContent: React.FC = () => {
 
   return (
     <div className={`${styles.container} startup-optimized`}>
-      <div className={`${styles.sidebar} sidebar-enter`}>
+      <div className={mergeClasses(styles.sidebar, isSidebarCollapsed && styles.sidebarCollapsed, "sidebar-enter")}>
+        {/* 顶部折叠与品牌微栏 */}
+        <div className={isSidebarCollapsed ? styles.sidebarHeaderBarCollapsed : styles.sidebarHeaderBar}>
+          {!isSidebarCollapsed && (
+            <div className={styles.sidebarBrandWrap}>
+              <span className={styles.sidebarBrandName}>{t("sidebar.control_center", "控制中心")}</span>
+            </div>
+          )}
+          <Tooltip content={isSidebarCollapsed ? "展开侧边栏" : "收起侧边栏"} relationship="label" positioning={isSidebarCollapsed ? "after" : "below"}>
+            <button
+              type="button"
+              className={styles.sidebarCollapseBtn}
+              onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
+              aria-label={isSidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
+            >
+              {isSidebarCollapsed ? <PanelLeftExpand24Regular /> : <PanelLeftContract24Regular />}
+            </button>
+          </Tooltip>
+        </div>
+
         {/* 设备信息区域 */}
-        {renderDeviceInfo()}
+        {isSidebarCollapsed ? (
+          <div className={styles.deviceInfoCollapsed} id="tour-device-info-collapsed">
+            <Tooltip
+              content={
+                selectedDevice
+                  ? `${getDeviceName()} (${selectedDevice.mode}) - 点击切换设备`
+                  : "未连接设备 - 点击查看或扫描设备"
+              }
+              relationship="label"
+              positioning="after"
+            >
+              <div
+                className={styles.deviceIconSectionCollapsed}
+                onClick={openDeviceSelectionWindow}
+              >
+                <img
+                  src={selectedDevice ? getDeviceIcon(selectedDevice.mode) : UnlinkIcon}
+                  alt="Device Icon"
+                  className={styles.deviceIconImageCollapsed}
+                />
+                {selectedDevice && (
+                  <span
+                    className={styles.deviceStatusDot}
+                    style={{
+                      backgroundColor:
+                        selectedDevice.mode === "sys"
+                          ? "#10b981"
+                          : selectedDevice.mode === "fastboot" || selectedDevice.mode === "fastbootd"
+                          ? "#3b82f6"
+                          : selectedDevice.mode === "rec"
+                          ? "#f59e0b"
+                          : "#ef4444",
+                    }}
+                  />
+                )}
+              </div>
+            </Tooltip>
+          </div>
+        ) : (
+          renderDeviceInfo()
+        )}
 
         {/* 标签列表 */}
         <TabList
           id="tour-nav-tabs"
           selectedValue={currentView}
           onTabSelect={handleTabSelect}
-          className={styles.tabList}
+          className={mergeClasses(styles.tabList, isSidebarCollapsed && styles.tabListCollapsed)}
           vertical // 设置为垂直模式
         >
           {tabs.map((tab) => (
-            <Tab
-              id={`tour-tab-${tab.id}`}
+            <Tooltip
               key={tab.id}
-              value={tab.id}
-              icon={tab.icon}
-              className={styles.tab}
+              content={tab.label}
+              relationship="label"
+              visible={isSidebarCollapsed ? undefined : false}
+              positioning="after"
             >
-              {tab.label}
-            </Tab>
+              <Tab
+                id={`tour-tab-${tab.id}`}
+                value={tab.id}
+                icon={tab.icon}
+                className={mergeClasses(styles.tab, isSidebarCollapsed && styles.tabCollapsed)}
+              >
+                {!isSidebarCollapsed && tab.label}
+              </Tab>
+            </Tooltip>
           ))}
         </TabList>
 
-        <div className={styles.buttonGroupContainer}>
-          {/* AI 助手按钮 - 位于命令行和日志上方，宽度占满整行（两个按钮宽度） */}
-          <div
-            className={mergeClasses(
-              styles.aiActionButton,
-              currentView === "ai-chat" && styles.aiActionButtonSelected
-            )}
-            onClick={() => setCurrentView("ai-chat")}
-            title={t("main.ai_assistant", "AI 助手")}
-            id="tour-ai-button"
-          >
-            <Bot24Regular style={{ color: currentView === "ai-chat" ? "var(--colorBrandForeground1)" : undefined }} />
-            <Text>{t("main.ai_assistant", "AI 助手")}</Text>
-          </div>
+        <div className={mergeClasses(styles.buttonGroupContainer, isSidebarCollapsed && styles.buttonGroupContainerCollapsed)}>
+          {/* AI 助手按钮 */}
+          <Tooltip content={t("main.ai_assistant", "AI 助手")} relationship="label" visible={isSidebarCollapsed ? undefined : false} positioning="after">
+            <div
+              className={mergeClasses(
+                styles.aiActionButton,
+                isSidebarCollapsed && styles.aiActionButtonCollapsed,
+                currentView === "ai-chat" && styles.aiActionButtonSelected
+              )}
+              onClick={() => setCurrentView("ai-chat")}
+              title={isSidebarCollapsed ? undefined : t("main.ai_assistant", "AI 助手")}
+              id="tour-ai-button"
+            >
+              <Bot24Regular style={{ color: currentView === "ai-chat" ? "var(--colorBrandForeground1)" : undefined }} />
+              {!isSidebarCollapsed && <Text>{t("main.ai_assistant", "AI 助手")}</Text>}
+            </div>
+          </Tooltip>
 
-          {/* 命令行与日志按钮组（各占一半宽度） */}
-          <div className={styles.consoleButtonGroup}>
+          {/* 命令行与日志按钮组 */}
+          <div className={mergeClasses(styles.consoleButtonGroup, isSidebarCollapsed && styles.consoleButtonGroupCollapsed)}>
             {/* 命令行按钮 */}
-            <div
-              className={mergeClasses(
-                styles.actionButton,
-                currentView === "command-line" && styles.actionButtonSelected
-              )}
-              onClick={() => setCurrentView("command-line")}
-              title={t("main.command_line")}
-              id="tour-command-line"
-            >
-              <Icons24Regular />
-              <Text>{t("main.command_line")}</Text>
-            </div>
+            <Tooltip content={t("main.command_line")} relationship="label" visible={isSidebarCollapsed ? undefined : false} positioning="after">
+              <div
+                className={mergeClasses(
+                  styles.actionButton,
+                  isSidebarCollapsed && styles.actionButtonCollapsed,
+                  currentView === "command-line" && styles.actionButtonSelected
+                )}
+                onClick={() => setCurrentView("command-line")}
+                title={isSidebarCollapsed ? undefined : t("main.command_line")}
+                id="tour-command-line"
+              >
+                <Prompt24Regular />
+                {!isSidebarCollapsed && <Text>{t("main.command_line")}</Text>}
+              </div>
+            </Tooltip>
             {/* 日志窗口按钮 */}
-            <div
-              className={mergeClasses(
-                styles.actionButton,
-                currentView === "logs" && styles.actionButtonSelected
-              )}
-              onClick={() => setCurrentView("logs")}
-              title={t("main.logs")}
-              id="tour-logs"
-            >
-              <Notepad24Regular />
-              <Text>{t("main.logs")}</Text>
-            </div>
+            <Tooltip content={t("main.logs")} relationship="label" visible={isSidebarCollapsed ? undefined : false} positioning="after">
+              <div
+                className={mergeClasses(
+                  styles.actionButton,
+                  isSidebarCollapsed && styles.actionButtonCollapsed,
+                  currentView === "logs" && styles.actionButtonSelected
+                )}
+                onClick={() => setCurrentView("logs")}
+                title={isSidebarCollapsed ? undefined : t("main.logs")}
+                id="tour-logs"
+              >
+                <Notepad24Regular />
+                {!isSidebarCollapsed && <Text>{t("main.logs")}</Text>}
+              </div>
+            </Tooltip>
           </div>
         </div>
       </div>

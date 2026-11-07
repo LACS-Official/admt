@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useDeviceStore } from "../stores/deviceStore";
 import { CommandResult } from "../types/device";
+import { yuanbaoSearchService } from "./yuanbaoSearchService";
 
 export interface McpExecutionResult {
   success: boolean;
@@ -37,15 +38,17 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
       }
 
       case "admt_get_device_info": {
-        if (!selectedDevice && !serial) {
+        const fallbackSerial = serial || selectedDevice?.serial || (deviceStore.devices.length > 0 ? deviceStore.devices[0].serial : undefined);
+        if (!fallbackSerial) {
           return { success: false, toolName, result: null, error: "未检测到已连接或选中的 Android 设备" };
         }
-        const props = selectedDevice?.properties || {};
+        const targetDev = deviceStore.devices.find((d) => d.serial === fallbackSerial) || selectedDevice;
+        const props = targetDev?.properties || {};
         return {
           success: true,
           toolName,
           result: {
-            serial: serial || selectedDevice?.serial,
+            serial: fallbackSerial,
             model: props.model || props.marketName || "Android Device",
             brand: props.brand || props.manufacturer || "Unknown",
             androidVersion: props.androidVersion || "14",
@@ -164,8 +167,42 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
         };
       }
 
-      case "admt_take_screenshot": {
-        const targetSerial = serial || selectedDevice?.serial;
+      case "admt_install_apk": {
+        const filePath = args.filePath;
+        if (!filePath) {
+          return { success: false, toolName, result: null, error: "缺少本地 APK 文件路径 filePath 参数" };
+        }
+        const targetSerial = serial || selectedDevice?.serial || (deviceStore.devices.length > 0 ? deviceStore.devices[0].serial : undefined);
+        if (!targetSerial) {
+          return { success: false, toolName, result: null, error: "未检测到已连接的 Android 设备，无法安装 APK" };
+        }
+        try {
+          const res = await invoke<CommandResult>("install_apk", {
+            serial: targetSerial,
+            apkPath: filePath,
+            replace: true,
+          });
+          return {
+            success: res.success,
+            toolName,
+            result: res.success
+              ? `APK [${filePath}] 已成功安装到设备 [${targetSerial}]`
+              : `安装 APK 失败: ${res.error || res.output}`,
+            error: res.success ? undefined : (res.error || res.output),
+          };
+        } catch (e: any) {
+          return {
+            success: false,
+            toolName,
+            result: null,
+            error: `安装 APK 异常: ${e.message || String(e)}`,
+          };
+        }
+      }
+
+      case "admt_take_screenshot":
+      case "admt_capture_screen": {
+        const targetSerial = serial || selectedDevice?.serial || (deviceStore.devices.length > 0 ? deviceStore.devices[0].serial : undefined);
         if (!targetSerial) {
           return { success: false, toolName, result: null, error: "未检测到已连接的 Android 设备" };
         }
@@ -204,6 +241,117 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
             markdownSnippet: `已成功解析来自 ${url} 的正文内容，已过滤广告与样式干扰。`,
           },
         };
+      }
+
+      case "admt_execute_host_command": {
+        const cmd = args.command;
+        if (!cmd) {
+          return { success: false, toolName, result: null, error: "缺少命令参数 command" };
+        }
+        try {
+          const res = await invoke<CommandResult>("execute_host_command", {
+            command: cmd,
+            shell: args.shell || "powershell",
+          });
+          const displayOutput = res.output || res.error || (res.success ? "命令执行成功，无标准输出返回。" : "未捕获到命令输出");
+          return {
+            success: res.success,
+            toolName,
+            result: {
+              command: cmd,
+              exitCode: res.exitCode,
+              output: displayOutput,
+              error: res.error,
+            },
+          };
+        } catch (e: any) {
+          return {
+            success: false,
+            toolName,
+            result: null,
+            error: `终端执行报错: ${e.message || String(e)}`,
+          };
+        }
+      }
+
+      case "admt_get_host_info": {
+        try {
+          const info = await invoke<any>("get_host_network_info");
+          return {
+            success: true,
+            toolName,
+            result: {
+              hostname: info.hostname,
+              localIp: info.local_ip,
+              platform: info.os,
+              arch: info.arch,
+              status: "online",
+              summary: `电脑主机名 ${info.hostname}，当前本机局域网 IP 为 ${info.local_ip} (${info.os} ${info.arch})`,
+            },
+          };
+        } catch (e: any) {
+          return {
+            success: false,
+            toolName,
+            result: null,
+            error: `获取主机网络环境失败: ${e.message || String(e)}`,
+          };
+        }
+      }
+
+      case "yuanbao_web_search": {
+        const query = args.query;
+        if (!query) {
+          return { success: false, toolName, result: null, error: "缺少搜索关键词 query 参数" };
+        }
+        const optimizedQuery = yuanbaoSearchService.optimizeAndroidQuery(query, {
+          model: selectedDevice?.properties?.model,
+          brand: selectedDevice?.properties?.brand,
+        });
+
+        const searchRes = await yuanbaoSearchService.search(optimizedQuery, {
+          freshness: args.freshness,
+        });
+
+        if (searchRes.success) {
+          if (searchRes.pages.length > 0) {
+            return {
+              success: true,
+              toolName,
+              result: {
+                query: optimizedQuery,
+                totalHits: searchRes.pages.length,
+                sources: searchRes.pages.map((p, idx) => ({
+                  index: idx + 1,
+                  title: p.title,
+                  snippet: p.passage,
+                  url: p.url,
+                  date: p.date,
+                  site: p.site,
+                })),
+                summaryHint: `检索到来自权威信源的 ${searchRes.pages.length} 条有效记录，请据此回答用户并引用信源序号 [1], [2] 等。`,
+              },
+            };
+          } else {
+            return {
+              success: true,
+              toolName,
+              result: {
+                query: optimizedQuery,
+                totalHits: 0,
+                sources: [],
+                message: `全网未检索到与「${optimizedQuery}」直接相关的公开记录。提示：可能该机型名称有误、尚未正式发布（如小米目前最新为 14/15 系列，尚无 17 系列），或者关键词过于具体。请据此向用户如实说明。`,
+              },
+            };
+          }
+        } else {
+          return {
+            success: false,
+            toolName,
+            result: { error: searchRes.error || "元宝搜索调用失败" },
+            error: searchRes.error || "元宝搜索调用失败",
+          };
+        }
       }
 
       case "brave_web_search": {

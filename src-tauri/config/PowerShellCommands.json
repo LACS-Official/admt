@@ -1,0 +1,99 @@
+{
+  "categories": [
+    {
+      "id": "ps_network",
+      "name": "网络与连通诊断",
+      "description": "PowerShell 网络状态与连通性检测命令",
+      "commands": [
+        {
+          "id": "ps_test_net",
+          "label": "测试端口连通性",
+          "command": "Test-NetConnection -ComputerName lacs.cc -Port 443",
+          "description": "测试指定主机端口的 TCP 握手状态与延迟"
+        },
+        {
+          "id": "ps_get_ip",
+          "label": "查看网卡IP配置",
+          "command": "Get-NetIPAddress -AddressFamily IPv4 | Format-Table InterfaceAlias, IPAddress",
+          "description": "获取所有活动网卡的 IPv4 地址列表"
+        },
+        {
+          "id": "ps_flush_dns",
+          "label": "清空 DNS 缓存",
+          "command": "Clear-DnsClientCache",
+          "description": "立即清除本机的 DNS 解析客户端缓存"
+        },
+        {
+          "id": "ps_listen_ports",
+          "label": "查看监听端口与PID",
+          "command": "Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table",
+          "description": "列出所有处于 Listen 状态的 TCP 端口和对应的进程 PID"
+        },
+        {
+          "id": "ps_traceroute",
+          "label": "路由跃点追踪",
+          "command": "Test-NetConnection -ComputerName 1.1.1.1 -TraceRoute",
+          "description": "追踪到目标 IP 的网络跃点路径"
+        }
+      ]
+    },
+    {
+      "id": "ps_process",
+      "name": "进程与资源分析",
+      "description": "查看系统高占用进程与服务状态",
+      "commands": [
+        {
+          "id": "ps_top_cpu",
+          "label": "CPU 占用 Top 10 进程",
+          "command": "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 Id, ProcessName, CPU, WorkingSet64 | Format-Table",
+          "description": "按 CPU 时间降序列出前 10 个系统进程"
+        },
+        {
+          "id": "ps_top_ram",
+          "label": "内存占用 Top 10 进程",
+          "command": "Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Id, ProcessName, @{Name='RAM(MB)';Expression={[math]::Round($_.WorkingSet64/1MB,1)}} | Format-Table",
+          "description": "按物理工作集内存降序列出前 10 个进程（单位 MB）"
+        },
+        {
+          "id": "ps_running_services",
+          "label": "查看运行中的服务",
+          "command": "Get-Service | Where-Object {$_.Status -eq 'Running'} | Select-Object -First 20 Name, DisplayName, Status | Format-Table",
+          "description": "筛选查看系统中正在运行的前 20 个 Windows 系统服务"
+        }
+      ]
+    },
+    {
+      "id": "ps_system",
+      "name": "系统与硬件信息",
+      "description": "查看系统版本、驱动器与硬件参数",
+      "commands": [
+        {
+          "id": "ps_version",
+          "label": "PowerShell 环境版本",
+          "command": "$PSVersionTable",
+          "description": "输出当前 PowerShell 引擎与运行环境版本表"
+        },
+        {
+          "id": "ps_os_info",
+          "label": "操作系统概要",
+          "command": "Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture, LastBootUpTime | Format-List",
+          "description": "查看 Windows 系统名称、内部版本号与最近开机时间"
+        },
+        {
+          "id": "ps_drives",
+          "label": "磁盘驱动器可用空间",
+          "command": "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{N='Free(GB)';E={[math]::round($_.Free/1GB,2)}}, @{N='Total(GB)';E={[math]::round(($_.Used+$_.Free)/1GB,2)}} | Format-Table",
+          "description": "统计所有本地文件系统盘符的总容量与可用空间"
+        },
+        {
+          "id": "ps_bios",
+          "label": "主板与 BIOS 信息",
+          "command": "Get-CimInstance Win32_BIOS | Select-Object Manufacturer, Name, SerialNumber, Version | Format-List",
+          "description": "获取主板制造商、BIOS 版本及序列号"
+        }
+      ]
+    }
+  ],
+  "version": "1.0",
+  "lastUpdated": "2026-11-07"
+}

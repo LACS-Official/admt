@@ -50,6 +50,47 @@ const sanitizeUrl = (url: string): string => {
   }
 };
 
+/**
+ * 解析并提取 DeepSeek DSML 格式工具调用 (<｜｜DSML｜｜ calls> ... </｜｜DSML｜｜ calls>)
+ */
+export function parseDsmlToolCalls(content: string): { cleanedContent: string; toolCalls: ChatToolCall[] } {
+  if (!content || (!content.includes("DSML") && !content.includes("invoke"))) {
+    return { cleanedContent: content, toolCalls: [] };
+  }
+
+  const toolCalls: ChatToolCall[] = [];
+  const invokeRegex = /<[|｜]{2}DSML[|｜]{2}\s*invoke\s+name=["']([^"']+)["']>([\s\S]*?)<\/[|｜]{2}DSML[|｜]{2}\s*invoke>/g;
+  const paramRegex = /<[|｜]{2}DSML[|｜]{2}\s*parameter\s+name=["']([^"']+)["'][^>]*>([\s\S]*?)<\/[|｜]{2}DSML[|｜]{2}\s*parameter>/g;
+
+  let invokeMatch;
+  let idx = 0;
+  while ((invokeMatch = invokeRegex.exec(content)) !== null) {
+    const name = invokeMatch[1];
+    const body = invokeMatch[2];
+    const args: Record<string, any> = {};
+
+    let paramMatch;
+    while ((paramMatch = paramRegex.exec(body)) !== null) {
+      const pName = paramMatch[1];
+      const pVal = paramMatch[2];
+      args[pName] = pVal.trim();
+    }
+
+    toolCalls.push({
+      id: `call_dsml_${Date.now()}_${idx++}`,
+      name,
+      arguments: args,
+      rawArguments: JSON.stringify(args),
+    });
+  }
+
+  const cleanedContent = content
+    .replace(/<[|｜]{2}DSML[|｜]{2}\s*calls>[\s\S]*?<\/[|｜]{2}DSML[|｜]{2}\s*calls>/g, "")
+    .trim();
+
+  return { cleanedContent, toolCalls };
+}
+
 class AIService {
   /**
    * SSE 流式对话与原生 Tool Calling 统一管线
@@ -97,26 +138,71 @@ class AIService {
       if (isOpenAICompatible) {
         headers["Authorization"] = `Bearer ${apiKey}`;
         
-        const formattedMessages = messages.map((m) => {
-          if (m.role === "tool") {
-            return {
-              role: "tool",
-              tool_call_id: m.tool_call_id || "call_default",
-              content: m.content,
-            };
-          }
-          if (m.role === "assistant" && m.tool_calls) {
-            return {
+        // 校验并清洗 Tool Calling 消息序列，确保每一个 assistant.tool_calls 都有对应且合规的 tool 回包
+        const formattedMessages: any[] = [];
+        for (let i = 0; i < messages.length; i++) {
+          const m = messages[i];
+          if (m.role === "assistant" && Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
+            formattedMessages.push({
               role: "assistant",
               content: m.content || "",
               tool_calls: m.tool_calls,
-            };
+            });
+
+            // 查找该 assistant 之后的所有已响应 tool 消息
+            const expectedIds = new Set(m.tool_calls.map((tc: any) => tc.id));
+            const foundResponses = new Map<string, any>();
+
+            // 1) 优先扫描紧随其后的 tool 消息
+            let j = i + 1;
+            while (j < messages.length && messages[j].role === "tool") {
+              const tm = messages[j];
+              if (tm.tool_call_id && expectedIds.has(tm.tool_call_id)) {
+                foundResponses.set(tm.tool_call_id, tm);
+              }
+              j++;
+            }
+
+            // 2) 扫描更靠后的同轮或历史 tool 消息
+            for (let k = j; k < messages.length; k++) {
+              const km = messages[k];
+              if (km.role === "tool" && km.tool_call_id && expectedIds.has(km.tool_call_id) && !foundResponses.has(km.tool_call_id)) {
+                foundResponses.set(km.tool_call_id, km);
+              }
+            }
+
+            // 3) 严格按照 m.tool_calls 的定义顺序，紧随其后输出每一个 tool 响应
+            for (const tc of m.tool_calls) {
+              const matched = foundResponses.get(tc.id);
+              if (matched) {
+                formattedMessages.push({
+                  role: "tool",
+                  tool_call_id: tc.id,
+                  content: typeof matched.content === "string" ? matched.content : JSON.stringify(matched.content || {}),
+                });
+              } else {
+                formattedMessages.push({
+                  role: "tool",
+                  tool_call_id: tc.id,
+                  content: JSON.stringify({ message: "未执行此工具调用或已被后续消息跳过" }),
+                });
+              }
+            }
+
+            i = j - 1;
+            continue;
           }
-          return {
+
+          // 孤立未绑定的 tool 消息严禁发送，直接跳过以符合 OpenAI/DeepSeek 严格规范
+          if (m.role === "tool") {
+            continue;
+          }
+
+          formattedMessages.push({
             role: m.role,
             content: m.content,
-          };
-        });
+          });
+        }
 
         body = {
           model,
@@ -418,6 +504,15 @@ class AIService {
           rawArguments: tc.argumentsStr,
         };
       });
+
+      // 核心修复：解析并剥离 DeepSeek DSML 标签中的工具调用
+      if (fullContent && (fullContent.includes("DSML") || fullContent.includes("invoke"))) {
+        const dsmlResult = parseDsmlToolCalls(fullContent);
+        if (dsmlResult.toolCalls.length > 0) {
+          toolCalls.push(...dsmlResult.toolCalls);
+          fullContent = dsmlResult.cleanedContent;
+        }
+      }
 
       if (toolCalls.length > 0) {
         logService.info("AI 触发原生 Tool Calling", "AIService", {

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { AppState, AppView, AppConfig, NotificationMessage } from "../types/app";
+import { AppState, AppView, AppConfig, NotificationMessage, LogRecordingLevel } from "../types/app";
 import { invoke } from "@tauri-apps/api/core";
 
 // 状态栏消息类型
@@ -48,6 +48,12 @@ interface AppStoreState extends AppState {
   setLogsModalOpen: (open: boolean) => void;
   isDeviceSelectionModalOpen: boolean;
   setDeviceSelectionModalOpen: (open: boolean) => void;
+  isSidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebar: () => void;
+  isSearchModalOpen: boolean;
+  setSearchModalOpen: (open: boolean) => void;
+  toggleSearchModal: () => void;
   saveToDisk: () => Promise<boolean>;
   initialize: () => Promise<void>;
   subscribeToStorageChanges: () => () => void;
@@ -60,6 +66,7 @@ const defaultConfig: AppConfig = {
   scanInterval: 2000,
   deviceDetectionInterval: 5000,
   logLevel: "info",
+  logRecordingLevels: ["error", "warning"],
   systemTrayEnabled: true,
   autoStartEnabled: false,
   minimizeToTrayOnClose: true,
@@ -80,6 +87,14 @@ const defaultConfig: AppConfig = {
     apiKey: "",
     endpoint: "https://api.openai.com/v1",
     temperature: 1.0,
+    yuanbaoSearch: {
+      enabled: false,
+      apiKey: "",
+      endpoint: "https://api.wsa.cloud.tencent.com",
+      searchMode: 0,
+      freshness: "noLimit",
+      resultCount: 10,
+    },
   },
 };
 
@@ -210,6 +225,12 @@ export const useAppStore = create<AppStoreState>()(
         }
       },
       setDeviceSelectionModalOpen: (open: boolean) => set({ isDeviceSelectionModalOpen: open }),
+      isSidebarCollapsed: false,
+      setSidebarCollapsed: (collapsed: boolean) => set({ isSidebarCollapsed: collapsed }),
+      toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+      isSearchModalOpen: false,
+      setSearchModalOpen: (open: boolean) => set({ isSearchModalOpen: open }),
+      toggleSearchModal: () => set((state) => ({ isSearchModalOpen: !state.isSearchModalOpen })),
 
       saveToDisk: async () => {
         const state = get();

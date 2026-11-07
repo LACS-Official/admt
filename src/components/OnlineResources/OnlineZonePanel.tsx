@@ -12,13 +12,14 @@ import {
   CloudArrowUp24Regular,
   Apps24Regular,
   Brain24Regular,
+  Server24Regular,
   ArrowDownload24Regular,
-  Sparkle24Regular,
 } from "@fluentui/react-icons";
 import { DownloadManagerPanel } from "./DownloadManagerPanel";
 import OnlineResourcesPanel from "./OnlineResourcesPanel";
 import PluginStorePanel from "./PluginStorePanel";
-import SkillsMcpPanel from "./SkillsMcpPanel";
+import SkillsResourcesPanel from "./SkillsResourcesPanel";
+import McpResourcesPanel from "./McpResourcesPanel";
 import { RomDownloadCenterCard } from "../FlashZone/RomDownloadCenterCard";
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 import { useAppStore } from "../../stores/appStore";
@@ -170,7 +171,7 @@ const useStyles = makeStyles({
   },
 });
 
-type FlashZoneView = "online-resources" | "rom-download" | "plugin-store" | "skills-mcp" | "download-manager";
+type FlashZoneView = "online-resources" | "rom-download" | "plugin-store" | "skills-resources" | "mcp-resources" | "download-manager";
 
 const OnlineZonePanel: React.FC = () => {
   const styles = useStyles();
@@ -182,8 +183,10 @@ const OnlineZonePanel: React.FC = () => {
   useEffect(() => {
     if (navigationParams?.onlineTab) {
       const tab = navigationParams.onlineTab;
-      if (tab === "skills-resources" || tab === "mcp-resources") {
-        setCurrentView("skills-mcp");
+      if (tab === "skills-resources" || tab === "skills") {
+        setCurrentView("skills-resources");
+      } else if (tab === "mcp-resources" || tab === "mcp" || tab === "skills-mcp") {
+        setCurrentView("mcp-resources");
       } else {
         setCurrentView(tab as FlashZoneView);
       }
@@ -234,9 +237,14 @@ const OnlineZonePanel: React.FC = () => {
       icon: <Apps24Regular />,
     },
     {
-      id: "skills-mcp" as FlashZoneView,
-      label: "Skills & MCP",
-      icon: <Sparkle24Regular />,
+      id: "skills-resources" as FlashZoneView,
+      label: "Skills 技能库",
+      icon: <Brain24Regular />,
+    },
+    {
+      id: "mcp-resources" as FlashZoneView,
+      label: "MCP 服务与工具",
+      icon: <Server24Regular />,
     },
   ];
 
@@ -248,8 +256,10 @@ const OnlineZonePanel: React.FC = () => {
         return <RomDownloadCenterCard />;
       case "plugin-store":
         return <PluginStorePanel />;
-      case "skills-mcp":
-        return <SkillsMcpPanel />;
+      case "skills-resources":
+        return <SkillsResourcesPanel />;
+      case "mcp-resources":
+        return <McpResourcesPanel />;
       case "download-manager":
         return <DownloadManagerPanel onBack={() => setCurrentView("online-resources")}/>;
       default:

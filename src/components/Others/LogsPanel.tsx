@@ -30,6 +30,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { StructuredLogEntry, LogLevel, LogCategory, LogFilter } from "../../services/logTypes";
 import logService from "../../services/logService";
+import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
   container: {
@@ -155,6 +156,9 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
     color: "var(--colorNeutralForeground1)",
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  },
+  levelTabItemUnrecorded: {
+    opacity: 0.65,
   },
   levelTabCount: {
     fontSize: "11px",
@@ -397,6 +401,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
   const styles = useStyles();
   const { t } = useTranslation();
 
+  const recordingLevels = useAppStore((state) => state.config.logRecordingLevels ?? ["error", "warning"]);
   const [logs, setLogs] = useState<StructuredLogEntry[]>([]);
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -664,16 +669,26 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
           </div>
 
           <div
-            className={mergeClasses(styles.levelTabItem, levelFilter === "info" && styles.levelTabItemActive)}
+            className={mergeClasses(
+              styles.levelTabItem,
+              levelFilter === "info" && styles.levelTabItemActive,
+              !recordingLevels.includes("info") && styles.levelTabItemUnrecorded
+            )}
             onClick={() => setLevelFilter("info")}
+            title={!recordingLevels.includes("info") ? "基础设置中未开启记录此级别" : undefined}
           >
             <span>信息</span>
             <span className={styles.levelTabCount}>{counts.info}</span>
           </div>
 
           <div
-            className={mergeClasses(styles.levelTabItem, levelFilter === "warning" && styles.levelTabItemActive)}
+            className={mergeClasses(
+              styles.levelTabItem,
+              levelFilter === "warning" && styles.levelTabItemActive,
+              !recordingLevels.includes("warning") && styles.levelTabItemUnrecorded
+            )}
             onClick={() => setLevelFilter("warning")}
+            title={!recordingLevels.includes("warning") ? "基础设置中未开启记录此级别" : undefined}
           >
             <span>警告</span>
             <span className={mergeClasses(styles.levelTabCount, counts.warning > 0 && styles.levelTabCountWarn)}>
@@ -682,8 +697,13 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
           </div>
 
           <div
-            className={mergeClasses(styles.levelTabItem, levelFilter === "error" && styles.levelTabItemActive)}
+            className={mergeClasses(
+              styles.levelTabItem,
+              levelFilter === "error" && styles.levelTabItemActive,
+              !recordingLevels.includes("error") && styles.levelTabItemUnrecorded
+            )}
             onClick={() => setLevelFilter("error")}
+            title={!recordingLevels.includes("error") ? "基础设置中未开启记录此级别" : undefined}
           >
             <span>错误</span>
             <span className={mergeClasses(styles.levelTabCount, counts.error > 0 && styles.levelTabCountAlert)}>
@@ -692,8 +712,13 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
           </div>
 
           <div
-            className={mergeClasses(styles.levelTabItem, levelFilter === "debug" && styles.levelTabItemActive)}
+            className={mergeClasses(
+              styles.levelTabItem,
+              levelFilter === "debug" && styles.levelTabItemActive,
+              !recordingLevels.includes("debug") && styles.levelTabItemUnrecorded
+            )}
             onClick={() => setLevelFilter("debug")}
+            title={!recordingLevels.includes("debug") ? "基础设置中未开启记录此级别" : undefined}
           >
             <span>调试</span>
             <span className={styles.levelTabCount}>{counts.debug}</span>
@@ -752,7 +777,11 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
             <DocumentBulletList24Regular className={styles.emptyIcon} />
             <span className={styles.emptyTitle}>暂无日志记录</span>
             <span className={styles.emptySubtitle}>
-              {logs.length === 0 ? "系统运行事件将实时输出至此" : "没有符合当前筛选条件的日志项"}
+              {levelFilter !== "all" && !recordingLevels.includes(levelFilter as any)
+                ? `当前基础设置未启用「${levelFilter === "error" ? "错误" : levelFilter === "warning" ? "警告" : levelFilter === "info" ? "信息" : "调试"}」采集，可在“软件设置 → 基础设置”中开启`
+                : logs.length === 0
+                ? "系统运行事件将实时输出至此"
+                : "没有符合当前筛选条件的日志项"}
             </span>
           </div>
         ) : (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   makeStyles,
+  mergeClasses,
   Text,
   Card,
   CardHeader,
@@ -16,13 +17,20 @@ import {
   ArrowMinimize20Regular,
   Play20Regular,
   Warning24Regular,
+  Warning20Regular,
   CheckmarkCircle24Regular,
   Settings24Regular,
   ArrowCounterclockwise24Regular,
   Speaker220Regular,
   CalendarLtr20Regular,
   Keyboard20Regular,
+  DocumentBulletList24Regular,
+  ErrorCircle20Regular,
+  Info20Regular,
+  Bug20Regular,
 } from "@fluentui/react-icons";
+import { LogRecordingLevel } from '../../types/app';
+import logService from '../../services/logService';
 import { useAppStore } from '../../stores/appStore';
 import { systemTrayService } from '../../services/systemTrayService';
 import { systemTrayManager } from '../../services/systemTrayManager';
@@ -298,6 +306,21 @@ const OtherSettingsPanel: React.FC = () => {
     })();
   };
 
+  const currentRecordingLevels: LogRecordingLevel[] = config.logRecordingLevels ?? ["error", "warning"];
+
+  const handleToggleLogLevel = (level: LogRecordingLevel, checked: boolean) => {
+    let next: LogRecordingLevel[];
+    if (checked) {
+      next = currentRecordingLevels.includes(level)
+        ? currentRecordingLevels
+        : [...currentRecordingLevels, level];
+    } else {
+      next = currentRecordingLevels.filter((l) => l !== level);
+    }
+    updateConfig({ logRecordingLevels: next });
+    logService.applyRecordedLevelsFilter();
+  };
+
   const handleRestoreDefaults = () => {
     const defaultSettings = {
       language: "zh-CN" as const,
@@ -305,8 +328,10 @@ const OtherSettingsPanel: React.FC = () => {
       autoStartEnabled: false,
       soundEnabled: true,
       globalSearchHotkey: 'Ctrl+K',
+      logRecordingLevels: ["error", "warning"] as LogRecordingLevel[],
     };
     updateConfig(defaultSettings);
+    logService.applyRecordedLevelsFilter();
     setStatusBarMessage({
       type: 'success',
       message: t('settings.settings_restored')
@@ -474,6 +499,80 @@ const OtherSettingsPanel: React.FC = () => {
               <Text size={200} weight="semibold" style={{ fontFamily: "ui-monospace, monospace", color: "var(--colorBrandForeground1)" }}>
                 24h / 标准
               </Text>
+            </div>
+          </div>
+        </Card>
+
+        {/* 卡片 3: 日志记录级别 */}
+        <Card className={styles.card}>
+          <CardHeader
+            className={styles.cardHeader}
+            image={<DocumentBulletList24Regular style={{ color: "var(--colorBrandForeground1)" }} />}
+            header={<Text weight="semibold" size={400}>日志记录级别</Text>}
+            description={<Text size={200} className={styles.description}>默认记录错误和警告，支持按需多选开启</Text>}
+          />
+
+          <div className={styles.cardContent}>
+            {/* 错误级别 */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowInfo}>
+                <div className={styles.titleWithIcon}>
+                  <ErrorCircle20Regular />
+                  <Text weight="semibold">错误 (Error)</Text>
+                </div>
+              </div>
+              <Switch
+                checked={currentRecordingLevels.includes("error")}
+                onChange={(_, data) => handleToggleLogLevel("error", data.checked === true)}
+              />
+            </div>
+
+            <Divider />
+
+            {/* 警告级别 */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowInfo}>
+                <div className={styles.titleWithIcon}>
+                  <Warning20Regular />
+                  <Text weight="semibold">警告 (Warning)</Text>
+                </div>
+              </div>
+              <Switch
+                checked={currentRecordingLevels.includes("warning")}
+                onChange={(_, data) => handleToggleLogLevel("warning", data.checked === true)}
+              />
+            </div>
+
+            <Divider />
+
+            {/* 信息级别 */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowInfo}>
+                <div className={styles.titleWithIcon}>
+                  <Info20Regular />
+                  <Text weight="semibold">信息 (Info)</Text>
+                </div>
+              </div>
+              <Switch
+                checked={currentRecordingLevels.includes("info")}
+                onChange={(_, data) => handleToggleLogLevel("info", data.checked === true)}
+              />
+            </div>
+
+            <Divider />
+
+            {/* 调试级别 */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowInfo}>
+                <div className={styles.titleWithIcon}>
+                  <Bug20Regular />
+                  <Text weight="semibold">调试 (Debug)</Text>
+                </div>
+              </div>
+              <Switch
+                checked={currentRecordingLevels.includes("debug")}
+                onChange={(_, data) => handleToggleLogLevel("debug", data.checked === true)}
+              />
             </div>
           </div>
         </Card>

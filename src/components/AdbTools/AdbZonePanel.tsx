@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import {
   makeStyles,
@@ -23,6 +23,7 @@ import AppInstallPanel from "./AppInstallPanel";
 import FileManagerPanel from "./FileManagerPanel";
 import DeviceControlPanel from "./DeviceControlPanel";
 import { useTranslation } from "react-i18next";
+import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({
   container: {
@@ -173,6 +174,14 @@ const AdbZonePanel: React.FC = () => {
   const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
   const [currentView, setCurrentView] = useState<AdbZoneView>("device-control");
+  const navigationParams = useAppStore((state) => state.navigationParams);
+
+  useEffect(() => {
+    if (navigationParams?.subView) {
+      setCurrentView(navigationParams.subView as AdbZoneView);
+    }
+  }, [navigationParams]);
+
   const [showOverlay, setShowOverlay] = useState(false);
 
   const connectedDevices = devices.filter((d) => d.connected);

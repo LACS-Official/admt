@@ -127,6 +127,52 @@ export const ADMT_BUILTIN_MCP_TOOLS: McpToolDefinition[] = [
       required: ["filePath"],
     },
   },
+  {
+    name: "admt_execute_host_command",
+    description: "在宿主电脑（Windows/macOS/Linux）上安全执行一条 CMD 或 PowerShell 命令行指令并返回标准输出。适用于查询本机网络 IP (ipconfig, ping)、端口占用 (netstat)、系统环境变量、本地文件路径及开发环境等。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        command: {
+          type: "string",
+          description: "需要执行的命令行指令（例如：'ipconfig', 'ping -n 2 192.168.1.1', 'netstat -ano | findstr 5037', 'Get-NetIPAddress -AddressFamily IPv4'）",
+        },
+        shell: {
+          type: "string",
+          enum: ["cmd", "powershell"],
+          description: "使用的终端 Shell 类型，Windows 平台默认为 powershell",
+        },
+      },
+      required: ["command"],
+    },
+  },
+  {
+    name: "admt_get_host_info",
+    description: "获取当前运行 ADMT 玩机管家的宿主电脑主机环境信息（包括本机局域网 IPv4 地址、主机名、操作系统平台与架构）",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "yuanbao_web_search",
+    description: "调用腾讯云元宝搜索 (Tencent Yuanbao Search / SearchPro) 检索全网实时权威信源。针对 Android 玩机、救砖、ROM 下载、变砖排错、Fastboot/ADB 报错分析、Magisk 与 KernelSU 模块生态提供精准联网问答与溯源支持。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "搜索关键词（例如：'Redmi K70 fastboot getvar all 报错'、'HyperOS 解锁 Bootloader 社区方案'、'KernelSU GKI 模块'）",
+        },
+        freshness: {
+          type: "string",
+          description: "搜索时效性过滤范围",
+          enum: ["noLimit", "oneDay", "oneWeek", "oneMonth", "oneYear"],
+        },
+      },
+      required: ["query"],
+    },
+  },
 ];
 
 // 预置 AI Skills 资源
@@ -188,6 +234,35 @@ export const PRESET_AI_SKILLS: AISkillResource[] = [
 请协助用户处理从 Source 机型向 Target 机型移植 ROM 时遇到的底层 HAL 与驱动不兼容问题。
 重点涵盖：device/厂商/代号 仓库配置、BoardConfig.mk 编写、proprietary-files.txt 提取、dts 设备树修改。`,
   },
+  {
+    id: "skill.yuanbao.android_rescue",
+    title: "元宝联网·全网救砖与官方 ROM 寻源专家",
+    category: "flash",
+    description: "依托腾讯云元宝搜索检索全网最新官方原厂固件、第三方 Recovery（TWRP / OrangeFox）、Fastboot 刷机脚本与社区避坑经验。",
+    author: "ADMT 玩机团队",
+    tags: ["元宝搜索", "救砖", "ROM寻源", "全网联网", "固件库"],
+    recommendedModels: ["腾讯混元 (Hunyuan-Turbo)", "DeepSeek-V3", "Claude 3.5 Sonnet", "GPT-4o"],
+    systemPrompt: `你是一位具备全网实时搜索能力的 Android 救砖与 ROM 寻源专家。
+你已深度集成【腾讯云元宝搜索 (Yuanbao Search)】能力。
+当用户询问特定机型的救砖方案、官方包下载源、TWRP/OrangeFox 镜像或澎湃/MIUI 降级时：
+1. 优先调用 yuanbao_web_search 工具，结合用户机型代号进行针对性实时全网检索；
+2. 甄别权威源（如官方社区、GitHub 发布页、开发者讨论区与专业专栏）；
+3. 给出带有引文出处的清晰步骤，并突出防回滚 (ARB) 与基带/Persist 保护告警。`,
+  },
+  {
+    id: "skill.yuanbao.error_search",
+    title: "元宝搜索·Fastboot/ADB 异常报错全网溯源",
+    category: "flash",
+    description: "遇到未知报错（如 remote: Partition error、Command write failed、AVB verification failed）时，利用元宝搜索快速匹配全球开源社区成功解决案例。",
+    author: "ADMT 玩机团队",
+    tags: ["元宝搜索", "报错排查", "Fastboot", "ADB", "社区案例"],
+    recommendedModels: ["腾讯混元 (Hunyuan-Turbo)", "DeepSeek-V3", "Claude 3.5 Sonnet"],
+    systemPrompt: `你是一位专注于 Android 底层异常代码排错的专家，具备腾讯云元宝搜索全网检索能力。
+当用户提供 Fastboot / ADB 的报错日志或退出码时：
+1. 准确提取错误关键字符串，调用 yuanbao_web_search 进行精准检索；
+2. 总结分析该报错的最可能成因（如驱动签名失效、USB 3.0 兼容性、分区表锁定、槽位异常）；
+3. 给出从最轻度到深度的排查解决清单，并标明成功案例的信源链接。`,
+  },
 ];
 
 // 预置主流开源免费 MCP 服务器扩展列表
@@ -204,6 +279,20 @@ export const PRESET_MCP_RESOURCES: McpServerResource[] = [
       claudeDesktop: JSON.stringify({ mcpServers: { "admt-manager": { url: "http://127.0.0.1:39860/sse" } } }, null, 2),
       antigravity: JSON.stringify({ mcpServers: { "admt-manager": { url: "http://127.0.0.1:39860/sse" } } }, null, 2),
       windsurf: JSON.stringify({ mcpServers: { "admt-manager": { serverUrl: "http://127.0.0.1:39860/sse" } } }, null, 2),
+    },
+  },
+  {
+    id: "mcp.yuanbao.search",
+    name: "腾讯云元宝搜索 MCP 服务 (官方接入点)",
+    description: "腾讯云面向 AI Agent 推出的官方元宝搜索 (WSA) MCP 协议服务，支持 Streamable HTTP 协议直接无缝接入，全网实时权威信源检索与去噪。",
+    category: "web",
+    transport: "sse",
+    url: "https://api.wsa.cloud.tencent.com/Mcp",
+    configSnippets: {
+      cursor: JSON.stringify({ mcpServers: { "yuanbao-search": { url: "https://api.wsa.cloud.tencent.com/Mcp", headers: { Authorization: "Bearer YOUR_WSA_API_KEY" } } } }, null, 2),
+      claudeDesktop: JSON.stringify({ mcpServers: { "yuanbao-search": { url: "https://api.wsa.cloud.tencent.com/Mcp", headers: { Authorization: "Bearer YOUR_WSA_API_KEY" } } } }, null, 2),
+      antigravity: JSON.stringify({ mcpServers: { "yuanbao-search": { url: "https://api.wsa.cloud.tencent.com/Mcp", headers: { Authorization: "Bearer YOUR_WSA_API_KEY" } } } }, null, 2),
+      windsurf: JSON.stringify({ mcpServers: { "yuanbao-search": { serverUrl: "https://api.wsa.cloud.tencent.com/Mcp", headers: { Authorization: "Bearer YOUR_WSA_API_KEY" } } } }, null, 2),
     },
   },
   {
@@ -322,8 +411,12 @@ interface McpStoreState {
   activeSkillTab: "skills" | "mcp-servers";
   selectedSkill: AISkillResource | null;
   selectedMcpResource: McpServerResource | null;
+  customSkills: AISkillResource[];
 
   // Actions
+  addCustomSkill: (skill: Omit<AISkillResource, "id">) => string;
+  updateCustomSkill: (id: string, updates: Partial<AISkillResource>) => void;
+  deleteCustomSkill: (id: string) => void;
   updateConfig: (updates: Partial<McpServerConfig>) => void;
   startServer: () => Promise<boolean>;
   stopServer: () => Promise<boolean>;
@@ -360,6 +453,31 @@ export const useMcpStore = create<McpStoreState>()(
       activeSkillTab: "skills",
       selectedSkill: PRESET_AI_SKILLS[0],
       selectedMcpResource: PRESET_MCP_RESOURCES[0],
+      customSkills: [],
+
+      addCustomSkill: (skill) => {
+        const id = `custom_skill_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const newSkill: AISkillResource = {
+          ...skill,
+          id,
+        };
+        set((state) => ({
+          customSkills: [newSkill, ...(state.customSkills || [])],
+        }));
+        return id;
+      },
+
+      updateCustomSkill: (id, updates) => {
+        set((state) => ({
+          customSkills: (state.customSkills || []).map((s) => (s.id === id ? { ...s, ...updates } : s)),
+        }));
+      },
+
+      deleteCustomSkill: (id) => {
+        set((state) => ({
+          customSkills: (state.customSkills || []).filter((s) => s.id !== id),
+        }));
+      },
 
       updateConfig: (updates) => {
         set((state) => ({

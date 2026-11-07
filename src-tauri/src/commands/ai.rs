@@ -178,3 +178,261 @@ pub fn read_chat_text_file(path: String) -> Result<String, String> {
     
     Ok(content)
 }
+
+/// 腾讯云元宝搜索单条网页信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YuanbaoSearchPage {
+    pub title: String,
+    pub url: String,
+    pub passage: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub site: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<f64>,
+}
+
+/// 腾讯云元宝搜索统一响应结构
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YuanbaoSearchResponse {
+    pub success: bool,
+    pub query: String,
+    pub pages: Vec<YuanbaoSearchPage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+}
+
+/// 腾讯云元宝搜索 API 原生调用 (WSA / SearchPro)
+#[tauri::command]
+pub async fn yuanbao_search(
+    query: String,
+    api_key: String,
+    cnt: Option<u32>,
+    mode: Option<u32>,
+    freshness: Option<String>,
+) -> Result<YuanbaoSearchResponse, String> {
+    let clean_query = query.trim();
+    if clean_query.is_empty() {
+        return Ok(YuanbaoSearchResponse {
+            success: false,
+            query: query.clone(),
+            pages: vec![],
+            error: Some("搜索关键词不能为空".to_string()),
+            request_id: None,
+        });
+    }
+
+    let clean_key = api_key.trim();
+    if clean_key.is_empty() {
+        return Ok(YuanbaoSearchResponse {
+            success: false,
+            query: clean_query.to_string(),
+            pages: vec![],
+            error: Some("请先配置腾讯云元宝搜索 API Key".to_string()),
+            request_id: None,
+        });
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|e| format!("初始化 HTTP 客户端失败: {}", e))?;
+
+    let target_cnt = cnt.unwrap_or(0);
+    // 腾讯云 SearchPro 接口：极速版/Lite 不支持 Cnt 和 Mode；标准版要求 10/20/30/40/50
+    let api_cnt = if target_cnt <= 0 {
+        0
+    } else if target_cnt <= 10 {
+        10
+    } else if target_cnt <= 20 {
+        20
+    } else if target_cnt <= 30 {
+        30
+    } else if target_cnt <= 40 {
+        40
+    } else {
+        50
+    };
+
+    let mut body = serde_json::json!({
+        "Query": clean_query,
+    });
+
+    if api_cnt > 0 {
+        if let Some(obj) = body.as_object_mut() {
+            obj.insert("Cnt".to_string(), serde_json::Value::Number(api_cnt.into()));
+            if let Some(m) = mode {
+                if m > 0 {
+                    obj.insert("Mode".to_string(), serde_json::Value::Number(m.into()));
+                }
+            }
+        }
+    }
+
+    if let Some(fresh) = freshness.as_deref() {
+        if !fresh.is_empty() && fresh != "noLimit" {
+            if let Some(obj) = body.as_object_mut() {
+                obj.insert("Freshness".to_string(), serde_json::Value::String(fresh.to_string()));
+            }
+        }
+    }
+
+    log::info!("发起腾讯云元宝搜索请求: query='{}', cnt={}, body={}", clean_query, api_cnt, body);
+
+    let send_request = |req_body: serde_json::Value| {
+        let client_clone = client.clone();
+        let key_clone = clean_key.to_string();
+        async move {
+            client_clone
+                .post("https://api.wsa.cloud.tencent.com/SearchPro")
+                .header("Authorization", format!("Bearer {}", key_clone))
+                .header("Content-Type", "application/json")
+                .json(&req_body)
+                .send()
+                .await
+        }
+    };
+
+    let res = send_request(body.clone())
+        .await
+        .map_err(|e| format!("请求腾讯云元宝搜索服务失败: {}", e))?;
+
+    let mut status = res.status();
+    let mut res_text = res
+        .text()
+        .await
+        .map_err(|e| format!("读取搜索响应内容失败: {}", e))?;
+
+    // 检查是否因 Cnt 或 Mode 被极速版拒收 (InvalidParameter: illegal Cnt / illegal Mode)
+    let needs_lite_retry = res_text.contains("illegal Cnt") || res_text.contains("illegal Mode");
+    if needs_lite_retry {
+        log::warn!("检测到元宝搜索接口提示参数限制 (如极速版/Lite 不支持 Cnt/Mode)，自动降级无 Cnt 参数重试...");
+        let mut lite_body = serde_json::json!({
+            "Query": clean_query,
+        });
+        if let Some(fresh) = freshness.as_deref() {
+            if !fresh.is_empty() && fresh != "noLimit" {
+                if let Some(obj) = lite_body.as_object_mut() {
+                    obj.insert("Freshness".to_string(), serde_json::Value::String(fresh.to_string()));
+                }
+            }
+        }
+
+        if let Ok(retry_res) = send_request(lite_body).await {
+            status = retry_res.status();
+            if let Ok(retry_text) = retry_res.text().await {
+                res_text = retry_text;
+            }
+        }
+    }
+
+    if !status.is_success() {
+        log::error!("元宝搜索接口返回错误: HTTP {}, body: {}", status, res_text);
+        return Ok(YuanbaoSearchResponse {
+            success: false,
+            query: clean_query.to_string(),
+            pages: vec![],
+            error: Some(format!("HTTP {} ({})", status, res_text)),
+            request_id: None,
+        });
+    }
+
+    // 解析 JSON 结果
+    let json_val: serde_json::Value = serde_json::from_str(&res_text)
+        .map_err(|e| format!("解析元宝搜索响应 JSON 失败: {}, 原始文本: {}", e, res_text))?;
+
+    // 检查是否有 Error 节点
+    if let Some(err_node) = json_val
+        .get("Response")
+        .and_then(|r| r.get("Error"))
+        .or_else(|| json_val.get("Error"))
+    {
+        let err_code = err_node.get("Code").and_then(|c| c.as_str()).unwrap_or("Unknown");
+        let err_msg = err_node.get("Message").and_then(|m| m.as_str()).unwrap_or("元宝搜索服务返回未知错误");
+        return Ok(YuanbaoSearchResponse {
+            success: false,
+            query: clean_query.to_string(),
+            pages: vec![],
+            error: Some(format!("{}: {}", err_code, err_msg)),
+            request_id: json_val.get("Response").and_then(|r| r.get("RequestId")).and_then(|id| id.as_str()).map(|s| s.to_string()),
+        });
+    }
+
+    let request_id = json_val
+        .get("Response")
+        .and_then(|r| r.get("RequestId"))
+        .or_else(|| json_val.get("RequestId"))
+        .and_then(|id| id.as_str())
+        .map(|s| s.to_string());
+
+    let raw_pages = json_val
+        .get("Response")
+        .and_then(|r| r.get("Pages"))
+        .or_else(|| json_val.get("Pages"))
+        .and_then(|p| p.as_array());
+
+    let mut pages: Vec<YuanbaoSearchPage> = Vec::new();
+
+    if let Some(page_arr) = raw_pages {
+        for item in page_arr {
+            // Pages 可能是字符串化的 JSON，也可能是直接的对象
+            let item_obj = if let Some(s) = item.as_str() {
+                serde_json::from_str::<serde_json::Value>(s).ok()
+            } else if item.is_object() {
+                Some(item.clone())
+            } else {
+                None
+            };
+
+            if let Some(obj) = item_obj {
+                let title = obj.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let url = obj
+                    .get("url")
+                    .or_else(|| obj.get("href"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let passage = obj
+                    .get("passage")
+                    .or_else(|| obj.get("snippet"))
+                    .or_else(|| obj.get("content"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let date = obj.get("date").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let site = obj.get("site").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let score = obj.get("score").and_then(|v| v.as_f64());
+
+                if !title.is_empty() || !passage.is_empty() || !url.is_empty() {
+                    pages.push(YuanbaoSearchPage {
+                        title,
+                        url,
+                        passage,
+                        date,
+                        site,
+                        score,
+                    });
+                }
+            }
+        }
+    }
+
+    if pages.len() > target_cnt as usize {
+        pages.truncate(target_cnt as usize);
+    }
+
+    log::info!("元宝搜索解析成功: 命中 {} 条搜索结果", pages.len());
+
+    Ok(YuanbaoSearchResponse {
+        success: true,
+        query: clean_query.to_string(),
+        pages,
+        error: None,
+        request_id,
+    })
+}
