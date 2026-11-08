@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -26,19 +26,15 @@ import {
   Copy24Regular,
   Open24Regular,
   DocumentChevronDouble24Regular,
-  Code24Regular,
-  CheckmarkCircle24Regular,
-  Warning24Regular,
   Search24Regular,
-  FolderOpen24Regular,
   Filter24Regular,
   Dismiss24Regular,
   Info24Regular,
   Sparkle24Regular,
   ChevronUp24Regular,
-  ChevronDown24Regular,
   BookOpen24Regular,
   Globe24Regular,
+  ChevronRight20Regular,
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
@@ -55,6 +51,11 @@ import {
   RomMirrorItem,
   getXiaomiSupportedVersions,
   SupportedSystemVersion,
+  fetchXiaomiDevicePresets,
+  fetchLatestXiaomiRoms,
+  getXiaomiDataSourceStatus,
+  XiaomiDataSourceStatus,
+  XiaomiDevicePreset,
 } from "../../services/xiaomiRomService";
 import {
   RomBrandCategory,
@@ -64,6 +65,7 @@ import {
   EXOTIC_CATEGORIES,
 } from "../../services/multiBrandRomService";
 import { onlineResourcesService } from "../../services/onlineResourcesService";
+import { detectNetdiskLink, extractHttpUrl, openInBrowser } from "../../utils/netdiskLink";
 
 const useStyles = makeStyles({
   container: {
@@ -75,6 +77,9 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
     boxSizing: "border-box",
     overflow: "hidden",
+    "& .fui-Input, & .fui-Select": {
+      borderRadius: "9999px",
+    },
   },
   brandTabBar: {
     display: "flex",
@@ -113,19 +118,17 @@ const useStyles = makeStyles({
     boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
   },
   filterCard: {
-    borderRadius: "16px",
+    borderRadius: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    padding: "16px 20px",
+    padding: "16px 18px",
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: "12px",
     flexShrink: 0,
-    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-    boxShadow: "0 2px 10px -2px rgba(0, 0, 0, 0.03)",
   },
   collapsedBar: {
-    borderRadius: "16px",
+    borderRadius: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: "10px 18px",
@@ -135,7 +138,6 @@ const useStyles = makeStyles({
     gap: "12px",
     flexWrap: "wrap",
     flexShrink: 0,
-    boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.02)",
   },
   summaryTags: {
     display: "flex",
@@ -209,7 +211,6 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
     color: "var(--colorBrandForeground1)",
     fontWeight: 600,
-    boxShadow: "0 1px 4px rgba(0, 0, 0, 0.08)",
   },
   filterActions: {
     display: "flex",
@@ -248,7 +249,7 @@ const useStyles = makeStyles({
     },
   },
   romCard: {
-    padding: "14px 16px",
+    padding: "16px 18px",
     borderRadius: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -257,14 +258,17 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     gap: "12px",
     cursor: "pointer",
-    transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+    transition: "border-color 0.16s ease, background-color 0.16s ease",
     "&:hover": {
+      backgroundColor: "var(--colorNeutralBackground2Hover)",
       borderTopColor: "var(--colorBrandStroke1)",
       borderRightColor: "var(--colorBrandStroke1)",
       borderBottomColor: "var(--colorBrandStroke1)",
       borderLeftColor: "var(--colorBrandStroke1)",
-      boxShadow: "0 4px 14px rgba(0, 0, 0, 0.06)",
-      transform: "translateY(-1px)",
+    },
+    "&:focus-visible": {
+      outline: "2px solid var(--colorBrandStroke1)",
+      outlineOffset: "2px",
     },
   },
   cardTopRow: {
@@ -294,8 +298,8 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground2)",
   },
   metaPill: {
-    padding: "2px 8px",
-    borderRadius: "6px",
+    padding: "2px 10px",
+    borderRadius: "9999px",
     backgroundColor: "var(--colorNeutralBackground3)",
     fontSize: "11px",
     display: "inline-flex",
@@ -307,8 +311,9 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: "8px",
-    borderTop: "1px solid var(--colorNeutralStroke3)",
+    gap: "8px",
+    paddingTop: "10px",
+    borderTop: "1px solid var(--colorNeutralStroke2)",
   },
   emptyState: {
     display: "flex",
@@ -324,7 +329,7 @@ const useStyles = makeStyles({
   detailDialogSurface: {
     maxWidth: "620px",
     width: "100%",
-    borderRadius: "16px",
+    borderRadius: "14px",
   },
   detailContent: {
     display: "flex",
@@ -337,8 +342,8 @@ const useStyles = makeStyles({
     gridTemplateColumns: "repeat(2, 1fr)",
     gap: "10px 16px",
     backgroundColor: "var(--colorNeutralBackground3)",
-    padding: "12px 14px",
-    borderRadius: "10px",
+    padding: "14px 16px",
+    borderRadius: "12px",
     fontSize: "12px",
   },
   detailMetaItem: {
@@ -351,8 +356,8 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "10px",
     backgroundColor: "var(--colorNeutralBackground3)",
-    padding: "12px 14px",
-    borderRadius: "10px",
+    padding: "14px 16px",
+    borderRadius: "12px",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   mirrorHeader: {
@@ -366,13 +371,13 @@ const useStyles = makeStyles({
     flexWrap: "wrap",
   },
   mirrorPill: {
-    padding: "6px 12px",
-    borderRadius: "8px",
+    padding: "5px 12px",
+    borderRadius: "9999px",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     cursor: "pointer",
     fontSize: "12px",
-    transition: "all 0.15s ease",
+    transition: "border-color 0.16s ease, background-color 0.16s ease",
     display: "flex",
     alignItems: "center",
     gap: "6px",
@@ -382,7 +387,6 @@ const useStyles = makeStyles({
       borderRightColor: "var(--colorBrandStroke1)",
       borderBottomColor: "var(--colorBrandStroke1)",
       borderLeftColor: "var(--colorBrandStroke1)",
-      color: "var(--colorBrandForeground1)",
     },
   },
   mirrorPillActive: {
@@ -390,7 +394,7 @@ const useStyles = makeStyles({
     borderRightColor: "var(--colorBrandStroke1)",
     borderBottomColor: "var(--colorBrandStroke1)",
     borderLeftColor: "var(--colorBrandStroke1)",
-    backgroundColor: "rgba(0, 113, 227, 0.12)",
+    backgroundColor: "var(--colorBrandBackground2)",
     color: "var(--colorBrandForeground1)",
     fontWeight: 600,
   },
@@ -398,7 +402,7 @@ const useStyles = makeStyles({
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
     fontSize: "11px",
     padding: "8px 10px",
-    borderRadius: "6px",
+    borderRadius: "10px",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
     wordBreak: "break-all",
@@ -418,7 +422,7 @@ const useStyles = makeStyles({
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
     fontSize: "12px",
     padding: "12px",
-    borderRadius: "8px",
+    borderRadius: "12px",
     backgroundColor: "var(--colorNeutralBackground3)",
     border: "1px solid var(--colorNeutralStroke2)",
     overflowX: "auto",
@@ -427,6 +431,31 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground1)",
     maxHeight: "220px",
     overflowY: "auto",
+  },
+  pillButton: {
+    borderRadius: "9999px",
+  },
+  neutralBadge: {
+    borderRadius: "9999px",
+  },
+  hintText: {
+    fontSize: "12px",
+    lineHeight: "18px",
+    color: "var(--colorNeutralForeground3)",
+  },
+  cardVersion: {
+    fontSize: "13px",
+    fontWeight: 600,
+    lineHeight: "18px",
+    color: "var(--colorBrandForeground1)",
+  },
+  cardHint: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "2px",
+    flexShrink: 0,
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground3)",
   },
 });
 
@@ -473,9 +502,17 @@ export const RomDownloadCenterCard: React.FC = () => {
   const [selectedModelPreset, setSelectedModelPreset] = useState<string>("");
   const [versionFilter, setVersionFilter] = useState<string>("");
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
-  const [selectedRegion, setSelectedRegion] = useState<string>("cn");
+  // 默认「全部地区」，避免国行默认把该机型最新的 Global 版本直接过滤掉
+  const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [methodFilter, setMethodFilter] = useState<"all" | "Recovery" | "Fastboot">("all");
   const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(true);
+
+  // 实时机型预设 / 首页最新源 / 数据源健康状态
+  const [devicePresets, setDevicePresets] =
+    useState<XiaomiDevicePreset[]>(POPULAR_XIAOMI_DEVICES);
+  const [isShowingLatestFeed, setIsShowingLatestFeed] = useState<boolean>(false);
+  const [sourceStatus, setSourceStatus] = useState<XiaomiDataSourceStatus | null>(null);
+  const initialFeedLoadedRef = useRef(false);
 
   // 小米系统版本动态支持列表状态
   const [supportedVersions, setSupportedVersions] = useState<SupportedSystemVersion[]>([]);
@@ -532,6 +569,40 @@ export const RomDownloadCenterCard: React.FC = () => {
       unlistenPromise.then((f) => f());
     };
   }, []);
+
+  // 进入小米专区即拉取实时索引：动态机型预设 + 全站最新固件
+  const feedLoadingRef = useRef(false);
+  const loadLatestFeed = useCallback(async (forceRefresh = false) => {
+    if (feedLoadingRef.current) return;
+    feedLoadingRef.current = true;
+    initialFeedLoadedRef.current = true;
+
+    try {
+      // 串行复用进程内缓存，避免并发触发两次 GitHub 请求
+      const latest = await fetchLatestXiaomiRoms(60, forceRefresh);
+      const presets = await fetchXiaomiDevicePresets();
+
+      setDevicePresets(presets.length > 0 ? presets : POPULAR_XIAOMI_DEVICES);
+      setXiaomiRomList(latest);
+      setIsShowingLatestFeed(true);
+      setSourceStatus(getXiaomiDataSourceStatus());
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      setDevicePresets(POPULAR_XIAOMI_DEVICES);
+      setSourceStatus(getXiaomiDataSourceStatus());
+      setErrorMsg(reason);
+      // 允许切走再切回时重试
+      initialFeedLoadedRef.current = false;
+      setStatusBarMessage({ type: "error", message: `ROM 索引获取失败: ${reason}` });
+    } finally {
+      feedLoadingRef.current = false;
+    }
+  }, [setStatusBarMessage]);
+
+  useEffect(() => {
+    if (selectedBrand !== "xiaomi" || initialFeedLoadedRef.current) return;
+    void loadLatestFeed();
+  }, [selectedBrand, loadLatestFeed]);
 
   // 动态检索当前机型代号、地区版本、版本分支对应的系统版本支持列表
   useEffect(() => {
@@ -664,6 +735,8 @@ export const RomDownloadCenterCard: React.FC = () => {
         forceRefresh,
       });
       setXiaomiRomList(results);
+      setIsShowingLatestFeed(false);
+      setSourceStatus(getXiaomiDataSourceStatus());
 
       if (results.length === 0) {
         setStatusBarMessage({
@@ -705,14 +778,8 @@ export const RomDownloadCenterCard: React.FC = () => {
             )
               return false;
           }
-          if (selectedRegion && selectedRegion !== "all") {
-            const reg = detectXiaomiRegion(rom.version);
-            if (reg !== selectedRegion.toLowerCase()) {
-              const kw = [selectedRegion.toLowerCase()];
-              const match = kw.some((k) => rom.name.toLowerCase().includes(k));
-              if (!match) return false;
-            }
-          }
+          // 地区已在 queryXiaomiRoms 中过滤一次；这里不再二次过滤，
+          // 否则默认「全站最新」会被 detectXiaomiRegion 的兜底值误砍。
           if (versionFilter.trim()) {
             const vf = versionFilter.trim().toLowerCase();
             if (!rom.version.toLowerCase().includes(vf) && !rom.name.toLowerCase().includes(vf)) {
@@ -734,7 +801,7 @@ export const RomDownloadCenterCard: React.FC = () => {
           return true;
         })
         .map((rom) => ({
-          id: `${rom.version}_${rom.method}`,
+          id: `${rom.codename}_${rom.version}_${rom.method}`,
           name: rom.name,
           codename: rom.codename,
           version: rom.version,
@@ -842,7 +909,6 @@ export const RomDownloadCenterCard: React.FC = () => {
     selectedBrand,
     xiaomiRomList,
     selectedBranch,
-    selectedRegion,
     versionFilter,
     methodFilter,
     listSearchQuery,
@@ -869,9 +935,26 @@ export const RomDownloadCenterCard: React.FC = () => {
 
   const activeDownloadUrl = activeMirror ? activeMirror.url : detailModalItem?.link || "";
 
+  // 网盘分享页不是直链，抢在下载队列之前识别
+  const activeNetdisk = useMemo(
+    () => detectNetdiskLink(activeDownloadUrl),
+    [activeDownloadUrl]
+  );
+
   // 添加到下载管理器
   const handleAddToDownloadManager = async () => {
     if (!detailModalItem || !activeDownloadUrl) return;
+
+    if (activeNetdisk) {
+      const opened = await openInBrowser(activeNetdisk.url);
+      setStatusBarMessage({
+        type: opened ? "success" : "warning",
+        message: opened
+          ? `该镜像为${activeNetdisk.label}分享链接，已在浏览器中打开，请在网页中完成下载`
+          : `未能自动打开浏览器，请复制直链后访问${activeNetdisk.label}页面`,
+      });
+      return;
+    }
 
     try {
       let fileName = "";
@@ -885,11 +968,13 @@ export const RomDownloadCenterCard: React.FC = () => {
         fileName = `${detailModalItem.codename}_${detailModalItem.version}.zip`;
       }
 
-      await onlineResourcesService.downloadCustomFile(
+      const taskId = await onlineResourcesService.downloadCustomFile(
         fileName,
         activeDownloadUrl,
         `${detailModalItem.name} ${detailModalItem.version}`
       );
+      // 空返回值 = 网盘链接已由服务转交浏览器，不再提示加入下载队列
+      if (!taskId) return;
 
       setStatusBarMessage({
         type: "success",
@@ -911,11 +996,14 @@ export const RomDownloadCenterCard: React.FC = () => {
 
   // 外部浏览器打开
   const handleOpenBrowser = async (url: string) => {
+    // 链接可能夹带提取码等说明文本，取出真正的 URL 再交给浏览器
+    const target = extractHttpUrl(url) || url;
     try {
-      await invoke("open_external_url", { url });
-      setStatusBarMessage({ type: "info", message: "已在系统默认浏览器中打开下载链接" });
+      const { open } = await import("@tauri-apps/plugin-shell");
+      await open(target);
+      setStatusBarMessage({ type: "info", message: "已在浏览器中打开链接" });
     } catch {
-      window.open(url, "_blank");
+      window.open(target, "_blank");
     }
   };
 
@@ -938,16 +1026,23 @@ export const RomDownloadCenterCard: React.FC = () => {
             return (
               <div
                 key={tab.id}
+                role="button"
+                tabIndex={0}
+                title={tab.tag}
                 className={`${styles.brandTabItem} ${active ? styles.brandTabItemActive : ""}`}
                 onClick={() => {
                   setSelectedBrand(tab.id);
                   setListSearchQuery("");
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedBrand(tab.id);
+                    setListSearchQuery("");
+                  }
+                }}
               >
-                <span>{tab.label}</span>
-                <Badge size="small" appearance={active ? "filled" : "tint"}>
-                  {tab.tag}
-                </Badge>
+                {tab.label}
               </div>
             );
           })}
@@ -956,10 +1051,11 @@ export const RomDownloadCenterCard: React.FC = () => {
         <Button
           appearance="subtle"
           size="small"
-          icon={<Sparkle24Regular style={{ color: "var(--colorBrandForeground1)" }} />}
+          className={styles.pillButton}
+          icon={<Sparkle24Regular />}
           onClick={handleAutoDetectCurrentDevice}
         >
-          一键识别连接机型并切换
+          识别当前机型
         </Button>
       </div>
 
@@ -969,27 +1065,29 @@ export const RomDownloadCenterCard: React.FC = () => {
           <div className={styles.filterCard}>
             <div className={styles.filterHeaderRow}>
               <div className={styles.filterSectionTitle}>
-                <Filter24Regular style={{ color: "var(--colorBrandForeground1)" }} />
-                <span>小米 / Redmi / POCO 固件筛选与版本支持检索</span>
+                <Filter24Regular />
+                <span>机型与版本筛选</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Button
                   appearance="subtle"
                   size="small"
-                  icon={<Sparkle24Regular style={{ color: "var(--colorBrandForeground1)" }} />}
+                  className={styles.pillButton}
+                  icon={<Sparkle24Regular />}
                   onClick={handleAutoDetectCurrentDevice}
                 >
-                  一键获取当前配置
+                  读取当前设备
                 </Button>
                 <Button
                   appearance="subtle"
                   size="small"
+                  className={styles.pillButton}
                   onClick={() => {
                     setCodename("");
                     setSelectedModelPreset("");
                     setVersionFilter("");
                     setSelectedBranch("all");
-                    setSelectedRegion("cn");
+                    setSelectedRegion("all");
                   }}
                 >
                   清空条件
@@ -998,10 +1096,11 @@ export const RomDownloadCenterCard: React.FC = () => {
                   <Button
                     appearance="subtle"
                     size="small"
+                    className={styles.pillButton}
                     icon={<ChevronUp24Regular />}
                     onClick={() => setIsFilterExpanded(false)}
                   >
-                    收起筛选
+                    收起
                   </Button>
                 )}
               </div>
@@ -1018,8 +1117,8 @@ export const RomDownloadCenterCard: React.FC = () => {
                     if (data.value) setCodename(data.value);
                   }}
                 >
-                  <option value="">-- 选择热门机型预设 --</option>
-                  {POPULAR_XIAOMI_DEVICES.map((dev) => (
+                  <option value="">-- 选择机型（实时索引） --</option>
+                  {devicePresets.map((dev) => (
                     <option key={`${dev.codename}-${dev.name}`} value={dev.codename}>
                       {dev.series} {dev.name} ({dev.codename})
                     </option>
@@ -1149,43 +1248,55 @@ export const RomDownloadCenterCard: React.FC = () => {
             </div>
 
             <div className={styles.filterActions}>
-              <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                支持检索当前机型代号全量历史版本及 BigOTA 官方直链；切换地区与分支将自动更新支持版本列表
-              </Text>
+              <Text className={styles.hintText}>支持历史版本与官方直链检索</Text>
 
               <Button
                 appearance="primary"
+                className={styles.pillButton}
                 icon={loading ? <Spinner size="tiny" /> : <Search24Regular />}
                 onClick={() => handleSearchXiaomi(false)}
                 disabled={loading}
-                style={{ borderRadius: "9999px", padding: "6px 20px" }}
+                style={{ padding: "6px 20px" }}
               >
-                {loading ? "检索固件中..." : "获取 ROM"}
+                {loading ? "检索中..." : "获取 ROM"}
               </Button>
             </div>
           </div>
         ) : (
           <div className={styles.collapsedBar}>
             <div className={styles.summaryTags}>
-              <Badge appearance="tint" color="brand">机型: {codename || "未选择"}</Badge>
-              <Badge appearance="outline">
-                地区: {selectedRegion === "all" ? "全部地区" : selectedRegion.toUpperCase()}
+              <Badge className={styles.neutralBadge} appearance="outline">机型 {codename || "未选择"}</Badge>
+              <Badge className={styles.neutralBadge} appearance="outline">
+                地区 {selectedRegion === "all" ? "全部" : selectedRegion.toUpperCase()}
               </Badge>
-              <Badge appearance="outline">
-                分支: {selectedBranch === "all" ? "全部分支" : selectedBranch}
+              <Badge className={styles.neutralBadge} appearance="outline">
+                分支 {selectedBranch === "all" ? "全部" : selectedBranch}
               </Badge>
-              <Badge appearance="outline">
-                版本: {versionFilter || "全部版本"}
+              <Badge className={styles.neutralBadge} appearance="outline">
+                版本 {versionFilter || "全部"}
               </Badge>
-              <Badge appearance="outline">
-                打包: {methodFilter === "all" ? "全部类型" : methodFilter}
+              <Badge className={styles.neutralBadge} appearance="outline">
+                打包 {methodFilter === "all" ? "全部" : methodFilter}
               </Badge>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Button size="small" appearance="secondary" icon={<Filter24Regular />} onClick={() => setIsFilterExpanded(true)}>
-                展开修改筛选
+              <Button
+                size="small"
+                appearance="secondary"
+                className={styles.pillButton}
+                icon={<Filter24Regular />}
+                onClick={() => setIsFilterExpanded(true)}
+              >
+                修改筛选
               </Button>
-              <Button size="small" icon={<ArrowSync24Regular />} onClick={() => handleSearchXiaomi(true)} disabled={loading} title="刷新" />
+              <Button
+                size="small"
+                className={styles.pillButton}
+                icon={<ArrowSync24Regular />}
+                onClick={() => handleSearchXiaomi(true)}
+                disabled={loading}
+                title="刷新"
+              />
             </div>
           </div>
         )
@@ -1196,9 +1307,9 @@ export const RomDownloadCenterCard: React.FC = () => {
         <div className={styles.filterCard}>
           <div className={styles.filterHeaderRow}>
             <div className={styles.filterSectionTitle}>
-              <Filter24Regular style={{ color: "var(--colorBrandForeground1)" }} />
+              <Filter24Regular />
               <span>
-                {BRAND_TABS.find((t) => t.id === selectedBrand)?.label} 固件版本筛选
+                {BRAND_TABS.find((t) => t.id === selectedBrand)?.label} 固件筛选
               </span>
             </div>
             <Button
@@ -1282,7 +1393,7 @@ export const RomDownloadCenterCard: React.FC = () => {
 
           <div className={styles.filterActions}>
             <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-              官方 OTA 全量直链与售后救砖 Fastboot 包已对齐，支持极速分流与多线路 CDN 镜像
+              官方 OTA 全量包与多线路镜像
             </Text>
           </div>
         </div>
@@ -1293,8 +1404,8 @@ export const RomDownloadCenterCard: React.FC = () => {
         <div className={styles.filterCard}>
           <div className={styles.filterHeaderRow}>
             <div className={styles.filterSectionTitle}>
-              <Globe24Regular style={{ color: "var(--colorBrandForeground1)" }} />
-              <span>类原生开源定制项目</span>
+              <Globe24Regular />
+              <span>类原生项目</span>
             </div>
           </div>
 
@@ -1327,7 +1438,7 @@ export const RomDownloadCenterCard: React.FC = () => {
               contentBefore={<Search24Regular />}
             />
             <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-              收录热门设备官方认证构建，支持 SourceForge 官方源与国内清华/GitHub 加速镜像
+              热门设备官方构建与加速镜像
             </Text>
           </div>
         </div>
@@ -1338,8 +1449,8 @@ export const RomDownloadCenterCard: React.FC = () => {
         <div className={styles.filterCard}>
           <div className={styles.filterHeaderRow}>
             <div className={styles.filterSectionTitle}>
-              <BookOpen24Regular style={{ color: "var(--colorBrandForeground1)" }} />
-              <span>极客折腾镜像与跨界系统</span>
+              <BookOpen24Regular />
+              <span>跨界系统</span>
             </div>
           </div>
 
@@ -1363,7 +1474,7 @@ export const RomDownloadCenterCard: React.FC = () => {
             </div>
           </div>
           <Text size={200} style={{ color: "var(--colorNeutralForeground3)", paddingTop: "4px" }}>
-            涵盖 Windows 11 on ARM、移动 Ubuntu/Debian Linux、车载中控、Kali 渗透系统与锤子拟物情怀移植，附折腾教程指南
+            跨界系统镜像与折腾教程
           </Text>
         </div>
       )}
@@ -1379,8 +1490,31 @@ export const RomDownloadCenterCard: React.FC = () => {
             onChange={(_, d) => setListSearchQuery(d.value)}
           />
           <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-            已列出 {displayedItems.length} 个固件或系统项目
+            {selectedBrand === "xiaomi" && isShowingLatestFeed
+              ? `全站最新 ${displayedItems.length} 个 · 输入代号可精确检索`
+              : `${displayedItems.length} 个结果`}
           </Text>
+          {selectedBrand === "xiaomi" && sourceStatus?.syncedAt && (
+            <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+              索引同步至 {sourceStatus.syncedAt} · {sourceStatus.romCount} 条 / {sourceStatus.deviceCount} 机型
+              {sourceStatus.fromCache ? "（离线缓存）" : ""}
+            </Text>
+          )}
+          {selectedBrand === "xiaomi" && (
+            <Button
+              appearance="subtle"
+              size="small"
+              className={styles.pillButton}
+              icon={<ArrowSync24Regular />}
+              onClick={() =>
+                codename.trim()
+                  ? void handleSearchXiaomi(true)
+                  : void loadLatestFeed(true)
+              }
+            >
+              刷新索引
+            </Button>
+          )}
         </div>
       )}
 
@@ -1388,43 +1522,51 @@ export const RomDownloadCenterCard: React.FC = () => {
       <div className={styles.contentArea}>
         {loading ? (
           <div className={styles.emptyState}>
-            <Spinner size="large" label="正在连接官方固件库检索..." />
+            <Spinner size="large" label="正在检索固件..." />
           </div>
         ) : displayedItems.length === 0 ? (
           <div className={styles.emptyState}>
             <Info24Regular style={{ fontSize: "40px" }} />
             <Text weight="semibold">
-              {selectedBrand === "xiaomi" && xiaomiRomList.length === 0
+              {selectedBrand === "xiaomi" && sourceStatus?.indexError
+                ? "实时 ROM 索引暂时不可用"
+                : selectedBrand === "xiaomi" && xiaomiRomList.length === 0
                 ? "输入机型代号后点击【获取 ROM】以拉取官方系统包"
                 : "未找到符合当前条件的固件或项目"}
             </Text>
             <Text size={200} style={{ maxWidth: "420px" }}>
-              {selectedBrand === "xiaomi" && xiaomiRomList.length === 0
-                ? "可选择上方快捷预设或直接点击【一键识别连接机型并切换】。"
+              {selectedBrand === "xiaomi" && sourceStatus?.indexError
+                ? "可点击【刷新索引】重试；也可直接输入机型代号尝试历史版本源。"
+                : selectedBrand === "xiaomi" && xiaomiRomList.length === 0
+                ? "可选择上方实时机型预设，或点击【识别当前机型】。"
                 : "可尝试清空筛选限制，或在上方切换至其他品牌与生态。"}
             </Text>
           </div>
         ) : (
           <div className={styles.romGrid}>
             {displayedItems.map((rom, idx) => {
-              const isRecovery = rom.method === "Recovery";
-              const isFastboot = rom.method === "Fastboot";
-
               return (
                 <div
                   key={`${rom.id}-${idx}`}
                   className={styles.romCard}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`查看 ${rom.name} ${rom.version} 详情`}
                   onClick={() => handleOpenDetailModal(rom)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleOpenDetailModal(rom);
+                    }
+                  }}
                 >
                   <div className={styles.cardTopRow}>
-                    <Text weight="bold" size={300} style={{ color: "var(--colorBrandForeground1)" }}>
-                      {rom.version}
-                    </Text>
+                    <Text className={styles.cardVersion}>{rom.version}</Text>
                     <div className={styles.cardBadges}>
-                      <Badge appearance="outline" color={isRecovery ? "informative" : isFastboot ? "warning" : "brand"}>
+                      <Badge className={styles.neutralBadge} appearance="outline">
                         {rom.method}
                       </Badge>
-                      <Badge size="small" appearance="filled">
+                      <Badge className={styles.neutralBadge} appearance="outline" size="small">
                         {rom.branch}
                       </Badge>
                     </div>
@@ -1435,7 +1577,7 @@ export const RomDownloadCenterCard: React.FC = () => {
                       {rom.name}
                     </Text>
                     <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                      代号/标识: {rom.codename} {rom.authorOrMaintainer ? `· ${rom.authorOrMaintainer}` : ""}
+                      {rom.codename} {rom.authorOrMaintainer ? `· ${rom.authorOrMaintainer}` : ""}
                     </Text>
                   </div>
 
@@ -1443,29 +1585,17 @@ export const RomDownloadCenterCard: React.FC = () => {
                     <span className={styles.metaPill}>
                       {rom.android.includes("Boot") ? rom.android : `Android ${rom.android}`}
                     </span>
-                    <span className={styles.metaPill}>
-                      大小: {rom.size}
-                    </span>
-                    <span className={styles.metaPill}>
-                      日期: {rom.date}
-                    </span>
+                    <span className={styles.metaPill}>大小 {rom.size}</span>
+                    <span className={styles.metaPill}>{rom.date}</span>
                   </div>
 
                   <div className={styles.cardBottomRow}>
                     <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                      {rom.mirrors.length > 0 ? `支持 ${rom.mirrors.length} 条加速镜像线路` : "官方直链分发"}
+                      {rom.mirrors.length > 0 ? `${rom.mirrors.length} 条镜像线路` : "官方直链"}
                     </Text>
-                    <Button
-                      size="small"
-                      appearance="primary"
-                      icon={<ArrowDownload24Regular />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenDetailModal(rom);
-                      }}
-                    >
-                      详情与下载
-                    </Button>
+                    <span className={styles.cardHint}>
+                      查看详情 <ChevronRight20Regular />
+                    </span>
                   </div>
                 </div>
               );
@@ -1485,6 +1615,7 @@ export const RomDownloadCenterCard: React.FC = () => {
               action={
                 <Button
                   appearance="subtle"
+                  className={styles.pillButton}
                   aria-label="close"
                   icon={<Dismiss24Regular />}
                   onClick={() => setDetailModalItem(null)}
@@ -1493,10 +1624,10 @@ export const RomDownloadCenterCard: React.FC = () => {
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                 <span>{detailModalItem?.version}</span>
-                <Badge appearance="outline" color="brand">
+                <Badge className={styles.neutralBadge} appearance="outline">
                   {detailModalItem?.method}
                 </Badge>
-                <Badge size="small" appearance="filled">
+                <Badge className={styles.neutralBadge} size="small" appearance="outline">
                   {detailModalItem?.branch}
                 </Badge>
               </div>
@@ -1511,9 +1642,7 @@ export const RomDownloadCenterCard: React.FC = () => {
                     </div>
                     <div className={styles.detailMetaItem}>
                       <span style={{ color: "var(--colorNeutralForeground3)" }}>系统版本 / 构建号</span>
-                      <Text weight="semibold" style={{ color: "var(--colorBrandForeground1)" }}>
-                        {detailModalItem.version}
-                      </Text>
+                      <Text weight="semibold">{detailModalItem.version}</Text>
                     </div>
                     <div className={styles.detailMetaItem}>
                       <span style={{ color: "var(--colorNeutralForeground3)" }}>底层基准 / 架构</span>
@@ -1547,12 +1676,12 @@ export const RomDownloadCenterCard: React.FC = () => {
                           <Text weight="semibold" size={300}>
                             服务商加速线路
                           </Text>
-                          <Badge size="small" appearance="tint" color="informative">
-                            共 {detailModalItem.mirrors.length} 个可用分流镜像
+                          <Badge className={styles.neutralBadge} size="small" appearance="outline">
+                            {detailModalItem.mirrors.length} 条线路
                           </Badge>
                         </div>
                         <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                          遇到卡顿可自由切换节点
+                          卡顿可切换线路
                         </Text>
                       </div>
 
@@ -1566,11 +1695,7 @@ export const RomDownloadCenterCard: React.FC = () => {
                               onClick={() => setSelectedMirrorId(m.id)}
                             >
                               <span>{m.name}</span>
-                              <Badge
-                                size="small"
-                                appearance={active ? "filled" : "outline"}
-                                color={m.badge === "推荐" ? "brand" : "subtle"}
-                              >
+                              <Badge className={styles.neutralBadge} size="small" appearance="outline">
                                 {m.badge}
                               </Badge>
                             </div>
@@ -1609,16 +1734,18 @@ export const RomDownloadCenterCard: React.FC = () => {
                   <Button
                     size="small"
                     appearance="subtle"
+                    className={styles.pillButton}
                     icon={<BookOpen24Regular />}
                     onClick={() => handleOpenBrowser(detailModalItem.tutorialUrl!)}
                   >
-                    查看折腾教程指南
+                    教程
                   </Button>
                 )}
                 {detailModalItem?.method === "Recovery" && selectedBrand === "xiaomi" && (
                   <Button
                     size="small"
                     appearance="subtle"
+                    className={styles.pillButton}
                     icon={<Sparkle24Regular />}
                     onClick={() => {
                       setExtractModalItem(detailModalItem as any);
@@ -1627,30 +1754,33 @@ export const RomDownloadCenterCard: React.FC = () => {
                       setExtractProgress(0);
                     }}
                   >
-                    流式提取镜像
+                    提取镜像
                   </Button>
                 )}
                 <Button
                   size="small"
                   appearance="subtle"
+                  className={styles.pillButton}
                   icon={<DocumentChevronDouble24Regular />}
                   onClick={() => handleJumpToRomManager(activeDownloadUrl)}
                 >
-                  载入ROM管理
+                  载入 ROM 管理
                 </Button>
                 <Button
                   size="small"
                   appearance="subtle"
+                  className={styles.pillButton}
                   icon={<Open24Regular />}
                   onClick={() => handleOpenBrowser(activeDownloadUrl)}
                 >
-                  浏览器下载
+                  浏览器打开
                 </Button>
               </div>
 
               <div style={{ display: "flex", gap: "6px" }}>
                 <Button
                   appearance="secondary"
+                  className={styles.pillButton}
                   icon={<Copy24Regular />}
                   onClick={() => handleCopyLink(activeDownloadUrl)}
                 >
@@ -1658,10 +1788,11 @@ export const RomDownloadCenterCard: React.FC = () => {
                 </Button>
                 <Button
                   appearance="primary"
-                  icon={<ArrowDownload24Regular />}
+                  className={styles.pillButton}
+                  icon={activeNetdisk ? <Open24Regular /> : <ArrowDownload24Regular />}
                   onClick={handleAddToDownloadManager}
                 >
-                  添加到下载管理
+                  {activeNetdisk ? `在浏览器打开${activeNetdisk.label}` : "加入下载队列"}
                 </Button>
               </div>
             </DialogActions>
@@ -1674,12 +1805,12 @@ export const RomDownloadCenterCard: React.FC = () => {
         open={!!extractModalItem}
         onOpenChange={(_, data) => !isExtracting && !data.open && setExtractModalItem(null)}
       >
-        <DialogSurface style={{ maxWidth: "520px" }}>
+        <DialogSurface style={{ maxWidth: "520px", borderRadius: "14px" }}>
           <DialogBody>
             <DialogTitle>流式提取指定镜像 ({extractModalItem?.version})</DialogTitle>
             <DialogContent className={styles.modalContent}>
               <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
-                借助 HTTP Range 断点续传切片技术，无需完整下载数 GB 的全量包，即可在线秒级提取内部指定分区镜像。
+                通过 HTTP Range 切片，无需下载完整固件即可提取指定分区镜像。
               </Text>
               <Field label="目标提取分区">
                 <Select value={targetPartition} onChange={(_, data) => setTargetPartition(data.value)} disabled={isExtracting}>
@@ -1693,7 +1824,7 @@ export const RomDownloadCenterCard: React.FC = () => {
                 <Input value={outputDir} onChange={(_, d) => setOutputDir(d.value)} disabled={isExtracting} />
               </Field>
               {(isExtracting || extractedFile || extractStatus) && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", borderRadius: "8px", backgroundColor: "var(--colorNeutralBackground3)" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", borderRadius: "12px", backgroundColor: "var(--colorNeutralBackground3)" }}>
                   <Text weight="medium" size={200}>
                     {extractedFile ? "提取完成！" : isExtracting ? "正在在线切片提取..." : "状态"}
                   </Text>
@@ -1703,11 +1834,17 @@ export const RomDownloadCenterCard: React.FC = () => {
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" disabled={isExtracting} onClick={() => setExtractModalItem(null)}>
+              <Button
+                appearance="secondary"
+                className={styles.pillButton}
+                disabled={isExtracting}
+                onClick={() => setExtractModalItem(null)}
+              >
                 关闭
               </Button>
               <Button
                 appearance="primary"
+                className={styles.pillButton}
                 disabled={isExtracting}
                 icon={isExtracting ? <Spinner size="tiny" /> : <Sparkle24Regular />}
                 onClick={async () => {

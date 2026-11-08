@@ -9,6 +9,7 @@ mod downloads;
 mod error;
 mod fastboot;
 mod mcp;
+mod pty;
 mod root;
 mod sys;
 mod system_features;
@@ -77,6 +78,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(MirrorManager::new())
         .manage(KeyMappingManager::new())
+        .manage(pty::PtyManager::new())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -291,6 +293,12 @@ pub fn run() {
             mcp::start_mcp_server,
             mcp::stop_mcp_server,
             mcp::get_mcp_server_status,
+            // 内置交互式终端（ConPTY 会话）
+            pty::pty_create,
+            pty::pty_write,
+            pty::pty_resize,
+            pty::pty_close,
+            pty::pty_list,
         ])
         .setup(|_app| {
             // 初始化应用状态

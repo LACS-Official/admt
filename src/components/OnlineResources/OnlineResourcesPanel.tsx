@@ -24,6 +24,7 @@ import {
 } from '@fluentui/react-icons';
 import { OnlineSoftware, OnlineResourcesState } from '../../types/app';
 import { onlineResourcesService, SearchParams } from '../../services/onlineResourcesService';
+import { isNetdiskRedirectError } from '../../utils/netdiskLink';
 
 import { DownloadManagerPanel } from './DownloadManagerPanel';
 import { ResourceDetailModal } from './ResourceDetailModalSimple';
@@ -34,8 +35,8 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    padding: '16px',
-    gap: '16px',
+    padding: '16px 18px',
+    gap: '12px',
     overflow: 'hidden',
   },
   header: {
@@ -56,7 +57,10 @@ const useStyles = makeStyles({
     display: 'flex',
     gap: '12px',
     alignItems: 'center',
-    marginBottom: '16px',
+    flexShrink: 0,
+    '& .fui-Input, & .fui-SearchBox': {
+      borderRadius: '9999px',
+    },
   },
   searchBox: {
     flex: 1,
@@ -75,13 +79,13 @@ const useStyles = makeStyles({
     marginBottom: '8px',
   },
   chip: {
-    padding: '6px 12px',
-    borderRadius: '16px',
-    ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke1)'),
+    padding: '5px 12px',
+    borderRadius: '9999px',
+    ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke2)'),
     cursor: 'pointer',
     fontSize: '12px',
-    transition: 'all 0.2s ease',
-    backgroundColor: 'var(--colorNeutralBackground1)',
+    transition: 'border-color 0.16s ease, background-color 0.16s ease',
+    backgroundColor: 'var(--colorNeutralBackground2)',
     whiteSpace: 'nowrap',
     '&:hover': {
       backgroundColor: 'var(--colorNeutralBackground1Hover)',
@@ -102,9 +106,12 @@ const useStyles = makeStyles({
   },
   softwareGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-    gap: '16px',
-    padding: '8px 0',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '12px',
+    padding: '2px 0',
+  },
+  pillButton: {
+    borderRadius: '9999px',
   },
   softwareCard: {
     height: 'auto',
@@ -296,7 +303,10 @@ const OnlineResourcesPanel: React.FC = () => {
       // handleCloseResourceModal();
       return taskId;
     } catch (error) {
-      setError(error instanceof Error ? error.message : '下载失败');
+      // 网盘链接已由 service 打开浏览器，不必在页面顶部再报一次错误
+      if (!isNetdiskRedirectError(error)) {
+        setError(error instanceof Error ? error.message : '下载失败');
+      }
       throw error;
     }
   };
@@ -362,6 +372,7 @@ const OnlineResourcesPanel: React.FC = () => {
         />
         <Button
           appearance="primary"
+          className={styles.pillButton}
           icon={<Search24Regular />}
           onClick={handleSearch}
           disabled={loading}

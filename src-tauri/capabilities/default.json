@@ -89,6 +89,12 @@
         { "url": "https://api.groq.com/*" },
         { "url": "https://openrouter.ai/*" },
         { "url": "https://api-g.lacs.cc/*" },
+        { "url": "https://api.github.com/*" },
+        { "url": "https://xiaomirom.com/*" },
+        { "url": "https://*.jsdelivr.net/*" },
+        { "url": "https://testingcf.jsdelivr.net/*" },
+        { "url": "https://gcore.jsdelivr.net/*" },
+        { "url": "https://raw.githubusercontent.com/*" },
         { "url": "http://localhost:*" },
         { "url": "http://127.0.0.1:*" }
       ]

@@ -497,7 +497,8 @@ async fn dispatch_tool_call(name: &str, args: &serde_json::Value) -> Result<Stri
             let command = args.get("command").and_then(|v| v.as_str()).ok_or_else(|| "缺少 command 参数".to_string())?;
             let shell = args.get("shell").and_then(|v| v.as_str()).map(|s| s.to_string());
 
-            let res = crate::commands::system::execute_host_command(command.to_string(), shell)
+            // MCP 工具为无界面的自动化调用，不允许弹出交互式终端窗口
+            let res = crate::commands::system::execute_host_command(command.to_string(), shell, None)
                 .await
                 .map_err(|e| format!("执行宿主命令失败: {}", e))?;
 

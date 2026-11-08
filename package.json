@@ -1,6 +1,6 @@
 {
   "name": "wanjiguanjia-tauri",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -33,6 +33,9 @@
     "@tauri-apps/plugin-process": "^2.3.0",
     "@tauri-apps/plugin-shell": "^2.0.0",
     "@types/crypto-js": "^4.2.2",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/xterm": "^6.0.0",
     "canvas-confetti": "^1.9.4",
     "classnames": "^2.5.1",
     "crypto-js": "^4.2.0",

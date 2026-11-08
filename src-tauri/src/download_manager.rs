@@ -39,6 +39,38 @@ pub struct DownloadRequest {
     pub download_dir: String,
 }
 
+/// 识别三大网盘的分享链接（与前端 `src/utils/netdiskLink.ts` 的关键字保持一致）。
+/// 这类链接不是文件直链，GET 只会拿到 HTML 落地页，后端不应把它写成本地文件。
+pub fn detect_netdisk_url(url: &str) -> Option<&'static str> {
+    let lower = url.to_ascii_lowercase();
+
+    const QUARK: [&str; 4] = ["quark", "夸克网盘", "夸克云盘", "夸克"];
+    const PAN123: [&str; 8] = [
+        "123pan", "123684", "123865", "123912", "123云盘", "123网盘", "123 云盘", "123 网盘",
+    ];
+    const BAIDU: [&str; 8] = [
+        "pan.baidu",
+        "yun.baidu",
+        "baidupcs",
+        "baidu.com/s/",
+        "百度网盘",
+        "百度云盘",
+        "百度云",
+        "百度盘",
+    ];
+
+    if QUARK.iter().any(|keyword| lower.contains(keyword)) {
+        return Some("夸克网盘");
+    }
+    if PAN123.iter().any(|keyword| lower.contains(keyword)) {
+        return Some("123 云盘");
+    }
+    if BAIDU.iter().any(|keyword| lower.contains(keyword)) {
+        return Some("百度网盘");
+    }
+    None
+}
+
 pub struct DownloadManager;
 
 impl DownloadManager {
@@ -129,6 +161,14 @@ impl DownloadManager {
         app_handle: &tauri::AppHandle<R>,
         request: &DownloadRequest,
     ) -> Result<PathBuf> {
+        // 网盘分享页不是直链：交给前端引导用户在浏览器里完成下载
+        if let Some(label) = detect_netdisk_url(&request.url) {
+            return Err(AdmtError::Network(format!(
+                "NETDISK_REDIRECT_REQUIRED: {}分享链接，请在浏览器中完成下载",
+                label
+            )));
+        }
+
         let client = reqwest::Client::new();
         let response = client
             .get(&request.url)
@@ -138,6 +178,19 @@ impl DownloadManager {
 
         if !response.status().is_success() {
             return Err(AdmtError::Network(format!("HTTP {}", response.status())));
+        }
+
+        // 非直链（网盘分享页 / 需要点击确认的落地页）会返回 200 + HTML。
+        // 若不拦截，HTML 字节会被直接写成 .zip/.exe，后续解压失败或产出假文件。
+        // 这里提前识别，交给前端引导用户在浏览器中完成下载。
+        if let Some(content_type) = response.headers().get(reqwest::header::CONTENT_TYPE) {
+            let value = content_type.to_str().unwrap_or("").to_ascii_lowercase();
+            if value.contains("text/html") {
+                return Err(AdmtError::Network(
+                    "DOWNLOAD_PAGE_REQUIRED: 该链接是网页下载页，请在浏览器中完成下载"
+                        .to_string(),
+                ));
+            }
         }
 
         let total_size = response.content_length().unwrap_or(0);

@@ -1,4 +1,5 @@
 import { load as yamlLoad } from "js-yaml";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { DeviceInfo } from "../types/device";
 
 export interface XiaomiRomItem {
@@ -12,6 +13,8 @@ export interface XiaomiRomItem {
   size: string;
   link: string;
   md5?: string;
+  /** index = 官方索引自带的真实直链；scraped = 站点页面推导，仅用于历史版本 */
+  source?: "index" | "scraped";
 }
 
 export interface XiaomiDevicePreset {
@@ -40,7 +43,7 @@ export const POPULAR_XIAOMI_DEVICES: XiaomiDevicePreset[] = [
   { name: "Xiaomi 11 Ultra / Pro", codename: "star", series: "Xiaomi" },
 
   // Redmi K 系列
-  { name: "Redmi K80", codename: "dada", series: "Redmi" },
+  { name: "Redmi K80", codename: "zorn", series: "Redmi" },
   { name: "Redmi K70", codename: "manet", series: "Redmi" },
   { name: "Redmi K70 Pro", codename: "vermeer", series: "Redmi" },
   { name: "Redmi K70E", codename: "duchamp", series: "Redmi" },
@@ -66,6 +69,17 @@ export const POPULAR_XIAOMI_DEVICES: XiaomiDevicePreset[] = [
   { name: "POCO F6 Pro", codename: "vermeer", series: "POCO" },
   { name: "POCO F6", codename: "peridot", series: "POCO" },
   { name: "POCO X6 Pro", codename: "duchamp", series: "POCO" },
+
+  // 2025–2026 新机型：仅在索引不可达时作为离线兜底，正常情况由动态预设覆盖
+  { name: "Redmi K80 Pro", codename: "miro", series: "Redmi" },
+  { name: "Redmi K80 Ultra", codename: "dali", series: "Redmi" },
+  { name: "Redmi K90", codename: "annibale", series: "Redmi" },
+  { name: "Redmi K90 Pro Max", codename: "myron", series: "Redmi" },
+  { name: "Xiaomi 17 Max", codename: "byron", series: "Xiaomi" },
+  { name: "Xiaomi 17 Ultra", codename: "nezha", series: "Xiaomi" },
+  { name: "Xiaomi 17T", codename: "chagall", series: "Xiaomi" },
+  { name: "Redmi Note 17 Pro", codename: "iolite", series: "Redmi" },
+  { name: "Redmi Note 17", codename: "mist", series: "Redmi" },
 ];
 
 /**
@@ -273,8 +287,155 @@ let cachedRomDatabase: XiaomiRomItem[] | null = null;
 let lastFetchTime = 0;
 const CACHE_TTL_MS = 1000 * 60 * 30; // 30 分钟缓存
 
+const GITHUB_API_BASE =
+  "https://api.github.com/repos/XiaomiFirmwareUpdater/miui-updates-tracker";
+const GITHUB_API_HEADERS: Record<string, string> = {
+  Accept: "application/vnd.github+json",
+  "User-Agent": "ADMT-ROM-Center",
+};
+// 本机实测：testingcf / gcore 两个 jsDelivr 节点可直连且返回完整索引；
+// fastly / cdn / raw 常被代理或 TLS 握手拦截，留作其它网络环境的兜底。
+const LEGACY_YAML_MIRRORS = [
+  "https://testingcf.jsdelivr.net/gh/XiaomiFirmwareUpdater/miui-updates-tracker@master/data/latest.yml",
+  "https://gcore.jsdelivr.net/gh/XiaomiFirmwareUpdater/miui-updates-tracker@master/data/latest.yml",
+  "https://fastly.jsdelivr.net/gh/XiaomiFirmwareUpdater/miui-updates-tracker@master/data/latest.yml",
+  "https://cdn.jsdelivr.net/gh/XiaomiFirmwareUpdater/miui-updates-tracker@master/data/latest.yml",
+  "https://raw.githubusercontent.com/XiaomiFirmwareUpdater/miui-updates-tracker/master/data/latest.yml",
+];
+
+// GitHub 未认证 API 限流 60 次/小时，撞限流时仍需能展示上次的完整索引
+const INDEX_CACHE_KEY = "admt_xiaomi_rom_index_yaml";
+const INDEX_CACHE_TIME_KEY = "admt_xiaomi_rom_index_time";
+
+function readCachedYaml(): string | null {
+  try {
+    const raw = localStorage.getItem(INDEX_CACHE_KEY);
+    return raw && raw.length > 1000 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedYaml(yaml: string): void {
+  try {
+    localStorage.setItem(INDEX_CACHE_KEY, yaml);
+    localStorage.setItem(INDEX_CACHE_TIME_KEY, String(Date.now()));
+  } catch {
+    // 超出 localStorage 配额时忽略，不影响在线获取
+  }
+}
+
+function readCachedYamlTime(): number | null {
+  try {
+    const value = Number(localStorage.getItem(INDEX_CACHE_TIME_KEY));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+// 数据源健康状态：让 UI 能显示「索引同步到哪天 / 哪个源失败」，而不是静默显示空列表
+let lastIndexError: string | null = null;
+let lastRegionalError: string | null = null;
+let lastIndexSyncedAt: string | null = null;
+let lastIndexFromCache = false;
+
+export interface XiaomiDataSourceStatus {
+  syncedAt: string | null;
+  indexError: string | null;
+  regionalError: string | null;
+  fromCache: boolean;
+  cachedAt: number | null;
+  deviceCount: number;
+  romCount: number;
+}
+
+export function getXiaomiDataSourceStatus(): XiaomiDataSourceStatus {
+  return {
+    syncedAt: lastIndexSyncedAt,
+    indexError: lastIndexError,
+    regionalError: lastRegionalError,
+    fromCache: lastIndexFromCache,
+    cachedAt: readCachedYamlTime(),
+    deviceCount: cachedRomDatabase
+      ? new Set(cachedRomDatabase.map((item) => item.codename)).size
+      : 0,
+    romCount: cachedRomDatabase?.length ?? 0,
+  };
+}
+
+/** 用 Tauri HTTP 插件请求文本，绕过 WebView 的 CORS；同时提供真正的超时保护 */
+async function fetchRomText(
+  url: string,
+  timeoutMs = 15000,
+  headers?: Record<string, string>
+): Promise<{ ok: boolean; text: string }> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`请求超时 (${timeoutMs}ms)`));
+    }, timeoutMs);
+  });
+
+  try {
+    const response = await Promise.race([
+      tauriFetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      }),
+      timeout,
+    ]);
+    return { ok: response.ok, text: response.ok ? await response.text() : "" };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/** GitHub blob 返回 base64，需按 UTF-8 解码（索引里含中文设备名） */
+function decodeGithubBase64(content: string): string {
+  const clean = content.replace(/\s/g, "");
+  if (!clean) return "";
+  const binary = atob(clean);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
 /**
- * 获取完整小米 ROM 数据库 (基于 XiaomiFirmwareUpdater 高速镜像)
+ * 主数据源：GitHub API。
+ * latest.yml 超过 1MB，contents 接口不返回正文，需先取 sha 再走 git/blobs 拿完整内容。
+ * 本机实测 api.github.com 可达，jsdelivr / raw.githubusercontent.com 常被 TLS 或代理拦截。
+ */
+async function fetchLatestYamlViaGithubApi(): Promise<string> {
+  const meta = await fetchRomText(
+    `${GITHUB_API_BASE}/contents/data/latest.yml`,
+    15000,
+    GITHUB_API_HEADERS
+  );
+  if (!meta.ok) throw new Error("GitHub contents API 请求失败");
+
+  const metaJson = JSON.parse(meta.text) as { content?: string; sha?: string };
+  const inline = decodeGithubBase64(metaJson.content || "");
+  if (inline.length > 1000) return inline;
+  if (!metaJson.sha) throw new Error("未取到 latest.yml 的 blob sha");
+
+  const blob = await fetchRomText(
+    `${GITHUB_API_BASE}/git/blobs/${metaJson.sha}`,
+    30000,
+    GITHUB_API_HEADERS
+  );
+  if (!blob.ok) throw new Error("GitHub blob API 请求失败");
+  const blobJson = JSON.parse(blob.text) as { content?: string };
+  return decodeGithubBase64(blobJson.content || "");
+}
+
+/**
+ * 获取完整小米 ROM 数据库（GitHub API 主源 + CDN 镜像兜底）
  */
 export async function fetchXiaomiRomDatabase(forceRefresh = false): Promise<XiaomiRomItem[]> {
   const now = Date.now();
@@ -282,34 +443,52 @@ export async function fetchXiaomiRomDatabase(forceRefresh = false): Promise<Xiao
     return cachedRomDatabase;
   }
 
-  const mirrorUrls = [
-    "https://fastly.jsdelivr.net/gh/XiaomiFirmwareUpdater/miui-updates-tracker@master/data/latest.yml",
-    "https://cdn.jsdelivr.net/gh/XiaomiFirmwareUpdater/miui-updates-tracker@master/data/latest.yml",
-    "https://raw.githubusercontent.com/XiaomiFirmwareUpdater/miui-updates-tracker/master/data/latest.yml",
-  ];
-
   let rawYamlText = "";
-  let lastError: any = null;
+  let fromCache = false;
+  const failures: string[] = [];
 
-  for (const url of mirrorUrls) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        rawYamlText = await res.text();
-        if (rawYamlText && rawYamlText.length > 1000) {
+  // GitHub API 数据最新，但撞 60 次/小时限流时会 403，需要快速转镜像
+  try {
+    const viaApi = await fetchLatestYamlViaGithubApi();
+    if (viaApi.length > 1000) {
+      rawYamlText = viaApi;
+    } else {
+      failures.push("GitHub API: 索引内容过短");
+    }
+  } catch (err) {
+    failures.push(`GitHub API: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  if (!rawYamlText) {
+    for (const url of LEGACY_YAML_MIRRORS) {
+      try {
+        const res = await fetchRomText(url, 12000);
+        if (res.ok && res.text.length > 1000) {
+          rawYamlText = res.text;
           break;
         }
+        failures.push(`${new URL(url).host}: 响应异常`);
+      } catch (err) {
+        failures.push(
+          `${new URL(url).host}: ${err instanceof Error ? err.message : String(err)}`
+        );
       }
-    } catch (err) {
-      lastError = err;
+    }
+  }
+
+  // 在线源全失败时回退到上次成功拉取的完整索引，应用仍可用
+  if (!rawYamlText) {
+    const cached = readCachedYaml();
+    if (cached) {
+      rawYamlText = cached;
+      fromCache = true;
     }
   }
 
   if (!rawYamlText) {
-    throw new Error(lastError ? `获取 ROM 索引失败: ${lastError.message || String(lastError)}` : "获取官方 ROM 索引失败，请检查网络连接");
+    lastIndexError = failures.slice(0, 3).join("；") || "所有数据源均不可用";
+    lastIndexFromCache = false;
+    throw new Error(`获取 ROM 索引失败（${lastIndexError}）`);
   }
 
   try {
@@ -329,14 +508,72 @@ export async function fetchXiaomiRomDatabase(forceRefresh = false): Promise<Xiao
       size: String(item.size || ""),
       link: String(item.link || ""),
       md5: item.md5 ? String(item.md5) : undefined,
+      source: "index" as const,
     }));
 
     cachedRomDatabase = items;
     lastFetchTime = now;
+    lastIndexFromCache = fromCache;
+    lastIndexError = fromCache
+      ? `在线源不可用（${failures.slice(0, 2).join("；")}），正在使用离线缓存`
+      : null;
+    lastIndexSyncedAt = items.reduce(
+      (latest, item) => (item.date > latest ? item.date : latest),
+      ""
+    );
+    if (!fromCache) writeCachedYaml(rawYamlText);
     return items;
   } catch (parseErr: any) {
+    lastIndexError = `解析失败: ${parseErr.message || String(parseErr)}`;
     throw new Error(`解析 ROM 索引数据失败: ${parseErr.message || String(parseErr)}`);
   }
+}
+
+const REGION_SUFFIX_RE =
+  /\s+(China|Global|EEA|Russia|Turkey|Indonesia|India|Taiwan|Japan|Chinese|International)$/i;
+
+function inferXiaomiSeries(name: string): XiaomiDevicePreset["series"] {
+  const lower = name.toLowerCase();
+  if (lower.includes("poco")) return "POCO";
+  if (lower.includes("redmi")) return "Redmi";
+  return "Xiaomi";
+}
+
+/** 从实时索引生成机型下拉，覆盖全部在维护的设备，替代写死的少量预设 */
+export async function fetchXiaomiDevicePresets(): Promise<XiaomiDevicePreset[]> {
+  const db = await fetchXiaomiRomDatabase();
+  const latestByCode = new Map<string, { name: string; date: string }>();
+
+  db.forEach((item) => {
+    const code = item.codename.toLowerCase().trim();
+    if (!code) return;
+    const current = latestByCode.get(code);
+    if (!current || item.date >= current.date) {
+      latestByCode.set(code, { name: item.name, date: item.date });
+    }
+  });
+
+  const presets: XiaomiDevicePreset[] = Array.from(latestByCode.entries()).map(
+    ([codename, meta]) => ({
+      name: meta.name.replace(REGION_SUFFIX_RE, "").trim() || meta.name,
+      codename,
+      series: inferXiaomiSeries(meta.name),
+    })
+  );
+
+  presets.sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+  return presets;
+}
+
+/** 首页默认展示：全站按日期倒序的最新固件（无需先填代号） */
+export async function fetchLatestXiaomiRoms(
+  limit = 60,
+  forceRefresh = false
+): Promise<XiaomiRomItem[]> {
+  const db = await fetchXiaomiRomDatabase(forceRefresh);
+  return [...db]
+    .sort((a, b) => b.date.localeCompare(a.date) || b.version.localeCompare(a.version))
+    .slice(0, limit);
 }
 
 export interface SupportedSystemVersion {
@@ -361,9 +598,11 @@ const REGION_SLUG_KEYWORDS: Record<string, string[]> = {
   tr: ["turkey", "土耳其"],
 };
 
-// 页面级固件与版本缓存
+// 页面级固件与版本缓存（带过期时间，避免切换筛选后永远读到旧结果）
 const regionalRomCache = new Map<string, XiaomiRomItem[]>();
+const regionalRomCacheTime = new Map<string, number>();
 const supportedVersionsCache = new Map<string, SupportedSystemVersion[]>();
+const supportedVersionsCacheTime = new Map<string, number>();
 
 /**
  * 从 xiaomirom.com 系列页面动态解析指定机型和地区的分区/历史 ROM 完整清单
@@ -374,23 +613,25 @@ export async function fetchXiaomiRomByRegionalPage(
 ): Promise<XiaomiRomItem[]> {
   const cleanCode = codename.toLowerCase().trim();
   const cacheKey = `${cleanCode}_${region.toLowerCase()}`;
-  if (regionalRomCache.has(cacheKey)) {
-    return regionalRomCache.get(cacheKey)!;
+  const cachedRegional = regionalRomCache.get(cacheKey);
+  if (cachedRegional && Date.now() - (regionalRomCacheTime.get(cacheKey) ?? 0) < CACHE_TTL_MS) {
+    return cachedRegional;
   }
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    const seriesRes = await fetch(`https://xiaomirom.com/series/${cleanCode}/`, {
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+    lastRegionalError = null;
+    // 站点没有 CORS 响应头，必须走 Tauri HTTP 插件，WebView 原生 fetch 会被拦
+    const seriesRes = await fetchRomText(
+      `https://xiaomirom.com/series/${cleanCode}/`,
+      10000
+    );
 
     if (!seriesRes.ok) {
+      lastRegionalError = `机型页不可用 (${cleanCode})`;
       return [];
     }
 
-    const seriesHtml = await seriesRes.text();
+    const seriesHtml = seriesRes.text;
     const romLinks = [
       ...new Set(
         seriesHtml.match(/https:\/\/xiaomirom\.com\/rom\/[^/<>\s"']+\//g) ||
@@ -413,14 +654,13 @@ export async function fetchXiaomiRomByRegionalPage(
       return [];
     }
 
-    const pageController = new AbortController();
-    const pageTimeoutId = setTimeout(() => pageController.abort(), 10000);
-    const pageRes = await fetch(matchedPage, { signal: pageController.signal });
-    clearTimeout(pageTimeoutId);
+    const pageRes = await fetchRomText(matchedPage, 15000);
+    if (!pageRes.ok) {
+      lastRegionalError = "历史版本页不可用";
+      return [];
+    }
 
-    if (!pageRes.ok) return [];
-
-    const pageHtml = await pageRes.text();
+    const pageHtml = pageRes.text;
 
     const rowRegex =
       /<td align=left>([^<]+)<\/td><td align=left>([^<]+)<\/td><td align=left>([^<]+)<\/td><td align=left>([^<]+)<\/td><td align=right>([^<]+)<\/td><td align=left>([^<]+)<\/td><td align=left>([^<]+)<\/td>/g;
@@ -469,14 +709,19 @@ export async function fetchXiaomiRomByRegionalPage(
         date: date.trim(),
         size: size.trim(),
         link: directLink,
+        source: "scraped" as const,
       });
     }
 
     if (items.length > 0) {
       regionalRomCache.set(cacheKey, items);
+      regionalRomCacheTime.set(cacheKey, Date.now());
+    } else {
+      lastRegionalError = `页面结构解析到 0 条记录 (${cleanCode})`;
     }
     return items;
-  } catch (_err) {
+  } catch (err) {
+    lastRegionalError = err instanceof Error ? err.message : String(err);
     return [];
   }
 }
@@ -494,8 +739,9 @@ export async function getXiaomiSupportedVersions(options: {
 
   const cleanCode = codename.toLowerCase().trim();
   const cacheKey = `${cleanCode}_${region.toLowerCase()}_${branch.toLowerCase()}`;
-  if (supportedVersionsCache.has(cacheKey)) {
-    return supportedVersionsCache.get(cacheKey)!;
+  const cachedVersions = supportedVersionsCache.get(cacheKey);
+  if (cachedVersions && Date.now() - (supportedVersionsCacheTime.get(cacheKey) ?? 0) < CACHE_TTL_MS) {
+    return cachedVersions;
   }
 
   // 并行获取来自 XiaomiFirmwareUpdater 与 xiaomirom.com 的数据
@@ -504,20 +750,17 @@ export async function getXiaomiSupportedVersions(options: {
     fetchXiaomiRomByRegionalPage(cleanCode, region).catch(() => [] as XiaomiRomItem[]),
   ]);
 
-  // 1. 合并并过滤符合 codename 的记录
-  const allCandidates: XiaomiRomItem[] = [...scrapedRoms];
-
-  fastUpdaterRoms.forEach((r) => {
+  // 1. 以官方索引为主（自带真实直链与 md5），站点抓取仅补历史版本
+  const allCandidates: XiaomiRomItem[] = fastUpdaterRoms.filter((r) => {
     const c = r.codename.toLowerCase();
-    if (c === cleanCode || c.startsWith(`${cleanCode}_`)) {
-      // 检查是否已存在
-      const exists = allCandidates.some(
-        (e) => e.version.toLowerCase() === r.version.toLowerCase() && e.method === r.method
-      );
-      if (!exists) {
-        allCandidates.push(r);
-      }
-    }
+    return c === cleanCode || c.startsWith(`${cleanCode}_`);
+  });
+
+  scrapedRoms.forEach((r) => {
+    const exists = allCandidates.some(
+      (e) => e.version.toLowerCase() === r.version.toLowerCase() && e.method === r.method
+    );
+    if (!exists) allCandidates.push(r);
   });
 
   // 2. 根据分支进行初步过滤
@@ -591,6 +834,7 @@ export async function getXiaomiSupportedVersions(options: {
 
   if (versionList.length > 0) {
     supportedVersionsCache.set(cacheKey, versionList);
+    supportedVersionsCacheTime.set(cacheKey, Date.now());
   }
 
   return versionList;
@@ -619,24 +863,30 @@ export async function queryXiaomiRoms(options: {
 
   const targetCode = codename.toLowerCase().trim();
 
-  // 并行拉取全库与指定地区的详细历史 ROM
+  // 并行拉取全库与指定地区的详细历史 ROM；失败不再静默吞掉
+  let indexFailure = "";
   const [db, regionalRoms] = await Promise.all([
-    fetchXiaomiRomDatabase(forceRefresh).catch(() => [] as XiaomiRomItem[]),
+    fetchXiaomiRomDatabase(forceRefresh).catch((err) => {
+      indexFailure = err instanceof Error ? err.message : String(err);
+      return [] as XiaomiRomItem[];
+    }),
     fetchXiaomiRomByRegionalPage(targetCode, region).catch(() => [] as XiaomiRomItem[]),
   ]);
 
-  // 合并数据源，以爬虫精确解析的直链为优先
-  const combined: XiaomiRomItem[] = [...regionalRoms];
-  db.forEach((item) => {
+  if (db.length === 0 && regionalRoms.length === 0) {
+    throw new Error(indexFailure || "ROM 索引与历史版本源均不可用，请检查网络后重试");
+  }
+
+  // 官方索引优先：link / md5 来自上游，不靠规则猜域名
+  const combined: XiaomiRomItem[] = db.filter((item) => {
     const itemCode = item.codename.toLowerCase();
-    if (itemCode === targetCode || itemCode.startsWith(`${targetCode}_`)) {
-      const exists = combined.some(
-        (c) => c.version.toLowerCase() === item.version.toLowerCase() && c.method === item.method
-      );
-      if (!exists) {
-        combined.push(item);
-      }
-    }
+    return itemCode === targetCode || itemCode.startsWith(`${targetCode}_`);
+  });
+  regionalRoms.forEach((item) => {
+    const exists = combined.some(
+      (c) => c.version.toLowerCase() === item.version.toLowerCase() && c.method === item.method
+    );
+    if (!exists) combined.push(item);
   });
 
   let filtered = combined;

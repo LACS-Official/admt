@@ -19,11 +19,12 @@ import {
   Badge,
 } from '@fluentui/react-components';
 import {
-  ArrowDownload24Regular,
-  Apps24Regular,
+  ArrowDownload20Regular,
+  Apps20Regular,
   Info20Regular,
-  Play24Regular,
-  FolderOpen24Regular,
+  Play20Regular,
+  FolderOpen20Regular,
+  Open20Regular,
 } from '@fluentui/react-icons';
 import { 
     shorthands,
@@ -32,6 +33,12 @@ import { OnlineSoftware } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 import { logService } from '../../services/logService';
 import { useAppStore } from '../../stores/appStore';
+import {
+  detectNetdiskLink,
+  extractHttpUrl,
+  isNetdiskRedirectError,
+  openInBrowser,
+} from '../../utils/netdiskLink';
 
 const useStyles = makeStyles({
   dialogContent: {
@@ -49,7 +56,7 @@ const useStyles = makeStyles({
     gap: '16px',
     backgroundColor: 'var(--colorNeutralBackground2)',
     ...shorthands.padding('12px'),
-    ...shorthands.borderRadius('8px'),
+    ...shorthands.borderRadius('12px'),
   },
   infoItem: {
     display: 'flex',
@@ -73,6 +80,9 @@ const useStyles = makeStyles({
   launchButton: {
     minWidth: '130px',
   },
+  pillButton: {
+    borderRadius: '9999px',
+  },
   loadingContainer: {
     display: 'flex',
     justifyContent: 'center',
@@ -92,6 +102,22 @@ const useStyles = makeStyles({
     maxHeight: '90vh',
     display: 'flex',
     flexDirection: 'column',
+    ...shorthands.borderRadius('14px'),
+  },
+  errorBox: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+    ...shorthands.padding('12px', '14px'),
+    ...shorthands.borderRadius('12px'),
+    ...shorthands.border('1px', 'solid', 'var(--colorPaletteRedBorder1)'),
+    backgroundColor: 'var(--colorPaletteRedBackground1)',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: '12px',
+    lineHeight: '18px',
+    color: 'var(--colorNeutralForeground1)',
   },
   modalHeader: {
     display: 'flex',
@@ -101,7 +127,7 @@ const useStyles = makeStyles({
   iconWrapper: {
     width: '40px',
     height: '40px',
-    borderRadius: '8px',
+    borderRadius: '12px',
     backgroundColor: 'var(--colorNeutralBackground3)',
     display: 'flex',
     alignItems: 'center',
@@ -117,7 +143,7 @@ const useStyles = makeStyles({
   warningBox: {
     backgroundColor: 'var(--colorNeutralBackground4)', 
     ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke2)'), 
-    ...shorthands.borderRadius('8px'), 
+    ...shorthands.borderRadius('12px'), 
     ...shorthands.padding('12px'), 
     display: 'flex',
     alignItems: 'flex-start',
@@ -132,7 +158,7 @@ const useStyles = makeStyles({
   executableCard: {
     backgroundColor: 'var(--colorNeutralBackground3)',
     ...shorthands.padding('12px'),
-    ...shorthands.borderRadius('8px'),
+    ...shorthands.borderRadius('12px'),
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
@@ -144,16 +170,12 @@ const useStyles = makeStyles({
   }
 });
 
-// 打开链接的通用函数
+// 打开链接的通用函数（统一走网盘工具里的 URL 提取与多重浏览器回退）
 const openUrl = (url: string) => {
-  import('@tauri-apps/plugin-shell').then(({ open }) => {
-    open(url).catch((error) => {
-      logService.error(`打开外部链接失败: ${url}`, '在线资源UI', { error: String(error) });
-      window.open(url, '_blank');
-    });
-  }).catch((err) => {
-    logService.error('加载 shell 插件失败', '在线资源UI', { error: String(err) });
-    window.open(url, '_blank');
+  void openInBrowser(url).then((ok) => {
+    if (!ok) {
+      logService.error(`打开外部链接失败: ${url}`, '在线资源UI');
+    }
   });
 };
 
@@ -187,6 +209,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
     remainingTime?: number;
   }>({ canDownload: true });
   const [cooldownTimer, setCooldownTimer] = useState<NodeJS.Timeout | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // 获取软件详细信息
   const fetchSoftwareDetail = async () => {
@@ -254,6 +277,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
 
   useEffect(() => {
     if (isOpen && software.id) {
+      setDownloadError(null);
       fetchSoftwareDetail();
       checkDownloadStatus();
       checkDownloadLimits();
@@ -288,6 +312,14 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   const handleDownload = async (_forceRedownload = false) => {
     const currentData = detailData || software;
 
+    // 网盘分享页不是文件直链：任何入口都不应把它送进后端写盘
+    const netdisk = detectNetdiskLink(currentData.latestDownloadUrl);
+    if (netdisk) {
+      setDownloadError(null);
+      openUrl(netdisk.url);
+      return;
+    }
+
     const limitCheck = onlineResourcesService.canStartDownload();
     if (!limitCheck.canDownload) {
       logService.warning(`下载受限: ${limitCheck.reason}`, '在线资源UI');
@@ -296,6 +328,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
 
     if (onDownload && currentData.latestDownloadUrl) {
       setIsDownloading(true);
+      setDownloadError(null);
       try {
         const taskId = await onDownload(currentData);
         console.log(' 下载任务已启动:', taskId);
@@ -305,7 +338,10 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
           checkDownloadLimits();
         }, 1000);
       } catch (error) {
-        console.error(' 下载失败:', error);
+        // service 层已打开浏览器并通过状态栏提示，这里不再显示「下载失败」
+        if (!isNetdiskRedirectError(error)) {
+          setDownloadError(error instanceof Error ? error.message : String(error));
+        }
       } finally {
         setIsDownloading(false);
       }
@@ -376,6 +412,21 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
   };
 
   const currentData = detailData || software;
+  const hasDownloadUrl = !!currentData.latestDownloadUrl;
+  const netdisk = detectNetdiskLink(currentData.latestDownloadUrl);
+  const isNetdisk = !!netdisk;
+  // 已在打开弹窗时识别出网盘，就不必等一次注定失败的下载来判定落地页
+  const isWebPage =
+    !isNetdisk &&
+    !!downloadError &&
+    (downloadError.includes('DOWNLOAD_PAGE_REQUIRED') || downloadError.includes('网页下载页'));
+  const shouldOpenBrowser = isNetdisk || isWebPage;
+
+  // 统一取出可打开的 URL：网盘文本可能夹带「提取码: xxxx」等说明
+  const openExternal = () => {
+    const url = netdisk?.url || extractHttpUrl(currentData.latestDownloadUrl || '');
+    if (url) openUrl(url);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(_, data) => !data.open && onClose()}>
@@ -386,7 +437,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
               {currentData.iconUrl ? (
                 <img src={currentData.iconUrl} className={styles.iconImage} alt={currentData.name} />
               ) : (
-                <Apps24Regular />
+                <Apps20Regular />
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -412,6 +463,36 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             </div>
           ) : (
             <>
+              {isNetdisk && (
+                <div className={styles.warningBox} style={{ marginTop: 0 }}>
+                  <Info20Regular style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div className={styles.warningText}>
+                    该资源由{netdisk?.label}分享，不是文件直链。点击底部按钮跳转浏览器后，请在网页中完成提取码与下载操作。
+                  </div>
+                </div>
+              )}
+
+              {downloadError && !isNetdisk && (
+                <div className={styles.errorBox}>
+                  <Info20Regular style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div className={styles.errorText}>
+                    {isWebPage
+                      ? '该资源提供的是网页下载页（网盘或跳转页），应用无法直接取得文件。请在浏览器中完成下载。'
+                      : `下载失败：${downloadError}`}
+                  </div>
+                  {isWebPage && hasDownloadUrl && (
+                    <Button
+                      appearance="outline"
+                      size="small"
+                      icon={<Open20Regular />}
+                      onClick={openExternal}
+                    >
+                      打开下载页
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {/* 基本信息 */}
               <div className={styles.infoGrid}>
                 <div className={styles.infoItem}>
@@ -452,7 +533,7 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                           <Button
                             appearance="primary"
                             size="small"
-                            icon={isLaunching ? <Spinner size="tiny" /> : <Play24Regular />}
+                            icon={isLaunching ? <Spinner size="tiny" /> : <Play20Regular />}
                             onClick={handleLaunchExecutable}
                             disabled={isLaunching || !downloadStatus.filePath}
                           >
@@ -557,22 +638,21 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
                 borderRadius: '9999px',
                 backgroundColor: 'var(--colorBrandBackground)',
                 transition: 'width 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
-                backgroundImage: 'linear-gradient(90deg, var(--colorBrandBackground), var(--colorBrandBackgroundHover))',
               }} />
             </div>
           </div>
         )}
 
         <DialogActions>
-          <Button appearance="secondary" onClick={onClose}>
+          <Button appearance="secondary" className={styles.pillButton} onClick={onClose}>
             关闭
           </Button>
-          <Button appearance="secondary" onClick={OpenWithAppfun}>
-            使用Appfun下载
+          <Button appearance="secondary" className={styles.pillButton} onClick={OpenWithAppfun}>
+            Appfun 渠道
           </Button>
 
           {/* 下载限制提示 */}
-          {!downloadLimitInfo.canDownload && (
+          {!downloadLimitInfo.canDownload && !shouldOpenBrowser && (
             <div style={{
               flex: 1,
               display: 'flex',
@@ -590,7 +670,8 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             <>
               <Button
                 appearance="outline"
-                icon={<FolderOpen24Regular />}
+                className={styles.pillButton}
+                icon={<FolderOpen20Regular />}
                 onClick={() => downloadStatus.filePath && handleOpenFolder(downloadStatus.filePath)}
                 disabled={!downloadStatus.filePath}
               >
@@ -598,18 +679,23 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
               </Button>
               <Button
                 appearance="subtle"
-                icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
-                onClick={() => handleDownload(true)}
-                disabled={isDownloading || !currentData.latestDownloadUrl || !downloadLimitInfo.canDownload}
+                className={styles.pillButton}
+                icon={shouldOpenBrowser ? <Open20Regular /> : isDownloading ? <Spinner size="tiny" /> : <ArrowDownload20Regular />}
+                onClick={() => (shouldOpenBrowser ? openExternal() : handleDownload(true))}
+                disabled={isDownloading || !hasDownloadUrl || (!shouldOpenBrowser && !downloadLimitInfo.canDownload)}
               >
-                重新下载
+                {isNetdisk
+                  ? `在浏览器打开${netdisk?.label}`
+                  : isWebPage
+                  ? '打开下载页'
+                  : '重新下载'}
               </Button>
               <Button
                 appearance="primary"
-                icon={isLaunching ? <Spinner size="tiny" /> : <Play24Regular />}
+                icon={isLaunching ? <Spinner size="tiny" /> : <Play20Regular />}
                 onClick={handleLaunchExecutable}
                 disabled={isLaunching || !downloadStatus.filePath}
-                className={styles.launchButton}
+                className={`${styles.launchButton} ${styles.pillButton}`}
               >
                 {isLaunching ? '正在启动...' : `运行程序${currentData.openname ? ` (${currentData.openname})` : ''}`}
               </Button>
@@ -617,12 +703,22 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
           ) : (
             <Button
               appearance="primary"
-              icon={isDownloading ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
-              onClick={() => handleDownload(false)}
-              disabled={isDownloading || !currentData.latestDownloadUrl || !downloadLimitInfo.canDownload}
-              className={styles.downloadButton}
+              className={`${styles.downloadButton} ${styles.pillButton}`}
+              icon={shouldOpenBrowser ? <Open20Regular /> : isDownloading ? <Spinner size="tiny" /> : <ArrowDownload20Regular />}
+              onClick={() => (shouldOpenBrowser ? openExternal() : handleDownload(false))}
+              disabled={isDownloading || !hasDownloadUrl || (!shouldOpenBrowser && !downloadLimitInfo.canDownload)}
             >
-              {isDownloading ? '下载中...' : downloadLimitInfo.canDownload ? '下载资源' : `等待 ${downloadLimitInfo.remainingTime || 0}s`}
+              {isDownloading
+                ? '下载中...'
+                : isNetdisk
+                ? `在浏览器打开${netdisk?.label}`
+                : isWebPage
+                ? '在浏览器打开下载页'
+                : !hasDownloadUrl
+                ? '暂无下载链接'
+                : downloadLimitInfo.canDownload
+                ? '下载资源'
+                : `等待 ${downloadLimitInfo.remainingTime || 0}s`}
             </Button>
           )}
         </DialogActions>

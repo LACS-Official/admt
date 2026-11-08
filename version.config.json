@@ -1,23 +1,24 @@
 {
-  "version": "1.5.4",
-  "buildNumber": 9,
-  "versionName": "1.5.4",
-  "releaseDate": "2026-10-15",
+  "version": "1.5.5",
+  "buildNumber": 10,
+  "versionName": "1.5.5",
+  "releaseDate": "2026-11-08",
   "description": "统一版本管理配置文件",
   "changelog": [
-    "开源纯净化：彻底剔除闭源商业授权系统残留，应用全局默认免激活",
-    "权限管理：补齐 Rust 侧原生 Windows 管理员权限检测与一键 UAC 提权重启支持",
-    "Boot修补：强化 Magisk 真实 Ramdisk 注入，智能识别 Android 13+ GKI 架构与 init_boot",
-    "隐私守正：遥测数据完全本地化留存，绝不向任何外部服务器上报用户设备指纹",
-    "去假存真：投屏性能参数全面清理 Math.random() 假数据，按规范输出明确技术状态"
+    "内置交互终端：基于 ConPTY 与 xterm.js 在应用内提供 PowerShell / CMD 真终端，支持交互输入、会话保活与窗口尺寸同步",
+    "终端效率工具：一键复制全部输出、全文查找与高亮跳转、右键菜单，以及四模式 Tab 补齐 / 自动联想 / 历史指令",
+    "软件商店收敛：卡片改为纯展示，资源须经详情弹窗下载，非直链与网盘分享页自动转为浏览器打开",
+    "ROM 中心实时化：小米官方索引多源同步、动态机型列表、最新固件自动加载与离线缓存",
+    "下载链路加固：拦截 HTML 落地页与三类网盘分享链接，避免把网页内容误存为 zip / exe",
+    "视觉统一：在线资源与 ROM 中心按极简卡片规范重构，统一圆角、单色图标与信息层级"
   ],
   "environments": {
     "development": {
-      "version": "1.5.4-dev",
+      "version": "1.5.5-dev",
       "enableDebug": true
     },
     "production": {
-      "version": "1.5.4",
+      "version": "1.5.5",
       "enableDebug": false
     }
   },

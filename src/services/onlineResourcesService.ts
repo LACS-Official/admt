@@ -2,6 +2,14 @@ import { OnlineSoftware, OnlineSoftwareResponse, DownloadTask } from '../types/a
 import { tauriHttpService } from './tauriHttpService';
 import { logService } from './logService';
 import { useAppStore } from '../stores/appStore';
+import {
+  NETDISK_REDIRECT_CODE,
+  NetdiskRedirectError,
+  detectNetdiskLink,
+  extractHttpUrl,
+  openInBrowser,
+} from '../utils/netdiskLink';
+import type { NetdiskMatch } from '../utils/netdiskLink';
 
 export interface OnlineResourcesConfig {
   apiBaseUrl: string;
@@ -222,6 +230,37 @@ class OnlineResourcesService {
   }
 
   /**
+   * 网盘分享链接统一处理：交给系统浏览器，不创建任务、不占用并发额度、不写本地文件
+   */
+  private async redirectNetdiskToBrowser(match: NetdiskMatch): Promise<void> {
+    const opened = await openInBrowser(match.url);
+    useAppStore.getState().setStatusBarMessage({
+      type: opened ? 'info' : 'warning',
+      message: opened
+        ? `检测到${match.label}分享链接，已在浏览器中打开，请在网页中完成下载`
+        : `检测到${match.label}分享链接，但未能打开浏览器，请复制下载链接手动访问`,
+      duration: 4000,
+    });
+    logService.info(`网盘链接已转交浏览器: ${match.label}`, '在线资源服务', { url: match.url });
+  }
+
+  /**
+   * 后端静态兜底返回 NETDISK_REDIRECT_REQUIRED 时，补上浏览器跳转
+   */
+  private async handleBackendNetdiskError(error: unknown, rawUrl: string): Promise<boolean> {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    if (!message.includes(NETDISK_REDIRECT_CODE)) return false;
+
+    const match: NetdiskMatch = detectNetdiskLink(rawUrl) ?? {
+      provider: 'quark',
+      label: '网盘',
+      url: extractHttpUrl(rawUrl) || rawUrl,
+    };
+    await this.redirectNetdiskToBrowser(match);
+    return true;
+  }
+
+  /**
    * 检查是否可以开始新的下载
    */
   canStartDownload(): { canDownload: boolean; reason?: string; remainingTime?: number } {
@@ -262,6 +301,13 @@ class OnlineResourcesService {
    * 开始下载软件（新版本：支持自动解压和配置文件生成）
    */
   async downloadSoftware(software: OnlineSoftware): Promise<string> {
+    // 网盘分享页不是直链：直接转交浏览器，避免写假文件或留下幽灵任务
+    const netdisk = detectNetdiskLink(software.latestDownloadUrl);
+    if (netdisk) {
+      await this.redirectNetdiskToBrowser(netdisk);
+      throw new NetdiskRedirectError(netdisk);
+    }
+
     let taskId: string = '';
     try {
       // 检查下载限制
@@ -337,8 +383,27 @@ class OnlineResourcesService {
       return taskId;
 
     } catch (error) {
-      logService.error(` 下载资源失败: ${software.name}`, '在线资源服务', { error: error instanceof Error ? error.message : String(error) });
+      const message = error instanceof Error ? error.message : String(error);
 
+      // 后端静态兜底识别到网盘：浏览器已打开，不计为下载失败
+      if (await this.handleBackendNetdiskError(error, software.latestDownloadUrl || '')) {
+        throw error;
+      }
+
+      // 失败时同步任务状态，避免下载管理里留下永远处于 pending 的幽灵任务
+      if (taskId) {
+        const failedTask = this.downloadTasks.get(taskId);
+        if (failedTask) {
+          failedTask.status = 'failed';
+          failedTask.error = message;
+          failedTask.endTime = new Date();
+          this.downloadTasks.set(taskId, failedTask);
+          this.persistTasks();
+        }
+        this.activeDownloads.delete(taskId);
+      }
+
+      logService.error(` 下载资源失败: ${software.name}`, '在线资源服务', { error: message });
       throw error;
     }
   }
@@ -347,6 +412,13 @@ class OnlineResourcesService {
    * 使用 Tauri 下载文件
    */
   private async startTauriDownload(task: DownloadTask): Promise<void> {
+    // 覆盖所有非 UI 调用路径：网盘链接一律不进后端下载
+    const netdisk = detectNetdiskLink(task.downloadUrl);
+    if (netdisk) {
+      await this.redirectNetdiskToBrowser(netdisk);
+      throw new NetdiskRedirectError(netdisk);
+    }
+
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
@@ -470,6 +542,14 @@ class OnlineResourcesService {
       logService.info(` 下载完成: ${task.fileName}`, '在线资源服务');
 
     } catch (error) {
+      // 后端静态兜底识别到网盘：移除刚建的任务，不留下 pending 记录
+      if (await this.handleBackendNetdiskError(error, task.downloadUrl)) {
+        this.downloadTasks.delete(task.id);
+        this.persistTasks();
+        useAppStore.getState().setGlobalDownload(null);
+        throw error;
+      }
+
       // 下载失败
       task.status = 'failed';
       task.error = error instanceof Error ? error.message : '下载失败';
@@ -504,6 +584,13 @@ class OnlineResourcesService {
    * 添加自定义文件下载任务（如 ROM 固件包）到下载管理中心
    */
   async downloadCustomFile(fileName: string, downloadUrl: string, _description?: string): Promise<string> {
+    // 返回空字符串表示「已转交浏览器、未创建下载任务」，调用方据此不提示加入队列
+    const netdisk = detectNetdiskLink(downloadUrl);
+    if (netdisk) {
+      await this.redirectNetdiskToBrowser(netdisk);
+      return '';
+    }
+
     const taskId = `rom_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const task: DownloadTask = {
       id: taskId,
@@ -537,8 +624,14 @@ class OnlineResourcesService {
       return filetype;
     }
 
-    // 从URL中提取扩展名
-    const urlPath = new URL(url).pathname;
+    // 下载链接可能夹带「网盘：」「提取码: xxxx」等说明文本，先取出真实 URL
+    const cleanUrl = extractHttpUrl(url) || url;
+    let urlPath: string;
+    try {
+      urlPath = new URL(cleanUrl).pathname;
+    } catch {
+      return 'zip';
+    }
     const extension = urlPath.split('.').pop();
 
     if (extension && ['exe', 'zip', '7z', 'rar', 'msi', 'dmg', 'pkg', 'deb', 'rpm', 'apk'].includes(extension.toLowerCase())) {

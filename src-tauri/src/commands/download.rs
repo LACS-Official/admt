@@ -1,4 +1,4 @@
-use crate::download_manager::DownloadManager;
+use crate::download_manager::{detect_netdisk_url, DownloadManager};
 use crate::error::{AdmtError, Result};
 use std::path::PathBuf;
 use tauri::Emitter;
@@ -21,6 +21,13 @@ pub fn get_app_downloads_dir() -> Result<PathBuf> {
 pub async fn download_apk(url: String, file_name: String, is_direct: bool) -> Result<String> {
     use tokio::fs;
     use tokio::io::AsyncWriteExt;
+
+    if let Some(label) = detect_netdisk_url(&url) {
+        return Err(AdmtError::Network(format!(
+            "NETDISK_REDIRECT_REQUIRED: {}分享链接，请在浏览器中完成下载",
+            label
+        )));
+    }
 
     let downloads_dir = get_app_downloads_dir()?;
     fs::create_dir_all(&downloads_dir)
@@ -130,6 +137,13 @@ pub async fn download_file(
     use tokio::fs;
     use tokio::io::AsyncWriteExt;
 
+    if let Some(label) = detect_netdisk_url(&url) {
+        return Err(AdmtError::Network(format!(
+            "NETDISK_REDIRECT_REQUIRED: {}分享链接，请在浏览器中完成下载",
+            label
+        )));
+    }
+
     let downloads_dir = get_app_downloads_dir()?;
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let daily_dir = downloads_dir.join(&today);
@@ -150,6 +164,17 @@ pub async fn download_file(
             "Download failed with status: {}",
             response.status()
         )));
+    }
+
+    // 与软件商店下载链路保持一致：网页落地页不是可直接写入的文件
+    if let Some(content_type) = response.headers().get(reqwest::header::CONTENT_TYPE) {
+        let value = content_type.to_str().unwrap_or("").to_ascii_lowercase();
+        if value.contains("text/html") {
+            return Err(AdmtError::Network(
+                "DOWNLOAD_PAGE_REQUIRED: 该链接是网页下载页，请在浏览器中完成下载"
+                    .to_string(),
+            ));
+        }
     }
 
     let total_size = response.content_length().unwrap_or(0);

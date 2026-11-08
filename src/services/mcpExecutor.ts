@@ -252,6 +252,8 @@ export async function executeMcpTool(toolName: string, args: Record<string, any>
           const res = await invoke<CommandResult>("execute_host_command", {
             command: cmd,
             shell: args.shell || "powershell",
+            // 自动化工具调用不承载交互会话，避免静默弹出终端窗口
+            interactive: false,
           });
           const displayOutput = res.output || res.error || (res.success ? "命令执行成功，无标准输出返回。" : "未捕获到命令输出");
           return {

@@ -228,7 +228,7 @@ const OnlineZonePanel: React.FC = () => {
     },
     {
       id: "rom-download" as FlashZoneView,
-      label: "Rom 下载",
+      label: "ROM 中心",
       icon: <ArrowDownload24Regular />,
     },
     {

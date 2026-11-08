@@ -1238,11 +1238,192 @@ fn decode_process_output(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).to_string()
 }
 
+/// 简易 shell 词法切分：按空白分词，保留引号内的空格。
+/// 仅用于判定命令形态，不承担执行语义，因此不需要处理转义/管道等完整语法。
+fn split_command_tokens(raw: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut quote: Option<char> = None;
+
+    for ch in raw.trim().chars() {
+        match quote {
+            Some(q) => {
+                if ch == q {
+                    quote = None;
+                } else {
+                    current.push(ch);
+                }
+            }
+            None => match ch {
+                '\'' | '"' => quote = Some(ch),
+                c if c.is_whitespace() => {
+                    if !current.is_empty() {
+                        tokens.push(std::mem::take(&mut current));
+                    }
+                }
+                c => current.push(c),
+            },
+        }
+    }
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+    tokens
+}
+
+/// 统计 ssh 命令中「选项之外」的位置参数个数：
+/// 0 = 仅打印用法；1 = 交互式登录会话；>=2 = 带远端命令的一次性执行。
+fn ssh_positional_count(args: &[String]) -> usize {
+    // 需要跟随取值的 ssh 选项；解析时须连同其值一并跳过
+    const OPT_WITH_VALUE: &[&str] = &[
+        "-B", "-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J", "-L", "-l", "-m", "-O", "-o",
+        "-p", "-Q", "-R", "-S", "-W", "-w",
+    ];
+
+    let mut i = 0usize;
+    let mut positional = 0usize;
+    let mut after_double_dash = false;
+
+    while i < args.len() {
+        let arg = &args[i];
+        if !after_double_dash && arg == "--" {
+            after_double_dash = true;
+            i += 1;
+            continue;
+        }
+        if !after_double_dash && arg.starts_with('-') && arg.len() > 1 {
+            i += if OPT_WITH_VALUE.contains(&arg.as_str()) {
+                2
+            } else {
+                1
+            };
+            continue;
+        }
+        positional += 1;
+        i += 1;
+    }
+    positional
+}
+
+/// 判定命令是否属于「必须依托真实交互式终端才能完成」的会话。
+/// 内置终端以 `-NonInteractive -Command` + 全缓冲管道运行，无法承载
+/// 主机密钥确认 (yes/no)、密码输入等需要 TTY 与可写 stdin 的交互。
+fn detect_interactive_host_command(raw_cmd: &str) -> Option<&'static str> {
+    let tokens = split_command_tokens(raw_cmd);
+    if tokens.is_empty() {
+        return None;
+    }
+
+    let program = tokens[0]
+        .rsplit(|c| c == '\\' || c == '/')
+        .next()
+        .unwrap_or("")
+        .trim_end_matches(".exe")
+        .to_ascii_lowercase();
+
+    match program.as_str() {
+        // 仅「ssh <host>」这类纯登录会话才需要 TTY；
+        // 带远端命令（ssh <host> uptime）或无参数（打印用法）走普通一次性执行。
+        "ssh" => match ssh_positional_count(&tokens[1..]) {
+            1 => Some("ssh"),
+            _ => None,
+        },
+        // 会话型客户端：建立连接后即进入交互，内置终端无法回传提示或接收输入
+        "sftp" => Some("sftp"),
+        "telnet" => Some("telnet"),
+        "ftp" => Some("ftp"),
+        "plink" => Some("plink"),
+        _ => None,
+    }
+}
+
+/// 为交互式命令启动一个可见的独立终端窗口，保留完整的 TTY 交互能力
+/// （PSReadLine 补全、yes/no 主机密钥确认、密码输入等）。
+#[cfg(windows)]
+fn spawn_interactive_console(raw_cmd: &str, shell_choice: &str) -> std::io::Result<()> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NEW_CONSOLE: u32 = 0x00000010;
+
+    let build = |exe: &str| -> std::io::Result<()> {
+        let mut c = if shell_choice.eq_ignore_ascii_case("cmd") {
+            let mut c = std::process::Command::new("cmd");
+            c.args(["/K", raw_cmd]);
+            c
+        } else {
+            let mut c = std::process::Command::new(exe);
+            c.args([
+                "-NoExit",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                raw_cmd,
+            ]);
+            c
+        };
+        c.creation_flags(CREATE_NEW_CONSOLE);
+        c.spawn().map(|_| ())
+    };
+
+    // 优先使用 PowerShell 7 (pwsh)，与用户日常终端保持一致；缺失时回退 Windows PowerShell 5.1
+    if !shell_choice.eq_ignore_ascii_case("cmd") {
+        if let Ok(()) = build("pwsh") {
+            return Ok(());
+        }
+    }
+    build("powershell")
+}
+
+/// 交互式命令统一处理结果：Windows 转交独立窗口，其他平台给出明确引导而非静默挂起。
+fn handle_interactive_command(
+    raw_cmd: &str,
+    shell_choice: &str,
+    program: &str,
+) -> crate::device::CommandResult {
+    #[cfg(windows)]
+    {
+        return match spawn_interactive_console(raw_cmd, shell_choice) {
+            Ok(()) => crate::device::CommandResult {
+                success: true,
+                output: format!(
+                    "[✓] 该命令需要交互输入，已在独立终端窗口中启动 {} 会话\n命令: {}\n请在弹出的窗口中完成主机密钥确认 (yes/no/[fingerprint])、密码输入及后续交互。\n说明: 内置终端为一次性非交互执行环境，不加载 PSReadLine，也无法向子进程写入 stdin；会话结束后窗口会保留，可直接关闭。",
+                    program, raw_cmd
+                ),
+                error: None,
+                exit_code: Some(0),
+            },
+            Err(e) => crate::device::CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some(format!("启动独立终端窗口失败: {}。可直接在系统 PowerShell 中执行该命令。", e)),
+                exit_code: Some(1),
+            },
+        };
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = shell_choice;
+        crate::device::CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some(format!(
+                "命令 {} 需要交互式终端 (TTY) 输入，内置终端无法承载。请在系统终端中执行: {}",
+                program, raw_cmd
+            )),
+            exit_code: Some(126),
+        }
+    }
+}
+
 /// 在宿主电脑上直接执行 CMD 或 PowerShell 命令行指令
 #[tauri::command]
 pub async fn execute_host_command(
     command: String,
     shell: Option<String>,
+    // 是否允许把交互式会话转交独立终端窗口。仅应用内置命令行传 true；
+    // AI 助手 / MCP 等自动化调用不弹窗，直接返回明确提示。
+    interactive: Option<bool>,
 ) -> Result<crate::device::CommandResult> {
     let raw_cmd = command.trim().to_string();
     if raw_cmd.is_empty() {
@@ -1276,15 +1457,43 @@ pub async fn execute_host_command(
         { "sh".to_string() }
     });
 
-    let task = tokio::task::spawn_blocking(move || {
-        use std::process::Command;
+    // 交互式会话（例如 `ssh root@192.168.68.1` 的 yes/no 主机密钥确认）
+    // 不能走一次性管道：内置终端 stdin 为 null、输出全缓冲，进程会一直挂到超时，
+    // 用户侧表现为「回车后没有任何反应」。此处直接转交可见的独立终端窗口。
+    if let Some(program) = detect_interactive_host_command(&raw_cmd) {
+        if interactive.unwrap_or(false) {
+            return Ok(handle_interactive_command(&raw_cmd, &shell_choice, program));
+        }
+        return Ok(crate::device::CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some(format!(
+                "命令 {} 需要交互式终端 (TTY) 输入。请在命令行面板切换到内置交互终端后执行: {}",
+                program, raw_cmd
+            )),
+            exit_code: Some(126),
+        });
+    }
 
-        let mut cmd = if shell_choice.eq_ignore_ascii_case("cmd") {
-            let mut c = Command::new("cmd");
-            c.args(&["/C", &raw_cmd]);
-            c
-        } else if shell_choice.eq_ignore_ascii_case("powershell") {
-            let mut c = Command::new("powershell");
+    let mut cmd = if shell_choice.eq_ignore_ascii_case("cmd") {
+        let mut c = tokio::process::Command::new("cmd");
+        c.args(&["/C", &raw_cmd]);
+        c
+    } else if shell_choice.eq_ignore_ascii_case("powershell") {
+        let mut c = tokio::process::Command::new("powershell");
+        c.args(&[
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            &raw_cmd,
+        ]);
+        c
+    } else {
+        #[cfg(windows)]
+        {
+            let mut c = tokio::process::Command::new("powershell");
             c.args(&[
                 "-NoProfile",
                 "-NonInteractive",
@@ -1294,39 +1503,43 @@ pub async fn execute_host_command(
                 &raw_cmd,
             ]);
             c
-        } else {
-            #[cfg(windows)]
-            {
-                let mut c = Command::new("powershell");
-                c.args(&[
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-Command",
-                    &raw_cmd,
-                ]);
-                c
-            }
-            #[cfg(not(windows))]
-            {
-                let mut c = Command::new("sh");
-                c.args(&["-c", &raw_cmd]);
-                c
-            }
-        };
-
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
         }
+        #[cfg(not(windows))]
+        {
+            let mut c = tokio::process::Command::new("sh");
+            c.args(&["-c", &raw_cmd]);
+            c
+        }
+    };
 
-        cmd.output()
-    });
+    #[cfg(windows)]
+    {
+        #[allow(unused_imports)]
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
 
-    match tokio::time::timeout(std::time::Duration::from_secs(30), task).await {
-        Ok(Ok(Ok(output))) => {
+    // stdin 显式置空，避免子进程误判可读而无限等待；
+    // kill_on_drop 保证超时后卡住的进程被终止，不再残留孤儿进程。
+    cmd.stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+
+    let child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            return Ok(crate::device::CommandResult {
+                success: false,
+                output: String::new(),
+                error: Some(format!("执行终端指令失败: {}", e)),
+                exit_code: Some(1),
+            });
+        }
+    };
+
+    match tokio::time::timeout(std::time::Duration::from_secs(30), child.wait_with_output()).await {
+        Ok(Ok(output)) => {
             let stdout = decode_process_output(&output.stdout).trim().to_string();
             let stderr = decode_process_output(&output.stderr).trim().to_string();
             let exit_code = output.status.code().unwrap_or(0);
@@ -1348,22 +1561,16 @@ pub async fn execute_host_command(
                 exit_code: Some(exit_code),
             })
         }
-        Ok(Ok(Err(e))) => Ok(crate::device::CommandResult {
+        Ok(Err(e)) => Ok(crate::device::CommandResult {
             success: false,
             output: String::new(),
             error: Some(format!("执行终端指令失败: {}", e)),
             exit_code: Some(1),
         }),
-        Ok(Err(e)) => Ok(crate::device::CommandResult {
-            success: false,
-            output: String::new(),
-            error: Some(format!("任务调度异常: {}", e)),
-            exit_code: Some(1),
-        }),
         Err(_) => Ok(crate::device::CommandResult {
             success: false,
             output: String::new(),
-            error: Some("终端指令执行超时 (超过 30 秒限制)".to_string()),
+            error: Some("终端指令执行超时 (超过 30 秒限制)，进程已终止".to_string()),
             exit_code: Some(124),
         }),
     }

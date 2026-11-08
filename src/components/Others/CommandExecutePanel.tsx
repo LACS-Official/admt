@@ -33,6 +33,7 @@ import {
   Save20Regular,
   Dismiss20Regular,
   Apps20Regular,
+  WindowConsole20Regular,
 } from "@fluentui/react-icons";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -47,6 +48,7 @@ import {
   AdbCommand,
   CommandCategory,
   filterCommandsBySearchTerm,
+  flattenCommands,
   loadFastbootCommandsConfig,
   saveFastbootCommandsConfig,
   watchFastbootConfigFile,
@@ -57,6 +59,15 @@ import {
 } from "../../utils/configLoader";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "react-i18next";
+import InteractiveTerminal, {
+  type InteractiveTerminalHandle,
+} from "../Console/InteractiveTerminal";
+import CommandInput from "./CommandInput";
+import {
+  loadCommandHistory,
+  pushCommandHistory,
+  type CommandHistoryMap,
+} from "../../utils/commandHistory";
 
 const useStyles = makeStyles({
   container: {
@@ -243,6 +254,48 @@ const useStyles = makeStyles({
   searchMatchesText: {
     fontSize: "12px",
     color: "var(--colorNeutralForeground3)",
+    whiteSpace: "nowrap",
+  },
+  // 搜索命中高亮（当前项加深）
+  searchMark: {
+    backgroundColor: "rgba(0, 113, 227, 0.16)",
+    color: "inherit",
+    borderRadius: "2px",
+  },
+  searchMarkActive: {
+    backgroundColor: "rgba(0, 113, 227, 0.42)",
+    color: "#ffffff",
+    borderRadius: "2px",
+  },
+  // 终端屏幕容器（承载选中复制的浮动按钮定位）
+  terminalScreenWrapper: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    flex: "1 1 0",
+    minHeight: 0,
+  },
+  copySelectionBtn: {
+    position: "absolute",
+    top: "8px",
+    right: "14px",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    height: "26px",
+    padding: "0 10px",
+    borderRadius: "9999px",
+    border: "1px solid var(--colorNeutralStroke2)",
+    backgroundColor: "var(--colorNeutralBackground1)",
+    color: "var(--colorNeutralForeground2)",
+    fontSize: "11px",
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.14)",
+    zIndex: 5,
+    userSelect: "none",
+    "&:hover": {
+      color: "var(--colorNeutralForeground1)",
+    },
   },
 
   // Terminal Screen (Log & Output Stream)
@@ -296,11 +349,6 @@ const useStyles = makeStyles({
   },
   promptPrefixTarget: {
     color: "#0071e3",
-  },
-  commandInput: {
-    flex: 1,
-    fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
-    fontSize: "12.5px",
   },
   runButton: {
     height: "32px",
@@ -411,9 +459,8 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
   const [showSearch, setShowSearch] = useState(false);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
-  // Command history
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  // 按命令行模式分别保存历史（持久化，重启后仍可用 ↑ 调出）
+  const [historyMap, setHistoryMap] = useState<CommandHistoryMap>(() => loadCommandHistory());
 
   // Quick commands modal & config
   const [isQuickCommandDialogOpen, setIsQuickCommandDialogOpen] = useState(false);
@@ -442,6 +489,10 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
   const outputScreenRef = useRef<HTMLDivElement>(null);
   const deviceDropdownRef = useRef<HTMLDivElement>(null);
 
+  // 选中区域复制
+  const [selectedText, setSelectedText] = useState("");
+  const [isCopiedSelection, setIsCopiedSelection] = useState(false);
+
   // Device mode & status helpers
   const isDeviceFastboot =
     selectedDevice?.mode === "fastboot" || selectedDevice?.mode === "fastbootd";
@@ -450,7 +501,14 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
     isDeviceFastboot ? "fastboot" : "adb"
   );
 
+  // PowerShell / CMD 默认使用真实 PTY 会话；仅在 PTY 不可用时回退到一次性指令模式
+  const [legacyShellMode, setLegacyShellMode] = useState(false);
+  const [ptyInitialCommand, setPtyInitialCommand] = useState<string | null>(null);
+
   const isFastbootMode = terminalMode === "fastboot";
+  const isPtyMode =
+    (terminalMode === "powershell" || terminalMode === "cmd") && !legacyShellMode;
+  const ptyTerminalRef = useRef<InteractiveTerminalHandle>(null);
 
   // Automatically adapt mode when device connects/switches mode (unless currently in SSH / PowerShell / CMD)
   useEffect(() => {
@@ -621,6 +679,93 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
     return matches;
   }, [output, searchTerm]);
 
+  // 将输出按匹配位置切分为片段，用于高亮渲染；无搜索词时返回 null（走纯文本渲染）
+  const outputSegments = useMemo(() => {
+    if (!searchTerm.trim() || searchMatches.length === 0 || !output) return null;
+    const segments: Array<{ text: string; matchIndex: number | null }> = [];
+    let cursor = 0;
+    searchMatches.forEach((m, i) => {
+      if (m.index > cursor) {
+        segments.push({ text: output.slice(cursor, m.index), matchIndex: null });
+      }
+      segments.push({ text: output.slice(m.index, m.index + m.length), matchIndex: i });
+      cursor = m.index + m.length;
+    });
+    if (cursor < output.length) {
+      segments.push({ text: output.slice(cursor), matchIndex: null });
+    }
+    return segments;
+  }, [output, searchTerm, searchMatches]);
+
+  // 滚动到指定序号的匹配项
+  const scrollToMatch = useCallback((idx: number) => {
+    const el = outputScreenRef.current?.querySelector<HTMLElement>(`[data-match="${idx}"]`);
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, []);
+
+  // 搜索词变化时重置并定位到第一个匹配
+  useEffect(() => {
+    if (searchTerm.trim() && searchMatches.length > 0) {
+      setCurrentMatchIndex(0);
+      requestAnimationFrame(() => scrollToMatch(0));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
+  // 搜索框键盘导航：Enter 下一个匹配，Shift+Enter 上一个
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchMatches.length > 0) {
+      e.preventDefault();
+      const dir = e.shiftKey ? -1 : 1;
+      const next = (currentMatchIndex + dir + searchMatches.length) % searchMatches.length;
+      setCurrentMatchIndex(next);
+      scrollToMatch(next);
+    } else if (e.key === "Escape") {
+      setShowSearch(false);
+      setSearchTerm("");
+    }
+  };
+
+  // 在输出区内选中文本后显示浮动复制按钮
+  const handleOutputMouseUp = useCallback(() => {
+    const sel = window.getSelection();
+    const text = sel?.toString() ?? "";
+    if (
+      text &&
+      outputScreenRef.current &&
+      sel?.anchorNode &&
+      outputScreenRef.current.contains(sel.anchorNode)
+    ) {
+      setSelectedText(text);
+      setIsCopiedSelection(false);
+    } else {
+      setSelectedText("");
+    }
+  }, []);
+
+  // 复制选中的输出内容
+  const handleCopySelection = useCallback(async () => {
+    if (!selectedText) return;
+    try {
+      await navigator.clipboard.writeText(selectedText);
+      setIsCopiedSelection(true);
+      setTimeout(() => {
+        setIsCopiedSelection(false);
+        setSelectedText("");
+        window.getSelection()?.removeAllRanges();
+      }, 1200);
+    } catch (e) {
+      console.error("复制选中内容失败:", e);
+    }
+  }, [selectedText]);
+
+  // 联想词库：当前模式的快捷命令库 + 该模式的历史
+  const libraryCommands = useMemo(
+    () => flattenCommands(commandsConfig?.categories ?? []).map((item) => item.command),
+    [commandsConfig]
+  );
+  const currentHistory = historyMap[terminalMode] ?? [];
+
   // Filtered quick commands
   const filteredCategories = useMemo(() => {
     if (!commandsConfig) return [];
@@ -651,6 +796,16 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       }
     }
 
+    // 会话型命令统一转到本地交互终端，避免被当成 ADB 指令执行
+    if (
+      /^(?:ssh|sftp|telnet|ftp|plink)(?:\.exe)?\s/i.test(rawCmd) &&
+      effectiveMode !== "powershell" &&
+      effectiveMode !== "cmd"
+    ) {
+      effectiveMode = "powershell";
+      setTerminalMode("powershell");
+    }
+
     // 若剥离前缀后为空，提供默认帮助参数
     if (!rawCmd) {
       if (effectiveMode === "powershell") {
@@ -662,12 +817,19 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       }
     }
 
-    // Save to history (保存用户输入的原始文本)
+    // 保存用户输入，按实际执行的模式归入对应历史
     const historyItem = cmdToRun !== undefined ? cmdToRun.trim() : command.trim();
-    setHistory((prev) => [historyItem, ...prev.filter((c) => c !== historyItem)].slice(0, 50));
-    setHistoryIndex(-1);
+    setHistoryMap((prev) => pushCommandHistory(prev, effectiveMode, historyItem));
     setCommand("");
     setIsExecuting(true);
+
+    // PowerShell / CMD 已是常驻 PTY 会话：快捷命令库与 AI 注入的命令直接送入会话，
+    // 不再走一次性管道，也不会转交独立系统窗口。
+    if ((effectiveMode === "powershell" || effectiveMode === "cmd") && !legacyShellMode) {
+      setIsExecuting(false);
+      setPtyInitialCommand(rawCmd);
+      return;
+    }
 
     const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
     const parts = rawCmd.split(/\s+/).filter(Boolean);
@@ -696,14 +858,23 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       promptHeader = `\n[${time}] $ adb${serialPart} ${rawCmd}\n`;
     }
 
-    setOutput((prev) => prev + promptHeader);
+    // 会话型命令（ssh / sftp / telnet 等）可能需要 yes/no 或密码输入，
+    // 后端会转交独立终端窗口。此处先给出即时说明，避免等待期间输出区一片空白。
+    const isHostShell = effectiveMode === "powershell" || effectiveMode === "cmd";
+    const isSessionCommand = /^(?:ssh|sftp|telnet|ftp|plink)(?:\.exe)?\s/i.test(rawCmd.trim());
+    const sessionHint =
+      isHostShell && isSessionCommand
+        ? "[提示] 兼容模式无法承载交互输入，请切换到交互终端执行。\n"
+        : "";
+
+    setOutput((prev) => prev + promptHeader + sessionHint);
 
     try {
       let result: { success: boolean; output?: string; error?: string };
       if (effectiveMode === "powershell" || effectiveMode === "cmd") {
         result = await invoke<{ success: boolean; output: string; error?: string; exit_code?: number }>(
           "execute_host_command",
-          { command: rawCmd, shell: effectiveMode }
+          { command: rawCmd, shell: effectiveMode, interactive: !isSessionCommand }
         );
       } else if (effectiveMode === "fastboot") {
         const targetSerial = isGlobalFastboot ? "" : selectedDevice?.serial || "";
@@ -774,30 +945,6 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       onClearInitialCommand?.();
     }
   }, [initialCommand, onClearInitialCommand]);
-
-  // Keyboard navigation for history
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      executeCommand();
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (history.length === 0) return;
-      const nextIndex = Math.min(historyIndex + 1, history.length - 1);
-      setHistoryIndex(nextIndex);
-      setCommand(history[nextIndex]);
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (historyIndex <= 0) {
-        setHistoryIndex(-1);
-        setCommand("");
-      } else {
-        const nextIndex = historyIndex - 1;
-        setHistoryIndex(nextIndex);
-        setCommand(history[nextIndex]);
-      }
-    }
-  };
 
   // Copy output
   const handleCopyOutput = useCallback(async () => {
@@ -1090,6 +1237,25 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
 
         {/* 顶部快捷操作 */}
         <div className={styles.headerRight}>
+          {(terminalMode === "powershell" || terminalMode === "cmd") && (
+            <Tooltip
+              content={legacyShellMode ? "切换到内置交互终端" : "切换到一次性指令模式"}
+              relationship="label"
+            >
+              <Button
+                appearance="subtle"
+                icon={<WindowConsole20Regular />}
+                className={mergeClasses(
+                  styles.actionBtn,
+                  !legacyShellMode && styles.actionBtnActive
+                )}
+                onClick={() => setLegacyShellMode(!legacyShellMode)}
+              >
+                {legacyShellMode ? "交互终端" : "兼容模式"}
+              </Button>
+            </Tooltip>
+          )}
+
           <Tooltip content="快捷命令库" relationship="label">
             <Button
               appearance="subtle"
@@ -1101,34 +1267,62 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
             </Button>
           </Tooltip>
 
-          <Tooltip content={showSearch ? "收起搜索" : "在输出中搜索"} relationship="label">
+          {/* 交互模式下，查找 / 复制直接转交给内置终端 */}
+          <Tooltip
+            content={isPtyMode ? "在终端中查找" : showSearch ? "收起搜索" : "在输出中搜索"}
+            relationship="label"
+          >
             <Button
               appearance="subtle"
               icon={<Search20Regular />}
-              className={mergeClasses(styles.actionBtn, showSearch && styles.actionBtnActive)}
-              onClick={() => setShowSearch(!showSearch)}
+              className={mergeClasses(
+                styles.actionBtn,
+                !isPtyMode && showSearch && styles.actionBtnActive
+              )}
+              onClick={() =>
+                isPtyMode ? ptyTerminalRef.current?.toggleSearch() : setShowSearch(!showSearch)
+              }
             />
           </Tooltip>
 
-          <Tooltip content={isCopiedOutput ? "已复制输出内容" : "复制全部输出"} relationship="label">
+          <Tooltip
+            content={
+              isPtyMode
+                ? "复制输出内容"
+                : isCopiedOutput
+                  ? "已复制输出内容"
+                  : "复制全部输出"
+            }
+            relationship="label"
+          >
             <Button
               appearance="subtle"
-              icon={isCopiedOutput ? <Checkmark20Regular style={{ color: "#10b981" }} /> : <Copy20Regular />}
+              icon={
+                !isPtyMode && isCopiedOutput ? (
+                  <Checkmark20Regular style={{ color: "#10b981" }} />
+                ) : (
+                  <Copy20Regular />
+                )
+              }
               className={styles.actionBtn}
-              onClick={handleCopyOutput}
-              disabled={!output}
+              onClick={() =>
+                isPtyMode ? ptyTerminalRef.current?.copy() : handleCopyOutput()
+              }
+              disabled={!isPtyMode && !output}
             />
           </Tooltip>
 
-          <Tooltip content="清空终端屏幕" relationship="label">
-            <Button
-              appearance="subtle"
-              icon={<Delete20Regular />}
-              className={styles.actionBtn}
-              onClick={handleClearOutput}
-              disabled={!output}
-            />
-          </Tooltip>
+          {!isPtyMode && (
+            <Tooltip content="清空终端屏幕" relationship="label">
+              <Button
+                appearance="subtle"
+                icon={<Delete20Regular />}
+                className={styles.actionBtn}
+                onClick={handleClearOutput}
+                disabled={!output}
+              />
+            </Tooltip>
+          )}
 
           {onClose && (
             <Tooltip content="关闭终端" relationship="label">
@@ -1145,6 +1339,22 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
 
       {/* 终端主体卡片 */}
       <div className={styles.terminalCard}>
+        {isPtyMode ? (
+          <InteractiveTerminal
+            ref={ptyTerminalRef}
+            shell={terminalMode === "cmd" ? "cmd" : "powershell"}
+            mode={terminalMode === "cmd" ? "cmd" : "powershell"}
+            history={currentHistory}
+            libraryCommands={libraryCommands}
+            onCommandExecuted={(value) =>
+              setHistoryMap((prev) => pushCommandHistory(prev, terminalMode, value))
+            }
+            initialCommand={ptyInitialCommand}
+            onInitialCommandSent={() => setPtyInitialCommand(null)}
+            onFallback={() => setLegacyShellMode(true)}
+          />
+        ) : (
+        <>
         {/* 搜索工具条（按需展开） */}
         {showSearch && (
           <div className={styles.searchToolbar}>
@@ -1152,6 +1362,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
               placeholder="搜索终端输出内容..."
               value={searchTerm}
               onChange={(_, data) => setSearchTerm(data.value)}
+              onKeyDown={handleSearchKeyDown}
               contentBefore={<Search20Regular />}
               contentAfter={
                 searchTerm ? (
@@ -1169,55 +1380,94 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
 
             {searchTerm && (
               <span className={styles.searchMatchesText}>
-                找到 {searchMatches.length} 个匹配项
+                {searchMatches.length > 0
+                  ? `${currentMatchIndex + 1} / ${searchMatches.length} 项匹配（Enter 下一个，Shift+Enter 上一个）`
+                  : "无匹配项"}
               </span>
             )}
           </div>
         )}
 
-        {/* 终端日志流展示 */}
-        <div className={styles.terminalScreen} ref={outputScreenRef}>
-          {!output ? (
-            <div className={styles.terminalIntro}>
-              <span className={styles.terminalIntroTitle}>ADMT Terminal Console</span>
-              <span>
-                • 当前目标: {terminalMode === "powershell" || terminalMode === "cmd" ? "本地主机 (Windows 宿主环境)" : selectedDevice ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})` : "全局执行模式 (未指定单设备)"}
-              </span>
-              <span>
-                • 运行模式: {terminalMode === "powershell" ? "Windows PowerShell 宿主环境" : terminalMode === "cmd" ? "Windows 命令提示符 (CMD)" : terminalMode === "fastboot" ? "Fastboot Protocol" : "Android Debug Bridge (ADB)"}
-              </span>
-              <span>• 命令输入: 支持直接输入命令或携带 adb / fastboot / powershell / cmd 前缀（系统将自动识别并去除前缀）</span>
-              <span>• 快捷键支持: 按 [Enter] 立即执行命令，按 [↑ / ↓] 键快速切换历史命令</span>
-            </div>
-          ) : (
-            output
+        {/* 终端日志流展示（外层承载选中复制浮动按钮） */}
+        <div className={styles.terminalScreenWrapper}>
+          <div
+            className={styles.terminalScreen}
+            ref={outputScreenRef}
+            onMouseUp={handleOutputMouseUp}
+          >
+            {!output ? (
+              <div className={styles.terminalIntro}>
+                <span className={styles.terminalIntroTitle}>ADMT Terminal Console</span>
+                <span>
+                  • 当前目标: {terminalMode === "powershell" || terminalMode === "cmd" ? "本地主机 (Windows 宿主环境)" : selectedDevice ? `${getDeviceDisplayName(selectedDevice)} (${selectedDevice.serial})` : "全局执行模式 (未指定单设备)"}
+                </span>
+                <span>
+                  • 运行模式: {terminalMode === "powershell" ? "Windows PowerShell 宿主环境" : terminalMode === "cmd" ? "Windows 命令提示符 (CMD)" : terminalMode === "fastboot" ? "Fastboot Protocol" : "Android Debug Bridge (ADB)"}
+                </span>
+                <span>• 命令输入: 支持直接输入命令或携带 adb / fastboot / powershell / cmd 前缀（系统将自动识别并去除前缀）</span>
+                <span>• 快捷键支持: 按 [Enter] 立即执行命令，按 [↑ / ↓] 键快速切换历史命令</span>
+              </div>
+            ) : outputSegments ? (
+              outputSegments.map((seg, i) =>
+                seg.matchIndex === null ? (
+                  <span key={i}>{seg.text}</span>
+                ) : (
+                  <mark
+                    key={i}
+                    data-match={seg.matchIndex}
+                    className={
+                      seg.matchIndex === currentMatchIndex
+                        ? styles.searchMarkActive
+                        : styles.searchMark
+                    }
+                  >
+                    {seg.text}
+                  </mark>
+                )
+              )
+            ) : (
+              output
+            )}
+          </div>
+
+          {selectedText && (
+            <button
+              className={styles.copySelectionBtn}
+              onClick={handleCopySelection}
+              title="复制选中内容"
+            >
+              {isCopiedSelection ? <Checkmark20Regular /> : <Copy20Regular />}
+              {isCopiedSelection ? "已复制" : "复制"}
+            </button>
           )}
         </div>
 
         {/* 底部命令行输入栏 */}
         <div className={styles.promptBar}>
           <div className={styles.promptPrefix}>
-            <span>{terminalMode === "powershell" ? "PS>" : terminalMode === "cmd" ? "C:\>" : "$"}</span>
+            <span>{terminalMode === "powershell" ? "PS>" : terminalMode === "cmd" ? "C:\\>" : "$"}</span>
             <span className={styles.promptPrefixTarget}>
               {terminalMode}
             </span>
           </div>
 
-          <Input
+          <CommandInput
+            mode={terminalMode}
             value={command}
-            onChange={(_, data) => setCommand(data.value)}
-            onKeyDown={handleKeyDown}
+            onChange={setCommand}
+            onSubmit={(value) => void executeCommand(value)}
+            history={currentHistory}
+            libraryCommands={libraryCommands}
             placeholder={
               terminalMode === "powershell"
-                ? "输入 PowerShell 命令或脚本 (如 Get-Process, ipconfig, Test-NetConnection)..."
+                ? "输入 PowerShell 命令 (Tab 补齐 · ↑ 历史，如 Get-Process, ipconfig)..."
                 : terminalMode === "cmd"
-                ? "输入 CMD 批处理命令 (如 ping, ipconfig, tasklist, systeminfo)..."
+                ? "输入 CMD 命令 (Tab 补齐 · ↑ 历史，如 ping, ipconfig, tasklist)..."
                 : terminalMode === "fastboot"
-                ? "输入 Fastboot 命令 (如 devices, oem unlock, getvar all)..."
-                : "输入 ADB 命令 (如 devices, connect 192.168.1.x, shell getprop)..."
+                ? "输入 Fastboot 命令 (Tab 补齐 · ↑ 历史，如 devices, oem unlock)..."
+                : "输入 ADB 命令 (Tab 补齐 · ↑ 历史，如 devices, shell getprop)..."
             }
             disabled={isExecuting}
-            className={styles.commandInput}
           />
 
           <Button
@@ -1230,6 +1480,8 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
             {isExecuting ? "执行中..." : "执行"}
           </Button>
         </div>
+        </>
+        )}
       </div>
 
       {/* 快捷命令对话框 */}
