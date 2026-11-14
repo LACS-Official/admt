@@ -101,8 +101,7 @@ pub async fn get_installed_apps_batch(
     Ok((apps, total_count))
 }
 
-/// 批量获取应用详细信息（优化版本）
-#[tauri::command]
+/// 批量获取应用详细信息（优化版本，仅供 Rust 内部调用）
 pub async fn get_batch_app_details(
     serial: String,
     package_names: Vec<String>,
@@ -579,51 +578,6 @@ pub async fn batch_install_apks(serial: String, apk_paths: Vec<String>) -> Resul
     Ok(batch_operation)
 }
 
-/// 解析包列表行
-#[allow(dead_code)]
-async fn parse_package_line(line: &str, serial: &str) -> Option<InstalledApp> {
-    // 解析各种格式的包列表行，包名始终是每一行最后一个等号(=)后面的字符串
-    // 例如：
-    // - "package:/data/app/MiShop/MiShop.apk=com.xiaomi.shop"
-    // - "package:/data/app/com.ss.android.ugc.aweme_15/com.ss.android.ugc.aweme_15.apk=com.ss.android.ugc.aweme"
-    // - "package:/data/app/~~eZRQwTTL2-CwMI3E2wLWqQ==/io.github.vvb2060.magisk-qNSUscO1eMB1xkl46MUfxA==/base.apk=io.github.vvb2060.magisk"
-    if !line.starts_with("package:") {
-        return None;
-    }
-
-    // 找到最后一个等号的位置
-    let last_equals_pos = line.rfind('=')?;
-    let package_name = line[last_equals_pos + 1..].to_string();
-    let apk_path = line["package:".len()..last_equals_pos].to_string();
-
-    // 获取应用详细信息
-    let mut app = InstalledApp {
-        package_name: package_name.clone(),
-        version_name: None,
-        version_code: None,
-        install_location: Some(apk_path.clone()),
-        is_system_app: apk_path.starts_with("/system/"),
-        is_enabled: true,
-        apk_path: Some(apk_path.clone()),
-        install_time: None,
-        update_time: None,
-        permissions: Vec::new(),
-    };
-
-    // 获取应用名称和版本信息
-    if let Ok(result) = utils_execute_adb_command(
-        &["-s", serial, "shell", "dumpsys", "package", &package_name],
-        Some(10),
-    )
-    .await
-    {
-        if result.success {
-            parse_package_dump(&result.output, &mut app);
-        }
-    }
-
-    Some(app)
-}
 
 /// 解析包信息输出
 fn parse_package_dump(output: &str, app: &mut InstalledApp) {

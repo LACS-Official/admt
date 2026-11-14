@@ -36,6 +36,7 @@ class OnlineResourcesService {
   private lastDownloadTime: number = 0;
   private readonly DOWNLOAD_COOLDOWN = 60 * 1000; // 1分钟冷却时间
   private activeDownloads: Map<string, number> = new Map(); // 跟踪活跃下载任务的时间戳
+  private progressUnlisteners: Map<string, () => void> = new Map(); // 按任务 id 管理进度事件监听，便于回收
   private readonly MAX_ACTIVE_DOWNLOADS = 2; // 最大活跃下载数
   private readonly ACTIVE_DOWNLOAD_WINDOW = 60 * 1000; // 1分钟窗口内
 
@@ -405,6 +406,11 @@ class OnlineResourcesService {
 
       logService.error(` 下载资源失败: ${software.name}`, '在线资源服务', { error: message });
       throw error;
+    } finally {
+      // 无论成功、失败还是网盘重定向提前退出，都回收该任务的进度监听
+      if (taskId) {
+        this.cleanupDownloadProgressListener(taskId);
+      }
     }
   }
 
@@ -542,6 +548,17 @@ class OnlineResourcesService {
       logService.info(` 下载完成: ${task.fileName}`, '在线资源服务');
 
     } catch (error) {
+      // 用户主动取消：后端已停止写盘并删除残件，不要误报为「下载失败」，
+      // 也不要重新 throw 让上层再弹一次错误提示（事件监听已由 download-cancelled 回调回收）。
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('DOWNLOAD_CANCELLED')) {
+        task.status = 'cancelled';
+        task.endTime = new Date();
+        this.downloadTasks.set(task.id, task);
+        this.persistTasks();
+        return;
+      }
+
       // 后端静态兜底识别到网盘：移除刚建的任务，不留下 pending 记录
       if (await this.handleBackendNetdiskError(error, task.downloadUrl)) {
         this.downloadTasks.delete(task.id);
@@ -648,8 +665,15 @@ class OnlineResourcesService {
   private async setupDownloadProgressListener(taskId: string): Promise<void> {
     const { listen } = await import('@tauri-apps/api/event');
 
+    // 同一任务重复注册时先注销旧监听，避免累积泄漏
+    this.cleanupDownloadProgressListener(taskId);
+
+    // 先占位，保证注册过程中若任务已结束/取消也能被正确回收
+    const placeholder: () => void = () => {};
+    this.progressUnlisteners.set(taskId, placeholder);
+
     // 监听下载进度事件
-    await listen('download-progress', (event: any) => {
+    const unlisten = await listen('download-progress', (event: any) => {
       const progressData = event.payload;
       if (progressData.id === taskId) {
         const task = this.downloadTasks.get(taskId);
@@ -698,9 +722,30 @@ class OnlineResourcesService {
 
           this.downloadTasks.set(taskId, task);
           this.persistTasks();
+
+          // 到达终态后注销监听，避免任务结束后仍占用事件订阅
+          if (progressData.status === 'ExtractCompleted' || progressData.status === 'Failed') {
+            this.cleanupDownloadProgressListener(taskId);
+          }
         }
       }
     });
+
+    // 若注册期间已被清理（任务结束/取消/重复注册），立即注销新监听
+    if (this.progressUnlisteners.get(taskId) === placeholder) {
+      this.progressUnlisteners.set(taskId, unlisten);
+    } else {
+      unlisten();
+    }
+  }
+
+  /** 按任务 id 回收进度事件监听（可重复调用） */
+  private cleanupDownloadProgressListener(taskId: string): void {
+    const unlisten = this.progressUnlisteners.get(taskId);
+    if (unlisten) {
+      unlisten();
+      this.progressUnlisteners.delete(taskId);
+    }
   }
 
   private getStatusText(status: string): string {
@@ -762,12 +807,14 @@ class OnlineResourcesService {
     const task = this.downloadTasks.get(taskId);
     if (task && (task.status === 'downloading' || task.status === 'paused' || task.status === 'extracting')) {
       try {
-        // 调用Tauri后端取消下载或解压
+        // 调用 Tauri 后端取消下载（Tauri 2 会自动把 taskId 映射为 task_id）
         const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('cancel_download_or_extract', { taskId });
+        await invoke('cancel_download', { taskId });
         logService.info(` 下载/解压已取消: ${task.fileName}`, '在线资源服务');
       } catch (error) {
         logService.error(`调用取消命令失败: ${task.fileName}`, '在线资源服务', { error });
+        // 取消命令失败时不能把任务误标为已取消，否则下载仍在跑却显示「已取消」
+        return;
       }
       
       // 更新任务状态
@@ -778,6 +825,9 @@ class OnlineResourcesService {
       
       // 从活跃下载中移除
       this.activeDownloads.delete(taskId);
+
+      // 回收该任务的进度事件监听
+      this.cleanupDownloadProgressListener(taskId);
     }
   }
 

@@ -286,32 +286,6 @@ pub async fn check_screen_mirror_support(device_serial: String) -> Result<Screen
     Ok(device)
 }
 
-/// 获取设备分辨率
-#[allow(dead_code)]
-pub async fn get_device_resolution(device_serial: String) -> Result<String> {
-    log::info!("Getting device resolution for: {}", device_serial);
-
-    let output = run_adb_command(&["-s", &device_serial, "shell", "wm", "size"]).await?;
-
-    let resolution = output
-        .lines()
-        .next()
-        .unwrap_or("")
-        .split(":")
-        .nth(1)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-
-    if resolution.is_empty() {
-        Err(AdmtError::Device(
-            "Failed to get device resolution".to_string(),
-        ))
-    } else {
-        log::info!("Device resolution: {}", resolution);
-        Ok(resolution)
-    }
-}
 
 /// 启动屏幕镜像
 #[tauri::command]

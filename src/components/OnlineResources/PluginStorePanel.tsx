@@ -1,45 +1,9 @@
 import React, { useState, useMemo } from "react";
-import {
-  makeStyles,
-  shorthands,
-  Button,
-  SearchBox,
-  Badge,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Spinner,
-  Text,
-  tokens,
-  Card,
-  CardHeader,
-  CardPreview,
-  Tooltip,
-} from "@fluentui/react-components";
-import {
-  Apps24Regular,
-  Search24Regular,
-  ArrowDownload24Regular,
-  Checkmark24Regular,
-  Star24Filled,
-  Person24Regular,
-  ShieldCheckmark24Regular,
-  Tag24Regular,
-  Code24Regular,
-  Globe24Regular,
-  Info24Regular,
-  Dismiss24Regular,
-  Sparkle24Regular,
-  Wrench24Regular,
-  Flash24Regular,
-  TopSpeed24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, shorthands, Button, SearchBox, Badge, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Text} from "@fluentui/react-components";
+import {Apps24Regular, ArrowDownload24Regular, Checkmark24Regular, Star24Filled, ShieldCheckmark24Regular, Code24Regular, Globe24Regular, Dismiss24Regular, Sparkle24Regular, Wrench24Regular, Flash24Regular, TopSpeed24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { usePluginStore } from "../../stores/pluginStore";
-import { PluginCategory, PluginStoreItem } from "../../types/plugin";
+import {PluginStoreItem} from "../../types/plugin";
 import { useAppStore } from "../../stores/appStore";
 
 const useStyles = makeStyles({

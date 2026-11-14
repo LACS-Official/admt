@@ -11,13 +11,16 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
+use std::time::Duration;
+#[cfg(windows)]
+use std::time::Instant;
 use tauri::State;
 
 #[cfg(windows)]
 use winapi::shared::minwindef::{BOOL, LPARAM, LRESULT, WPARAM};
 #[cfg(windows)]
-use winapi::shared::windef::{HHOOK, HWND, RECT};
+use winapi::shared::windef::{HWND, RECT};
 #[cfg(windows)]
 use winapi::um::winuser::*;
 
@@ -111,27 +114,189 @@ pub struct KeyMappingConfig {
     pub profile: KeyMappingProfile,
 }
 
+/// 设备屏幕尺寸与 ADB 输入能力
+///
+/// 之前版本把分辨率硬编码成 1080x2400，在 720p / 2K / 平板 / 折叠屏上
+/// 所有归一化坐标都会算错，且 `input motionevent` 在不少 ROM 上并不存在，
+/// 这两点是按键映射"启动了却没反应"的主要原因。
+#[derive(Debug, Clone, Copy)]
+struct ScreenMetrics {
+    /// 物理短边
+    short_side: u32,
+    /// 物理长边
+    long_side: u32,
+    /// 设备是否支持 `input motionevent DOWN/UP/MOVE`
+    supports_motion_event: bool,
+}
+
+impl Default for ScreenMetrics {
+    fn default() -> Self {
+        Self {
+            short_side: 1080,
+            long_side: 2400,
+            supports_motion_event: false,
+        }
+    }
+}
+
+impl ScreenMetrics {
+    /// 返回当前方向下 `input` 命令使用的坐标系宽高
+    fn base_size(&self, landscape: bool) -> (i32, i32) {
+        if landscape {
+            (self.long_side as i32, self.short_side as i32)
+        } else {
+            (self.short_side as i32, self.long_side as i32)
+        }
+    }
+}
+
+/// 归一化坐标 -> 设备像素坐标
+fn to_pixels(metrics: &ScreenMetrics, config: &KeyMappingConfig, x: f32, y: f32) -> (i32, i32) {
+    let landscape = config.profile.orientation.as_deref() == Some("landscape");
+    let (w, h) = metrics.base_size(landscape);
+    (
+        (x.clamp(0.0, 1.0) * w as f32) as i32,
+        (y.clamp(0.0, 1.0) * h as f32) as i32,
+    )
+}
+
+/// Windows 下隐藏 adb 子进程的控制台窗口
+#[cfg(windows)]
+fn hide_console(cmd: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn hide_console(_cmd: &mut Command) {}
+
+/// 读取 `wm size`，返回 (短边, 长边)；读取失败时回退到 1080x2400
+fn query_screen_size(adb_path: &PathBuf, serial: &str) -> (u32, u32) {
+    let mut result = (1080u32, 2400u32);
+    let mut size_cmd = Command::new(adb_path);
+    size_cmd.args(["-s", serial, "shell", "wm", "size"]);
+    hide_console(&mut size_cmd);
+    if let Ok(out) = size_cmd.output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        for line in text.lines() {
+            if let Some(token) = line.split_whitespace().last() {
+                if let Some((w, h)) = token.split_once('x') {
+                    if let (Ok(w), Ok(h)) = (w.parse::<u32>(), h.parse::<u32>()) {
+                        if w > 0 && h > 0 {
+                            result = (w.min(h), w.max(h));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    result
+}
+
+/// 读取设备真实分辨率并探测 `input motionevent` 能力
+fn query_screen_metrics(adb_path: &PathBuf, serial: &str) -> ScreenMetrics {
+    let mut metrics = ScreenMetrics::default();
+
+    // 1) wm size，形如 "Physical size: 1080x2400" / "Override size: 1080x2400"
+    let (short_side, long_side) = query_screen_size(adb_path, serial);
+    metrics.short_side = short_side;
+    metrics.long_side = long_side;
+
+    // 2) 用一组无害的 DOWN/UP 探测能力，避免依赖各 ROM 的 help 输出格式
+    let mut probe = Command::new(adb_path);
+    probe.args([
+        "-s",
+        serial,
+        "shell",
+        "input",
+        "motionevent",
+        "DOWN",
+        "1",
+        "1",
+    ]);
+    hide_console(&mut probe);
+    if let Ok(out) = probe.output() {
+        let combined = format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        )
+        .to_lowercase();
+        let supported = out.status.success()
+            && !combined.contains("unknown")
+            && !combined.contains("error")
+            && !combined.contains("not found")
+            && !combined.contains("usage:")
+            && !combined.contains("invalid");
+        metrics.supports_motion_event = supported;
+        if supported {
+            // 必须立刻抬起，否则会在屏幕上留下一个按下的触点
+            let mut up = Command::new(adb_path);
+            up.args([
+                "-s",
+                serial,
+                "shell",
+                "input",
+                "motionevent",
+                "UP",
+                "1",
+                "1",
+            ]);
+            hide_console(&mut up);
+            let _ = up.output();
+        }
+    }
+
+    log::info!(
+        "KeyMapping screen metrics: {}x{}, motionevent={}",
+        metrics.short_side,
+        metrics.long_side,
+        metrics.supports_motion_event
+    );
+    metrics
+}
+
 /// 持久化 ADB Shell 会话
 struct AdbTouchSession {
     child: Child,
     stdin: ChildStdin,
+    metrics: ScreenMetrics,
 }
 
 impl AdbTouchSession {
     pub fn new(serial: &str) -> Result<Self> {
         let adb_path = crate::cache::get_cached_adb_path();
+
+        // 设备不在线时明确失败，避免"UI 显示已启动、实际一条命令都发不出去"
+        let mut state_cmd = Command::new(&adb_path);
+        state_cmd.args(["-s", serial, "get-state"]);
+        hide_console(&mut state_cmd);
+        let state = state_cmd
+            .output()
+            .map_err(|e| AdmtError::AdbCommandFailed {
+                message: format!("无法执行 adb get-state: {}", e),
+            })?;
+        let state_text = String::from_utf8_lossy(&state.stdout).trim().to_string();
+        if !state.status.success() || state_text != "device" {
+            return Err(AdmtError::DeviceNotReady {
+                serial: serial.to_string(),
+                state: if state_text.is_empty() {
+                    "no device".to_string()
+                } else {
+                    state_text
+                },
+            });
+        }
+
+        let metrics = query_screen_metrics(&adb_path, serial);
+
         let mut cmd = Command::new(adb_path);
         cmd.args(["-s", serial, "shell"])
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
-
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            const CREATE_NO_WINDOW: u32 = 0x08000000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-        }
+        hide_console(&mut cmd);
 
         let mut child = cmd
             .spawn()
@@ -141,12 +306,31 @@ impl AdbTouchSession {
             .take()
             .ok_or_else(|| AdmtError::Process("无法获取 ADB 标准输入通道".to_string()))?;
 
-        Ok(Self { child, stdin })
+        Ok(Self {
+            child,
+            stdin,
+            metrics,
+        })
     }
 
     pub fn send_command(&mut self, cmd: &str) {
         let _ = writeln!(self.stdin, "{}", cmd);
         let _ = self.stdin.flush();
+    }
+
+    fn tap(&mut self, px: i32, py: i32) {
+        self.send_command(&format!("input tap {} {}", px, py));
+    }
+
+    fn motion(&mut self, action: &str, px: i32, py: i32) {
+        self.send_command(&format!("input motionevent {} {} {}", action, px, py));
+    }
+
+    fn swipe(&mut self, sx: i32, sy: i32, ex: i32, ey: i32, duration_ms: u32) {
+        self.send_command(&format!(
+            "input swipe {} {} {} {} {}",
+            sx, sy, ex, ey, duration_ms
+        ));
     }
 }
 
@@ -155,6 +339,13 @@ impl Drop for AdbTouchSession {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+}
+
+/// 串行化后的按键事件，保证 down/up 顺序不被线程调度打乱
+struct KeyEvent {
+    key: String,
+    is_down: bool,
+    config: KeyMappingConfig,
 }
 
 /// 全局按键映射状态管理器
@@ -168,6 +359,8 @@ pub struct KeyMappingManager {
     pressed_keys: Arc<Mutex<HashSet<String>>>,
     /// 摇杆当前激活的方向状态
     joystick_state: Arc<Mutex<JoystickState>>,
+    /// 按键事件串行队列（hook 回调与前端桥接共用）
+    event_tx: Arc<Mutex<Option<mpsc::Sender<KeyEvent>>>>,
     #[cfg(windows)]
     hook_handle: Arc<Mutex<Option<usize>>>,
     #[cfg(windows)]
@@ -184,6 +377,8 @@ struct JoystickState {
     down: bool,
     left: bool,
     right: bool,
+    /// 无 motionevent 能力时，用于避免同一方向重复发送 swipe
+    last_dir: Option<(i8, i8)>,
 }
 
 impl KeyMappingManager {
@@ -195,6 +390,7 @@ impl KeyMappingManager {
             burst_tasks: Arc::new(Mutex::new(HashMap::new())),
             pressed_keys: Arc::new(Mutex::new(HashSet::new())),
             joystick_state: Arc::new(Mutex::new(JoystickState::default())),
+            event_tx: Arc::new(Mutex::new(None)),
             #[cfg(windows)]
             hook_handle: Arc::new(Mutex::new(None)),
             #[cfg(windows)]
@@ -203,7 +399,7 @@ impl KeyMappingManager {
     }
 }
 
-// 全局静态单例引用，供 Windows 低阶 Hook 回调安全访问
+// 全局静态单例引用，供 Windows 低阶 Hook 回调与前端键盘桥接安全访问
 static GLOBAL_MANAGER: OnceCell<Arc<KeyMappingManagerInternal>> = OnceCell::new();
 
 struct KeyMappingManagerInternal {
@@ -213,6 +409,7 @@ struct KeyMappingManagerInternal {
     burst_tasks: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
     pressed_keys: Arc<Mutex<HashSet<String>>>,
     joystick_state: Arc<Mutex<JoystickState>>,
+    event_tx: Arc<Mutex<Option<mpsc::Sender<KeyEvent>>>>,
 }
 
 // ---------------- Windows 原生底层键盘 Hook 与注入 ----------------
@@ -245,11 +442,16 @@ unsafe extern "system" fn low_level_keyboard_proc(
                         let config_clone = config.clone();
                         drop(config_guard);
 
-                        // 异步处理按键事件，防止阻塞 Windows 消息钩子队列导致系统输入迟钝
-                        let mgr = manager.clone();
-                        std::thread::spawn(move || {
-                            mgr.handle_key_event(&key_name, is_down, &config_clone);
-                        });
+                        // 统一投递到串行 worker：既避免在 Hook 回调里阻塞系统输入队列，
+                        // 也保证 down/up 不会因多线程并发而乱序（乱序会导致点击丢失、摇杆卡死）。
+                        let tx = manager.event_tx.lock().unwrap().as_ref().cloned();
+                        if let Some(tx) = tx {
+                            let _ = tx.send(KeyEvent {
+                                key: key_name,
+                                is_down,
+                                config: config_clone,
+                            });
+                        }
                     }
                 }
             }
@@ -261,18 +463,23 @@ unsafe extern "system" fn low_level_keyboard_proc(
 
 impl KeyMappingManagerInternal {
     fn handle_key_event(&self, key: &str, is_down: bool, config: &KeyMappingConfig) {
+        if !self.is_running.load(Ordering::SeqCst) {
+            return;
+        }
+
         let key_upper = key.to_uppercase();
 
-        // 维护按下按键状态集合，避免操作系统按键重复连发（Key Repeat）干扰
+        // 维护按下按键状态集合，避免操作系统按键重复连发（Key Repeat）干扰。
+        // up 也做去重：Windows 全局 Hook 与应用内键盘桥接可能同时上报同一次抬起，
+        // 若重复处理，降级为 input tap 的点击会变成双击。
         {
             let mut pressed = self.pressed_keys.lock().unwrap();
             if is_down {
                 if !pressed.insert(key_upper.clone()) {
-                    // 已经在按下状态中，忽略重复 KeyDown
                     return;
                 }
-            } else {
-                pressed.remove(&key_upper);
+            } else if !pressed.remove(&key_upper) {
+                return;
             }
         }
 
@@ -322,22 +529,7 @@ impl KeyMappingManagerInternal {
             item.y
         );
 
-        match config.injection_mode {
-            InjectionMode::DirectWindow | InjectionMode::Auto => {
-                #[cfg(windows)]
-                {
-                    if let Some(hwnd) = find_scrcpy_window(config.window_title.as_deref()) {
-                        post_mouse_event_to_window(hwnd, item.x, item.y, is_down);
-                        return;
-                    }
-                }
-                // 窗口未找到或非 Windows，通过 ADB 发送
-                self.send_adb_touch(item.x, item.y, is_down);
-            }
-            InjectionMode::AdbStream => {
-                self.send_adb_touch(item.x, item.y, is_down);
-            }
-        }
+        inject_touch(config, &self.adb_session, item.x, item.y, is_down, true);
     }
 
     /// 执行高频连点
@@ -373,6 +565,7 @@ impl KeyMappingManagerInternal {
                         item_clone.x,
                         item_clone.y,
                         true,
+                        true,
                     );
                     std::thread::sleep(std::time::Duration::from_millis(click_down_ms as u64));
 
@@ -383,6 +576,7 @@ impl KeyMappingManagerInternal {
                         item_clone.x,
                         item_clone.y,
                         false,
+                        true,
                     );
                     std::thread::sleep(std::time::Duration::from_millis(rest_ms as u64));
                 }
@@ -393,6 +587,7 @@ impl KeyMappingManagerInternal {
                     &adb_session_arc,
                     item_clone.x,
                     item_clone.y,
+                    false,
                     false,
                 );
                 log::info!("KeyMapping: Burst stopped for key={}", item_clone.key);
@@ -452,17 +647,48 @@ impl KeyMappingManagerInternal {
 
         let is_any_pressed = state.up || state.down || state.left || state.right;
 
-        if is_any_pressed {
-            // 归一化方向向量
-            let len = (dx * dx + dy * dy).sqrt();
-            if len > 0.001 {
-                dx /= len;
-                dy /= len;
+        // 归一化方向向量
+        let len = (dx * dx + dy * dy).sqrt();
+        if len > 0.001 {
+            dx /= len;
+            dy /= len;
+        }
+        let target_x = (state.center_x + dx * state.radius).clamp(0.01, 0.99);
+        let target_y = (state.center_y + dy * state.radius).clamp(0.01, 0.99);
+
+        let supports_motion = self
+            .adb_session
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|s| s.metrics.supports_motion_event)
+            .unwrap_or(false);
+
+        if !supports_motion {
+            // 设备没有 input motionevent：用「中心 -> 目标」短滑动近似摇杆，
+            // 且只在方向变化时发一次，避免大量 swipe 堵住设备输入队列。
+            let dir = (dx as i8, dy as i8);
+            if is_any_pressed {
+                if state.last_dir != Some(dir) {
+                    state.last_dir = Some(dir);
+                    inject_swipe_fallback(
+                        config,
+                        &self.adb_session,
+                        state.center_x,
+                        state.center_y,
+                        target_x,
+                        target_y,
+                    );
+                }
+                state.is_active = true;
+            } else {
+                state.last_dir = None;
+                state.is_active = false;
             }
+            return;
+        }
 
-            let target_x = (state.center_x + dx * state.radius).clamp(0.01, 0.99);
-            let target_y = (state.center_y + dy * state.radius).clamp(0.01, 0.99);
-
+        if is_any_pressed {
             if !state.is_active {
                 // 首次激活，先按下中心，再滑动到指定方向
                 state.is_active = true;
@@ -472,18 +698,24 @@ impl KeyMappingManagerInternal {
                     state.center_x,
                     state.center_y,
                     true,
+                    false,
                 );
-                std::thread::sleep(std::time::Duration::from_millis(8));
+                std::thread::sleep(Duration::from_millis(8));
             }
 
             // 移动到目标坐标
             inject_move(config, &self.adb_session, target_x, target_y);
-        } else {
-            // 全部释放，抬起手指
-            if state.is_active {
-                state.is_active = false;
-                inject_touch(config, &self.adb_session, state.center_x, state.center_y, false);
-            }
+        } else if state.is_active {
+            // 全部释放，抬起手指（摇杆不能走 tap 降级，否则会在中心多点一下）
+            state.is_active = false;
+            inject_touch(
+                config,
+                &self.adb_session,
+                state.center_x,
+                state.center_y,
+                false,
+                false,
+            );
         }
     }
 
@@ -499,133 +731,111 @@ impl KeyMappingManagerInternal {
         let adb_session_arc = self.adb_session.clone();
 
         std::thread::spawn(move || {
-            match config_clone.injection_mode {
-                InjectionMode::DirectWindow | InjectionMode::Auto => {
-                    #[cfg(windows)]
-                    {
-                        if let Some(hwnd) =
-                            find_scrcpy_window(config_clone.window_title.as_deref())
-                        {
-                            // 窗口模式下模拟连续平滑移动
-                            post_mouse_event_to_window(hwnd, start_x, start_y, true);
-                            let steps = (duration_ms / 15).max(4);
-                            for step in 1..=steps {
-                                let t = step as f32 / steps as f32;
-                                let cur_x = start_x + (end_x - start_x) * t;
-                                let cur_y = start_y + (end_y - start_y) * t;
-                                post_mouse_move_to_window(hwnd, cur_x, cur_y);
-                                std::thread::sleep(std::time::Duration::from_millis(15));
-                            }
-                            post_mouse_event_to_window(hwnd, end_x, end_y, false);
-                            return;
+            // 只有明确选择「窗口直连」才用 PostMessage。默认 auto 一律走 ADB，
+            // 否则模糊匹配可能把鼠标消息投给标题含 ADMT 的应用主窗口。
+            #[cfg(windows)]
+            {
+                if config_clone.injection_mode == InjectionMode::DirectWindow {
+                    if let Some(hwnd) = find_scrcpy_window(config_clone.window_title.as_deref()) {
+                        post_mouse_event_to_window(hwnd, start_x, start_y, true);
+                        let steps = (duration_ms / 15).max(4);
+                        for step in 1..=steps {
+                            let t = step as f32 / steps as f32;
+                            let cur_x = start_x + (end_x - start_x) * t;
+                            let cur_y = start_y + (end_y - start_y) * t;
+                            post_mouse_move_to_window(hwnd, cur_x, cur_y);
+                            std::thread::sleep(Duration::from_millis(15));
                         }
+                        post_mouse_event_to_window(hwnd, end_x, end_y, false);
+                        return;
                     }
                 }
-                _ => {}
             }
 
-            // 回退到 ADB swipe
             let mut session_guard = adb_session_arc.lock().unwrap();
             if let Some(session) = session_guard.as_mut() {
-                let is_landscape = config_clone.profile.orientation.as_deref() == Some("landscape");
-                let (base_w, base_h) = if is_landscape { (2400.0, 1080.0) } else { (1080.0, 2400.0) };
-                let sx = (start_x * base_w) as i32;
-                let sy = (start_y * base_h) as i32;
-                let ex = (end_x * base_w) as i32;
-                let ey = (end_y * base_h) as i32;
-                session.send_command(&format!(
-                    "input swipe {} {} {} {} {}",
-                    sx, sy, ex, ey, duration_ms
-                ));
+                let (sx, sy) = to_pixels(&session.metrics, &config_clone, start_x, start_y);
+                let (ex, ey) = to_pixels(&session.metrics, &config_clone, end_x, end_y);
+                session.swipe(sx, sy, ex, ey, duration_ms);
             }
         });
-    }
-
-    fn send_adb_touch(&self, x: f32, y: f32, is_down: bool) {
-        let mut session_guard = self.adb_session.lock().unwrap();
-        if let Some(session) = session_guard.as_mut() {
-            let is_landscape = self
-                .config
-                .lock()
-                .unwrap()
-                .as_ref()
-                .and_then(|c| c.profile.orientation.as_deref())
-                == Some("landscape");
-            let (base_w, base_h) = if is_landscape { (2400.0, 1080.0) } else { (1080.0, 2400.0) };
-            let px = (x * base_w) as i32;
-            let py = (y * base_h) as i32;
-            if is_down {
-                session.send_command(&format!("input motionevent DOWN {} {}", px, py));
-            } else {
-                session.send_command(&format!("input motionevent UP {} {}", px, py));
-            }
-        }
     }
 }
 
 /// 统一触控下发函数
+///
+/// `tap_fallback` 为 true 时，若设备不支持 `input motionevent`，
+/// 会在抬起时用标准 `input tap` 完成一次完整点击（Click / Burst）。
+/// 摇杆必须传 false，否则松开摇杆会在中心点多出一次点击。
 fn inject_touch(
     config: &KeyMappingConfig,
     adb_session: &Arc<Mutex<Option<AdbTouchSession>>>,
     x: f32,
     y: f32,
     is_down: bool,
+    tap_fallback: bool,
 ) {
-    match config.injection_mode {
-        InjectionMode::DirectWindow | InjectionMode::Auto => {
-            #[cfg(windows)]
-            {
-                if let Some(hwnd) = find_scrcpy_window(config.window_title.as_deref()) {
-                    post_mouse_event_to_window(hwnd, x, y, is_down);
-                    return;
-                }
+    #[cfg(windows)]
+    {
+        if config.injection_mode == InjectionMode::DirectWindow {
+            if let Some(hwnd) = find_scrcpy_window(config.window_title.as_deref()) {
+                post_mouse_event_to_window(hwnd, x, y, is_down);
+                return;
             }
         }
-        _ => {}
     }
 
-    // ADB 注入
     let mut session_guard = adb_session.lock().unwrap();
     if let Some(session) = session_guard.as_mut() {
-        let is_landscape = config.profile.orientation.as_deref() == Some("landscape");
-        let (base_w, base_h) = if is_landscape { (2400.0, 1080.0) } else { (1080.0, 2400.0) };
-        let px = (x * base_w) as i32;
-        let py = (y * base_h) as i32;
-        if is_down {
-            session.send_command(&format!("input motionevent DOWN {} {}", px, py));
-        } else {
-            session.send_command(&format!("input motionevent UP {} {}", px, py));
+        let (px, py) = to_pixels(&session.metrics, config, x, y);
+        if session.metrics.supports_motion_event {
+            session.motion(if is_down { "DOWN" } else { "UP" }, px, py);
+        } else if tap_fallback && !is_down {
+            session.tap(px, py);
         }
     }
 }
 
-/// 统一移动下发函数
+/// 统一移动下发函数（仅 motionevent 可用时有效）
 fn inject_move(
     config: &KeyMappingConfig,
     adb_session: &Arc<Mutex<Option<AdbTouchSession>>>,
     x: f32,
     y: f32,
 ) {
-    match config.injection_mode {
-        InjectionMode::DirectWindow | InjectionMode::Auto => {
-            #[cfg(windows)]
-            {
-                if let Some(hwnd) = find_scrcpy_window(config.window_title.as_deref()) {
-                    post_mouse_move_to_window(hwnd, x, y);
-                    return;
-                }
+    #[cfg(windows)]
+    {
+        if config.injection_mode == InjectionMode::DirectWindow {
+            if let Some(hwnd) = find_scrcpy_window(config.window_title.as_deref()) {
+                post_mouse_move_to_window(hwnd, x, y);
+                return;
             }
         }
-        _ => {}
     }
 
     let mut session_guard = adb_session.lock().unwrap();
     if let Some(session) = session_guard.as_mut() {
-        let is_landscape = config.profile.orientation.as_deref() == Some("landscape");
-        let (base_w, base_h) = if is_landscape { (2400.0, 1080.0) } else { (1080.0, 2400.0) };
-        let px = (x * base_w) as i32;
-        let py = (y * base_h) as i32;
-        session.send_command(&format!("input motionevent MOVE {} {}", px, py));
+        if session.metrics.supports_motion_event {
+            let (px, py) = to_pixels(&session.metrics, config, x, y);
+            session.motion("MOVE", px, py);
+        }
+    }
+}
+
+/// 无 motionevent 能力时的摇杆降级：用短滑动近似方向位移
+fn inject_swipe_fallback(
+    config: &KeyMappingConfig,
+    adb_session: &Arc<Mutex<Option<AdbTouchSession>>>,
+    sx: f32,
+    sy: f32,
+    ex: f32,
+    ey: f32,
+) {
+    let mut session_guard = adb_session.lock().unwrap();
+    if let Some(session) = session_guard.as_mut() {
+        let (x1, y1) = to_pixels(&session.metrics, config, sx, sy);
+        let (x2, y2) = to_pixels(&session.metrics, config, ex, ey);
+        session.swipe(x1, y1, x2, y2, 120);
     }
 }
 
@@ -652,7 +862,7 @@ fn find_scrcpy_window(custom_title: Option<&str>) -> Option<HWND> {
             let matches = if let Some(target) = ctx.target_title.as_ref() {
                 title.contains(target)
             } else {
-                title.contains("ADMT") || title.contains("scrcpy") || title.contains("HOUT")
+                title.contains("scrcpy")
             };
 
             if matches && IsWindowVisible(hwnd) != 0 {
@@ -694,11 +904,9 @@ fn is_target_window_active(custom_title: Option<&str>) -> bool {
             }
         }
 
-        // 默认匹配 ADMT 投屏窗口或 scrcpy 窗口
-        title.contains("ADMT")
-            || title.contains("scrcpy")
-            || title.contains("HOUT")
-            || title.contains("玩机管家")
+        // 只认精确标题或独立 scrcpy 窗口。应用主窗口的按键交给前端键盘桥接，
+        // 避免模糊包含「ADMT / 玩机管家」把主窗口当成投屏窗口。
+        title.contains("scrcpy")
     }
 }
 
@@ -1044,72 +1252,94 @@ pub async fn start_key_mapping(
         config.injection_mode
     );
 
-    // 1. 初始化 ADB 持久化会话
-    let adb_session = AdbTouchSession::new(&config.device_serial).ok();
+    // 1. 初始化 ADB 持久化会话。失败要如实报错，不能像旧版那样 .ok() 后
+    //    仍然返回 true，造成「UI 显示已启动、实际一条命令都发不出去」。
+    let adb_session = AdbTouchSession::new(&config.device_serial)?;
 
-    // 2. 存储配置
+    // 2. 存储配置与会话
     {
         let mut cfg = state.config.lock().unwrap();
         *cfg = Some(config.clone());
     }
     {
         let mut session = state.adb_session.lock().unwrap();
-        *session = adb_session;
+        *session = Some(adb_session);
     }
 
-    state.is_running.store(true, Ordering::SeqCst);
-
-    // 3. 注册全局单例
+    // 3. 注册全局单例 + 串行按键 worker（Hook 与前端桥接共用同一条队列）
     let _ = GLOBAL_MANAGER.get_or_init(|| {
-        Arc::new(KeyMappingManagerInternal {
+        let (tx, rx) = mpsc::channel::<KeyEvent>();
+        *state.event_tx.lock().unwrap() = Some(tx.clone());
+        let internal = Arc::new(KeyMappingManagerInternal {
             is_running: state.is_running.clone(),
             config: state.config.clone(),
             adb_session: state.adb_session.clone(),
             burst_tasks: state.burst_tasks.clone(),
             pressed_keys: state.pressed_keys.clone(),
             joystick_state: state.joystick_state.clone(),
-        })
+            event_tx: Arc::new(Mutex::new(Some(tx))),
+        });
+        let worker = Arc::clone(&internal);
+        std::thread::spawn(move || {
+            while let Ok(evt) = rx.recv() {
+                worker.handle_key_event(&evt.key, evt.is_down, &evt.config);
+            }
+        });
+        internal
     });
 
-    // 4. 启动 Windows 原生底层键盘 Hook 线程
+    state.is_running.store(true, Ordering::SeqCst);
+
+    // 4. 启动 Windows 原生底层键盘 Hook 线程（仅用于独立投屏窗口）
     #[cfg(windows)]
     {
         let hook_handle_arc = state.hook_handle.clone();
         let hook_thread_id_arc = state.hook_thread_id.clone();
 
-        // 如果已有 hook 先清理
-        stop_windows_hook(&hook_handle_arc, &hook_thread_id_arc);
+        // 若已有 hook 先请求退出，并等待它真正卸载，避免热重载时累积多个钩子
+        stop_windows_hook(&hook_thread_id_arc);
+        if wait_hook_exit(&hook_thread_id_arc, Duration::from_millis(600)) {
+            std::thread::spawn(move || unsafe {
+                let h_instance = winapi::um::libloaderapi::GetModuleHandleW(std::ptr::null());
+                let hook = SetWindowsHookExW(
+                    WH_KEYBOARD_LL,
+                    Some(low_level_keyboard_proc),
+                    h_instance,
+                    0,
+                );
 
-        std::thread::spawn(move || unsafe {
-            let h_instance = winapi::um::libloaderapi::GetModuleHandleW(std::ptr::null());
-            let hook = SetWindowsHookExW(
-                WH_KEYBOARD_LL,
-                Some(low_level_keyboard_proc),
-                h_instance,
-                0,
-            );
+                if hook.is_null() {
+                    log::error!("Failed to install WH_KEYBOARD_LL hook");
+                    return;
+                }
 
-            if hook.is_null() {
-                log::error!("Failed to install WH_KEYBOARD_LL hook");
-                return;
-            }
+                let thread_id = winapi::um::processthreadsapi::GetCurrentThreadId();
+                *hook_handle_arc.lock().unwrap() = Some(hook as usize);
 
-            let thread_id = winapi::um::processthreadsapi::GetCurrentThreadId();
-            *hook_handle_arc.lock().unwrap() = Some(hook as usize);
-            *hook_thread_id_arc.lock().unwrap() = Some(thread_id);
+                let mut msg: MSG = std::mem::zeroed();
+                // 预热消息队列：否则启动瞬间的 PostThreadMessage(WM_QUIT) 会丢失
+                PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_NOREMOVE);
+                *hook_thread_id_arc.lock().unwrap() = Some(thread_id);
 
-            log::info!("Windows Low-Level Keyboard Hook installed (Thread ID: {})", thread_id);
+                log::info!(
+                    "Windows Low-Level Keyboard Hook installed (Thread ID: {})",
+                    thread_id
+                );
 
-            // Windows 消息泵
-            let mut msg: MSG = std::mem::zeroed();
-            while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
-                TranslateMessage(&msg);
-                DispatchMessageW(&msg);
-            }
+                while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
 
-            UnhookWindowsHookEx(hook);
-            log::info!("Windows Low-Level Keyboard Hook uninstalled");
-        });
+                // 只由拥有 hook 的线程卸载，避免旧实现里的双重 UnhookWindowsHookEx
+                UnhookWindowsHookEx(hook);
+                *hook_handle_arc.lock().unwrap() = None;
+                *hook_thread_id_arc.lock().unwrap() = None;
+                log::info!("Windows Low-Level Keyboard Hook uninstalled");
+            });
+        } else {
+            log::warn!("KeyMapping: previous hook thread did not exit in time, keep the old one");
+        }
     }
 
     Ok(true)
@@ -1146,29 +1376,141 @@ pub async fn stop_key_mapping(state: State<'_, KeyMappingManager>) -> Result<boo
     }
 
     #[cfg(windows)]
-    stop_windows_hook(&state.hook_handle, &state.hook_thread_id);
+    stop_windows_hook(&state.hook_thread_id);
 
     Ok(true)
 }
 
 #[cfg(windows)]
-fn stop_windows_hook(
-    hook_handle: &Arc<Mutex<Option<usize>>>,
-    hook_thread_id: &Arc<Mutex<Option<u32>>>,
-) {
-    let mut handle_guard = hook_handle.lock().unwrap();
-    let mut thread_guard = hook_thread_id.lock().unwrap();
-
-    if let Some(thread_id) = thread_guard.take() {
+fn stop_windows_hook(hook_thread_id: &Arc<Mutex<Option<u32>>>) {
+    if let Some(thread_id) = hook_thread_id.lock().unwrap().as_ref().copied() {
         unsafe {
             PostThreadMessageW(thread_id, WM_QUIT, 0, 0);
         }
     }
-    if let Some(hook_ptr) = handle_guard.take() {
-        unsafe {
-            UnhookWindowsHookEx(hook_ptr as HHOOK);
+}
+
+#[cfg(windows)]
+fn wait_hook_exit(hook_thread_id: &Arc<Mutex<Option<u32>>>, timeout: Duration) -> bool {
+    let start = Instant::now();
+    while start.elapsed() < timeout {
+        if hook_thread_id.lock().unwrap().is_none() {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    false
+}
+
+/// 前端键盘桥接：应用窗口聚焦时把 DOM 键盘事件交给同一个映射引擎。
+/// 这样即使全局 Hook 安装失败（权限 / 完整性级别 / 非 Windows 平台），
+/// 在应用内按键依然可用；两条通道通过 pressed_keys 去重，不会重复注入。
+#[tauri::command]
+pub async fn inject_key_mapping_event(key: String, is_down: bool) -> Result<bool> {
+    if let Some(manager) = GLOBAL_MANAGER.get() {
+        if !manager.is_running.load(Ordering::SeqCst) {
+            return Ok(false);
+        }
+
+        // 窗口失焦时 Webview 收不到 keyup，逐一补发抬起，避免摇杆/连点卡死
+        if key == "__release_all__" {
+            let pressed: Vec<String> = manager
+                .pressed_keys
+                .lock()
+                .unwrap()
+                .iter()
+                .cloned()
+                .collect();
+            let config = manager.config.lock().unwrap().clone();
+            let tx = manager.event_tx.lock().unwrap().as_ref().cloned();
+            if let (Some(config), Some(tx)) = (config, tx) {
+                for k in pressed {
+                    let _ = tx.send(KeyEvent {
+                        key: k,
+                        is_down: false,
+                        config: config.clone(),
+                    });
+                }
+            }
+            return Ok(true);
+        }
+
+        let config = manager.config.lock().unwrap().clone();
+        let tx = manager.event_tx.lock().unwrap().as_ref().cloned();
+        if let (Some(config), Some(tx)) = (config, tx) {
+            let _ = tx.send(KeyEvent { key, is_down, config });
+            return Ok(true);
         }
     }
+    Ok(false)
+}
+
+/// 返回按键映射运行时诊断，供 UI 显示真实状态而不是「已启动」三个字
+#[tauri::command]
+pub async fn get_key_mapping_diagnostics(
+    state: State<'_, KeyMappingManager>,
+) -> Result<serde_json::Value> {
+    let running = state.is_running.load(Ordering::SeqCst);
+    let (screen_width, screen_height, motion_supported, adb_session) = {
+        let guard = state.adb_session.lock().unwrap();
+        match guard.as_ref() {
+            Some(s) => (
+                s.metrics.short_side,
+                s.metrics.long_side,
+                s.metrics.supports_motion_event,
+                true,
+            ),
+            None => (0, 0, false, false),
+        }
+    };
+
+    #[cfg(windows)]
+    let hook_installed = state.hook_thread_id.lock().unwrap().is_some();
+    #[cfg(not(windows))]
+    let hook_installed = false;
+    let event_queue_ready = state.event_tx.lock().unwrap().is_some();
+
+    let cfg = state.config.lock().unwrap().clone();
+    let (injection_mode, active_window_only, profile_name, item_count) = match cfg.as_ref() {
+        Some(c) => (
+            format!("{:?}", c.injection_mode),
+            c.active_window_only,
+            c.profile.name.clone(),
+            c.profile.items.len(),
+        ),
+        None => ("Auto".to_string(), false, String::new(), 0),
+    };
+
+    let mut issues: Vec<String> = Vec::new();
+    if running && !adb_session {
+        issues.push("ADB 会话未建立，触控命令无法下发".to_string());
+    }
+    if running && !motion_supported {
+        issues.push("设备不支持 input motionevent：点击已降级为 input tap，摇杆使用滑动近似".to_string());
+    }
+    #[cfg(windows)]
+    if running && !hook_installed {
+        issues.push("全局键盘钩子未安装，独立投屏窗口内按键不会生效（应用窗口内仍可用）".to_string());
+    }
+    #[cfg(not(windows))]
+    if running {
+        issues.push("当前平台无全局键盘钩子，请在应用窗口内按键".to_string());
+    }
+
+    Ok(serde_json::json!({
+        "running": running,
+        "adbSession": adb_session,
+        "hookInstalled": hook_installed,
+        "eventQueueReady": event_queue_ready,
+        "screenWidth": screen_width,
+        "screenHeight": screen_height,
+        "motionEventSupported": motion_supported,
+        "injectionMode": injection_mode,
+        "activeWindowOnly": active_window_only,
+        "profileName": profile_name,
+        "itemCount": item_count,
+        "issues": issues,
+    }))
 }
 
 /// 查询按键映射运行状态
@@ -1245,22 +1587,29 @@ pub async fn simulate_key_mapping_touch(
 ) -> Result<bool> {
     let adb_path = crate::cache::get_cached_adb_path();
 
-    let mut cmd = Command::new(adb_path);
+    let mut cmd = Command::new(&adb_path);
     cmd.arg("-s").arg(&device_serial).arg("shell");
 
+    // 与映射引擎共用同一份真实分辨率，避免 Studio 里点得准、实际映射却偏移
+    let (short_side, long_side) = query_screen_size(&adb_path, &device_serial);
+    let metrics = ScreenMetrics {
+        short_side,
+        long_side,
+        supports_motion_event: false,
+    };
     let is_landscape = orientation.as_deref() == Some("landscape");
-    let (base_w, base_h) = if is_landscape { (2400.0, 1080.0) } else { (1080.0, 2400.0) };
+    let (base_w, base_h) = metrics.base_size(is_landscape);
 
-    let px = (x * base_w) as i32;
-    let py = (y * base_h) as i32;
+    let px = (x.clamp(0.0, 1.0) * base_w as f32) as i32;
+    let py = (y.clamp(0.0, 1.0) * base_h as f32) as i32;
 
     match action.as_str() {
         "tap" => {
             cmd.arg("input").arg("tap").arg(px.to_string()).arg(py.to_string());
         }
         "swipe" => {
-            let ex = (end_x.unwrap_or(x) * base_w) as i32;
-            let ey = (end_y.unwrap_or(y - 0.2) * base_h) as i32;
+            let ex = (end_x.unwrap_or(x).clamp(0.0, 1.0) * base_w as f32) as i32;
+            let ey = (end_y.unwrap_or(y - 0.2).clamp(0.0, 1.0) * base_h as f32) as i32;
             let dur = duration_ms.unwrap_or(150);
             cmd.arg("input")
                 .arg("swipe")

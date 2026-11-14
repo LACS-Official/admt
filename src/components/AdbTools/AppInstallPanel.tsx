@@ -11,20 +11,7 @@ import {
   Textarea,
   Badge,
 } from "@fluentui/react-components";
-import {
-  DocumentAdd24Regular,
-  Apps24Regular,
-  Folder24Regular,
-  Delete24Regular,
-  CheckmarkCircle24Regular,
-  DismissCircle24Regular,
-  Clock24Regular,
-  Play24Regular,
-  ArrowUpload24Regular,
-  FolderOpen24Regular,
-  History24Regular,
-  Sparkle24Regular,
-} from "@fluentui/react-icons";
+import {DocumentAdd24Regular, Apps24Regular, Folder24Regular, Delete24Regular, CheckmarkCircle24Regular, DismissCircle24Regular, Clock24Regular, Play24Regular, ArrowUpload24Regular, FolderOpen24Regular, History24Regular} from "@fluentui/react-icons";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
 import { open } from "@tauri-apps/plugin-dialog";

@@ -16,6 +16,7 @@ import {
   debug as pluginDebug,
   attachLogger,
 } from "@tauri-apps/plugin-log";
+import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../stores/appStore";
 import { LogRecordingLevel } from "../types/app";
 
@@ -51,7 +52,7 @@ export class LogService {
   public isLevelAllowed(level: LogLevel): boolean {
     try {
       const recordingLevels: LogRecordingLevel[] =
-        useAppStore.getState().config.logRecordingLevels ?? ["error", "warning"];
+        useAppStore.getState().config.logRecordingLevels ?? ["error", "warning", "info"];
 
       if (level === "fatal" || level === "error") {
         return recordingLevels.includes("error");
@@ -763,8 +764,141 @@ export class LogService {
     }
   }
 
-  async refreshFromBackend(): Promise<void> {
-    this.logInfo("日志已与后端保持同步", "LogService", { count: this.logs.length });
+  /**
+   * 解析 tauri-plugin-log 的落盘行格式：
+   * [YYYY-MM-DD][HH:mm:ss][module][LEVEL] message
+   * 前端日志会以 [FE] [source] 开头，这里还原成真实来源。
+   */
+  private parsePluginLogLine(raw: string): {
+    timestamp: string;
+    level: LogLevel;
+    source: string;
+    message: string;
+  } | null {
+    const match = raw.match(
+      /^\[(\d{4}-\d{2}-\d{2})\]\[(\d{2}:\d{2}:\d{2})\]\[(.*?)\]\[([A-Z]+)\]\s*(.*)$/
+    );
+    if (!match) return null;
+
+    const levels: Record<string, LogLevel> = {
+      TRACE: "debug",
+      DEBUG: "debug",
+      INFO: "info",
+      WARN: "warning",
+      ERROR: "error",
+      FATAL: "fatal",
+    };
+    const parsedTime = new Date(`${match[1]}T${match[2]}`);
+    let message = match[5];
+    let source = match[3] || "Rust";
+
+    const frontend = message.match(/^\[FE\]\s*\[(.*?)\]\s*(.*)$/);
+    if (frontend) {
+      source = frontend[1];
+      message = frontend[2];
+    }
+
+    return {
+      timestamp: Number.isNaN(parsedTime.getTime())
+        ? new Date().toISOString()
+        : parsedTime.toISOString(),
+      level: levels[match[4]] ?? "info",
+      source,
+      message,
+    };
+  }
+
+  private inferCategory(text: string): LogCategory {
+    const lower = text.toLowerCase();
+    if (/adb|fastboot|scrcpy|device|usb|serial|edl|recovery/.test(lower)) return "device";
+    if (/flash|firmware|rom|payload|partition|slot|boot|magisk|ksu|kptools/.test(lower)) return "firmware";
+    if (/network|http|tcp|wifi|download|url|socket|proxy|github|token/.test(lower)) return "network";
+    if (/ai|openai|claude|chat|prompt|gpt/.test(lower)) return "ai";
+    if (/security|permission|auth/.test(lower)) return "security";
+    return "system";
+  }
+
+  private historyId(raw: string): string {
+    let hash = 0;
+    for (let i = 0; i < raw.length; i += 1) {
+      hash = (hash * 31 + raw.charCodeAt(i)) | 0;
+    }
+    return `hist_${hash >>> 0}_${raw.length}`;
+  }
+
+  /**
+   * 把磁盘历史日志合并进当前会话列表。历史回看不受采集级别过滤，避免用户主动载入后看不到。
+   */
+  importHistoryLines(lines: string[]): number {
+    let imported = 0;
+    for (const raw of lines) {
+      const parsed = this.parsePluginLogLine(raw);
+      if (!parsed) continue;
+      const id = this.historyId(raw);
+      if (this.seenIds.has(id)) continue;
+      const entry: StructuredLogEntry = {
+        id,
+        timestamp: parsed.timestamp,
+        level: parsed.level,
+        category: this.inferCategory(`${parsed.source} ${parsed.message}`),
+        message: parsed.message,
+        source: parsed.source,
+        context: { sessionId: "history" },
+        metadata: { version: "1.0.0", platform: "tauri" },
+      };
+      this.seenIds.add(id);
+      this.logs.push(entry);
+      imported += 1;
+    }
+
+    if (imported > 0) {
+      this.logs.sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      if (this.logs.length > this.maxLogs) {
+        const removed = this.logs.splice(0, this.logs.length - this.maxLogs);
+        removed.forEach((item) => this.seenIds.delete(item.id));
+      }
+      this.notifyListeners();
+    }
+    return imported;
+  }
+
+  /** 返回 tauri-plugin-log 的日志目录，供「打开日志目录」使用。 */
+  async getPluginLogDirectory(): Promise<string | null> {
+    try {
+      const info = await invoke<{ directory: string }>("read_plugin_log_files", { limit: 1 });
+      return info.directory;
+    } catch (error) {
+      this.logError("获取日志目录失败", "LogService", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /** 从 LogDir 载入本次会话之前的历史日志。 */
+  async refreshFromBackend(limit: number = 500): Promise<number> {
+    try {
+      const history = await invoke<{
+        directory: string;
+        files: string[];
+        lines: string[];
+      }>("read_plugin_log_files", { limit });
+      const imported = this.importHistoryLines(history.lines);
+      this.logInfo("历史日志已载入", "LogService", {
+        files: history.files.length,
+        lines: history.lines.length,
+        imported,
+        directory: history.directory,
+      });
+      return imported;
+    } catch (error) {
+      this.logError("载入历史日志失败", "LogService", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return 0;
+    }
   }
 
   dispose(): void {

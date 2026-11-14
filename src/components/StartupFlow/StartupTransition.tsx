@@ -24,7 +24,7 @@ const useStyles = makeStyles({
     left: 0,
     width: '100%',
     height: '100%',
-    background: 'linear-gradient(135deg, var(--colorNeutralBackground1) 0%, var(--colorNeutralBackground2) 100%)',
+    background: 'var(--colorNeutralBackground1)',
   },
   
   curtain: {
@@ -60,7 +60,7 @@ const StartupTransition: React.FC<StartupTransitionProps> = ({
         setShowCurtain(false);
         onTransitionComplete?.();
         onComplete?.();
-      }, 800); // 过渡动画持续时间
+      }, 450); // 过渡动画持续时间
 
       return () => clearTimeout(timer);
     }
@@ -68,21 +68,15 @@ const StartupTransition: React.FC<StartupTransitionProps> = ({
 
   const curtainVariants = {
     hidden: {
-      clipPath: 'circle(0% at 50% 50%)',
+      opacity: 0,
     },
     visible: {
-      clipPath: 'circle(150% at 50% 50%)',
-      transition: {
-        duration: 0.6,
-        ease: "easeInOut",
-      }
+      opacity: 1,
+      transition: { duration: 0.2 },
     },
     exit: {
-      clipPath: 'circle(0% at 50% 50%)',
-      transition: {
-        duration: 0.4,
-        ease: "easeIn",
-      }
+      opacity: 0,
+      transition: { duration: 0.2 },
     }
   };
 

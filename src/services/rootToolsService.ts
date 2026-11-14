@@ -1,6 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { appDataDir, join } from "@tauri-apps/api/path";
+import { writeFile, mkdir, stat } from "@tauri-apps/plugin-fs";
 import { PatchEngineType } from "./oneClickRootService";
 import { useAppStore } from "../stores/appStore";
 
@@ -116,6 +119,166 @@ export const ROOT_TOOL_VERSIONS: Record<PatchEngineType, ToolVersionInfo[]> = {
 
 const GH_PROXY_PREFIX = "https://ghproxy.net/";
 
+// ===== 在线数据源健康状态（供 UI 显示在线 / 离线）=====
+export interface RootDataSourceStatus {
+  online: boolean; // 是否有任一在线数据源成功
+  lastSyncedAt: string | null; // 最近一次成功同步时间
+  lastError: string | null; // 最近一次失败原因
+  fromCache: boolean; // 当前展示是否来自离线静态兜底 / 缓存
+  toolVersionsOnline: boolean; // 工具版本在线数据是否获取成功
+  modulesOnline: boolean; // 模块列表在线数据是否获取成功
+}
+
+let rootDataSourceState: RootDataSourceStatus = {
+  online: false,
+  lastSyncedAt: null,
+  lastError: null,
+  fromCache: true,
+  toolVersionsOnline: false,
+  modulesOnline: false,
+};
+
+export function getRootDataSourceStatus(): RootDataSourceStatus {
+  const online =
+    rootDataSourceState.toolVersionsOnline || rootDataSourceState.modulesOnline;
+  return {
+    ...rootDataSourceState,
+    online,
+    fromCache: !online,
+  };
+}
+
+/** 供两个 root 服务各自上报在线拉取结果，统一汇总到同一份状态 */
+export function reportRootDataSource(patch: Partial<RootDataSourceStatus>): void {
+  rootDataSourceState = { ...rootDataSourceState, ...patch };
+}
+
+const GH_API_HEADERS: Record<string, string> = {
+  Accept: "application/vnd.github+json",
+};
+
+/**
+ * 用 Tauri HTTP 插件发起 GET，绕过 WebView CORS，并带真实超时。
+ * 失败一律抛出明确错误，绝不静默吞掉。
+ */
+async function tauriFetchWithTimeout(
+  url: string,
+  timeoutMs: number,
+  headers?: Record<string, string>
+): Promise<Response> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`请求超时 (${timeoutMs}ms): ${url}`));
+    }, timeoutMs);
+  });
+
+  try {
+    const resp = await Promise.race([
+      tauriFetch(url, {
+        method: "GET",
+        headers: { "User-Agent": "ADMT/1.0", ...(headers || {}) },
+        signal: controller.signal,
+      }),
+      timeout,
+    ]);
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}: ${url}`);
+    }
+    return resp;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/** 复用给其它 root 服务：带超时、明确失败的 GitHub Releases JSON 拉取 */
+export async function fetchGithubJson<T>(url: string, timeoutMs = 12000): Promise<T> {
+  const resp = await tauriFetchWithTimeout(url, timeoutMs, GH_API_HEADERS);
+  return (await resp.json()) as T;
+}
+
+interface GhRelease {
+  tag_name?: string;
+  name?: string;
+  published_at?: string;
+  body?: string;
+  assets?: Array<{
+    name?: string;
+    browser_download_url?: string;
+    size?: number;
+  }>;
+}
+
+/** 每个引擎对应的 GitHub Releases 仓库（多仓库结果合并去重） */
+const ENGINE_REPOS: Record<PatchEngineType, { repo: string; toolName: string }[]> = {
+  Magisk: [{ repo: "topjohnwu/Magisk", toolName: "Magisk" }],
+  KernelSU: [{ repo: "tiann/KernelSU", toolName: "KernelSU" }],
+  APatch: [{ repo: "bmax121/APatch", toolName: "APatch" }],
+  "SukiSU Ultra": [
+    { repo: "KernelSU-Next/KernelSU-Next", toolName: "KernelSU-Next" },
+    { repo: "ShirkNeko/SukiSU-Ultra", toolName: "SukiSU Ultra" },
+  ],
+};
+
+function parseReleases(rels: GhRelease[], toolName: string): ToolVersionInfo[] {
+  const list: ToolVersionInfo[] = [];
+  for (const rel of rels) {
+    if (!rel.assets || rel.assets.length === 0) continue;
+    const apk = rel.assets.find(
+      (a) => typeof a.name === "string" && a.name.toLowerCase().endsWith(".apk")
+    );
+    if (!apk || !apk.browser_download_url || !apk.name) continue;
+
+    const tag = rel.tag_name || rel.name || "";
+    const cleanTag = tag.startsWith("v") ? tag : `v${tag}`;
+    let desc = "";
+    if (rel.body) {
+      desc = rel.body.split("\n")[0].replace(/^[#*\s-]+/, "").trim();
+      if (desc.length > 60) desc = desc.slice(0, 58) + "...";
+    }
+    if (!desc) desc = `${toolName} 官方发布版本，包含完整修补管理器`;
+    const dateStr = rel.published_at ? rel.published_at.slice(0, 10) : "";
+
+    list.push({
+      id: `${toolName.toLowerCase().replace(/[^a-z0-9]/g, "")}_${cleanTag}`,
+      version: cleanTag,
+      label: `${toolName} ${cleanTag}${dateStr ? ` (${dateStr})` : ""}`,
+      downloadUrl: apk.browser_download_url,
+      filename: apk.name,
+      description: desc,
+      releaseDate: dateStr,
+      sizeBytes: apk.size,
+      isRealOnline: true,
+      sourceType: "github_release",
+    });
+  }
+  return list;
+}
+
+/** 在线优先、按版本号去重后与静态兜底合并 */
+function mergeVersions(engine: PatchEngineType, online: ToolVersionInfo[]): ToolVersionInfo[] {
+  const staticList = ROOT_TOOL_VERSIONS[engine] || [];
+  if (online.length === 0) return staticList.map((v) => ({ ...v }));
+
+  const seen = new Set<string>();
+  const merged: ToolVersionInfo[] = [];
+  for (const item of online) {
+    const key = item.version.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push({ ...item, isLatest: merged.length === 0 });
+  }
+  for (const item of staticList) {
+    const key = item.version.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push({ ...item, isLatest: false });
+  }
+  return merged;
+}
+
 class RootToolsService {
   private static instance: RootToolsService;
   private downloadedCache: Set<string> = new Set();
@@ -197,6 +360,16 @@ class RootToolsService {
     return ROOT_TOOL_VERSIONS[engineType] || [];
   }
 
+  /** 将在线拉取到的版本列表写入缓存，使 getAvailableVersions 也能反映在线数据 */
+  public cacheOnlineVersions(record: Record<PatchEngineType, ToolVersionInfo[]>): void {
+    for (const [k, v] of Object.entries(record)) {
+      if (v && v.length > 0) {
+        this.realVersionsCache.set(k as PatchEngineType, v);
+      }
+    }
+    this.saveCache();
+  }
+
   /**
    * 通过官方 API 或 GitHub Releases 动态拉取真实的最新版本列表
    */
@@ -256,27 +429,25 @@ class RootToolsService {
     try {
       const rawUrl = "https://raw.githubusercontent.com/topjohnwu/magisk-files/master/stable.json";
       const targetUrl = useMirror ? `${GH_PROXY_PREFIX}${rawUrl}` : rawUrl;
-      const resp = await fetch(targetUrl, { signal: AbortSignal.timeout(6000) });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.magisk) {
-          const ver = data.magisk.version;
-          const directLink = data.magisk.link;
-          results.push({
-            id: `magisk_v${ver}`,
-            version: `v${ver}`,
-            label: `Magisk v${ver} (官方稳定发布通道)`,
-            downloadUrl: directLink,
-            filename: `Magisk-v${ver}.apk`,
-            description: `Magisk 官方稳定版本 (Code ${data.magisk.versionCode || "-"})`,
-            isLatest: true,
-            isRealOnline: true,
-            sourceType: "official_api",
-          });
-        }
+      const resp = await tauriFetchWithTimeout(targetUrl, 6000);
+      const data = await resp.json();
+      if (data.magisk) {
+        const ver = data.magisk.version;
+        const directLink = data.magisk.link;
+        results.push({
+          id: `magisk_v${ver}`,
+          version: `v${ver}`,
+          label: `Magisk v${ver} (官方稳定发布通道)`,
+          downloadUrl: directLink,
+          filename: `Magisk-v${ver}.apk`,
+          description: `Magisk 官方稳定版本 (Code ${data.magisk.versionCode || "-"})`,
+          isLatest: true,
+          isRealOnline: true,
+          sourceType: "official_api",
+        });
       }
-    } catch (_err) {
-      // ignore official magisk fetch error
+    } catch (err) {
+      console.warn("[RootTools] Magisk 官方稳定清单拉取失败:", err);
     }
 
     // 2. 尝试从 GitHub Releases 获取历史与最新列表
@@ -287,8 +458,8 @@ class RootToolsService {
           results.push(ghv);
         }
       }
-    } catch (_err) {
-      // ignore github releases error
+    } catch (err) {
+      console.warn("[RootTools] Magisk GitHub Releases 拉取失败:", err);
     }
 
     return results;
@@ -303,16 +474,8 @@ class RootToolsService {
     _useMirror: boolean
   ): Promise<ToolVersionInfo[]> {
     const apiUrl = `https://api.github.com/repos/${repo}/releases?per_page=6`;
-    const resp = await fetch(apiUrl, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-      signal: AbortSignal.timeout(7000),
-    });
-
-    if (!resp.ok) {
-      throw new Error(`GitHub API HTTP ${resp.status}`);
-    }
-
-    const releases = await resp.json();
+    // 使用 Tauri HTTP 插件绕过 WebView CORS，带真实超时，失败抛出明确错误
+    const releases = await fetchGithubJson<any[]>(apiUrl, 7000);
     if (!Array.isArray(releases)) {
       return [];
     }
@@ -361,6 +524,59 @@ class RootToolsService {
     }
 
     return list;
+  }
+
+  /**
+   * 校验落盘文件真实存在且大小 > 0。
+   * 优先用 plugin-fs stat 读取磁盘真实大小；若 stat 命令未放行，
+   * 退回调用方已知的写入字节长度（仅 plugin-fs 落盘路径有该值）。
+   */
+  private async verifyDownloadedFile(
+    filePath: string,
+    writtenByteLength: number
+  ): Promise<boolean> {
+    try {
+      const info = await stat(filePath);
+      return typeof info.size === "number" && info.size > 0;
+    } catch {
+      return writtenByteLength > 0;
+    }
+  }
+
+  /** 统一处理「真实落盘成功」后的缓存与全局状态栏 / 下载指示器联动 */
+  private finishDownloadSuccess(
+    tool: ToolVersionInfo,
+    taskId: string,
+    filePath: string,
+    onProgress: (percent: number, status: string) => void
+  ): { success: boolean; filePath?: string; message: string } {
+    this.downloadedCache.add(tool.id);
+    this.downloadedFilesMap.set(tool.id, filePath);
+    this.saveCache();
+
+    onProgress(100, `工具包已成功就绪: ${tool.filename}`);
+    useAppStore.getState().setGlobalDownload({
+      taskId,
+      fileName: tool.filename,
+      progress: 100,
+      status: "completed",
+    });
+    useAppStore.getState().setStatusBarMessage({
+      type: "success",
+      message: `工具包下载就绪: ${tool.filename}`,
+      duration: 3500,
+    });
+    setTimeout(() => {
+      if (useAppStore.getState().globalDownload?.taskId === taskId) {
+        useAppStore.getState().setGlobalDownload(null);
+      }
+    }, 3500);
+
+    return {
+      success: true,
+      filePath,
+      message: `下载成功: ${filePath}`,
+    };
   }
 
   /**
@@ -452,41 +668,52 @@ class RootToolsService {
         };
       } catch (backendErr: any) {
         if (unlistenProgress) unlistenProgress();
-        console.warn("[RootTools] invoke('download_file') 失败，尝试备用网络下载:", backendErr);
+        console.warn("[RootTools] invoke('download_file') 失败，尝试备用下载:", backendErr);
 
-        // 备用方式：前端 fetch blob 写入
-        onProgress(40, `正在通过直链网络拉取数据 (${tool.filename})...`);
-        const resp = await fetch(finalUrl);
-        if (!resp.ok) {
-          throw new Error(`网络请求失败: HTTP ${resp.status}`);
-        }
-        onProgress(85, `数据已拉取，正在校验完整性...`);
-
-        this.downloadedCache.add(tool.id);
-        this.saveCache();
-        onProgress(100, `工具包已缓存就绪: ${tool.filename}`);
-
-        useAppStore.getState().setGlobalDownload({
-          taskId,
-          fileName: tool.filename,
-          progress: 100,
-          status: "completed",
-        });
-        useAppStore.getState().setStatusBarMessage({
-          type: "success",
-          message: `工具包已缓存就绪: ${tool.filename}`,
-          duration: 3500,
-        });
-        setTimeout(() => {
-          if (useAppStore.getState().globalDownload?.taskId === taskId) {
-            useAppStore.getState().setGlobalDownload(null);
+        // 备用方式 1：改用另一条后端下载命令真实落盘。
+        // download_apk 真实签名：url / file_name / is_direct（JS 侧为 camelCase 的 url/fileName/isDirect）。
+        try {
+          onProgress(40, `备用通道：通过后端命令下载并落盘 (${tool.filename})...`);
+          const backendPath = await invoke<string>("download_apk", {
+            url: finalUrl,
+            fileName: tool.filename,
+            isDirect: true,
+          });
+          if (!backendPath) {
+            throw new Error("后端下载命令未返回有效文件路径");
           }
-        }, 3500);
+          if (!(await this.verifyDownloadedFile(backendPath, 0))) {
+            throw new Error("后端落盘文件为空或无法校验文件大小");
+          }
+          return this.finishDownloadSuccess(tool, taskId, backendPath, onProgress);
+        } catch (apkErr: any) {
+          console.warn(
+            "[RootTools] download_apk 备用失败，回退到 plugin-fs 落盘:",
+            apkErr?.message || apkErr
+          );
+        }
 
-        return {
-          success: true,
-          message: `工具包已缓存就绪: ${tool.filename}`,
-        };
+        // 备用方式 2：经 Tauri HTTP 插件拉取字节，用 plugin-fs 写入 appDataDir 持久化目录。
+        // capabilities/default.json 已放行 fs:allow-write-file / fs:allow-mkdir 且作用域含 $APP/**。
+        onProgress(55, `备用通道：拉取数据并写入持久化目录 (${tool.filename})...`);
+        const resp = await tauriFetchWithTimeout(finalUrl, 30000);
+        const bytes = new Uint8Array(await resp.arrayBuffer());
+        if (bytes.byteLength === 0) {
+          throw new Error("下载内容为空 (0 字节)，拒绝标记为已下载");
+        }
+
+        onProgress(85, `数据已拉取，正在写入磁盘并校验...`);
+        const baseDir = await appDataDir();
+        const targetDir = await join(baseDir, "root-tools");
+        await mkdir(targetDir, { recursive: true });
+        const filePath = await join(targetDir, tool.filename);
+        await writeFile(filePath, bytes);
+
+        // 落盘后必须校验文件大小 > 0，才允许加入缓存并返回成功；任何失败都向上抛出明确错误。
+        if (!(await this.verifyDownloadedFile(filePath, bytes.byteLength))) {
+          throw new Error("文件落盘后校验失败（大小为 0 或无法读取）");
+        }
+        return this.finishDownloadSuccess(tool, taskId, filePath, onProgress);
       }
     } catch (err: any) {
       const errMsg = err.message || String(err);
@@ -516,3 +743,80 @@ class RootToolsService {
 }
 
 export const rootToolsService = RootToolsService.getInstance();
+
+/**
+ * 通过 GitHub Releases API 拉取 Magisk / KernelSU / KernelSU-Next / APatch / SukiSU-Ultra
+ * 的最新 release 版本号与安装包直链，与内置静态列表合并去重（在线优先）。
+ * 全部失败时返回静态列表；每个请求独立超时，失败原因记录到数据源状态，绝不静默吞掉。
+ */
+export async function fetchLatestRootToolVersions(): Promise<
+  Record<PatchEngineType, ToolVersionInfo[]>
+> {
+  const engines = Object.keys(ENGINE_REPOS) as PatchEngineType[];
+  const errors: string[] = [];
+  let anyOnline = false;
+
+  const tasks = engines.map(async (engine) => {
+    const repos = ENGINE_REPOS[engine];
+    const results = await Promise.allSettled(
+      repos.map(async ({ repo, toolName }) => {
+        const rels = await fetchGithubJson<GhRelease[]>(
+          `https://api.github.com/repos/${repo}/releases?per_page=6`
+        );
+        if (!Array.isArray(rels)) {
+          throw new Error(`${repo} 返回数据格式异常`);
+        }
+        return parseReleases(rels, toolName);
+      })
+    );
+
+    const online: ToolVersionInfo[] = [];
+    for (const r of results) {
+      if (r.status === "fulfilled") {
+        online.push(...r.value);
+      } else {
+        const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+        errors.push(`${engine}: ${msg}`);
+        console.warn(`[RootTools] 拉取在线版本失败 (${engine}):`, msg);
+      }
+    }
+
+    // 多仓库之间按版本号去重
+    const deduped: ToolVersionInfo[] = [];
+    const seen = new Set<string>();
+    for (const item of online) {
+      const key = item.version.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(item);
+    }
+    if (deduped.length > 0) anyOnline = true;
+    return { engine, list: mergeVersions(engine, deduped) };
+  });
+
+  const settled = await Promise.all(tasks);
+  const record = {} as Record<PatchEngineType, ToolVersionInfo[]>;
+  for (const s of settled) {
+    record[s.engine] = s.list;
+  }
+
+  if (anyOnline) {
+    rootToolsService.cacheOnlineVersions(record);
+    reportRootDataSource({
+      lastSyncedAt: new Date().toISOString(),
+      lastError: errors.length > 0 ? errors.join(" | ") : null,
+      toolVersionsOnline: true,
+    });
+  } else {
+    // 全部失败：明确降级为静态列表
+    reportRootDataSource({
+      lastError: errors.length > 0 ? errors.join(" | ") : "所有在线工具版本数据源均不可用",
+      toolVersionsOnline: false,
+    });
+    for (const engine of engines) {
+      record[engine] = (ROOT_TOOL_VERSIONS[engine] || []).map((v) => ({ ...v }));
+    }
+  }
+
+  return record;
+}

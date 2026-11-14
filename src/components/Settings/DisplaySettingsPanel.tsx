@@ -14,15 +14,7 @@ import {
 } from "@fluentui/react-components";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
-import {
-  Color24Regular,
-  ArrowReset24Regular,
-  WeatherSunny20Regular,
-  WeatherMoon20Regular,
-  Desktop20Regular,
-  Sparkle20Regular,
-  Eye20Regular,
-} from "@fluentui/react-icons";
+import {Color24Regular, ArrowReset24Regular, WeatherSunny20Regular, WeatherMoon20Regular, Desktop20Regular, Eye20Regular} from "@fluentui/react-icons";
 import { ChromePicker } from 'react-color';
 import { useTranslation } from "react-i18next";
 import confetti from "canvas-confetti";
@@ -473,7 +465,6 @@ const DisplaySettingsPanel: React.FC = () => {
                 onChange={(_, data) => setShowTitleBarButtons(data.checked === true)}
               />
             </div>
-
 
           </div>
         </Card>

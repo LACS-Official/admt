@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from '@tauri-apps/api/core';
-import {
-  makeStyles,
-  mergeClasses,
-  Text,
-  Spinner,
-  tokens,
-} from "@fluentui/react-components";
+import {makeStyles, mergeClasses, Text, Spinner} from "@fluentui/react-components";
 import {
   Checkmark24Regular,
   Warning24Regular,
@@ -18,7 +12,6 @@ import {
 } from "@fluentui/react-icons";
 import { useAppStore, StatusBarMessage } from "../../stores/appStore";
 import { NotificationMessage } from "../../types/app";
-
 
 const useStyles = makeStyles({
   statusBar: {
@@ -178,8 +171,7 @@ const StatusBar: React.FC = () => {
         const rawData = await invoke('read_resource_file', {
           path: `music/${soundFile}`
         });
-        
-        
+
         // 确保数据存在
         if (!rawData) {
           console.error(`获取${type}音效文件数据为空`);
@@ -202,8 +194,7 @@ const StatusBar: React.FC = () => {
           console.error(`无法识别的${type}音效数据类型`);
           return;
         }
-        
-        
+
         // 创建Blob对象和Blob URL
         const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
         const blobUrl = URL.createObjectURL(blob);
@@ -242,7 +233,6 @@ const StatusBar: React.FC = () => {
       console.error(`创建${type}音效失败:`, error);
     }
   };
-
 
 
   const [currentNotification, setCurrentNotification] = useState<NotificationMessage | null>(null);
@@ -397,7 +387,6 @@ const StatusBar: React.FC = () => {
         return <Info24Regular className={styles.notificationIcon} />;
     }
   };
-
 
 
   // 获取状态栏消息的图标

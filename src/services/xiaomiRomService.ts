@@ -215,7 +215,31 @@ export interface XiaomiRomInfo {
   region: string;
   downloadUrl?: string;
   filename?: string;
-  source: "official_api" | "ota_cdn" | "community" | "manual";
+  source: "official_api" | "ota_cdn" | "community" | "manual" | "unavailable";
+  /** 直链不可用时的具体原因，供调用方展示 */
+  reason?: string;
+}
+
+/** 校验拼接出来的 CDN 直链是否真实可达，避免把猜测的 404 链接交给下载流程 */
+async function verifyRomUrlReachable(url: string): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await tauriFetch(url, {
+      method: "GET",
+      headers: { Range: "bytes=0-0" },
+      signal: controller.signal,
+    });
+    const contentType = response.headers.get("content-type") || "";
+    return (
+      (response.status === 200 || response.status === 206) &&
+      !contentType.toLowerCase().includes("text/html")
+    );
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -268,17 +292,22 @@ export async function queryXiaomiOfficialRom(device: DeviceInfo): Promise<Xiaomi
     // 降级使用官方 CDN 构造
   }
 
-  // 降级方案：通用官方 BigOTA CDN 直链规则
+  // 降级方案：通用官方 BigOTA CDN 直链规则。拼接出的地址必须先验证可达，
+  // 否则返回空链接让调用方明确提示，而不是把 404 页面交给镜像提取流程。
   const defaultFilename = `miui_${deviceCode.toUpperCase()}_${romVersion}.zip`;
   const defaultUrl = `https://bigota.d.miui.com/${romVersion}/${defaultFilename}`;
+  const reachable = romVersion ? await verifyRomUrlReachable(defaultUrl) : false;
 
   return {
     deviceCode,
     romVersion,
     region,
-    downloadUrl: defaultUrl,
+    downloadUrl: reachable ? defaultUrl : "",
     filename: defaultFilename,
-    source: "ota_cdn",
+    source: reachable ? "ota_cdn" : "unavailable",
+    reason: reachable
+      ? undefined
+      : "未能从官方索引取到该机型的完整包直链，请手动输入链接或改用本地固件包",
   };
 }
 

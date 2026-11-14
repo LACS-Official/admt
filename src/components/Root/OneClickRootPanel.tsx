@@ -15,25 +15,18 @@ import {
   Badge,
   Divider,
   Spinner,
+  MessageBar,
 } from "@fluentui/react-components";
-import {
-  Play24Regular,
-  Folder24Regular,
-  ArrowSync24Regular,
-  Dismiss24Regular,
-  CheckmarkCircle24Regular,
-  Warning24Regular,
-  ArrowDownload24Regular,
-  Document24Regular,
-  ChevronDown24Regular,
-  ChevronUp24Regular,
-} from "@fluentui/react-icons";
+import {Play24Regular, Folder24Regular, ArrowSync24Regular, Dismiss24Regular, CheckmarkCircle24Regular, ArrowDownload24Regular, Document24Regular, ChevronDown24Regular, ChevronUp24Regular, Info24Regular} from "@fluentui/react-icons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { DeviceInfo } from "../../types/device";
 import {
   oneClickRootService,
   PatchEngineType,
   WorkflowProgressState,
+  EngineCapability,
+  RootPatchCapabilities,
+  PersistedWorkflow,
 } from "../../services/oneClickRootService";
 import {
   isXiaomiDevice,
@@ -42,13 +35,35 @@ import {
   formatXiaomiVersionFriendly,
   queryXiaomiOfficialRom,
 } from "../../services/xiaomiRomService";
-import {
-  ROOT_TOOL_VERSIONS,
-  rootToolsService,
-  ToolVersionInfo,
-} from "../../services/rootToolsService";
+import {rootToolsService, ToolVersionInfo} from "../../services/rootToolsService";
 import { deviceService } from "../../services/deviceService";
 import { verifySecurityAction } from "../Common/SecurityVerificationDialog";
+
+function msgOf(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+// 新 WorkflowStepId 归并到原有 5 步视觉（相邻步骤并入同一高亮）
+const STEP_GROUPS: Record<number, string[]> = {
+  1: ["check_device"],
+  2: ["acquire_image", "backup_image"],
+  3: ["patch_image", "device_patch", "verify_image"],
+  4: ["reboot_fastboot", "flash_fastboot"],
+  5: ["reboot_system", "verify_root", "completed"],
+};
+
+function stepGroupOf(step: string): number {
+  for (const [group, steps] of Object.entries(STEP_GROUPS)) {
+    if (steps.includes(step)) return Number(group);
+  }
+  return 0;
+}
+
+const MODE_LABELS: Record<string, string> = {
+  pc_native: "PC 原生修补",
+  device_assisted: "设备端辅助",
+  unavailable: "不可用",
+};
 
 const useStyles = makeStyles({
   container: {
@@ -59,6 +74,9 @@ const useStyles = makeStyles({
     height: "100%",
     boxSizing: "border-box",
     overflow: "hidden",
+    "& .fui-Button": {
+      borderRadius: "9999px",
+    },
   },
   layoutBoth: {
     display: "grid",
@@ -195,6 +213,48 @@ const useStyles = makeStyles({
     paddingTop: tokens.spacingVerticalM,
     borderTop: "1px solid var(--colorNeutralStroke2)",
   },
+  noticeBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    padding: "10px 16px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "14px",
+    flexShrink: 0,
+  },
+  infoBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  actionRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+    alignItems: "center",
+  },
+  deviceAssist: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    padding: "12px 14px",
+    backgroundColor: "var(--colorNeutralBackground2)",
+    border: "1px solid var(--colorNeutralStroke2)",
+    borderRadius: "14px",
+  },
+  mono: {
+    fontFamily: tokens.fontFamilyMonospace,
+    fontSize: "11px",
+    wordBreak: "break-all",
+  },
+  capabilityRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+  },
 });
 
 interface OneClickRootPanelProps {
@@ -222,6 +282,21 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
   const [autoFlash, setAutoFlash] = useState(true);
   const [autoReboot, setAutoReboot] = useState(true);
 
+  // 引擎能力 / 新增工作流配置 / 断点续跑 / 设备端辅助
+  const [capabilities, setCapabilities] = useState<RootPatchCapabilities | null>(null);
+  const [capabilitiesLoading, setCapabilitiesLoading] = useState(false);
+  const [capabilitiesError, setCapabilitiesError] = useState<string | null>(null);
+  const [patcherPath, setPatcherPath] = useState("");
+  const [backupImage, setBackupImage] = useState(true);
+  const [rollbackOnFailure, setRollbackOnFailure] = useState(true);
+  const [acknowledgeUnknownBootloader, setAcknowledgeUnknownBootloader] = useState(false);
+  const [vbmetaPath, setVbmetaPath] = useState("");
+  const [persisted, setPersisted] = useState<PersistedWorkflow | null>(null);
+  const [deviceOutputPath, setDeviceOutputPath] = useState("");
+  const [scannedImages, setScannedImages] = useState<string[]>([]);
+  const [selectedScannedImage, setSelectedScannedImage] = useState("");
+  const [isScanningImages, setIsScanningImages] = useState(false);
+
   // 下载工具包状态
   const [isDownloadingTool, setIsDownloadingTool] = useState(false);
   const [toolDownloadStatus, setToolDownloadStatus] = useState("");
@@ -243,6 +318,7 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
   const [isStatusExpanded, setIsStatusExpanded] = useState<boolean>(false);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
+  const lastSessionKeyRef = useRef("");
 
   const isXiaomi = isXiaomiDevice(device);
   const deviceCode = device ? extractXiaomiDeviceCode(device) : "";
@@ -328,6 +404,133 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [workflowState.logs]);
 
+  // 引擎能力探测与断点续跑记录
+  const loadCapabilities = async () => {
+    setCapabilitiesLoading(true);
+    setCapabilitiesError(null);
+    try {
+      const caps = await oneClickRootService.getCapabilities();
+      setCapabilities(caps);
+    } catch (e) {
+      setCapabilitiesError(msgOf(e));
+    } finally {
+      setCapabilitiesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCapabilities();
+    try {
+      const saved = oneClickRootService.loadPersisted();
+      if (
+        saved &&
+        saved.state.currentStep !== "idle" &&
+        saved.state.currentStep !== "completed"
+      ) {
+        setPersisted(saved);
+      }
+    } catch {
+      // 无持久化记录时忽略
+    }
+  }, []);
+
+  // 需要设备端辅助时自动展开执行状态卡片
+  useEffect(() => {
+    if (workflowState.needsDeviceAction) {
+      setIsStatusExpanded(true);
+    }
+  }, [workflowState.needsDeviceAction]);
+
+  // 设备端会话变化时初始化产物路径与扫描结果
+  useEffect(() => {
+    const session = workflowState.deviceSession;
+    if (workflowState.needsDeviceAction && session) {
+      const key = `${session.deviceInput}|${session.suggestedOutput}`;
+      if (key !== lastSessionKeyRef.current) {
+        lastSessionKeyRef.current = key;
+        setDeviceOutputPath(session.suggestedOutput || "");
+        setScannedImages([]);
+        setSelectedScannedImage("");
+      }
+    } else {
+      lastSessionKeyRef.current = "";
+    }
+  }, [workflowState.needsDeviceAction, workflowState.deviceSession]);
+
+  const selectedCapability: EngineCapability | undefined = capabilities?.engines.find(
+    (item) => item.engine.toLowerCase() === patchType.toLowerCase()
+  );
+  const engineUnavailable =
+    !!selectedCapability &&
+    (selectedCapability.mode === "unavailable" || selectedCapability.available === false);
+  // pc_native（Magisk）必须由用户指定安装包路径
+  const isPcNative = patchType === "Magisk" || selectedCapability?.mode === "pc_native";
+  const patcherPathMissing = isPcNative && !patcherPath.trim();
+  const canStart =
+    !!device && !isExecuting && !engineUnavailable && !patcherPathMissing;
+  const activeStepGroup = stepGroupOf(workflowState.currentStep);
+
+  const handleSelectPatcher = async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "Magisk 安装包", extensions: ["apk"] }],
+    });
+    if (typeof selected === "string") setPatcherPath(selected);
+  };
+
+  const handleScanDeviceImages = async () => {
+    if (!device?.serial || isScanningImages) return;
+    setIsScanningImages(true);
+    try {
+      const paths = await oneClickRootService.scanDevicePatchedImages(device.serial);
+      setScannedImages(paths || []);
+    } catch (e) {
+      setWorkflowState((prev) => ({
+        ...prev,
+        logs: [
+          ...prev.logs,
+          `[${new Date().toLocaleTimeString()}] 扫描设备修补产物失败: ${msgOf(e)}`,
+        ],
+      }));
+    } finally {
+      setIsScanningImages(false);
+    }
+  };
+
+  const handleSubmitDeviceImage = () => {
+    const path = (selectedScannedImage || deviceOutputPath).trim();
+    if (!path) return;
+    oneClickRootService.submitDevicePatchedImage(path);
+  };
+
+  const handleResumeWorkflow = async () => {
+    if (!persisted || isExecuting) return;
+    // 续跑若涉及自动烧录，保持与新建任务一致的二次安全验证
+    if (persisted.config.autoFlash) {
+      const passed = await verifySecurityAction("rootFlash", "继续上次 Root 镜像修补与 Fastboot 烧录");
+      if (!passed) return;
+    }
+    setIsStatusExpanded(true);
+    setIsConfigExpanded(false);
+    setIsExecuting(true);
+    try {
+      await oneClickRootService.executeWorkflow(
+        { ...persisted.config, resume: true },
+        (state) => setWorkflowState(state)
+      );
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsExecuting(false);
+      setPersisted(null);
+    }
+  };
+
+  const handleClearPersisted = () => {
+    oneClickRootService.clearPersisted();
+    setPersisted(null);
+  };
+
   const fetchOfficialXiaomiRom = async () => {
     if (!device) return;
     setIsQueryingRom(true);
@@ -382,7 +585,8 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
 
   // 一键开始执行 Root 流程
   const handleStartWorkflow = async () => {
-    if (!device) return;
+    if (!canStart) return;
+    setPersisted(null);
 
     // 执行时：展开执行状态卡片，并折叠参数配置卡片
     setIsStatusExpanded(true);
@@ -416,6 +620,11 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
           targetPartition,
           autoFlash,
           autoReboot,
+          patcherPath: isPcNative ? patcherPath.trim() : undefined,
+          backupImage,
+          rollbackOnFailure,
+          acknowledgeUnknownBootloader,
+          vbmetaPath: vbmetaPath.trim() || undefined,
         },
         (state) => {
           setWorkflowState(state);
@@ -433,6 +642,36 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
 
   return (
     <div className={styles.container}>
+      {persisted && !isExecuting && (
+        <div className={styles.noticeBar}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <Info24Regular style={{ fontSize: "20px" }} />
+            <Text weight="semibold" size={300}>检测到上次未完成的任务</Text>
+            <Badge appearance="outline" color="warning">{persisted.state.currentStep}</Badge>
+            <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+              保存于 {new Date(persisted.savedAt).toLocaleString()} · {persisted.state.statusMessage}
+            </Text>
+          </div>
+          <div className={styles.actionRow}>
+            <Button
+              appearance="primary"
+              size="small"
+              icon={<ArrowSync24Regular />}
+              onClick={handleResumeWorkflow}
+            >
+              继续上次任务
+            </Button>
+            <Button
+              appearance="subtle"
+              size="small"
+              icon={<Dismiss24Regular />}
+              onClick={handleClearPersisted}
+            >
+              清除记录
+            </Button>
+          </div>
+        </div>
+      )}
       <div className={isBothExpanded ? styles.layoutBoth : styles.layoutSingle}>
         {/* 1. 参数配置卡片：展开态 vs 折叠态 */}
         {isConfigExpanded ? (
@@ -621,6 +860,93 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
                 </Field>
               </div>
 
+              {/* 引擎能力探测 */}
+              <div className={styles.infoBlock}>
+                <div className={styles.capabilityRow}>
+                  <Text weight="semibold" size={200}>引擎能力</Text>
+                  {capabilitiesLoading && <Spinner size="tiny" />}
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<ArrowSync24Regular />}
+                    onClick={loadCapabilities}
+                    disabled={capabilitiesLoading}
+                  >
+                    重新探测
+                  </Button>
+                </div>
+
+                {capabilitiesError && (
+                  <MessageBar intent="warning">
+                    能力探测失败：{capabilitiesError}。仍可尝试执行，由服务端校验依赖。
+                  </MessageBar>
+                )}
+
+                {selectedCapability ? (
+                  <div className={styles.infoBlock}>
+                    <div className={styles.capabilityRow}>
+                      <Badge appearance="tint" color={engineUnavailable ? "danger" : "success"}>
+                        {MODE_LABELS[selectedCapability.mode] || selectedCapability.mode}
+                      </Badge>
+                      <Badge appearance="outline" color={selectedCapability.available ? "success" : "danger"}>
+                        {selectedCapability.available ? "可用" : "不可用"}
+                      </Badge>
+                      <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                        {selectedCapability.reason}
+                      </Text>
+                    </div>
+                    {selectedCapability.hint && (
+                      <Text size={200}>{selectedCapability.hint}</Text>
+                    )}
+                    {selectedCapability.requiredFiles.length > 0 && (
+                      <Text size={200} className={styles.mono}>
+                        依赖文件：{selectedCapability.requiredFiles.join("、")}
+                      </Text>
+                    )}
+                  </div>
+                ) : (
+                  !capabilitiesLoading && !capabilitiesError && (
+                    <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                      未返回该引擎的能力信息。
+                    </Text>
+                  )
+                )}
+
+                {engineUnavailable && (
+                  <MessageBar intent="error">
+                    所选引擎当前不可用，无法启动。请按上方依赖指引补齐文件后重新探测。
+                  </MessageBar>
+                )}
+
+                {capabilities?.toolsDir && (
+                  <Text size={200} className={styles.mono}>工具目录：{capabilities.toolsDir}</Text>
+                )}
+                {capabilities?.magiskbootPath && (
+                  <Text size={200} className={styles.mono}>magiskboot：{capabilities.magiskbootPath}</Text>
+                )}
+              </div>
+
+              {/* pc_native 需指定 Magisk 安装包 */}
+              {isPcNative && (
+                <div className={styles.inputRow}>
+                  <Field label="Magisk 安装包路径 (APK)" style={{ flex: 1 }}>
+                    <Input
+                      value={patcherPath}
+                      onChange={(_, d) => setPatcherPath(d.value)}
+                      placeholder="选择 Magisk 安装包 (.apk)"
+                    />
+                  </Field>
+                  <Button icon={<Folder24Regular />} onClick={handleSelectPatcher}>
+                    浏览
+                  </Button>
+                </div>
+              )}
+              {patcherPathMissing && (
+                <MessageBar intent="warning">
+                  PC 原生修补模式需先选择 Magisk 安装包路径，未选择时无法启动。
+                </MessageBar>
+              )}
+
               {/* 版本选择与下载 */}
               <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.9fr", gap: tokens.spacingHorizontalM, alignItems: "flex-end" }}>
                 <Field
@@ -694,14 +1020,72 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
                   disabled={!autoFlash}
                 />
               </div>
+
+              <div style={{ display: "flex", gap: tokens.spacingHorizontalL, marginTop: tokens.spacingVerticalS, flexWrap: "wrap" }}>
+                <Checkbox
+                  checked={backupImage}
+                  onChange={(_, d) => setBackupImage(!!d.checked)}
+                  label="修补前备份原镜像"
+                />
+                <Checkbox
+                  checked={rollbackOnFailure}
+                  onChange={(_, d) => setRollbackOnFailure(!!d.checked)}
+                  label="失败时自动回滚"
+                />
+                <Checkbox
+                  checked={acknowledgeUnknownBootloader}
+                  onChange={(_, d) => setAcknowledgeUnknownBootloader(!!d.checked)}
+                  label="已确认 Bootloader 状态未知的风险"
+                />
+              </div>
+
+              {workflowState.preflight?.avbEnabled && (
+                <MessageBar intent="warning" style={{ marginTop: tokens.spacingVerticalS }}>
+                  该设备启用了 AVB 校验。若刷入修补镜像后无法开机，可在下方提供 vbmeta 镜像，由应用禁用校验后重刷（可能导致清除用户数据）。
+                </MessageBar>
+              )}
+              <Field
+                label="vbmeta 镜像（可选，仅 AVB 校验失败时需要）"
+                style={{ marginTop: tokens.spacingVerticalS }}
+              >
+                <div style={{ display: "flex", gap: tokens.spacingHorizontalS }}>
+                  <Input
+                    value={vbmetaPath}
+                    onChange={(_, d) => setVbmetaPath(d.value)}
+                    placeholder="留空则不处理 AVB 校验"
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    icon={<Folder24Regular />}
+                    onClick={async () => {
+                      const picked = await open({
+                        multiple: false,
+                        filters: [{ name: "vbmeta 镜像", extensions: ["img"] }],
+                      });
+                      if (typeof picked === "string") setVbmetaPath(picked);
+                    }}
+                  >
+                    选择
+                  </Button>
+                </div>
+              </Field>
             </div>
 
             <div className={styles.actionBar}>
+              {(engineUnavailable || patcherPathMissing || !device) && (
+                <Text size={200} style={{ color: "var(--colorNeutralForeground3)", marginRight: "auto" }}>
+                  {!device
+                    ? "请先连接设备"
+                    : engineUnavailable
+                    ? "所选引擎依赖未满足，请按上方指引补齐"
+                    : "请先选择 Magisk 安装包路径"}
+                </Text>
+              )}
               <Button
                 appearance="primary"
                 icon={<Play24Regular />}
                 size="medium"
-                disabled={isExecuting || !device}
+                disabled={!canStart}
                 onClick={handleStartWorkflow}
               >
                 {isExecuting ? "流水线执行中..." : "一键开始执行 Root 流程"}
@@ -717,6 +1101,9 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
               <Badge appearance="outline">{targetPartition === "auto" ? "自动判断分区" : targetPartition}</Badge>
               {autoFlash && <Badge appearance="tint" color="informative">自动烧录</Badge>}
               {autoReboot && <Badge appearance="tint" color="success">自动重启</Badge>}
+              {backupImage && <Badge appearance="outline">备份镜像</Badge>}
+              {rollbackOnFailure && <Badge appearance="outline">失败回滚</Badge>}
+              {acknowledgeUnknownBootloader && <Badge appearance="outline" color="warning">已知悉 BL 未知</Badge>}
               <Text size={200} style={{ color: "var(--colorNeutralForeground3)", marginLeft: "4px" }}>
                 来源: {sourceType === "auto_xiaomi" ? "小米官方源" : sourceType === "local_image" ? "本地镜像" : sourceType === "local_rom" ? "本地固件" : "在线链接"}
               </Text>
@@ -756,38 +1143,172 @@ export const OneClickRootPanel: React.FC<OneClickRootPanelProps> = ({ device }) 
                   {workflowState.statusMessage}
                 </Badge>
               </div>
-              <Button
-                size="small"
-                appearance="subtle"
-                icon={<ChevronUp24Regular />}
-                onClick={() => setIsStatusExpanded(false)}
-              >
-                折叠状态
-              </Button>
+              <div className={styles.actionRow}>
+                {isExecuting && (
+                  <Button
+                    size="small"
+                    appearance="secondary"
+                    icon={<Dismiss24Regular />}
+                    onClick={() => oneClickRootService.abortWorkflow()}
+                  >
+                    中断
+                  </Button>
+                )}
+                <Button
+                  size="small"
+                  appearance="subtle"
+                  icon={<ChevronUp24Regular />}
+                  onClick={() => setIsStatusExpanded(false)}
+                >
+                  折叠状态
+                </Button>
+              </div>
             </div>
 
             <ProgressBar value={workflowState.progressPercent / 100} />
 
             {/* 线性步骤状态 */}
             <div className={styles.stepContainer}>
-              <div className={`${styles.stepItem} ${workflowState.currentStep === "check_device" ? styles.stepActive : ""}`}>
+              <div className={`${styles.stepItem} ${activeStepGroup === 1 ? styles.stepActive : ""}`}>
                 <span>[步骤 1] 设备环境与 Bootloader 校验</span>
               </div>
-              <div className={`${styles.stepItem} ${workflowState.currentStep === "acquire_image" ? styles.stepActive : ""}`}>
-                <span>[步骤 2] 固件解析与分区镜像流式提取</span>
+              <div className={`${styles.stepItem} ${activeStepGroup === 2 ? styles.stepActive : ""}`}>
+                <span>[步骤 2] 固件解析 / 镜像提取与备份</span>
               </div>
-              <div className={`${styles.stepItem} ${workflowState.currentStep === "patch_image" ? styles.stepActive : ""}`}>
-                <span>[步骤 3] {patchType} 内核及 Ramdisk 修补</span>
+              <div className={`${styles.stepItem} ${activeStepGroup === 3 ? styles.stepActive : ""}`}>
+                <span>[步骤 3] {patchType} 内核及 Ramdisk 修补 / 校验</span>
               </div>
-              <div className={`${styles.stepItem} ${["reboot_fastboot", "flash_fastboot"].includes(workflowState.currentStep) ? styles.stepActive : ""}`}>
+              <div className={`${styles.stepItem} ${activeStepGroup === 4 ? styles.stepActive : ""}`}>
                 <span>[步骤 4] Fastboot 分区烧录</span>
               </div>
-              <div className={`${styles.stepItem} ${workflowState.currentStep === "reboot_system" ? styles.stepActive : ""}`}>
-                <span>[步骤 5] 重启进入系统</span>
+              <div className={`${styles.stepItem} ${activeStepGroup === 5 ? styles.stepActive : ""}`}>
+                <span>[步骤 5] 重启进入系统 / Root 校验</span>
               </div>
             </div>
 
             <Divider />
+
+            {/* 预检 / 备份 / 校验 / 错误结果 */}
+            {(workflowState.preflight ||
+              workflowState.backupPath ||
+              workflowState.outputImagePath ||
+              workflowState.verification ||
+              workflowState.error) && (
+              <div className={styles.infoBlock}>
+                {workflowState.preflight && (
+                  <>
+                    <Text weight="semibold" size={200}>设备预检</Text>
+                    <Text size={200} className={styles.mono}>
+                      型号 {workflowState.preflight.model || "-"} · SDK {workflowState.preflight.sdk ?? "-"} ·
+                      BL {workflowState.preflight.bootloaderUnlocked === null || workflowState.preflight.bootloaderUnlocked === undefined ? "未知" : workflowState.preflight.bootloaderUnlocked ? "已解锁" : "未解锁"} ·
+                      校验启动 {workflowState.preflight.verifiedBootState || "-"} ·
+                      槽位 {workflowState.preflight.abSlot || "-"} ·
+                      防回滚 {workflowState.preflight.antiRollback || "-"} ·
+                      推荐分区 {workflowState.preflight.recommendedPartition} ·
+                      请求分区 {workflowState.preflight.requestedPartition}
+                    </Text>
+                    {workflowState.preflight.blockers.length > 0 && (
+                      <MessageBar intent="error">
+                        阻断项：{workflowState.preflight.blockers.join("；")}
+                      </MessageBar>
+                    )}
+                    {workflowState.preflight.warnings.length > 0 && (
+                      <MessageBar intent="warning">
+                        警告：{workflowState.preflight.warnings.join("；")}
+                      </MessageBar>
+                    )}
+                  </>
+                )}
+                {workflowState.backupPath && (
+                  <Text size={200} className={styles.mono}>备份镜像：{workflowState.backupPath}</Text>
+                )}
+                {workflowState.outputImagePath && (
+                  <Text size={200} className={styles.mono}>产出镜像：{workflowState.outputImagePath}</Text>
+                )}
+                {workflowState.verification && (
+                  <MessageBar intent={workflowState.verification.rooted ? "success" : "warning"}>
+                    {workflowState.verification.rooted ? "Root 校验通过" : "Root 校验未通过"}：{workflowState.verification.detail}
+                  </MessageBar>
+                )}
+                {workflowState.error && (
+                  <MessageBar intent="error">{workflowState.error}</MessageBar>
+                )}
+              </div>
+            )}
+
+            {/* 设备端辅助修补 */}
+            {workflowState.needsDeviceAction && (
+              <div className={styles.deviceAssist}>
+                <div className={styles.capabilityRow}>
+                  <Info24Regular style={{ fontSize: "20px" }} />
+                  <Text weight="semibold" size={300}>设备端辅助修补</Text>
+                </div>
+                {workflowState.deviceSession ? (
+                  <>
+                    <MessageBar intent="info">{workflowState.deviceSession.hint}</MessageBar>
+                    <Field label="设备上的输入镜像">
+                      <Input readOnly value={workflowState.deviceSession.deviceInput} />
+                    </Field>
+                    <Text size={200} className={styles.mono}>
+                      设备目录：{workflowState.deviceSession.deviceDir} · 引擎：{workflowState.deviceSession.engine}
+                      {workflowState.deviceSession.appPackage ? ` · 应用：${workflowState.deviceSession.appPackage}` : ""}
+                    </Text>
+                    <Field label="修补产物路径">
+                      <Input
+                        value={deviceOutputPath}
+                        onChange={(_, d) => setDeviceOutputPath(d.value)}
+                        placeholder={workflowState.deviceSession.suggestedOutput}
+                      />
+                    </Field>
+                    {scannedImages.length > 0 && (
+                      <Field label="扫描到的产物">
+                        <Dropdown
+                          value={selectedScannedImage || "选择扫描结果"}
+                          selectedOptions={selectedScannedImage ? [selectedScannedImage] : []}
+                          onOptionSelect={(_, d) => {
+                            const value = d.optionValue as string;
+                            setSelectedScannedImage(value);
+                            setDeviceOutputPath(value);
+                          }}
+                        >
+                          {scannedImages.map((path) => (
+                            <Option key={path} value={path}>{path}</Option>
+                          ))}
+                        </Dropdown>
+                      </Field>
+                    )}
+                    <div className={styles.actionRow}>
+                      <Button
+                        icon={isScanningImages ? <Spinner size="tiny" /> : <ArrowSync24Regular />}
+                        onClick={handleScanDeviceImages}
+                        disabled={isScanningImages || !device?.serial}
+                      >
+                        扫描设备上的修补产物
+                      </Button>
+                      <Button
+                        appearance="primary"
+                        icon={<CheckmarkCircle24Regular />}
+                        onClick={handleSubmitDeviceImage}
+                        disabled={!deviceOutputPath.trim() && !selectedScannedImage}
+                      >
+                        已完成修补，取回产物
+                      </Button>
+                      <Button
+                        appearance="subtle"
+                        icon={<Dismiss24Regular />}
+                        onClick={() => oneClickRootService.abortWorkflow()}
+                      >
+                        取消
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <Text size={200} style={{ color: "var(--colorNeutralForeground3)" }}>
+                    等待设备端会话信息…
+                  </Text>
+                )}
+              </div>
+            )}
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Text weight="semibold" size={200}>控制台实时日志输出</Text>

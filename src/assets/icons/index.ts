@@ -1,10 +1,11 @@
 // 设备图标导入
 import anzIcon from "./devices/anz.webp";
-import androidIcon from "./devices/anz.webp";
-import fastbootIcon from "./devices/anz.webp";
-import fastbootdIcon from "./devices/anz.webp";
-import sideloadIcon from "./devices/anz.webp";
-import twrpIcon from "./devices/anz.webp";
+// 以下模式当前共用同一张占位图，保留别名以免破坏既有导出与映射
+const androidIcon = anzIcon;
+const fastbootIcon = anzIcon;
+const fastbootdIcon = anzIcon;
+const sideloadIcon = anzIcon;
+const twrpIcon = anzIcon;
 import UnlinkIcon from "./devices/Unlink.gif";
 //关于页面导入
 import admtbgIcon from "./admt/admt-bg.webp";

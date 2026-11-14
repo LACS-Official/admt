@@ -20,9 +20,6 @@ import "./styles/global.css";
 import i18n from "./i18n/config";
 import "./utils/devtools";
 
-// 在应用启动时清除 localStorage 中的 token
-localStorage.removeItem("rom-download-storage");
-
 const CommandLineWindow = React.lazy(() => import("./components/Console/CommandLineWindow"));
 const LogsWindow = React.lazy(() => import("./components/Console/LogsWindow"));
 const AIChatWindow = React.lazy(() => import("./components/Console/AIChatWindow"));
@@ -102,21 +99,23 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     const baseTheme = isDarkMode ? createDarkTheme(brand) : createLightTheme(brand);
     
     // 应用圆角设置
+    // 设计规范：卡片 12-16px 连续圆角，交互控件 9999px 胶囊。
+    // 三档用户设置都落在合规区间内，不再出现 2/4/8px 小碎圆角。
     const radiusMap = {
-      small: "2px",
-      medium: "4px",
-      large: "8px"
+      small: "12px",
+      medium: "14px",
+      large: "16px"
     };
-    const borderRadius = radiusMap[cornerRadius] || "4px";
+    const borderRadius = radiusMap[cornerRadius] || "14px";
 
     const finalTheme: Theme = {
       ...baseTheme,
       borderRadiusNone: "0",
-      borderRadiusSmall: cornerRadius === 'small' ? "1px" : "2px",
+      borderRadiusSmall: "12px",
       borderRadiusMedium: borderRadius,
-      borderRadiusLarge: cornerRadius === 'large' ? "12px" : "8px",
-      borderRadiusXLarge: cornerRadius === 'large' ? "16px" : "12px",
-      borderRadiusCircular: "10000px",
+      borderRadiusLarge: "16px",
+      borderRadiusXLarge: "16px",
+      borderRadiusCircular: "9999px",
     };
 
     // 应用内容密度 (间距) 设置

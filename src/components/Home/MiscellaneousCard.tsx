@@ -1,31 +1,6 @@
 import React, { useState } from "react";
-import {
-  makeStyles,
-  mergeClasses,
-  Card,
-  Text,
-  Spinner,
-  Badge,
-  tokens,
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogContent,
-  DialogBody,
-  DialogActions,
-  Button,
-} from "@fluentui/react-components";
-import {
-  Wrench24Regular,
-  Warning24Regular,
-  Info24Regular,
-  WifiSettingsRegular,
-  ArrowClockwise24Regular,
-  Dismiss24Regular,
-  Desktop24Regular,
-  PlugDisconnected24Regular,
-  AppsListDetail24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, Card, Text, Spinner, Dialog, DialogSurface, DialogTitle, DialogContent, DialogBody, DialogActions, Button} from "@fluentui/react-components";
+import {Wrench24Regular, Warning24Regular, ArrowClockwise24Regular, Dismiss24Regular, Desktop24Regular, PlugDisconnected24Regular, AppsListDetail24Regular} from "@fluentui/react-icons";
 
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
@@ -222,8 +197,6 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
 
 
 
-
-
   const handleRestartAdb = async () => {
     setStatusBarMessage({
       type: "info",
@@ -243,7 +216,6 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     });
     setCurrentView("online-resources");
   };
-
 
   const handleFixUsb3 = async () => {
     setShowUsbFixDialog(true);
@@ -322,13 +294,11 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
     setShowUsbFixDialog(true);
   };
 
-
   const handleUsbFixClose = () => {
     setShowUsbFixDialog(false);
     setUsbFixStatus('idle');
     setUsbFixOutput('');
   };
-
 
 
   const handleFinishAdb = async () => {
@@ -350,7 +320,6 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
       t('misc.open_task_manager')
     );
   };
-
 
   const miscFunctions: MiscFunction[] = [
     {

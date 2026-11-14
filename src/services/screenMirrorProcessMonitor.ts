@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ScreenMirrorSession } from "../types/screenMirror";
 
 /**
  * 投屏进程监控服务 - 负责系统级监控scrcpy进程状态

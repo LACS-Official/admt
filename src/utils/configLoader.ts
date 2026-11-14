@@ -9,6 +9,69 @@ import { resourceDir, appDataDir } from '@tauri-apps/api/path';
 import { listen } from '@tauri-apps/api/event';
 import i18n from '../i18n/config';
 
+// ==================== 统一配置读取入口 ====================
+// 四套快捷命令配置的加载逻辑原本被逐行复制成 4 份。这里收敛为唯一实现；
+// verbose 保留「ADB/Fastboot 打印详细日志、另两套静默」的历史行为差异，
+// 回退链（invoke -> resourceDir -> appDataDir -> 相对路径 -> 默认配置）完全不变。
+interface ConfigAccessOptions {
+  relativePath: string;
+  label: string;
+  verbose: boolean;
+}
+
+async function readConfigWithFallback<T>(
+  opts: ConfigAccessOptions,
+  fallback: () => T,
+): Promise<T> {
+  const { relativePath, label, verbose } = opts;
+  const log = (...args: unknown[]) => { if (verbose) console.log(...args); };
+  const warn = (...args: unknown[]) => { if (verbose) console.warn(...args); };
+  try {
+    try {
+      log(`尝试使用invoke API读取${label}配置文件`);
+      const config = await invoke<T>('read_json_file', { path: relativePath });
+      log(`成功使用invoke API读取${label}配置文件:`, config);
+      return config;
+    } catch (invokeError) {
+      warn(`使用invoke API读取${label}配置失败:`, invokeError);
+      let configPath = '';
+      let configContent = '';
+      try {
+        const resourceDirPath = await resourceDir();
+        configPath = `${resourceDirPath}/${relativePath}`;
+        log('尝试从资源目录读取配置:', configPath);
+        configContent = await readTextFile(configPath);
+      } catch (resourceError) {
+        warn('从资源目录读取配置失败:', resourceError);
+        try {
+          const appDataDirPath = await appDataDir();
+          configPath = `${appDataDirPath}/${relativePath}`;
+          log('尝试从应用数据目录读取配置:', configPath);
+          configContent = await readTextFile(configPath);
+        } catch (appDataError) {
+          warn('从应用数据目录读取配置失败:', appDataError);
+          try {
+            configPath = `./src-tauri/${relativePath}`;
+            log('尝试使用相对路径读取配置:', configPath);
+            configContent = await readTextFile(configPath);
+          } catch (relativeError) {
+            warn('使用相对路径读取配置失败:', relativeError);
+            log('使用硬编码的默认配置');
+            return fallback();
+          }
+        }
+      }
+      log('成功读取配置文件:', configPath);
+      log('配置内容:', configContent);
+      return JSON.parse(configContent) as T;
+    }
+  } catch (error) {
+    if (verbose) console.error(`加载${label}命令配置失败:`, error);
+    log('所有方法都失败，使用硬编码的默认配置');
+    return fallback();
+  }
+}
+
 export interface AdbCommand {
   id: string;
   label: string;
@@ -34,69 +97,10 @@ export interface AdbCommandsConfig {
  * @returns Promise<AdbCommandsConfig> 返回解析后的配置对象
  */
 export async function loadAdbCommandsConfig(): Promise<AdbCommandsConfig> {
-  try {
-    // 尝试多种方法来读取配置文件
-    
-    // 方法1: 使用invoke API调用后端命令
-    try {
-      console.log('尝试使用invoke API读取配置文件');
-      const config = await invoke<AdbCommandsConfig>('read_json_file', { 
-        path: 'config/adbCommands.json' 
-      });
-      console.log('成功使用invoke API读取配置文件:', config);
-      return config;
-    } catch (invokeError) {
-      console.warn('使用invoke API读取配置失败:', invokeError);
-      
-      // 方法2: 使用readTextFile尝试多种路径
-      let configPath = '';
-      let configContent = '';
-      
-      try {
-        // 尝试resourceDir
-        const resourceDirPath = await resourceDir();
-        configPath = `${resourceDirPath}/config/adbCommands.json`;
-        console.log('尝试从资源目录读取配置:', configPath);
-        configContent = await readTextFile(configPath);
-      } catch (resourceError) {
-        console.warn('从资源目录读取配置失败:', resourceError);
-        
-        try {
-          // 尝试appDataDir
-          const appDataDirPath = await appDataDir();
-          configPath = `${appDataDirPath}/config/adbCommands.json`;
-          console.log('尝试从应用数据目录读取配置:', configPath);
-          configContent = await readTextFile(configPath);
-        } catch (appDataError) {
-          console.warn('从应用数据目录读取配置失败:', appDataError);
-          
-          try {
-            // 尝试相对路径
-            configPath = './src-tauri/config/adbCommands.json';
-            console.log('尝试使用相对路径读取配置:', configPath);
-            configContent = await readTextFile(configPath);
-          } catch (relativeError) {
-            console.warn('使用相对路径读取配置失败:', relativeError);
-            
-            // 方法3: 使用硬编码的默认配置作为最后手段
-            console.log('使用硬编码的默认配置');
-            return getDefaultAdbCommandsConfig();
-          }
-        }
-      }
-      
-      console.log('成功读取配置文件:', configPath);
-      console.log('配置内容:', configContent);
-      
-      const config = JSON.parse(configContent) as AdbCommandsConfig;
-      return config;
-    }
-  } catch (error) {
-    console.error('加载ADB命令配置失败:', error);
-    // 如果所有方法都失败，返回默认配置
-    console.log('所有方法都失败，使用硬编码的默认配置');
-    return getDefaultAdbCommandsConfig();
-  }
+  return readConfigWithFallback<AdbCommandsConfig>(
+    { relativePath: 'config/adbCommands.json', label: 'ADB', verbose: true },
+    getDefaultAdbCommandsConfig,
+  );
 }
 
 // 提供默认配置作为后备方案
@@ -521,69 +525,10 @@ export async function watchConfigFile(callback: (config: AdbCommandsConfig) => v
  * @returns Promise<AdbCommandsConfig> 返回解析后的配置对象
  */
 export async function loadFastbootCommandsConfig(): Promise<AdbCommandsConfig> {
-  try {
-    // 尝试多种方法来读取配置文件
-    
-    // 方法1: 使用invoke API调用后端命令
-    try {
-      console.log('尝试使用invoke API读取Fastboot配置文件');
-      const config = await invoke<AdbCommandsConfig>('read_json_file', { 
-        path: 'config/FastbootCommands.json' 
-      });
-      console.log('成功使用invoke API读取Fastboot配置文件:', config);
-      return config;
-    } catch (invokeError) {
-      console.warn('使用invoke API读取Fastboot配置失败:', invokeError);
-      
-      // 方法2: 使用readTextFile尝试多种路径
-      let configPath = '';
-      let configContent = '';
-      
-      try {
-        // 尝试resourceDir
-        const resourceDirPath = await resourceDir();
-        configPath = `${resourceDirPath}/config/FastbootCommands.json`;
-        console.log('尝试从资源目录读取Fastboot配置:', configPath);
-        configContent = await readTextFile(configPath);
-      } catch (resourceError) {
-        console.warn('从资源目录读取Fastboot配置失败:', resourceError);
-        
-        try {
-          // 尝试appDataDir
-          const appDataDirPath = await appDataDir();
-          configPath = `${appDataDirPath}/config/FastbootCommands.json`;
-          console.log('尝试从应用数据目录读取Fastboot配置:', configPath);
-          configContent = await readTextFile(configPath);
-        } catch (appDataError) {
-          console.warn('从应用数据目录读取Fastboot配置失败:', appDataError);
-          
-          try {
-            // 尝试相对路径
-            configPath = './src-tauri/config/FastbootCommands.json';
-            console.log('尝试使用相对路径读取Fastboot配置:', configPath);
-            configContent = await readTextFile(configPath);
-          } catch (relativeError) {
-            console.warn('使用相对路径读取Fastboot配置失败:', relativeError);
-            
-            // 方法3: 使用硬编码的默认配置作为最后手段
-            console.log('使用硬编码的默认Fastboot配置');
-            return getDefaultFastbootCommandsConfig();
-          }
-        }
-      }
-      
-      console.log('成功读取Fastboot配置文件:', configPath);
-      console.log('Fastboot配置内容:', configContent);
-      
-      const config = JSON.parse(configContent) as AdbCommandsConfig;
-      return config;
-    }
-  } catch (error) {
-    console.error('加载Fastboot命令配置失败:', error);
-    // 如果所有方法都失败，返回默认配置
-    console.log('所有方法都失败，使用硬编码的默认Fastboot配置');
-    return getDefaultFastbootCommandsConfig();
-  }
+  return readConfigWithFallback<AdbCommandsConfig>(
+    { relativePath: 'config/FastbootCommands.json', label: 'Fastboot', verbose: true },
+    getDefaultFastbootCommandsConfig,
+  );
 }
 
 // 提供默认Fastboot配置作为后备方案
@@ -933,35 +878,10 @@ export function getDefaultPowerShellCommandsConfig(): AdbCommandsConfig {
 }
 
 export async function loadPowerShellCommandsConfig(): Promise<AdbCommandsConfig> {
-  try {
-    try {
-      const config = await invoke<AdbCommandsConfig>('read_json_file', { 
-        path: 'config/PowerShellCommands.json' 
-      });
-      return config;
-    } catch {
-      try {
-        const resourceDirPath = await resourceDir();
-        const content = await readTextFile(`${resourceDirPath}/config/PowerShellCommands.json`);
-        return JSON.parse(content) as AdbCommandsConfig;
-      } catch {
-        try {
-          const appDataDirPath = await appDataDir();
-          const content = await readTextFile(`${appDataDirPath}/config/PowerShellCommands.json`);
-          return JSON.parse(content) as AdbCommandsConfig;
-        } catch {
-          try {
-            const content = await readTextFile('./src-tauri/config/PowerShellCommands.json');
-            return JSON.parse(content) as AdbCommandsConfig;
-          } catch {
-            return getDefaultPowerShellCommandsConfig();
-          }
-        }
-      }
-    }
-  } catch {
-    return getDefaultPowerShellCommandsConfig();
-  }
+  return readConfigWithFallback<AdbCommandsConfig>(
+    { relativePath: 'config/PowerShellCommands.json', label: 'PowerShell', verbose: false },
+    getDefaultPowerShellCommandsConfig,
+  );
 }
 
 export async function savePowerShellCommandsConfig(config: AdbCommandsConfig): Promise<boolean> {
@@ -1086,35 +1006,10 @@ export function getDefaultCmdCommandsConfig(): AdbCommandsConfig {
 }
 
 export async function loadCmdCommandsConfig(): Promise<AdbCommandsConfig> {
-  try {
-    try {
-      const config = await invoke<AdbCommandsConfig>('read_json_file', { 
-        path: 'config/CmdCommands.json' 
-      });
-      return config;
-    } catch {
-      try {
-        const resourceDirPath = await resourceDir();
-        const content = await readTextFile(`${resourceDirPath}/config/CmdCommands.json`);
-        return JSON.parse(content) as AdbCommandsConfig;
-      } catch {
-        try {
-          const appDataDirPath = await appDataDir();
-          const content = await readTextFile(`${appDataDirPath}/config/CmdCommands.json`);
-          return JSON.parse(content) as AdbCommandsConfig;
-        } catch {
-          try {
-            const content = await readTextFile('./src-tauri/config/CmdCommands.json');
-            return JSON.parse(content) as AdbCommandsConfig;
-          } catch {
-            return getDefaultCmdCommandsConfig();
-          }
-        }
-      }
-    }
-  } catch {
-    return getDefaultCmdCommandsConfig();
-  }
+  return readConfigWithFallback<AdbCommandsConfig>(
+    { relativePath: 'config/CmdCommands.json', label: 'CMD', verbose: false },
+    getDefaultCmdCommandsConfig,
+  );
 }
 
 export async function saveCmdCommandsConfig(config: AdbCommandsConfig): Promise<boolean> {

@@ -64,40 +64,22 @@ class AdminService {
   }
 
   /**
-   * 设置自启动状态（需要管理员权限）
+   * 设置自启动状态
+   * 走 Tauri 官方 autostart 插件；旧实现调用的 set_autostart_enabled 后端并不存在。
+   * 动态 import 是为了避免与 autoStartService 形成循环依赖。
    */
   async setAutostartEnabled(enabled: boolean): Promise<boolean> {
     try {
-      return await invoke<boolean>('set_autostart_enabled', { enabled });
+      const { enable, disable } = await import('@tauri-apps/plugin-autostart');
+      if (enabled) {
+        await enable();
+      } else {
+        await disable();
+      }
+      return true;
     } catch (error) {
       console.error('设置自启动失败:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 检查系统兼容性
-   */
-  async checkSystemCompatibility(): Promise<{
-    platform: string;
-    arch: string;
-    tauri_version: string;
-    is_admin: boolean;
-    exe_path: string;
-    admin_required_features: string[];
-  }> {
-    try {
-      return await invoke<any>('check_system_compatibility');
-    } catch (error) {
-      console.error('检查系统兼容性失败:', error);
-      return {
-        platform: 'unknown',
-        arch: 'unknown',
-        tauri_version: 'unknown',
-        is_admin: false,
-        exe_path: '',
-        admin_required_features: []
-      };
+      return false;
     }
   }
 

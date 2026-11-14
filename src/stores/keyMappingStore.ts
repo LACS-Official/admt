@@ -5,7 +5,9 @@ import {
   KeyMappingProfile,
   InjectionMode,
 } from "../types/keyMapping";
-import KeyMappingService from "../services/keyMappingService";
+import KeyMappingService, {
+  KeyMappingDiagnostics,
+} from "../services/keyMappingService";
 
 interface KeyMappingState {
   profiles: KeyMappingProfile[];
@@ -17,9 +19,11 @@ interface KeyMappingState {
   selectedItemId: string | null;
   isLoading: boolean;
   error: string | null;
+  diagnostics: KeyMappingDiagnostics | null;
 
   // Actions
   loadProfiles: () => Promise<void>;
+  refreshDiagnostics: () => Promise<void>;
   selectProfile: (id: string) => void;
   createProfile: (
     name: string,
@@ -57,6 +61,12 @@ export const useKeyMappingStore = create<KeyMappingState>((set, get) => ({
   selectedItemId: null,
   isLoading: false,
   error: null,
+  diagnostics: null,
+
+  refreshDiagnostics: async () => {
+    const diagnostics = await KeyMappingService.getDiagnostics();
+    set({ diagnostics });
+  },
 
   loadProfiles: async () => {
     set({ isLoading: true, error: null });
@@ -77,6 +87,7 @@ export const useKeyMappingStore = create<KeyMappingState>((set, get) => ({
         isRunning,
         isLoading: false,
       });
+      await get().refreshDiagnostics();
     } catch (err: any) {
       set({ error: String(err), isLoading: false });
     }
@@ -279,6 +290,7 @@ export const useKeyMappingStore = create<KeyMappingState>((set, get) => ({
     try {
       const ok = await KeyMappingService.startKeyMapping(config);
       set({ isRunning: ok, error: null });
+      await get().refreshDiagnostics();
       return ok;
     } catch (err: any) {
       set({ error: String(err), isRunning: false });
@@ -290,6 +302,7 @@ export const useKeyMappingStore = create<KeyMappingState>((set, get) => ({
     try {
       const ok = await KeyMappingService.stopKeyMapping();
       set({ isRunning: false });
+      await get().refreshDiagnostics();
       return ok;
     } catch (err: any) {
       set({ error: String(err) });

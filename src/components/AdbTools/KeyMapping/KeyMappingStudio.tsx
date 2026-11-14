@@ -57,9 +57,10 @@ import { useKeyMappingStore } from "../../../stores/keyMappingStore";
 import { useAppStore } from "../../../stores/appStore";
 import { useDeviceStore } from "../../../stores/deviceStore";
 import { DeviceInfo } from "../../../types/device";
-import KeyMappingService from "../../../services/keyMappingService";
+import KeyMappingService, { normalizeKeyName } from "../../../services/keyMappingService";
 import ScreenMirrorService from "../../../services/screenMirrorService";
 import { DEFAULT_SCREEN_MIRROR_CONFIG } from "../../../types/screenMirror";
+import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
   container: {
@@ -69,6 +70,16 @@ const useStyles = makeStyles({
     height: "100%",
     minHeight: 0,
     ...shorthands.overflow("hidden"),
+  },
+  diagnosticsBar: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    ...shorthands.gap("6px", "16px"),
+    ...shorthands.padding("8px", "14px"),
+    backgroundColor: "var(--colorNeutralBackground2)",
+    ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
+    ...shorthands.borderRadius("10px"),
   },
   topBar: {
     display: "flex",
@@ -315,6 +326,7 @@ interface KeyMappingStudioProps {
 
 export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: propDevice }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const { setStatusBarMessage } = useAppStore();
   const { devices, selectedDevice: storeSelectedDevice } = useDeviceStore();
 
@@ -348,6 +360,8 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
     setSelectedItemId,
     startMapping,
     stopMapping,
+    diagnostics,
+    refreshDiagnostics,
   } = useKeyMappingStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -378,11 +392,22 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
     loadProfiles();
   }, [loadProfiles]);
 
-  // 按键映射处于 Beta 阶段的状态栏轻量提示（退出时自动清理）
+  // 状态栏展示真实运行状态（而不是笼统的「Beta 功能」提示）
   useEffect(() => {
+    if (!isRunning || !diagnostics) return;
+
+    const message = diagnostics.issues.length
+      ? `${t('keymap.status_partial', '按键映射运行中（存在限制）')} · ${diagnostics.issues[0]}`
+      : t('keymap.status_running', {
+          defaultValue: '按键映射运行中 · {{width}}×{{height}} · {{count}} 个键位',
+          width: diagnostics.screenWidth,
+          height: diagnostics.screenHeight,
+          count: diagnostics.itemCount,
+        });
+
     setStatusBarMessage({
-      type: "info",
-      message: "按键映射当前为 Beta 测试功能，建议配合独立投屏窗口使用",
+      type: diagnostics.issues.length ? "warning" : "success",
+      message,
       duration: 0,
       source: "tools:key-mapping",
     });
@@ -390,7 +415,16 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
     return () => {
       useAppStore.getState().clearStatusBarMessage("tools:key-mapping");
     };
-  }, [setStatusBarMessage]);
+  }, [isRunning, diagnostics, setStatusBarMessage, t]);
+
+  // Hook 是异步安装的，启动后补刷一次诊断，避免误报「未安装」
+  useEffect(() => {
+    if (!isRunning) return;
+    const timer = window.setTimeout(() => {
+      void refreshDiagnostics();
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [isRunning, refreshDiagnostics]);
 
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
   const selectedItem = activeProfile?.items.find((i) => i.id === selectedItemId);
@@ -562,9 +596,8 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
       e.preventDefault();
       e.stopPropagation();
 
-      let keyName = e.key;
-      if (keyName === " ") keyName = "Space";
-      if (keyName.length === 1) keyName = keyName.toUpperCase();
+      const keyName = normalizeKeyName(e);
+      if (!keyName) return;
 
       if (editingItem) {
         setEditingItem({ ...editingItem, key: keyName });
@@ -573,6 +606,18 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
     },
     [isRecordingKey, editingItem]
   );
+
+  useEffect(() => {
+    // 录制键位时打全局标记，让键盘桥接暂时静默，避免录一个键就往手机点一下
+    if (isRecordingKey) {
+      document.body.dataset.keyCapture = "true";
+    } else {
+      delete document.body.dataset.keyCapture;
+    }
+    return () => {
+      delete document.body.dataset.keyCapture;
+    };
+  }, [isRecordingKey]);
 
   useEffect(() => {
     if (isRecordingKey) {
@@ -745,6 +790,37 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
         onChange={handleFileSelected}
         style={{ display: "none" }}
       />
+
+      {/* 运行时诊断：把真实设备分辨率 / 注入能力 / 问题直接摆出来 */}
+      {isRunning && diagnostics && (
+        <div className={styles.diagnosticsBar}>
+          <Text size={200} weight="semibold">
+            {t('keymap.diag_title', '映射运行中')}
+          </Text>
+          <Text size={200}>
+            {t('keymap.diag_resolution', '设备分辨率')}: {diagnostics.screenWidth || '—'} × {diagnostics.screenHeight || '—'}
+          </Text>
+          <Text size={200}>
+            {t('keymap.diag_injection', '注入方式')}: {diagnostics.injectionMode}
+            {diagnostics.motionEventSupported ? ' / motionevent' : ` / ${t('keymap.diag_tap_fallback', 'input tap 兼容降级')}`}
+          </Text>
+          <Text size={200}>
+            {t('keymap.diag_keys', '键位数')}: {diagnostics.itemCount}
+          </Text>
+          <Text size={200}>
+            {t('keymap.diag_hook', '全局钩子')}: {diagnostics.hookInstalled ? t('keymap.diag_ready', '就绪') : t('keymap.diag_app_only', '仅应用窗口内可用')}
+          </Text>
+          {diagnostics.issues.map((issue, index) => (
+            <Text
+              key={index}
+              size={200}
+              style={{ color: "var(--colorPaletteRedForeground1)" }}
+            >
+              {issue}
+            </Text>
+          ))}
+        </div>
+      )}
 
       {/* 顶部控制栏 */}
       <div className={styles.topBar}>

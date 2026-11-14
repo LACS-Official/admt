@@ -1,22 +1,5 @@
 import React, { useState } from 'react';
-import {
-  makeStyles,
-  shorthands,
-  mergeClasses,
-  Card,
-  CardHeader,
-  Text,
-  Badge,
-  Spinner,
-  Button,
-  Dialog,
-  DialogTrigger,
-  DialogSurface,
-  DialogTitle,
-  DialogContent,
-  DialogBody,
-  DialogActions,
-} from "@fluentui/react-components";
+import {makeStyles, mergeClasses, Card, Text} from "@fluentui/react-components";
 import {
   Power24Regular,
   Warning24Regular,
@@ -380,7 +363,6 @@ const DeviceRebootCard: React.FC<DeviceRebootCardProps> = ({ device: propDevice 
       clearCountdown();
     }
   };
-
 
 
   // 组件卸载时清理定时器

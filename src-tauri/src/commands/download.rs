@@ -1,7 +1,29 @@
 use crate::download_manager::{detect_netdisk_url, DownloadManager};
 use crate::error::{AdmtError, Result};
+use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 use tauri::Emitter;
+
+/// 用户已请求取消、但下载流尚未退出的任务 id。
+/// cancel_download 写入标记，download_file 在写盘的每个分块前检查它。
+fn cancelled_downloads() -> &'static Mutex<HashSet<String>> {
+    static CANCELLED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    CANCELLED.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn is_cancelled(task_id: &str) -> bool {
+    cancelled_downloads()
+        .lock()
+        .map(|set| set.contains(task_id))
+        .unwrap_or(false)
+}
+
+fn clear_cancel(task_id: &str) {
+    if let Ok(mut set) = cancelled_downloads().lock() {
+        set.remove(task_id);
+    }
+}
 
 /// 获取应用下载目录
 pub fn get_app_downloads_dir() -> Result<PathBuf> {
@@ -137,6 +159,9 @@ pub async fn download_file(
     use tokio::fs;
     use tokio::io::AsyncWriteExt;
 
+    // 允许同一个 taskId 重新下载，先清掉可能残留的取消标记
+    clear_cancel(&task_id);
+
     if let Some(label) = detect_netdisk_url(&url) {
         return Err(AdmtError::Network(format!(
             "NETDISK_REDIRECT_REQUIRED: {}分享链接，请在浏览器中完成下载",
@@ -184,7 +209,13 @@ pub async fn download_file(
         .map_err(|e| AdmtError::Io(format!("Failed to create file: {}", e)))?;
 
     let mut stream = response.bytes_stream();
+    let mut cancelled = false;
     while let Some(chunk_result) = stream.next().await {
+        // 每个分块写盘前检查取消标记，避免 UI 显示已取消但磁盘仍在写入
+        if is_cancelled(&task_id) {
+            cancelled = true;
+            break;
+        }
         let chunk =
             chunk_result.map_err(|e| AdmtError::Network(format!("Failed to read chunk: {}", e)))?;
         file.write_all(&chunk)
@@ -200,15 +231,28 @@ pub async fn download_file(
             "taskId": task_id, "progress": progress, "downloadedSize": downloaded_size, "totalSize": total_size
         }));
     }
+
+    if cancelled {
+        drop(file);
+        let _ = fs::remove_file(&file_path).await; // 不留半截文件
+        clear_cancel(&task_id);
+        return Err(AdmtError::Network("DOWNLOAD_CANCELLED: 下载已取消".to_string()));
+    }
+
     file.flush()
         .await
         .map_err(|e| AdmtError::Io(format!("Failed to flush file: {}", e)))?;
+    clear_cancel(&task_id);
     Ok(file_path.to_string_lossy().to_string())
 }
 
 /// 取消下载
 #[tauri::command]
 pub async fn cancel_download(task_id: String, window: tauri::Window) -> Result<()> {
+    // 真正通知下载流停止，而不只是发一个前端事件
+    if let Ok(mut set) = cancelled_downloads().lock() {
+        set.insert(task_id.clone());
+    }
     let _ = window.emit(
         "download-cancelled",
         serde_json::json!({ "taskId": task_id }),

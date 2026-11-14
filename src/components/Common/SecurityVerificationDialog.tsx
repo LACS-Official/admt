@@ -13,7 +13,7 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
-import { LockClosed24Regular, ShieldKeyhole24Regular } from "@fluentui/react-icons";
+import {ShieldKeyhole24Regular} from "@fluentui/react-icons";
 import { useSecurityStore, ProtectedActions } from "../../stores/securityStore";
 
 const useStyles = makeStyles({

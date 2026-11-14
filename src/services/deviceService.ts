@@ -4,7 +4,6 @@ import { useDeviceStore } from "../stores/deviceStore";
 import { useAppStore } from "../stores/appStore";
 import { DeviceInfo, DeviceProperties, CommandResult, InstalledApp, ApkInfo, BatchOperation, DeviceFile } from "../types/device";
 import { logService } from "./logService";
-import { enhancedLogService } from "./enhancedLogService";
 import { deviceConnectionTrackingService } from "./deviceConnectionTrackingService";
 import { adbToolsManager } from "./adbToolsManager";
 
@@ -72,16 +71,6 @@ export class DeviceService {
         throw error;
       }
     });
-  }
-
-  async getDeviceInfo(serial: string): Promise<DeviceInfo> {
-    try {
-      const device = await invoke<DeviceInfo>("get_device_info", { serial });
-      return device;
-    } catch (error) {
-      console.error("Failed to get device info:", error);
-      throw error;
-    }
   }
 
   async getDeviceProperties(serial: string): Promise<DeviceProperties> {
@@ -272,45 +261,6 @@ export class DeviceService {
       return operation;
     } catch (error) {
       console.error("Failed to batch uninstall apps:", error);
-      throw error;
-    }
-  }
-
-  async freezeApp(serial: string, packageName: string): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("freeze_app", {
-        serial,
-        packageName,
-      });
-      return result;
-    } catch (error) {
-      console.error("Failed to freeze app:", error);
-      throw error;
-    }
-  }
-
-  async unfreezeApp(serial: string, packageName: string): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("unfreeze_app", {
-        serial,
-        packageName,
-      });
-      return result;
-    } catch (error) {
-      console.error("Failed to unfreeze app:", error);
-      throw error;
-    }
-  }
-
-  async clearAppData(serial: string, packageName: string): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("clear_app_data", {
-        serial,
-        packageName,
-      });
-      return result;
-    } catch (error) {
-      console.error("Failed to clear app data:", error);
       throw error;
     }
   }
@@ -514,39 +464,7 @@ export class DeviceService {
     }
   }
 
-
-
   // ADB管理相关功能
-  async stopAdbServer(): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("stop_adb_server");
-      return result;
-    } catch (error) {
-      logService.error("停止 ADB 服务失败", "设备服务", { error: String(error) });
-      throw error;
-    }
-  }
-
-  async restartAdbServer(): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("restart_adb_server");
-      return result;
-    } catch (error) {
-      logService.error("重启 ADB 服务失败", "设备服务", { error: String(error) });
-      throw error;
-    }
-  }
-
-  async installDeviceDriver(): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("install_device_driver");
-      logService.info("已触发安装设备驱动程序", "设备服务");
-      return result;
-    } catch (error) {
-      logService.error("安装设备驱动程序失败", "设备服务", { error: String(error) });
-      throw error;
-    }
-  }
 
   async fixUsb3Connection(): Promise<CommandResult> {
     try {
@@ -555,27 +473,6 @@ export class DeviceService {
       return result;
     } catch (error) {
       logService.error("修复 USB 3.0 连接失败", "设备服务", { error: String(error) });
-      throw error;
-    }
-  }
-
-  async clearAdbAuthorization(serial: string): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("clear_adb_authorization", { serial });
-      return result;
-    } catch (error) {
-      console.error("Failed to clear ADB authorization:", error);
-      throw error;
-    }
-  }
-
-  async diagnoseDeviceConnection(serial: string): Promise<CommandResult> {
-    try {
-      const result = await invoke<CommandResult>("diagnose_device_connection", { serial });
-      logService.info(`已对设备进行连接诊断: ${serial}`, "设备服务");
-      return result;
-    } catch (error) {
-      logService.error(`诊断设备连接失败: ${serial}`, "设备服务", { error: String(error) });
       throw error;
     }
   }
@@ -814,7 +711,7 @@ export class DeviceService {
         properties = await this.getDeviceProperties(device.serial);
       } catch (error) {
         console.warn('获取设备属性失败:', error);
-        enhancedLogService.logWarning(
+        logService.logWarning(
           `获取设备属性失败: ${device.serial}`,
           "DeviceService",
           { deviceSerial: device.serial, error: error?.toString() }
@@ -825,7 +722,7 @@ export class DeviceService {
       this.connectedDevices.set(device.serial, { connectedAt: new Date(), properties });
 
       // 使用增强日志系统记录设备连接事件
-      enhancedLogService.logDeviceEvent({
+      logService.logDeviceEvent({
         type: 'connected',
         deviceId: device.serial,
         deviceModel: properties?.marketName || properties?.model || 'Unknown',
@@ -852,7 +749,7 @@ export class DeviceService {
       console.log(`设备连接统计已记录 (${scanType}):`, device.serial);
     } catch (error) {
       console.error('记录设备连接失败:', error);
-      enhancedLogService.logError(
+      logService.logError(
         `记录设备连接失败: ${device.serial}`,
         "DeviceService",
         { deviceSerial: device.serial },
@@ -876,7 +773,7 @@ export class DeviceService {
       const connectionDuration = Date.now() - connectionInfo.connectedAt.getTime();
       
       // 使用增强日志系统记录设备断开事件
-      enhancedLogService.logDeviceEvent({
+      logService.logDeviceEvent({
         type: 'disconnected',
         deviceId: serial,
         deviceModel: connectionInfo.properties?.marketName || connectionInfo.properties?.model || 'Unknown',
@@ -891,7 +788,7 @@ export class DeviceService {
       
     } catch (error) {
       console.error('处理设备断开失败:', error);
-      enhancedLogService.logError(
+      logService.logError(
         `记录设备断开失败: ${serial}`,
         "DeviceService",
         { deviceSerial: serial },
@@ -1080,52 +977,7 @@ export const useDeviceService = () => {
 // 扩展deviceService类，添加设备操作功能
 class ExtendedDeviceService extends DeviceService {
   // 设备操作功能
-  async takeScreenshot(serial: string): Promise<void> {
-    try {
-      await invoke('take_screenshot', { serial });
-    } catch (error) {
-      console.error('截屏失败:', error);
-      throw error;
-    }
-  }
 
-  async startScreenRecord(serial: string): Promise<void> {
-    try {
-      await invoke('start_screen_record', { serial });
-    } catch (error) {
-      console.error('录屏失败:', error);
-      throw error;
-    }
-  }
-
-  async openFileManager(serial: string): Promise<void> {
-    try {
-      await invoke('open_file_manager', { serial });
-    } catch (error) {
-      console.error('打开文件管理器失败:', error);
-      throw error;
-    }
-  }
-
-  async openFileTransfer(serial: string): Promise<void> {
-    try {
-      await invoke('open_file_transfer', { serial });
-    } catch (error) {
-      console.error('打开文件传输失败:', error);
-      throw error;
-    }
-  }
-
-
-
-  async installApp(serial: string): Promise<void> {
-    try {
-      await invoke('install_app', { serial });
-    } catch (error) {
-      console.error('应用安装失败:', error);
-      throw error;
-    }
-  }
 }
 
 export const deviceService = new DeviceService();

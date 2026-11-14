@@ -1,19 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { invoke } from '@tauri-apps/api/core';
-import {
-  makeStyles,
-  mergeClasses,
-  shorthands,
-  Text,
-  Spinner,
-  tokens,
-  Menu,
-  MenuTrigger,
-  MenuList,
-  MenuItem,
-  MenuPopover,
-  Tooltip,
-} from "@fluentui/react-components";
+import {makeStyles, mergeClasses, shorthands, Text, Spinner, Menu, MenuTrigger, MenuList, MenuItem, MenuPopover, Tooltip} from "@fluentui/react-components";
 import {
   Checkmark24Regular,
   Warning24Regular,
@@ -28,9 +15,8 @@ import {
 import { useTranslation } from "react-i18next";
 import AppTour from "../Common/AppTour";
 import { useAppStore, StatusBarMessage } from "../../stores/appStore";
-import { useThemeStore } from "../../stores/themeStore";
-import { NotificationMessage } from "../../types/app";
 
+import { NotificationMessage } from "../../types/app";
 
 const useStyles = makeStyles({
   statusBar: {
@@ -269,7 +255,13 @@ const useStyles = makeStyles({
 const StatusBar: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
-  const { isLoading, notifications, removeNotification, statusBarMessage, clearStatusBarMessage, config, globalDownload, setCurrentView } = useAppStore();
+  const { isLoading, notifications, removeNotification, statusBarMessage, clearStatusBarMessage, config, globalDownload, setCurrentView, envStatus } = useAppStore();
+
+  // 环境检测状态（adb/fastboot 工具链）
+  const envIssue = !!envStatus && (envStatus.adb !== 'ok' || envStatus.fastboot !== 'ok');
+  const envBadTools = envStatus
+    ? [envStatus.adb !== 'ok' ? t('env.adb') : null, envStatus.fastboot !== 'ok' ? t('env.fastboot') : null].filter(Boolean) as string[]
+    : [];
   
   // 引导状态
   const [runTour, setRunTour] = useState<boolean | undefined>(undefined);
@@ -305,8 +297,7 @@ const StatusBar: React.FC = () => {
         const rawData = await invoke('read_resource_file', {
           path: `music/${soundFile}`
         });
-        
-        
+
         // 确保数据存在
         if (!rawData) {
           console.error(`获取${type}音效文件数据为空`);
@@ -329,8 +320,7 @@ const StatusBar: React.FC = () => {
           console.error(`无法识别的${type}音效数据类型`);
           return;
         }
-        
-        
+
         // 创建Blob对象和Blob URL
         const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
         const blobUrl = URL.createObjectURL(blob);
@@ -369,7 +359,6 @@ const StatusBar: React.FC = () => {
       console.error(`创建${type}音效失败:`, error);
     }
   };
-
 
 
   const [currentNotification, setCurrentNotification] = useState<NotificationMessage | null>(null);
@@ -524,7 +513,6 @@ const StatusBar: React.FC = () => {
         return <Info24Regular className={styles.notificationIcon} />;
     }
   };
-
 
 
   // 获取状态栏消息的图标
@@ -699,7 +687,37 @@ const StatusBar: React.FC = () => {
               </MenuList>
             </MenuPopover>
           </Menu>
-          
+
+          {/* 环境检测状态指示器（常驻） */}
+          {envStatus && (
+            <Tooltip
+              content={envIssue ? t('env.tooltip_issue', { tools: envBadTools.join('、') }) : t('env.tooltip_ok')}
+              relationship="label"
+              positioning="above"
+            >
+              <span
+                title={envIssue ? t('env.tooltip_issue', { tools: envBadTools.join('、') }) : t('env.tooltip_ok')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 10px',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'default',
+                  color: envIssue ? 'var(--colorErrorForeground2, #d13438)' : 'var(--colorSuccessForeground2, #107c41)',
+                  backgroundColor: envIssue
+                    ? 'var(--colorErrorBackground2, rgba(216, 59, 1, 0.12))'
+                    : 'var(--colorSuccessBackground2, rgba(16, 124, 65, 0.1))',
+                }}
+              >
+                {envIssue ? <Warning24Regular style={{ fontSize: '14px' }} /> : <Checkmark24Filled style={{ fontSize: '14px' }} />}
+                <span>{envIssue ? t('env.status_issue') : t('env.status_ok')}</span>
+              </span>
+            </Tooltip>
+          )}
+
           {/* 可以添加其他状态信息 */}
         </div>
       </div>

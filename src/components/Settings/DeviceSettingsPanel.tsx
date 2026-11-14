@@ -1,15 +1,5 @@
 import React from "react";
-import {
-  makeStyles,
-  Text,
-  Card,
-  CardHeader,
-  Switch,
-  Badge,
-  TabList,
-  Tab,
-  Divider,
-} from "@fluentui/react-components";
+import {makeStyles, Text, Card, CardHeader, Switch, TabList, Tab, Divider} from "@fluentui/react-components";
 import {
   Timer24Regular,
   Pulse24Regular,

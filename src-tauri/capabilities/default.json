@@ -74,8 +74,6 @@
       "identifier": "http:default",
       "allow": [
         { "url": "https://*" },
-        { "url": "http://*" },
-        { "url": "*://*" },
         { "url": "https://api.deepseek.com/*" },
         { "url": "https://*.deepseek.com/*" },
         { "url": "https://api.openai.com/*" },

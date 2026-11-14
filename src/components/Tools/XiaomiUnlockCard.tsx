@@ -20,9 +20,7 @@ import {
   Button,
   Spinner,
 } from "@fluentui/react-components";
-import {
-  Warning24Regular,
-} from "@fluentui/react-icons";
+
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
@@ -337,7 +335,6 @@ const XiaomiUnlockCard: React.FC<XiaomiUnlockCardProps> = ({ device }) => {
               </Button>
             ))}
           </div>
-
 
         </div>
       </Card>

@@ -1,17 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  makeStyles,
-  Card,
-  CardHeader,
-  Button,
-  Text,
-  Tab,
-  TabList,
-  Spinner,
-  mergeClasses,
-  tokens,
-  Badge,
-} from '@fluentui/react-components';
+import {makeStyles, Card, Button, Text, Tab, TabList, Spinner, mergeClasses, tokens, Badge} from '@fluentui/react-components';
 import {
   Pulse24Regular,
   Play24Filled,
@@ -22,7 +10,7 @@ import {
 } from '@fluentui/react-icons';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
-import { writeTextFile, writeFile, BaseDirectory, mkdir } from '@tauri-apps/plugin-fs';
+import {writeTextFile, writeFile, mkdir} from '@tauri-apps/plugin-fs';
 import { documentDir, join } from '@tauri-apps/api/path';
 import {
   LineChart,

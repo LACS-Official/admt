@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { devtools, persist, createJSONStorage } from 'zustand/middleware';
+import {persist, createJSONStorage} from 'zustand/middleware';
 import type { VersionCheckResult, VersionInfo } from '../types/app';
 
 // 启动流程阶段

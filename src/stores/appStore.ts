@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { AppState, AppView, AppConfig, NotificationMessage, LogRecordingLevel } from "../types/app";
+import {AppState, AppView, AppConfig, NotificationMessage} from "../types/app";
 import { invoke } from "@tauri-apps/api/core";
 
 // 状态栏消息类型
@@ -24,6 +24,14 @@ export interface GlobalDownloadStatus {
   totalSizeText?: string;
 }
 
+// 启动环境检测（adb/fastboot 工具链）状态
+export type EnvToolStatus = 'ok' | 'unavailable' | 'unknown';
+export interface EnvCheckStatus {
+  adb: EnvToolStatus;
+  fastboot: EnvToolStatus;
+  checkedAt: number;
+}
+
 interface AppStoreState extends AppState {
   notifications: NotificationMessage[];
   statusBarMessage: StatusBarMessage | null;
@@ -39,6 +47,8 @@ interface AppStoreState extends AppState {
   setStatusBarMessage: (message: (Omit<StatusBarMessage, "id" | "timestamp"> & { source?: string }) | null) => void;
   clearStatusBarMessage: (source?: string) => void;
   setGlobalDownload: (status: GlobalDownloadStatus | null) => void;
+  envStatus: EnvCheckStatus | null;
+  setEnvStatus: (status: EnvCheckStatus) => void;
   setNavigationParams: (params: Record<string, any> | undefined) => void;
   isWirelessDebuggingDialogOpen: boolean;
   setWirelessDebuggingDialogOpen: (open: boolean) => void;
@@ -66,7 +76,7 @@ const defaultConfig: AppConfig = {
   scanInterval: 2000,
   deviceDetectionInterval: 5000,
   logLevel: "info",
-  logRecordingLevels: ["error", "warning"],
+  logRecordingLevels: ["error", "warning", "info"],
   systemTrayEnabled: true,
   autoStartEnabled: false,
   minimizeToTrayOnClose: true,
@@ -111,6 +121,7 @@ export const useAppStore = create<AppStoreState>()(
       notifications: [],
       statusBarMessage: null,
       globalDownload: null,
+      envStatus: null,
       navigationParams: undefined,
       isWirelessDebuggingDialogOpen: false,
       isCommandLineModalOpen: false,
@@ -208,6 +219,7 @@ export const useAppStore = create<AppStoreState>()(
       },
 
       setGlobalDownload: (status: GlobalDownloadStatus | null) => set({ globalDownload: status }),
+      setEnvStatus: (status: EnvCheckStatus) => set({ envStatus: status }),
 
       setWirelessDebuggingDialogOpen: (open: boolean) => set({ isWirelessDebuggingDialogOpen: open }),
       setCommandLineModalOpen: (open: boolean) => {

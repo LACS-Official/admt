@@ -2,6 +2,11 @@ import { deviceService } from "./deviceService";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
+import { fetchGithubJson, reportRootDataSource } from "./rootToolsService";
+
+// 在线 / 离线数据源状态：统一由 rootToolsService 维护，此处转出供 UI 直接使用
+export { getRootDataSourceStatus } from "./rootToolsService";
+export type { RootDataSourceStatus } from "./rootToolsService";
 
 export type RootModuleType = "magisk" | "ksu" | "lsposed" | "apatch";
 
@@ -146,6 +151,145 @@ export const DEFAULT_ONLINE_CORE_MODULES: OnlineCoreModuleInfo[] = [
     notes: "APK 模块应用，刷入后将在设备端安装并自动注册到 LSPosed",
   },
 ];
+
+const MODULE_CACHE_KEY = "admt_online_core_modules_cache_v1";
+
+/** GitHub Releases 返回结构（只取在线模块需要的字段） */
+interface GhModuleRelease {
+  tag_name?: string;
+  name?: string;
+  published_at?: string;
+  assets?: Array<{
+    name?: string;
+    browser_download_url?: string;
+    size?: number;
+  }>;
+}
+
+/**
+ * 从 GitHub Releases 拉取单个模块的最新版本信息。
+ * 失败时抛出明确错误（由调用方决定降级），不静默吞掉。
+ */
+async function fetchLatestModuleRelease(
+  mod: OnlineCoreModuleInfo,
+  timeoutMs = 12000
+): Promise<OnlineCoreModuleInfo> {
+  const rels = await fetchGithubJson<GhModuleRelease[]>(
+    `https://api.github.com/repos/${mod.repo}/releases?per_page=1`,
+    timeoutMs
+  );
+  if (!Array.isArray(rels) || rels.length === 0) {
+    throw new Error(`${mod.repo} 未返回任何 release`);
+  }
+
+  const latest = rels[0];
+  const updated: OnlineCoreModuleInfo = { ...mod };
+  const tag = latest.tag_name || latest.name || "";
+  if (tag) {
+    updated.version = tag;
+    updated.isLatest = true;
+  }
+  if (latest.published_at) {
+    updated.releaseDate = latest.published_at.slice(0, 10);
+  }
+
+  if (latest.assets && latest.assets.length > 0) {
+    const isApk = mod.targetType === "lsposed" || mod.fileName.endsWith(".apk");
+    const asset =
+      latest.assets.find((a) => {
+        const n = (a.name || "").toLowerCase();
+        if (isApk) return n.endsWith(".apk");
+        if (mod.id === "lsposed_mod") return n.includes("zygisk") && n.endsWith(".zip");
+        return n.endsWith(".zip");
+      }) || latest.assets[0];
+
+    if (asset && asset.browser_download_url) {
+      updated.downloadUrl = asset.browser_download_url;
+      updated.fileName = asset.name || mod.fileName;
+      if (asset.size) {
+        updated.fileSize = `${(asset.size / (1024 * 1024)).toFixed(2)} MB`;
+      }
+    }
+  }
+  return updated;
+}
+
+/**
+ * 在线拉取核心模块最新信息，与内置静态列表合并去重（在线优先）。
+ * 使用 Tauri HTTP 插件绕过 WebView CORS，每个请求独立超时；
+ * 全部失败时明确返回静态列表，并把失败原因上报到数据源状态，绝不静默吞掉。
+ */
+export async function fetchOnlineRootModules(
+  forceRefresh = false,
+  _useMirror = true
+): Promise<OnlineCoreModuleInfo[]> {
+  if (!forceRefresh) {
+    try {
+      const cached = localStorage.getItem(MODULE_CACHE_KEY);
+      if (cached) {
+        const list = JSON.parse(cached) as OnlineCoreModuleInfo[];
+        if (Array.isArray(list) && list.length > 0) {
+          return list;
+        }
+      }
+    } catch (_e) {
+      // 缓存读取失败不阻塞在线拉取
+    }
+  }
+
+  const staticList = JSON.parse(
+    JSON.stringify(DEFAULT_ONLINE_CORE_MODULES)
+  ) as OnlineCoreModuleInfo[];
+  const errors: string[] = [];
+
+  const results = await Promise.allSettled(
+    staticList.map((mod) => fetchLatestModuleRelease(mod))
+  );
+
+  const onlineById = new Map<string, OnlineCoreModuleInfo>();
+  results.forEach((r, idx) => {
+    if (r.status === "fulfilled") {
+      onlineById.set(staticList[idx].id, r.value);
+    } else {
+      const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+      errors.push(`${staticList[idx].id}: ${msg}`);
+      console.warn(`[RootModule] 拉取在线模块失败 (${staticList[idx].id}):`, msg);
+    }
+  });
+
+  // 在线优先 + 静态兜底，按 id 去重
+  const merged: OnlineCoreModuleInfo[] = [];
+  const seen = new Set<string>();
+  for (const online of onlineById.values()) {
+    if (seen.has(online.id)) continue;
+    seen.add(online.id);
+    merged.push(online);
+  }
+  for (const mod of staticList) {
+    if (seen.has(mod.id)) continue;
+    seen.add(mod.id);
+    merged.push(mod);
+  }
+
+  const anyOnline = onlineById.size > 0;
+  reportRootDataSource({
+    ...(anyOnline ? { lastSyncedAt: new Date().toISOString() } : {}),
+    lastError: errors.length > 0 ? errors.join(" | ") : null,
+    modulesOnline: anyOnline,
+  });
+
+  const finalList = anyOnline ? merged : staticList;
+
+  // 仅在线成功时写入缓存，避免把静态兜底当成在线结果缓存
+  if (anyOnline) {
+    try {
+      localStorage.setItem(MODULE_CACHE_KEY, JSON.stringify(finalList));
+    } catch (_e) {
+      // 缓存写入失败不影响返回
+    }
+  }
+  return finalList;
+}
 
 class RootModuleService {
   private static instance: RootModuleService;
@@ -712,74 +856,8 @@ rm -f "${remoteZip}"
     forceRefresh = false,
     _useMirror = true
   ): Promise<OnlineCoreModuleInfo[]> {
-    if (!forceRefresh) {
-      try {
-        const cached = localStorage.getItem("admt_online_core_modules_cache_v1");
-        if (cached) {
-          return JSON.parse(cached);
-        }
-      } catch (_e) {
-        // ignore cache read error
-      }
-    }
-
-    const modules = JSON.parse(JSON.stringify(DEFAULT_ONLINE_CORE_MODULES)) as OnlineCoreModuleInfo[];
-
-    // 并行异步检索 GitHub Releases 最新版本
-    await Promise.allSettled(
-      modules.map(async (mod) => {
-        try {
-          const apiUrl = `https://api.github.com/repos/${mod.repo}/releases?per_page=1`;
-          const resp = await fetch(apiUrl, {
-            headers: { Accept: "application/vnd.github.v3+json" },
-            signal: AbortSignal.timeout(6000),
-          });
-
-          if (!resp.ok) return;
-          const releases = await resp.json();
-          if (!Array.isArray(releases) || releases.length === 0) return;
-
-          const latest = releases[0];
-          const tag = latest.tag_name || latest.name || "";
-          if (tag) {
-            mod.version = tag;
-            mod.isLatest = true;
-          }
-          if (latest.published_at) {
-            mod.releaseDate = latest.published_at.slice(0, 10);
-          }
-
-          if (latest.assets && latest.assets.length > 0) {
-            const isApk = mod.targetType === "lsposed" || mod.fileName.endsWith(".apk");
-            const asset = latest.assets.find((a: any) => {
-              const n = (a.name || "").toLowerCase();
-              if (isApk) return n.endsWith(".apk");
-              if (mod.id === "lsposed_mod") return n.includes("zygisk") && n.endsWith(".zip");
-              return n.endsWith(".zip");
-            }) || latest.assets[0];
-
-            if (asset && asset.browser_download_url) {
-              mod.downloadUrl = asset.browser_download_url;
-              mod.fileName = asset.name || mod.fileName;
-              if (asset.size) {
-                const mb = (asset.size / (1024 * 1024)).toFixed(2);
-                mod.fileSize = `${mb} MB`;
-              }
-            }
-          }
-        } catch (_err) {
-          // 单个拉取失败不影响整体展示
-        }
-      })
-    );
-
-    try {
-      localStorage.setItem("admt_online_core_modules_cache_v1", JSON.stringify(modules));
-    } catch (_e) {
-      // ignore cache write error
-    }
-
-    return modules;
+    // 统一走在线拉取 + 静态兜底 + 超时 + 数据源状态上报的实现
+    return fetchOnlineRootModules(forceRefresh, _useMirror);
   }
 
   /**

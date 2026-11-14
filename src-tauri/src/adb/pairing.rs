@@ -1,7 +1,7 @@
 use crate::error::{AdmtError, Result};
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use once_cell::sync::Lazy;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::TcpListener;
@@ -36,7 +36,7 @@ pub async fn start_adb_pairing_server() -> Result<PairingInfo> {
         });
     }
 
-    let pairing_code: String = rand::thread_rng()
+    let pairing_code: String = rand::rng()
         .sample_iter(&Alphanumeric)
         .take(6)
         .map(char::from)
@@ -47,7 +47,7 @@ pub async fn start_adb_pairing_server() -> Result<PairingInfo> {
     let port = listener.local_addr()?.port();
     drop(listener); // Close and reopen with tokio
 
-    let service_name = format!("ADMT-{}", rand::thread_rng().gen_range(1000..9999));
+    let service_name = format!("ADMT-{}", rand::rng().random_range(1000..9999));
 
     let mdns = ServiceDaemon::new().map_err(|e| AdmtError::Unknown {
         message: e.to_string(),

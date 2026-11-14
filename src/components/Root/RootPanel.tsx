@@ -1,27 +1,15 @@
 
 import React, { useState, useEffect }  from 'react';
 
-import {
-  makeStyles,
-  Text,
-  TabList,
-  Tab,
-  Button,
-} from "@fluentui/react-components";
-import {
-  Code24Regular,
-  Settings24Regular,
-  Play24Regular,
-  Apps24Regular,
-  Folder24Regular,
-  Dismiss24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, TabList, Tab} from "@fluentui/react-components";
+import {Code24Regular, Settings24Regular, Play24Regular, Apps24Regular, Key24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
 import PatchImagePanel from './PatchImagePanel';
 import ModulePanel from './ModulePanel';
 import AdvancedSettingsPanel from './AdvancedSettingsPanel';
 import OneClickRootPanel from './OneClickRootPanel';
+import SuAppPanel from './SuAppPanel';
 import { DeviceInfo } from '../../types/device';
 
 const useStyles = makeStyles({
@@ -149,13 +137,19 @@ const useStyles = makeStyles({
   },
 });
 
-type AdbZoneView = "one-click-root" | "patch-image" | "module-management" | "advanced-settings";
+type AdbZoneView = "one-click-root" | "patch-image" | "module-management" | "advanced-settings" | "su-management";
+
+// 一键 Root 流程尚未通过真机刷写验证，先不开放入口。
+// 实现代码完整保留，验证通过后把此开关改回 true 即可恢复。
+const ENABLE_ONE_CLICK_ROOT = false;
 
 const RootPanel: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const { selectedDevice, devices } = useDeviceStore();
-  const [currentView, setCurrentView] = useState<AdbZoneView>("one-click-root");
+  const [currentView, setCurrentView] = useState<AdbZoneView>(
+    ENABLE_ONE_CLICK_ROOT ? "one-click-root" : "patch-image",
+  );
   const [showOverlay, setShowOverlay] = useState(false);
   
   const isNoDevice = !selectedDevice || devices.filter(d => d.connected).length === 0;
@@ -173,11 +167,15 @@ const RootPanel: React.FC = () => {
   };
 
   const tabs = [
-    {
-      id: "one-click-root" as AdbZoneView,
-      label: "一键 Root",
-      icon: <Play24Regular />,
-    },
+    ...(ENABLE_ONE_CLICK_ROOT
+      ? [
+          {
+            id: "one-click-root" as AdbZoneView,
+            label: t('root.tab_one_click', '一键 Root'),
+            icon: <Play24Regular />,
+          },
+        ]
+      : []),
     {
       id: "patch-image" as AdbZoneView,
       label: t('root.tab_patch', '镜像修补'),
@@ -193,20 +191,31 @@ const RootPanel: React.FC = () => {
       label: t('root.tab_settings', '高级设置'),
       icon: <Settings24Regular />,
     },
+    {
+      id: "su-management" as AdbZoneView,
+      label: t('root.tab_su', '授权管理'),
+      icon: <Key24Regular />,
+    },
   ];
 
   const renderContent = (device: DeviceInfo | null) => {
     switch (currentView) {
       case "one-click-root":
-        return <OneClickRootPanel device={device} />;
+        return ENABLE_ONE_CLICK_ROOT ? (
+          <OneClickRootPanel device={device} />
+        ) : (
+          <PatchImagePanel device={device} />
+        );
       case "patch-image":
         return <PatchImagePanel device={device} />;
       case "module-management":
         return <ModulePanel device={device} />;
       case "advanced-settings":
         return <AdvancedSettingsPanel device={device} />;
+      case "su-management":
+        return <SuAppPanel device={device} />;
       default:
-        return <OneClickRootPanel device={device} />;
+        return <PatchImagePanel device={device} />;
     }
   };
 

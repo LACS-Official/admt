@@ -7,7 +7,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { usePrivacyConsentStore } from '../stores/privacyConsentStore';
 import { SecurityConfigManager } from '../config/securityConfig';
-import { tauriHttpService } from './tauriHttpService';
 
 // 使用数据接口
 interface UsageData {
@@ -295,7 +294,6 @@ export class UsageTrackingService {
   private generateSessionId(): string {
     return `session_${Date.now()}_${Math.random().toString(36).substring(2)}`;
   }
-
 
 
   /**

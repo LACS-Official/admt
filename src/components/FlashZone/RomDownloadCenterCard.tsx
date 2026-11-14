@@ -1,25 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import {
-  makeStyles,
-  shorthands,
-  Text,
-  Button,
-  Field,
-  Input,
-  Select,
-  ProgressBar,
-  Spinner,
-  Badge,
-  Tooltip,
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogContent,
-  DialogBody,
-  DialogActions,
-} from "@fluentui/react-components";
+import {makeStyles, Text, Button, Field, Input, Select, ProgressBar, Spinner, Badge, Tooltip, Dialog, DialogSurface, DialogTitle, DialogContent, DialogBody, DialogActions} from "@fluentui/react-components";
 import {
   ArrowDownload24Regular,
   ArrowSync24Regular,
@@ -38,32 +20,8 @@ import {
 } from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
-import {
-  POPULAR_XIAOMI_DEVICES,
-  XiaomiRomItem,
-  extractXiaomiDeviceCode,
-  extractXiaomiRomVersion,
-  isXiaomiDevice,
-  queryXiaomiRoms,
-  generatePartitionExtractScript,
-  detectXiaomiRegion,
-  getRomMirrors,
-  RomMirrorItem,
-  getXiaomiSupportedVersions,
-  SupportedSystemVersion,
-  fetchXiaomiDevicePresets,
-  fetchLatestXiaomiRoms,
-  getXiaomiDataSourceStatus,
-  XiaomiDataSourceStatus,
-  XiaomiDevicePreset,
-} from "../../services/xiaomiRomService";
-import {
-  RomBrandCategory,
-  MultiBrandRomItem,
-  multiBrandRomService,
-  AOSP_PROJECTS,
-  EXOTIC_CATEGORIES,
-} from "../../services/multiBrandRomService";
+import {POPULAR_XIAOMI_DEVICES, XiaomiRomItem, extractXiaomiDeviceCode, extractXiaomiRomVersion, queryXiaomiRoms, detectXiaomiRegion, getRomMirrors, RomMirrorItem, getXiaomiSupportedVersions, SupportedSystemVersion, fetchXiaomiDevicePresets, fetchLatestXiaomiRoms, getXiaomiDataSourceStatus, XiaomiDataSourceStatus, XiaomiDevicePreset} from "../../services/xiaomiRomService";
+import {RomBrandCategory, multiBrandRomService, AOSP_PROJECTS, EXOTIC_CATEGORIES} from "../../services/multiBrandRomService";
 import { onlineResourcesService } from "../../services/onlineResourcesService";
 import { detectNetdiskLink, extractHttpUrl, openInBrowser } from "../../utils/netdiskLink";
 

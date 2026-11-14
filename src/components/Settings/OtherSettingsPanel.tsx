@@ -1,16 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import {
-  makeStyles,
-  mergeClasses,
-  Text,
-  Card,
-  CardHeader,
-  Switch,
-  Select,
-  Button,
-  Spinner,
-  Divider,
-} from "@fluentui/react-components";
+import React, { useState, useEffect, useCallback } from "react";
+import {makeStyles, Text, Card, CardHeader, Switch, Select, Button, Spinner, Divider} from "@fluentui/react-components";
 import {
   Globe24Regular,
   Globe20Regular,
@@ -77,17 +66,6 @@ const StatusIndicator: React.FC<{ status: SystemFeatureStatus | null }> = ({ sta
       )}
     </div>
   );
-};
-
-const debounce = <T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
 };
 
 const useStyles = makeStyles({
@@ -179,38 +157,41 @@ const OtherSettingsPanel: React.FC = () => {
   const [trayStatus, setTrayStatus] = useState<SystemFeatureStatus | null>(null);
   const [autoStartStatus, setAutoStartStatus] = useState<SystemFeatureStatus | null>(null);
   
-  const checkSystemFeatures = useMemo(() => 
-    debounce(async () => {
-      try {
-        const [isTraySupp, isAutoStartSupp] = await Promise.all([
-          systemTrayService().isSystemTraySupported(),
-          isEnabled().then(() => true).catch(() => false),
-        ]);
-        
-        setTraySupported(isTraySupp);
-        setAutoStartSupported(isAutoStartSupp);
-      } catch (error) {
-        console.error('系统功能检查失败:', error);
-      }
-    }, 1000), []
-  );
+  const checkSystemFeatures = useCallback(async () => {
+    try {
+      const [isTraySupp, isAutoStartSupp] = await Promise.all([
+        systemTrayService().isSystemTraySupported(),
+        isEnabled().then(() => true).catch(() => false),
+      ]);
+
+      setTraySupported(isTraySupp);
+      setAutoStartSupported(isAutoStartSupp);
+    } catch (error) {
+      console.error('系统功能检查失败:', error);
+    }
+  }, []);
 
   useEffect(() => {
     const syncStates = async () => {
       try {
         setLoading(true);
         await checkSystemFeatures();
-        
-        const trayReady = await systemTrayService().isReady();
-        if (trayReady !== config.systemTrayEnabled) {
-          updateConfig({ systemTrayEnabled: trayReady });
-          setMinimizeToTray(trayReady);
+
+        // 以用户配置为准驱动托盘，而不是反过来用「托盘当前是否已创建」覆盖配置。
+        // 后者会让刚打开的开关被立刻弹回（同步往往发生在 initialize 完成之前）。
+        const currentConfig = useAppStore.getState().config;
+        const traySupportedNow = await systemTrayService().isSystemTraySupported();
+        if (currentConfig.systemTrayEnabled && traySupportedNow && !systemTrayManager.isReady()) {
+          await systemTrayManager.initialize({
+            systemTrayEnabled: true,
+            minimizeToTrayOnClose: currentConfig.minimizeToTrayOnClose,
+          });
         }
 
         if (autoStartSupported) {
           await autoStartService.initialize('玩机管家');
           const status = await autoStartService.getAutoStartStatus();
-          if (status.isEnabled !== config.autoStartEnabled) {
+          if (status.isEnabled !== currentConfig.autoStartEnabled) {
             updateConfig({ autoStartEnabled: status.isEnabled });
             setStartWithSystem(status.isEnabled);
           }
@@ -306,7 +287,7 @@ const OtherSettingsPanel: React.FC = () => {
     })();
   };
 
-  const currentRecordingLevels: LogRecordingLevel[] = config.logRecordingLevels ?? ["error", "warning"];
+  const currentRecordingLevels: LogRecordingLevel[] = config.logRecordingLevels ?? ["error", "warning", "info"];
 
   const handleToggleLogLevel = (level: LogRecordingLevel, checked: boolean) => {
     let next: LogRecordingLevel[];
@@ -328,7 +309,7 @@ const OtherSettingsPanel: React.FC = () => {
       autoStartEnabled: false,
       soundEnabled: true,
       globalSearchHotkey: 'Ctrl+K',
-      logRecordingLevels: ["error", "warning"] as LogRecordingLevel[],
+      logRecordingLevels: ["error", "warning", "info"] as LogRecordingLevel[],
     };
     updateConfig(defaultSettings);
     logService.applyRecordedLevelsFilter();

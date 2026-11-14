@@ -10,6 +10,7 @@ import { SecurityConfigManager } from "../config/securityConfig";
 import { unifiedVersionService } from "../services/unifiedVersionService";
 import { usageTrackingService } from "../services/usageTrackingService";
 import { deviceService } from "../services/deviceService";
+import { checkEnvironment } from "../services/envCheckService";
 import { useConfigStore } from "../stores/configStore";
 import { useDeviceStore } from "../stores/deviceStore";
 
@@ -48,6 +49,17 @@ export const useAppStartup = () => {
   const securityConfigRef = useRef(false);
   const adbInitRef = useRef(false);
   const completionRef = useRef(false); // 保护完成回调只执行一次
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 组件卸载时清理倒计时定时器，避免定时器继续跑并重复触发 exit()
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current !== null) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // 禁用 Webview 刷新快捷键（保留桌面体验）
   useEffect(() => {
@@ -166,6 +178,17 @@ export const useAppStartup = () => {
           }
         })(),
 
+        // 环境检测（adb/fastboot 工具链可用性）
+        (async () => {
+          try {
+            const status = await checkEnvironment();
+            useAppStore.getState().setEnvStatus(status);
+            console.log(" 环境检测完成:", status);
+          } catch (error) {
+            console.error(" 环境检测失败:", error);
+          }
+        })(),
+
         // 开启设备扫描的操作将被移到启动完成后执行，减少启动时的负载
       ];
 
@@ -258,10 +281,19 @@ export const useAppStartup = () => {
     setShowErrorNotification(true);
     setCountdown(5);
 
-    const countdownInterval = setInterval(() => {
+    // 避免重复创建定时器导致多次触发 exit()
+    if (countdownIntervalRef.current !== null) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    countdownIntervalRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          clearInterval(countdownInterval);
+          if (countdownIntervalRef.current !== null) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
           setTimeout(async () => {
             try {
               const { exit } = await import('@tauri-apps/plugin-process');

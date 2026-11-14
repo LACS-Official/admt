@@ -504,24 +504,6 @@ fn calculate_realtime_cpu_usage(serial: &str, output: &str) -> (f64, Vec<f64>) {
     (total_usage, core_usages)
 }
 
-#[allow(dead_code)]
-fn parse_battery_level_and_health(output: &str) -> (i32, Option<String>) {
-    let mut level = 0;
-    let mut health = None;
-    for line in output.lines() {
-        let line = line.trim();
-        if line.starts_with("level:") {
-            level = line
-                .split(':')
-                .nth(1)
-                .and_then(|s| s.trim().parse().ok())
-                .unwrap_or(0);
-        } else if line.starts_with("health:") {
-            health = line.split(':').nth(1).map(|s| s.trim().to_string());
-        }
-    }
-    (level, health)
-}
 
 fn calculate_network_speed(serial: &str, output: &str) -> (f64, f64) {
     let mut rx_bytes = 0u64;
@@ -669,6 +651,20 @@ pub async fn backup_partition(
         partition,
         output_path
     );
+
+    // 分区名会被拼进设备端 shell 命令，必须先做白名单校验，避免命令注入
+    if partition.is_empty()
+        || !partition
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return Ok(crate::device::CommandResult {
+            success: false,
+            output: String::new(),
+            error: Some("分区名包含非法字符，已拒绝执行".to_string()),
+            exit_code: Some(1),
+        });
+    }
 
     // 1. 在设备端执行 dd 备份到临时位置
     // 注意：这需要设备有 root 权限，通常使用 'su -c dd ...'

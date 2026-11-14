@@ -3,9 +3,10 @@
  * 提供最小化到系统托盘的功能，包括托盘图标、右键菜单等
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { exit } from '@tauri-apps/plugin-process';
+import { useDeviceStore } from '../stores/deviceStore';
 
 // 扩展 Window 接口以包含 Tauri 全局对象
 declare global {
@@ -36,6 +37,7 @@ export class SystemTrayService {
   private currentWindow: any = null;
   private closeToTrayEnabled = false;
   private closeEventUnlisten?: () => void;
+  private trayEventUnlistens: Array<() => void> = [];
   private windowInitialized = false;
 
   private constructor() {
@@ -120,16 +122,10 @@ export class SystemTrayService {
       console.warn(' 插件退出失败，尝试后端兜底：', pluginErr);
     }
 
-    // 4) 后端兜底：force_exit 优先，其次兼容 exit_app，如均不可用则最终 window.close()
+    // 4) 后端兜底：exit_app；不可用则最终 window.close()
     try {
-      try {
-        await invoke('force_exit', { exitCode });
-        return;
-      } catch (_) {
-        // 兼容旧命令名
-        await invoke('exit_app', { exitCode });
-        return;
-      }
+      await invoke('exit_app', { exitCode });
+      return;
     } catch (backendErr) {
       console.error(' 后端兜底退出失败：', backendErr);
       if (typeof window !== 'undefined') {
@@ -200,20 +196,51 @@ export class SystemTrayService {
       // 监听托盘菜单点击事件
       await invoke('setup_tray_event_listener');
       
-      // 注册事件处理器
+      // 注册事件处理器（保存 unlisten，避免反复开关托盘后累积重复监听）
       const { listen } = await import('@tauri-apps/api/event');
-      
-      await listen('tray-menu-click', (event) => {
-        this.handleTrayMenuClick(event.payload as string);
-      });
 
-      await listen('tray-icon-click', () => {
-        this.handleTrayIconClick();
-      });
+      this.clearTrayEventListeners();
+      this.trayEventUnlistens.push(
+        await listen('tray-menu-click', (event) => {
+          this.handleTrayMenuClick(event.payload as string);
+        }),
+        await listen('tray-icon-click', () => {
+          this.handleTrayIconClick();
+        }),
+      );
 
     } catch (error) {
       console.error(' 设置托盘事件监听器失败:', error);
       throw error;
+    }
+  }
+
+  /** 移除托盘事件监听（幂等） */
+  private clearTrayEventListeners(): void {
+    for (const unlisten of this.trayEventUnlistens.splice(0)) {
+      try {
+        unlisten();
+      } catch (err) {
+        console.warn('移除托盘事件监听失败:', err);
+      }
+    }
+  }
+
+  /**
+   * 重启当前选中设备
+   * 后端 reboot_device 的签名是 (serial: String, mode: String)，
+   * 托盘菜单只携带目标模式，序列号需从设备状态中取，否则反序列化会失败。
+   */
+  private async rebootActiveDevice(mode: 'system' | 'bootloader' | 'recovery'): Promise<void> {
+    const serial = useDeviceStore.getState().selectedDevice?.serial;
+    if (!serial) {
+      console.warn(`托盘重启失败：当前没有选中设备 (mode=${mode})`);
+      return;
+    }
+    try {
+      await invoke('reboot_device', { serial, mode });
+    } catch (e) {
+      console.error(`托盘重启设备失败 (mode=${mode}):`, e);
     }
   }
 
@@ -238,30 +265,15 @@ export class SystemTrayService {
           break;
         case 'reboot_sys':
         case 'custom-reboot_sys':
-          try {
-            const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('reboot_device', { rebootType: 'system' });
-          } catch (e) {
-            console.error('托盘重启系统失败:', e);
-          }
+          await this.rebootActiveDevice('system');
           break;
         case 'reboot_bootloader':
         case 'custom-reboot_bootloader':
-          try {
-            const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('reboot_device', { rebootType: 'bootloader' });
-          } catch (e) {
-            console.error('托盘重启Fastboot失败:', e);
-          }
+          await this.rebootActiveDevice('bootloader');
           break;
         case 'reboot_recovery':
         case 'custom-reboot_recovery':
-          try {
-            const { invoke } = await import('@tauri-apps/api/core');
-            await invoke('reboot_device', { rebootType: 'recovery' });
-          } catch (e) {
-            console.error('托盘重启Recovery失败:', e);
-          }
+          await this.rebootActiveDevice('recovery');
           break;
         case 'exit':
         case 'custom-exit':
@@ -382,6 +394,7 @@ export class SystemTrayService {
           this.closeEventUnlisten();
           this.closeEventUnlisten = undefined;
         }
+        this.clearTrayEventListeners();
         
         // 销毁托盘
         try {
@@ -411,16 +424,24 @@ export class SystemTrayService {
 
   /**
    * 检查系统是否支持托盘功能
+   *
+   * 注意：Tauri 2 默认不会注入 `window.__TAURI__`（那是 Tauri 1 开启
+   * withGlobalTauri 后才有的全局对象），这里必须用官方的 isTauri() 判定，
+   * 再向后端确认平台能力，避免把正常的桌面环境误判为「不支持托盘」。
    */
   async isSystemTraySupported(): Promise<boolean> {
     try {
-      // 检查是否在 Tauri 环境中
-      if (typeof window === 'undefined' || !window.__TAURI__) {
+      if (typeof window === 'undefined' || !isTauri()) {
         return false;
       }
-      
-      // 在 Tauri 中，系统托盘通常是支持的
-      return true;
+
+      try {
+        return await invoke<boolean>('is_system_tray_supported');
+      } catch (err) {
+        // 旧版本后端没有该命令时，退化为「在 Tauri 桌面环境内即视为支持」
+        console.warn('后端托盘能力探测失败，回退到环境判定:', err);
+        return true;
+      }
     } catch (error) {
       console.error('检查系统托盘支持时出错:', error);
       return false;

@@ -2,20 +2,7 @@ import React, { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import {
-  makeStyles,
-  Card,
-  Text,
-  Button,
-  Field,
-  Input,
-  ProgressBar,
-  Spinner,
-  Badge,
-  TabList,
-  Tab,
-  tokens,
-} from "@fluentui/react-components";
+import {makeStyles, Card, Text, Button, Field, Input, ProgressBar, Spinner, Badge, TabList, Tab} from "@fluentui/react-components";
 import {
   Folder24Regular,
   Document24Regular,

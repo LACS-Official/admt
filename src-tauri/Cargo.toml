@@ -1,6 +1,6 @@
 [package]
 name = "admt-lacs"
-version = "1.5.5"
+version = "1.5.6"
 description = "Android设备跨平台全能管家"
 authors = ["领创工作室"]
 repository = ""
@@ -19,6 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+# build.rs 用 chrono 生成 BUILD_DATE；与 [dependencies] 的 chrono 各自独立，不可合并
 chrono = { version = "0.4", features = ["serde"] }
 
 [dependencies]
@@ -32,23 +33,16 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-http = "2"
 tauri-plugin-opener = "2"
-tokio = { version = "1.0", features = ["full"] }
-anyhow = "1.0"
+tokio = { version = "1", features = ["full"] }
 thiserror = "1.0"
-regex = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
-reqwest = { version = "0.11", features = ["json", "stream", "blocking"] }
-base64 = "0.21"
+reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
+base64 = "0.22"
 mdns-sd = "0.11"
-spake2 = "0.4"
-rustls = "0.23"
-tokio-rustls = "0.26"
-rand = "0.8"
+rand = "0.9"
 futures-util = "0.3"
-futures = "0.3"
 dirs = "5.0"
-time = "0.3"
 zip = "0.6"
 lzma-rs = "0.3.0"
 sevenz-rust = "0.5"
@@ -71,3 +65,10 @@ winapi = { version = "0.3", features = ["processthreadsapi", "winbase", "winuser
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
 notify = "6.1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

@@ -499,3 +499,83 @@ pub async fn verify_tools_integrity() -> Result<bool> {
 
     Ok(is_valid)
 }
+
+/// tauri-plugin-log 落盘的历史日志快照。
+/// 前端日志页只保留本次会话的实时流，此命令用于回看之前会话写进 LogDir 的日志。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginLogHistory {
+    pub directory: String,
+    pub files: Vec<String>,
+    pub lines: Vec<String>,
+}
+
+#[tauri::command]
+pub fn read_plugin_log_files(
+    app: tauri::AppHandle,
+    limit: Option<usize>,
+) -> Result<PluginLogHistory> {
+    use tauri::Manager;
+
+    let dir = app
+        .path()
+        .app_log_dir()
+        .map_err(|e| AdmtError::FileOperationFailed {
+            message: format!("获取应用日志目录失败: {}", e),
+        })?;
+    let max_lines = limit.unwrap_or(500).clamp(1, 5000);
+
+    let mut entries: Vec<(std::time::SystemTime, PathBuf)> = Vec::new();
+    if let Ok(read_dir) = fs::read_dir(&dir) {
+        for entry in read_dir.flatten() {
+            let path = entry.path();
+            if !path.is_file() || path.extension().and_then(|s| s.to_str()) != Some("log") {
+                continue;
+            }
+            let modified = entry
+                .metadata()
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::UNIX_EPOCH);
+            entries.push((modified, path));
+        }
+    }
+    // 最新的日志文件优先
+    entries.sort_by(|a, b| b.0.cmp(&a.0));
+
+    let files: Vec<String> = entries
+        .iter()
+        .map(|(_, p)| p.to_string_lossy().into_owned())
+        .collect();
+
+    let mut lines: Vec<String> = Vec::new();
+    for (_, path) in &entries {
+        if lines.len() >= max_lines {
+            break;
+        }
+        if let Ok(content) = fs::read_to_string(path) {
+            // 从文件末尾往前取最近的日志行
+            for line in content.lines().rev() {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                lines.push(line.to_string());
+                if lines.len() >= max_lines {
+                    break;
+                }
+            }
+        }
+    }
+    lines.reverse();
+
+    log::info!(
+        "[log-history] 读取历史日志 files={} lines={} dir={}",
+        files.len(),
+        lines.len(),
+        dir.display()
+    );
+    Ok(PluginLogHistory {
+        directory: dir.to_string_lossy().into_owned(),
+        files,
+        lines,
+    })
+}

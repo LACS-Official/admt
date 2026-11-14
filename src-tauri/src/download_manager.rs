@@ -151,8 +151,32 @@ impl DownloadManager {
             Ok(extract_dir)
         } else {
             println!(" 非压缩文件，无需解压: {}", downloaded_file.display());
-            Ok(downloaded_file.parent().unwrap().to_path_buf())
+            Ok(downloaded_file
+                .parent()
+                .ok_or_else(|| {
+                    AdmtError::PathResolution(format!(
+                        "无法确定下载文件的父目录: {}",
+                        downloaded_file.display()
+                    ))
+                })?
+                .to_path_buf())
         }
+    }
+
+    /// 校验远端提供的软件名称，只允许单个普通路径组件，
+    /// 从而拒绝 `..`、路径分隔符、绝对路径/盘符前缀等可能引发路径穿越的内容。
+    fn sanitize_software_name(name: &str) -> Result<()> {
+        let mut components = Path::new(name).components();
+        let is_single_normal =
+            matches!(components.next(), Some(std::path::Component::Normal(_)))
+                && components.next().is_none();
+        if !is_single_normal {
+            return Err(AdmtError::PathResolution(format!(
+                "非法的软件名称，拒绝用于文件路径: {}",
+                name
+            )));
+        }
+        Ok(())
     }
 
     /// 下载文件
@@ -198,7 +222,8 @@ impl DownloadManager {
         // 获取应用程序下载目录
         let app_downloads_dir = Self::get_app_downloads_dir()?;
 
-        // 构建文件名
+        // 构建文件名（远端 software_name 会参与路径拼接，先净化防止路径穿越）
+        Self::sanitize_software_name(&request.software_name)?;
         let file_extension = request.file_extension.as_deref().unwrap_or("bin");
         let filename = format!("{}.{}", request.software_name, file_extension);
 
@@ -313,7 +338,17 @@ impl DownloadManager {
         archive_path: &Path,
         request: &DownloadRequest,
     ) -> Result<PathBuf> {
-        let extract_dir = archive_path.parent().unwrap().join(&request.software_name);
+        // 远端 software_name 直接用于 join 解压目录，先净化防止路径穿越
+        Self::sanitize_software_name(&request.software_name)?;
+        let extract_dir = archive_path
+            .parent()
+            .ok_or_else(|| {
+                AdmtError::PathResolution(format!(
+                    "无法确定压缩文件的父目录: {}",
+                    archive_path.display()
+                ))
+            })?
+            .join(&request.software_name);
         fs::create_dir_all(&extract_dir).map_err(|e| AdmtError::Io(e.to_string()))?;
 
         // 发送解压开始事件

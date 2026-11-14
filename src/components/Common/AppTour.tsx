@@ -4,8 +4,6 @@ import "driver.js/dist/driver.css";
 import { useTranslation } from "react-i18next";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAppStore } from "../../stores/appStore";
-import { AppView } from "../../types/app";
-import { tokens } from "@fluentui/react-components";
 
 interface AppTourProps {
     runTour?: boolean;

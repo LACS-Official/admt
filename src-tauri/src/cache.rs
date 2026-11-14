@@ -161,10 +161,8 @@ impl CacheManager {
         let mut cache = self.device_list_cache.write().await;
         let item = CacheItem::new(devices, self.device_list_ttl);
         *cache = Some(item);
-        log::debug!(
-            "Cached device list with {} devices",
-            cache.as_ref().unwrap().value.len()
-        );
+        let device_count = cache.as_ref().map_or(0, |item| item.value.len());
+        log::debug!("Cached device list with {} devices", device_count);
     }
 
     /// 清除过期的缓存项
@@ -233,13 +231,6 @@ impl CacheManager {
         self.stats.read().await.clone()
     }
 
-    /// 重置统计信息
-    #[allow(dead_code)]
-    pub async fn reset_stats(&self) {
-        let mut stats = self.stats.write().await;
-        *stats = CacheStats::default();
-        log::info!("Cache statistics reset");
-    }
 
     /// 获取缓存大小信息
     pub async fn get_cache_info(&self) -> HashMap<String, usize> {
@@ -254,12 +245,6 @@ impl CacheManager {
         info
     }
 
-    /// 设置设备缓存TTL
-    #[allow(dead_code)]
-    pub fn set_device_cache_ttl(&mut self, ttl: Duration) {
-        self.device_cache_ttl = ttl;
-        log::info!("Device cache TTL set to {:?}", ttl);
-    }
 }
 
 /// 全局缓存管理器实例

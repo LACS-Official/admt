@@ -1,42 +1,6 @@
 import React, { useState } from "react";
-import {
-  makeStyles,
-  Text,
-  Card,
-  CardHeader,
-  Switch,
-  Field,
-  Input,
-  Select,
-  Slider,
-  Button,
-  Spinner,
-  Divider,
-  Badge,
-  Tooltip,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from "@fluentui/react-components";
-import {
-  Bot24Regular,
-  Wand24Regular,
-  Save24Regular,
-  ArrowUpload24Regular,
-  ArrowDownload24Regular,
-  Delete24Regular,
-  Add24Regular,
-  Eye24Regular,
-  EyeOff24Regular,
-  Server24Regular,
-  Copy24Regular,
-  Checkmark24Regular,
-  Dismiss24Regular,
-  Settings24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, Text, Card, CardHeader, Switch, Field, Input, Select, Slider, Button, Spinner, Divider, Badge, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions} from "@fluentui/react-components";
+import {Wand24Regular, Save24Regular, ArrowUpload24Regular, ArrowDownload24Regular, Delete24Regular, Add24Regular, Eye24Regular, EyeOff24Regular, Server24Regular, Copy24Regular, Checkmark24Regular, Dismiss24Regular, Settings24Regular} from "@fluentui/react-icons";
 import { fetch } from "@tauri-apps/plugin-http";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";

@@ -8,12 +8,7 @@ import {
   Badge,
   Card,
 } from "@fluentui/react-components";
-import {
-  ShieldLock24Regular,
-  Warning24Regular,
-  CheckmarkCircle24Regular,
-  Bot24Regular,
-} from "@fluentui/react-icons";
+import {ShieldLock24Regular, Warning24Regular, Bot24Regular} from "@fluentui/react-icons";
 import { InstalledApp } from "../../types/device";
 import { aiService } from "../../services/aiService";
 import { useTranslation } from "react-i18next";

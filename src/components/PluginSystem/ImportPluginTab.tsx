@@ -1,32 +1,6 @@
 ﻿import React, { useState } from "react";
-import {
-  makeStyles,
-  shorthands,
-  Button,
-  Input,
-  Text,
-  Badge,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Spinner,
-  tokens,
-  Card,
-} from "@fluentui/react-components";
-import {
-  ArrowUpload24Regular,
-  Globe24Regular,
-  FolderOpen24Regular,
-  ShieldCheckmark24Regular,
-  Warning24Regular,
-  CheckmarkCircle24Filled,
-  Apps24Regular,
-  Dismiss24Regular,
-  Code24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, shorthands, Button, Input, Text, Badge, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Spinner} from "@fluentui/react-components";
+import {ArrowUpload24Regular, Globe24Regular, FolderOpen24Regular, ShieldCheckmark24Regular, Dismiss24Regular, Code24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { usePluginStore } from "../../stores/pluginStore";
 import { useAppStore } from "../../stores/appStore";

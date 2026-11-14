@@ -3,7 +3,7 @@
  * 负责从 API 获取和管理轮播图数据
  */
 
-import { Banner, BannerResponse } from '../types/app';
+import {Banner} from '../types/app';
 import { tauriHttpService } from './tauriHttpService';
 
 export class BannerService {

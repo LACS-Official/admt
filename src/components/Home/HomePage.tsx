@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  makeStyles,
-  mergeClasses,
-  Text,
-  tokens,
-  TabList,
-  Tab,
-  SelectTabEvent,
-  SelectTabData,
-} from "@fluentui/react-components";
+import {makeStyles, mergeClasses, tokens, TabList, Tab, SelectTabEvent, SelectTabData} from "@fluentui/react-components";
 import {
   DeviceEq24Regular,
   Link24Regular,

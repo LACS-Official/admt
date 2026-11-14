@@ -206,6 +206,18 @@ const getAllCommands = (t: any) => {
   );
 };
 
+/** HTML 实体转义，用于把不可信的命令输出安全地放进 dangerouslySetInnerHTML */
+const escapeHtml = (value: string): string =>
+  value.replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      default: return '&#39;';
+    }
+  });
+
 const FastbootCommandCard: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
@@ -248,30 +260,30 @@ const FastbootCommandCard: React.FC = () => {
   }, [output, searchTerm]);
 
   // 处理搜索高亮显示
+  // output 由用户输入的命令 + 设备回显拼接而成，属于不可信内容。
+  // 按原始 output 分段切片、每段单独 HTML 转义后再拼接 <mark>，
+  // 既避免转义后 match.index 错位，也保证设备回显无法注入 HTML。
   const highlightedOutput = useMemo(() => {
-    if (!searchTerm.trim() || !output || searchMatches.length === 0) {
-      return output;
+    if (!output) return '';
+    if (!searchTerm.trim() || searchMatches.length === 0) {
+      return escapeHtml(output);
     }
 
-    let result = output;
-    let offset = 0;
-
+    let html = '';
+    let cursor = 0;
     searchMatches.forEach((match, index) => {
-      const isCurrentMatch = index === currentMatchIndex;
-      const className = isCurrentMatch ? 'current-match' : 'highlighted-text';
-      const id = isCurrentMatch ? 'current-search-match' : `search-match-${index}`;
+      const start = match.index;
+      const end = start + match.length;
+      if (start < cursor || end > output.length) return;
 
-      const before = result.substring(0, match.index + offset);
-      const matchText = result.substring(match.index + offset, match.index + offset + match.length);
-      const after = result.substring(match.index + offset + match.length);
-
-      const replacement = `<mark class="${className}" id="${id}">${matchText}</mark>`;
-      result = before + replacement + after;
-
-      offset += replacement.length - match.length;
+      html += escapeHtml(output.slice(cursor, start));
+      const className = index === currentMatchIndex ? 'current-match' : 'highlighted-text';
+      const id = index === currentMatchIndex ? 'current-search-match' : `search-match-${index}`;
+      html += `<mark class="${className}" id="${id}">${escapeHtml(output.slice(start, end))}</mark>`;
+      cursor = end;
     });
-
-    return result;
+    html += escapeHtml(output.slice(cursor));
+    return html;
   }, [output, searchTerm, searchMatches, currentMatchIndex]);
 
   // 搜索导航功能
@@ -495,7 +507,7 @@ const FastbootCommandCard: React.FC = () => {
                 <pre
                   ref={outputRef}
                   dangerouslySetInnerHTML={{
-                    __html: highlightedOutput || `<span style="color: #888">${t('fastboot.output_placeholder')}</span>`
+                    __html: highlightedOutput || `<span style="color: #888">${escapeHtml(String(t('fastboot.output_placeholder')))}</span>`
                   }}
                 />
               </div>

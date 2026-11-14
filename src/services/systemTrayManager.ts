@@ -51,8 +51,14 @@ class SystemTrayManager implements ISystemTrayManager {
         this.status = SystemTrayStatus.READY;
         logService.info('系统托盘管理器初始化完成', 'SystemTrayManager');
       } else {
-        this.status = SystemTrayStatus.NOT_SUPPORTED;
-        logService.info('系统托盘未启用或不支持，跳过初始化', 'SystemTrayManager');
+        // 区分「平台不支持」与「用户未启用」，避免诊断信息把两者混为一谈
+        this.status = traySupported
+          ? SystemTrayStatus.NOT_INITIALIZED
+          : SystemTrayStatus.NOT_SUPPORTED;
+        logService.info(
+          traySupported ? '系统托盘未启用，跳过初始化' : '当前环境不支持系统托盘',
+          'SystemTrayManager',
+        );
       }
     } catch (error) {
       this.status = SystemTrayStatus.FAILED;

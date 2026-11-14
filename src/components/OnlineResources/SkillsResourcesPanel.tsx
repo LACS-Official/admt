@@ -1,38 +1,9 @@
 import React, { useState, useMemo } from "react";
-import {
-  makeStyles,
-  shorthands,
-  Button,
-  SearchBox,
-  Text,
-  Badge,
-  tokens,
-  Tooltip,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from "@fluentui/react-components";
-import {
-  Sparkle24Regular,
-  Copy24Regular,
-  Checkmark24Regular,
-  ArrowDownload24Regular,
-  Tag24Regular,
-  Code24Regular,
-  DocumentText24Regular,
-  Lightbulb24Regular,
-  Dismiss24Regular,
-  Open24Regular,
-  Apps24Regular,
-  Add20Regular,
-  Delete24Regular,
-} from "@fluentui/react-icons";
-import { Input, Textarea, Field } from "@fluentui/react-components";
+import {makeStyles, shorthands, Button, SearchBox, Text, Badge, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions} from "@fluentui/react-components";
+import {Sparkle24Regular, Copy24Regular, Checkmark24Regular, Dismiss24Regular, Open24Regular, Delete24Regular} from "@fluentui/react-icons";
+
 import { useTranslation } from "react-i18next";
-import { useMcpStore, PRESET_AI_SKILLS } from "../../stores/mcpStore";
+import {useMcpStore} from "../../stores/mcpStore";
 import { AISkillResource } from "../../types/mcp";
 import { useAppStore } from "../../stores/appStore";
 

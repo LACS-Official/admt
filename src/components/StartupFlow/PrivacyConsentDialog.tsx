@@ -7,42 +7,8 @@ import React, { useState } from "react";
 import { admtLogo512 } from "../../assets/icons";
 import { wechatpay, alipay } from "../../assets/icons";
 import DonationPanel from "../Settings/DonationPanel";
-import {
-  Button,
-  Checkbox,
-  Text,
-  makeStyles,
-  shorthands,
-  tokens,
-  Card,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Link,
-  Divider,
-  Select,
-  Switch,
-  Label,
-} from "@fluentui/react-components";
-import {
-  ArrowLeft24Regular,
-  Shield24Regular,
-  Document24Regular,
-  Warning24Regular,
-  Dismiss24Regular,
-  CheckmarkCircle24Regular,
-  DocumentBulletList24Regular,
-  ChevronRight24Regular,
-  Open24Regular,
-  Globe24Regular,
-  Play24Regular,
-  ArrowMinimize24Regular,
-  Settings24Regular,
-  Heart24Regular,
-} from "@fluentui/react-icons";
+import {Button, Checkbox, Text, makeStyles, shorthands, tokens, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Divider, Select, Switch, Label} from "@fluentui/react-components";
+import {Shield24Regular, Document24Regular, Warning24Regular, CheckmarkCircle24Regular, DocumentBulletList24Regular, Globe24Regular, Play24Regular, ArrowMinimize24Regular, Settings24Regular, Heart24Regular} from "@fluentui/react-icons";
 import { usePrivacyConsentStore } from "../../stores/privacyConsentStore";
 import { useAppStore } from "../../stores/appStore";
 import { systemTrayManager } from "../../services/systemTrayManager";

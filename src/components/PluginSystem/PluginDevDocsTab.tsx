@@ -1,24 +1,6 @@
 import React, { useState } from "react";
-import {
-  makeStyles,
-  shorthands,
-  Button,
-  TabList,
-  Tab,
-  Text,
-  Badge,
-  Card,
-  tokens,
-} from "@fluentui/react-components";
-import {
-  Code24Regular,
-  DocumentCopy24Regular,
-  Checkmark24Regular,
-  ArrowDownload24Regular,
-  BookOpen24Regular,
-  AppsList24Regular,
-  Lightbulb24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, shorthands, Button, Text, Badge} from "@fluentui/react-components";
+import {DocumentCopy24Regular, Checkmark24Regular, ArrowDownload24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/appStore";
 

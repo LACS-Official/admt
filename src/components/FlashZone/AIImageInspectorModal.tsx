@@ -1,34 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
-import {
-  makeStyles,
-  tokens,
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogBody,
-  DialogActions,
-  Button,
-  Badge,
-  Text,
-  Spinner,
-  Input,
-  Tooltip,
-  Divider,
-} from "@fluentui/react-components";
-import {
-  BrainCircuit24Regular,
-  ShieldCheckmark24Regular,
-  ShieldDismiss24Regular,
-  Dismiss24Regular,
-  Send24Regular,
-  DocumentBulletList24Regular,
-  ArrowReset24Regular,
-  Copy24Regular,
-  Checkmark24Regular,
-  Info24Regular,
-  Code24Regular,
-  Flash24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, Dialog, DialogSurface, Button, Badge, Text, Spinner, Input, Tooltip} from "@fluentui/react-components";
+import {BrainCircuit24Regular, ShieldCheckmark24Regular, ShieldDismiss24Regular, Dismiss24Regular, Send24Regular, DocumentBulletList24Regular, ArrowReset24Regular, Copy24Regular, Checkmark24Regular, Code24Regular, Flash24Regular} from "@fluentui/react-icons";
 import { PartitionImageInspection } from "../../types/fastbootPartition";
 import { aiService } from "../../services/aiService";
 import { useTranslation } from "react-i18next";

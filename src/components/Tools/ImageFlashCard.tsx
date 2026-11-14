@@ -1,43 +1,13 @@
-import React, { useRef, useState, useEffect }  from "react";
+import React, {useState, useEffect}  from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import {
-  makeStyles,
-  Card,
-  CardHeader,
-  Text,
-  Button,
-  Field,
-  Combobox,
-  Option,
-  ProgressBar,
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogContent,
-  DialogBody,
-  DialogActions,
-  RadioGroup,
-  Radio,
-  Checkbox,
-  Tooltip,
-  Link,
-} from "@fluentui/react-components";
-import {
-  CloudArrowUp24Regular,
-  Warning24Regular,
-  Document24Regular,
-  Play24Regular,
-  ShieldTask24Regular,
-  Dismiss24Regular,
-  Info24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, Card, Text, Button, Field, Combobox, Option, ProgressBar, Dialog, DialogSurface, DialogTitle, DialogContent, DialogBody, DialogActions, RadioGroup, Radio, Checkbox} from "@fluentui/react-components";
+import {Document24Regular, Play24Regular, ShieldTask24Regular, Info24Regular} from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
 import { useTranslation } from "react-i18next";
 import { verifySecurityAction } from "../Common/SecurityVerificationDialog";
-
 
 const useStyles = makeStyles({
   card: {
@@ -168,7 +138,6 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
     };
   }, [setStatusBarMessage, clearStatusBarMessage, t]);
 
-  
   // 选择的镜像文件（使用 Tauri 原生文件选择，保留真实路径）
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
@@ -278,7 +247,6 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
     }
   };
 
-
   // 常见分区列表
   const partitions = [
     { value: "boot", label: "Boot" },
@@ -337,14 +305,12 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
     }
   };
 
-
   const handleFlashStart = () => {
     if (!selectedFilePath || !selectedPartition) return;
     if (!checkMode()) return;
     setIsConfirmed(false); // 重置确认状态
     setShowConfirmDialog(true);
   };
-
 
   const handleFlashConfirm = async () => {
     if (!device || !selectedFilePath || !selectedPartition) return;
@@ -437,7 +403,6 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
       }
     }
   };
-
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';

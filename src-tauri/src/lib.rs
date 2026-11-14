@@ -31,7 +31,7 @@ use crate::commands::{
     invalidate_device_cache, is_debug_mode, open_devtools, open_folder, launch_software_resource, read_chat_text_file, read_json_file,
     read_resource_file, save_app_config, scan_devices, set_window_always_on_top, terminate_process,
     validate_activation_code_format, validate_local_activation_data, validate_security_config,
-    check_activation_expiry, verify_command_safety, watch_config_file, write_json_file, parse_local_rom,
+    check_activation_expiry, verify_command_safety, watch_config_file, watch_fastboot_config_file, write_json_file, parse_local_rom,
     extract_local_partition, parse_online_rom, extract_online_partition,
     is_admin, restart_as_admin, get_autostart_config,
             get_host_network_info, execute_host_command, yuanbao_search,
@@ -48,9 +48,10 @@ use crate::adb::command::adb_system_controler::{
 use crate::adb::device::device_reboot::reboot_device;
 use crate::adb::file::file::{list_device_files, pull_file, push_file};
 use crate::adb::scrcpy::key_mapping::{
-    capture_device_screen, delete_key_mapping_profile, get_key_mapping_profiles,
-    is_key_mapping_active, save_key_mapping_profile, simulate_key_mapping_touch,
-    start_key_mapping, stop_key_mapping, KeyMappingManager,
+    capture_device_screen, delete_key_mapping_profile, get_key_mapping_diagnostics,
+    get_key_mapping_profiles, inject_key_mapping_event, is_key_mapping_active,
+    save_key_mapping_profile, simulate_key_mapping_touch, start_key_mapping, stop_key_mapping,
+    KeyMappingManager,
 };
 use crate::adb::scrcpy::screen_mirror::{
     check_screen_mirror_support, diagnose_scrcpy, get_active_mirror_sessions, is_device_mirroring,
@@ -61,10 +62,10 @@ use crate::cache::cache_cleanup_task;
 use crate::core::log::{
     cleanup_expired_logs, clear_all_logs, clear_logs, get_log_file_info, get_log_statistics,
     get_logs, get_tool_paths_status, initialize_log_directory, persist_log, persist_log_to_file,
-    verify_tools_integrity,
+    read_plugin_log_files, verify_tools_integrity,
 };
 use core::log::*;
-use downloads::get_rom::{download_rom, fetch_rom_list};
+use downloads::get_rom::{download_rom, fetch_rom_list, get_rom_download_url};
 use fastboot::command::fastboot_command_runner::{
     execute_fastboot_command, execute_fastboot_command_with_path, get_current_active_slot,
     get_slot_info, switch_ab_partition,
@@ -191,6 +192,8 @@ pub fn run() {
             delete_key_mapping_profile,
             simulate_key_mapping_touch,
             capture_device_screen,
+            inject_key_mapping_event,
+            get_key_mapping_diagnostics,
             validate_activation_code_format,
             activate_application,
             check_activation_status,
@@ -222,12 +225,14 @@ pub fn run() {
             read_json_file,
             write_json_file,
             watch_config_file,
+            watch_fastboot_config_file,
             execute_script_in_new_window,
             get_cache_stats,
             clear_all_cache,
             invalidate_device_cache,
             fetch_rom_list,
             download_rom,
+            get_rom_download_url,
             // 日志系统命令
             initialize_log_directory,
             persist_log,
@@ -239,6 +244,7 @@ pub fn run() {
             write_logs_to_file,
             clear_all_logs,
             get_log_file_info,
+            read_plugin_log_files,
             // 工具路径监控命令
             get_tool_paths_status,
             verify_tools_integrity,
@@ -275,6 +281,21 @@ pub fn run() {
             terminate_process,
             check_process_alive,
             crate::root::patch::patch_boot_image_local,
+            crate::root::patch::get_root_patch_capabilities,
+            crate::root::patch::ensure_root_patch_tool,
+            crate::root::workflow::root_preflight,
+            crate::root::workflow::root_wait_for_fastboot,
+            crate::root::workflow::root_wait_for_adb,
+            crate::root::workflow::root_verify_root,
+            crate::root::workflow::root_backup_image,
+            crate::root::workflow::root_list_backups,
+            crate::root::workflow::root_append_workflow_log,
+            crate::root::workflow::root_prepare_device_patch,
+            crate::root::workflow::root_scan_device_patched_images,
+            crate::root::workflow::root_collect_device_patch,
+            crate::root::workflow::root_restore_backup,
+            crate::root::workflow::root_flash_patched_image,
+            crate::root::workflow::root_detect_kmi,
             get_device_partitions,
             backup_partition,
             export_apk,

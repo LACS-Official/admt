@@ -458,123 +458,6 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
     }
 }
 
-/// 结束ADB-5037端口
-#[tauri::command]
-// 可选：如果不再需要可以删除，或者保留并加上 #[allow(dead_code)]
-#[allow(dead_code)]
-pub async fn finish_adb5037() -> Result<CommandResult> {
-    log::info!("Finishing ADB process on port 5037");
-
-    #[cfg(windows)]
-    {
-        // 使用netstat和taskkill命令结束占用5037端口的进程
-        let mut cmd = Command::new("cmd");
-        cmd.args([
-            "/C",
-            "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :5037 ^| findstr LISTENING') do taskkill /F /PID %a"
-        ])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-
-        // 在Windows端隐藏控制台窗口
-        {
-            use std::os::windows::process::CommandExt;
-            const CREATE_NO_WINDOW: u32 = 0x08000000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-            log::debug!("结束ADB-5037端口设置隐藏窗口");
-        }
-
-        match cmd.output() {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                let combined_output = if stderr.is_empty() {
-                    stdout.to_string()
-                } else {
-                    format!("{}\n{}", stdout, stderr)
-                };
-
-                log::info!(
-                    "ADB-5037 port termination completed with exit code: {:?}",
-                    output.status.code()
-                );
-
-                Ok(CommandResult {
-                    success: output.status.success(),
-                    output: combined_output,
-                    error: if output.status.success() {
-                        None
-                    } else {
-                        Some(stderr.to_string())
-                    },
-                    exit_code: output.status.code(),
-                })
-            }
-            Err(e) => {
-                let error_msg = format!("结束ADB-5037端口失败: {}", e);
-                log::error!("{}", error_msg);
-                Ok(CommandResult {
-                    success: false,
-                    output: String::new(),
-                    error: Some(error_msg),
-                    exit_code: Some(1),
-                })
-            }
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        // 在 Linux 上使用 fuser 结束占用 5037 端口的进程
-        let mut cmd = Command::new("sh");
-        cmd.args(["-c", "fuser -k 5037/tcp"])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-
-        match cmd.output() {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-
-                log::info!(
-                    "ADB-5037 port termination (Linux) completed with exit code: {:?}",
-                    output.status.code()
-                );
-
-                Ok(CommandResult {
-                    success: output.status.success(),
-                    output: stdout.to_string(),
-                    error: if output.status.success() {
-                        None
-                    } else {
-                        Some(stderr.to_string())
-                    },
-                    exit_code: output.status.code(),
-                })
-            }
-            Err(e) => {
-                let error_msg = format!("结束ADB-5037端口失败 (Linux): {}", e);
-                log::error!("{}", error_msg);
-                Ok(CommandResult {
-                    success: false,
-                    output: String::new(),
-                    error: Some(error_msg),
-                    exit_code: Some(1),
-                })
-            }
-        }
-    }
-
-    #[cfg(not(any(windows, target_os = "linux")))]
-    {
-        Ok(CommandResult {
-            success: false,
-            output: String::new(),
-            error: Some("结束ADB-5037端口功能目前仅支持 Windows 和 Linux".to_string()),
-            exit_code: Some(1),
-        })
-    }
-}
 
 /// 执行批处理文件（支持实时流式输出）
 #[tauri::command]
@@ -670,8 +553,12 @@ pub async fn execute_batch_file_stream(
 
         match cmd.spawn() {
             Ok(mut child) => {
-                let stdout = child.stdout.take().unwrap();
-                let stderr = child.stderr.take().unwrap();
+                let stdout = child.stdout.take().ok_or_else(|| {
+                    crate::error::AdmtError::Process("无法获取脚本 stdout 管道".to_string())
+                })?;
+                let stderr = child.stderr.take().ok_or_else(|| {
+                    crate::error::AdmtError::Process("无法获取脚本 stderr 管道".to_string())
+                })?;
 
                 let app_handle_stdout = app_handle.clone();
                 let app_handle_stderr = app_handle.clone();

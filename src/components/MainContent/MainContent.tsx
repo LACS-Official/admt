@@ -21,22 +21,7 @@ import {
   Spinner,
   Tooltip,
 } from "@fluentui/react-components";
-import {
-  Code24Regular,
-  Settings24Regular,
-  CloudArrowUp24Regular,
-  CloudArrowDown24Regular,
-  Home24Regular,
-  Icons24Regular,
-  Notepad24Regular,
-  AppsAddIn24Regular,
-  Flash24Regular,
-  Bot24Regular,
-  Sparkle20Regular,
-  PanelLeftContract24Regular,
-  PanelLeftExpand24Regular,
-  Prompt24Regular,
-} from "@fluentui/react-icons";
+import {Code24Regular, Settings24Regular, CloudArrowUp24Regular, CloudArrowDown24Regular, Home24Regular, Icons24Regular, Notepad24Regular, AppsAddIn24Regular, Flash24Regular, Bot24Regular, PanelLeftContract24Regular, PanelLeftExpand24Regular, Prompt24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 // import DeviceSelectionDialog from "./DeviceSelectionDialog";
 import { getDeviceIcon } from "../../assets/icons";
@@ -49,6 +34,7 @@ import { AppView } from "../../types/app";
 import HomePage from "../Home/HomePage";
 import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
+import EnvCheckBanner from "../Common/EnvCheckBanner";
 import { DeviceSelectionModal } from "../Modals/DeviceSelectionModal";
 import AutoMirrorManager from "../Common/AutoMirrorManager";
 import { systemTrayManager } from "../../services/systemTrayManager";
@@ -844,13 +830,11 @@ const MainContent: React.FC = () => {
       label: t("sidebar.flash_zone"),
       icon: <CloudArrowUp24Regular />,
     },
-    /* 暂时隐藏 Root 专区入口
     {
       id: "root" as AppView,
       label: t("sidebar.root_zone", "Root专区"),
       icon: <Flash24Regular />,
     },
-    */
     {
       id: "online-resources" as AppView,
       label: t("sidebar.online_resources"),
@@ -876,7 +860,6 @@ const MainContent: React.FC = () => {
   // 版本检查相关状态
   const [triggerVersionCheck, setTriggerVersionCheck] = useState(false);
   const [updateCheckCompleted, setUpdateCheckCompleted] = useState(false);
-
 
   // 离线弹窗状态
   const [isOfflineDialogOpen, setIsOfflineDialogOpen] = useState(false);
@@ -971,7 +954,6 @@ const MainContent: React.FC = () => {
       refreshDeviceInfo(selectedDevice.serial);
     }
   }, [selectedDevice, refreshDeviceInfo, setStatusBarMessage, t]);
-
 
   // 用户行为追踪 - 在MainContent组件挂载时发送使用数据（备用方案）
   useEffect(() => {
@@ -1080,22 +1062,35 @@ const MainContent: React.FC = () => {
     let unlisten1: (() => void) | undefined;
     let unlisten2: (() => void) | undefined;
     let unlisten3: (() => void) | undefined;
+    let cancelled = false;
 
     import("@tauri-apps/api/event").then(({ listen }) => {
+      if (cancelled) return;
+
       listen("open-command-line-modal", () => {
         setCurrentView("command-line");
-      }).then((fn) => (unlisten1 = fn));
+      }).then((fn) => {
+        if (cancelled) fn();
+        else unlisten1 = fn;
+      });
 
       listen("execute-command-from-ai", () => {
         setCurrentView("command-line");
-      }).then((fn) => (unlisten2 = fn));
+      }).then((fn) => {
+        if (cancelled) fn();
+        else unlisten2 = fn;
+      });
 
       listen("open-logs-modal", () => {
         setCurrentView("logs");
-      }).then((fn) => (unlisten3 = fn));
+      }).then((fn) => {
+        if (cancelled) fn();
+        else unlisten3 = fn;
+      });
     });
 
     return () => {
+      cancelled = true;
       if (unlisten1) unlisten1();
       if (unlisten2) unlisten2();
       if (unlisten3) unlisten3();
@@ -1533,6 +1528,9 @@ const MainContent: React.FC = () => {
         }}
         showStatusMessage={false} // 不显示状态消息，避免干扰用户
       />
+
+      {/* 环境检测横幅 */}
+      <EnvCheckBanner />
 
       {/* 离线设备提示弹窗 */}
       <Dialog

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   makeStyles,
@@ -33,11 +33,10 @@ import {
   Dismiss24Regular,
 } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
-import { deviceService } from "../../services/deviceService";
+import { deviceService, useDeviceService } from "../../services/deviceService";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
-import { useDeviceService } from "../../services/deviceService";
-import { FastbootStorageInfoPanel } from "./FastbootStorageInfoPanel";
+
 import { DeviceInfoItem } from "./DeviceInfoItem";
 import { generateDeviceHtmlReport } from "../../utils/deviceReportGenerator";
 
@@ -444,7 +443,6 @@ interface DeviceOverviewCardProps {
   onCustomize: () => void; // 添加自定义按钮回调
 }
 
-
 // 辅助函数
 const getBatteryColor = (level?: number): "success" | "warning" | "error" | undefined => {
   if (level === undefined) return undefined;
@@ -654,7 +652,6 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
       });
     }
   };
-
 
 
   return (
@@ -1027,7 +1024,6 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
 
 // 设备信息项组件
 
-
 // 设备信息项组件 - 支持自定义值渲染
 interface DeviceInfoItemWithCustomValueProps {
   label: string;
@@ -1087,7 +1083,6 @@ const BooleanValueItem: React.FC<BooleanValueItemProps> = ({
     </div>
   );
 };
-
 
 
 // 基本信息面板
@@ -1750,9 +1745,6 @@ const FastbootHardwareInfoPanel: React.FC<InfoPanelProps> = ({ device, onCopyVal
     </div>
   );
 };
-
-
-
 
 
 

@@ -1,17 +1,7 @@
 import React from 'react';
-import {
-  makeStyles,
-  Text,
-  tokens,
-  Image,
-  Badge,
-} from "@fluentui/react-components";
+import {makeStyles, Text, Image, Badge} from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
-import {
-  Heart24Regular,
-  Info24Regular,
-  ShieldCheckmark24Regular,
-} from "@fluentui/react-icons";
+import {Heart24Regular, ShieldCheckmark24Regular} from "@fluentui/react-icons";
 import wxPay from "../../assets/icons/pay/wx.webp";
 import zfbPay from "../../assets/icons/pay/zfb.webp";
 

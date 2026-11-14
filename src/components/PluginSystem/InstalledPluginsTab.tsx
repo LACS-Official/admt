@@ -1,38 +1,6 @@
 import React, { useState } from "react";
-import {
-  makeStyles,
-  shorthands,
-  Button,
-  Switch,
-  Badge,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Input,
-  Text,
-  tokens,
-  Tooltip,
-} from "@fluentui/react-components";
-import {
-  Play24Regular,
-  Settings24Regular,
-  Delete24Regular,
-  Info24Regular,
-  AppsAddIn24Regular,
-  Code24Regular,
-  Wrench24Regular,
-  Flash24Regular,
-  Sparkle24Regular,
-  Dismiss24Regular,
-  Search24Regular,
-  ArrowReset24Regular,
-  Globe24Regular,
-  Open24Regular,
-  HeartPulse24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, shorthands, Button, Switch, Badge, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Input, Text, Tooltip} from "@fluentui/react-components";
+import {Settings24Regular, Delete24Regular, AppsAddIn24Regular, Dismiss24Regular, Search24Regular, ArrowReset24Regular, Open24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { usePluginStore } from "../../stores/pluginStore";
 import { ADMTPlugin, PluginCategory } from "../../types/plugin";

@@ -408,6 +408,89 @@ pub async fn watch_config_file(_app_handle: tauri::AppHandle, window: tauri::Win
     Ok(())
 }
 
+/// 监听 Fastboot 命令配置文件变化。
+///
+/// 前端 `watchFastbootConfigFile` 调用本命令并监听 `fastboot-config-file-changed`
+/// 事件。历史上该命令缺失，invoke 抛错后被前端 catch 吞掉、直接返回空的停止函数，
+/// 导致 Fastboot 配置热重载整条链路失效。注意不能复用 `watch_config_file`：
+/// 它监听的是 `adbCommands.json`，emit 的是 `config-file-changed`，语义不同。
+#[tauri::command]
+pub async fn watch_fastboot_config_file(
+    app_handle: tauri::AppHandle,
+    window: tauri::Window,
+) -> Result<()> {
+    use notify::{Event, EventKind, RecursiveMode, Watcher};
+    use std::sync::mpsc;
+    use tauri::Emitter;
+
+    const FILE_NAME: &str = "FastbootCommands.json";
+
+    let mut candidates = Vec::new();
+    if let Ok(dir) = app_handle.path().resource_dir() {
+        candidates.push(dir.join("config").join(FILE_NAME));
+    }
+    if let Ok(dir) = app_handle.path().app_data_dir() {
+        candidates.push(dir.join("config").join(FILE_NAME));
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            candidates.push(parent.join("config").join(FILE_NAME));
+        }
+    }
+    candidates.push(PathBuf::from("config").join(FILE_NAME));
+
+    let config_path = candidates
+        .into_iter()
+        .find(|p| p.exists())
+        .ok_or_else(|| AdmtError::FileNotFound {
+            path: format!("config/{}", FILE_NAME),
+        })?;
+
+    let watch_dir = config_path
+        .parent()
+        .ok_or_else(|| AdmtError::ConfigError {
+            message: "无法定位 Fastboot 配置目录".to_string(),
+        })?
+        .to_path_buf();
+
+    let (tx, rx) = mpsc::channel();
+    let mut watcher = notify::recommended_watcher(tx).map_err(|e| AdmtError::ConfigError {
+        message: format!("创建配置监听器失败: {}", e),
+    })?;
+    watcher
+        .watch(&watch_dir, RecursiveMode::NonRecursive)
+        .map_err(|e| AdmtError::ConfigError {
+            message: format!("监听配置目录失败: {}", e),
+        })?;
+
+    let target = config_path.clone();
+    std::thread::spawn(move || {
+        // 持有 watcher：函数返回时若被 drop，监听会立即停止。
+        let _watcher = watcher;
+        while let Ok(event) = rx.recv() {
+            if let Ok(Event {
+                kind: EventKind::Modify(_),
+                paths,
+                ..
+            }) = event
+            {
+                if paths.iter().any(|p| p == &target) {
+                    let _ = window.emit(
+                        "fastboot-config-file-changed",
+                        target.to_string_lossy().to_string(),
+                    );
+                }
+            }
+        }
+    });
+
+    log::info!(
+        "Started watching Fastboot config: {}",
+        config_path.display()
+    );
+    Ok(())
+}
+
 fn get_config_path(app: &tauri::AppHandle) -> Result<PathBuf> {
     let mut path = app
         .path()

@@ -1,42 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import {
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  Text,
-  makeStyles,
-  mergeClasses,
-} from "@fluentui/react-components";
-import {
-  Search20Regular,
-  Home20Regular,
-  Code20Regular,
-  CloudArrowUp20Regular,
-  Settings20Regular,
-  DocumentText20Regular,
-  Bot20Regular,
-  Camera20Regular,
-  ArrowClockwise20Regular,
-  WifiSettings20Regular,
-  PhoneDesktop20Regular,
-  Apps20Regular,
-  Folder20Regular,
-  WeatherMoon20Regular,
-  WeatherSunny20Regular,
-  Copy20Regular,
-  Globe20Regular,
-  Dismiss16Regular,
-  Play20Regular,
-  Checkmark16Regular,
-  PanelLeftContract20Regular,
-  PanelLeftExpand20Regular,
-  ArrowReset20Regular,
-} from "@fluentui/react-icons";
+import {Dialog, DialogSurface, DialogBody, makeStyles, mergeClasses} from "@fluentui/react-components";
+import {Search20Regular, Home20Regular, Code20Regular, CloudArrowUp20Regular, Settings20Regular, DocumentText20Regular, Bot20Regular, Camera20Regular, ArrowClockwise20Regular, WifiSettings20Regular, PhoneDesktop20Regular, Apps20Regular, Folder20Regular, WeatherMoon20Regular, WeatherSunny20Regular, Copy20Regular, Globe20Regular, Dismiss16Regular, Play20Regular, Checkmark16Regular, PanelLeftContract20Regular, PanelLeftExpand20Regular} from "@fluentui/react-icons";
 import { useAppStore } from "../../stores/appStore";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { deviceService } from "../../services/deviceService";
-import { AppView } from "../../types/app";
 
 const useStyles = makeStyles({
   dialogSurface: {
@@ -281,7 +249,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const { setCurrentView, setCommandLineModalOpen, setLogsModalOpen, setWirelessDebuggingDialogOpen, setStatusBarMessage, isSidebarCollapsed, toggleSidebar } = useAppStore();
   const { selectedDevice, devices, selectDevice } = useDeviceStore();
   const { isDarkMode, toggleTheme } = useThemeStore();
-  
 
   // 构建快捷指令池
   const allCommands = useMemo<CommandItem[]>(() => {

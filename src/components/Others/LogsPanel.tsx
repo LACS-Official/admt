@@ -8,26 +8,9 @@ import {
   Input,
   Tooltip,
 } from "@fluentui/react-components";
-import {
-  Delete24Regular,
-  ArrowDownload24Regular,
-  ArrowClockwise24Regular,
-  Warning20Regular,
-  ErrorCircle20Regular,
-  Info20Regular,
-  Bug20Regular,
-  Copy20Regular,
-  Checkmark20Regular,
-  Search20Regular,
-  Dismiss20Regular,
-  Pin20Regular,
-  PinOff20Regular,
-  ChevronRight16Regular,
-  ChevronDown16Regular,
-  DocumentBulletList24Regular,
-  TextAlignLeft20Regular,
-} from "@fluentui/react-icons";
+import {Delete24Regular, ArrowDownload24Regular, ArrowClockwise24Regular, Copy20Regular, Checkmark20Regular, Search20Regular, Dismiss20Regular, Pin20Regular, PinOff20Regular, ChevronRight16Regular, ChevronDown16Regular, DocumentBulletList24Regular, TextAlignLeft20Regular, Folder24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
+import { invoke } from "@tauri-apps/api/core";
 import { StructuredLogEntry, LogLevel, LogCategory, LogFilter } from "../../services/logTypes";
 import logService from "../../services/logService";
 import { useAppStore } from "../../stores/appStore";
@@ -412,6 +395,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
   const [expandedContexts, setExpandedContexts] = useState<Record<string, boolean>>({});
   const [isCopiedAll, setIsCopiedAll] = useState<boolean>(false);
   const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
 
   const logContentRef = useRef<HTMLDivElement>(null);
 
@@ -478,6 +462,32 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
   // Actions
   const handleClearLogs = useCallback(() => {
     logService.clearLogs();
+  }, []);
+
+  const handleLoadHistory = useCallback(async () => {
+    setIsLoadingHistory(true);
+    try {
+      const imported = await logService.refreshFromBackend(500);
+      if (imported === 0) {
+        logService.logInfo("没有可载入的历史日志", "LogsPanel");
+      }
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  const handleOpenLogDir = useCallback(async () => {
+    const dir = await logService.getPluginLogDirectory();
+    if (!dir) return;
+    try {
+      await invoke("open_folder", { path: dir });
+      logService.logInfo("已打开日志目录", "LogsPanel", { path: dir });
+    } catch (error) {
+      logService.logError("打开日志目录失败", "LogsPanel", {
+        error: error instanceof Error ? error.message : String(error),
+        path: dir,
+      });
+    }
   }, []);
 
   const handleExportLogs = useCallback(() => {
@@ -630,6 +640,25 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
               className={styles.actionBtn}
               onClick={handleExportLogs}
               disabled={filteredLogs.length === 0}
+            />
+          </Tooltip>
+
+          <Tooltip content={t('logs_panel.load_history')} relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<ArrowClockwise24Regular />}
+              className={styles.actionBtn}
+              onClick={handleLoadHistory}
+              disabled={isLoadingHistory}
+            />
+          </Tooltip>
+
+          <Tooltip content={t('logs_panel.open_log_dir')} relationship="label">
+            <Button
+              appearance="subtle"
+              icon={<Folder24Regular />}
+              className={styles.actionBtn}
+              onClick={handleOpenLogDir}
             />
           </Tooltip>
 

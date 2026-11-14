@@ -19,25 +19,7 @@ import {
   Dropdown,
   Option,
 } from "@fluentui/react-components";
-import {
-  Search24Regular,
-  ArrowReset24Regular,
-  BrainCircuit24Regular,
-  ArrowDownload24Regular,
-  Delete24Regular,
-  Warning24Regular,
-  Play24Regular,
-  Layer24Regular,
-  Flash24Regular,
-  ArrowSwap24Regular,
-  Info24Regular,
-  Copy24Regular,
-  Checkmark24Regular,
-  Power24Regular,
-  Dismiss24Regular,
-  Wrench24Regular,
-  Box24Regular,
-} from "@fluentui/react-icons";
+import {Search24Regular, ArrowReset24Regular, BrainCircuit24Regular, ArrowDownload24Regular, Delete24Regular, Play24Regular, Flash24Regular, Info24Regular, Copy24Regular, Checkmark24Regular, Power24Regular, Dismiss24Regular, Wrench24Regular, Box24Regular} from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import {
   FastbootPartitionItem,

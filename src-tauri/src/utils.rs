@@ -13,96 +13,7 @@ pub fn executable_name(name: &str) -> String {
     format!("{}{}", name, EXE_SUFFIX)
 }
 
-/// 获取ADB可执行文件路径（已弃用，请使用缓存版本）
-#[deprecated(note = "Use get_cached_adb_path() for better performance")]
-#[allow(dead_code)]
-pub fn get_adb_path() -> PathBuf {
-    let adb_filename = executable_name("adb");
 
-    // 1. 优先尝试从应用工具目录获取（生产模式）
-    if let Ok(exe_dir) = std::env::current_exe() {
-        if let Some(parent) = exe_dir.parent() {
-            let adb_path = parent.join("tools").join("adb").join(&adb_filename);
-            if adb_path.exists() {
-                log::info!("Found ADB at app tools: {}", adb_path.display());
-                return adb_path;
-            }
-        }
-    }
-
-    // 2. 尝试从当前工作目录的tools/adb获取（开发模式）
-    let current_dir_tools = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("src-tauri")
-        .join("tools")
-        .join("adb")
-        .join(&adb_filename);
-    if current_dir_tools.exists() {
-        log::info!(
-            "Found ADB at current dir tools: {}",
-            current_dir_tools.display()
-        );
-        return current_dir_tools;
-    }
-
-    // 3. 尝试从相对路径获取（开发模式备选）
-    let relative_path = PathBuf::from(format!("src-tauri/tools/adb/{}", adb_filename));
-    if relative_path.exists() {
-        log::info!("Found ADB at relative path: {}", relative_path.display());
-        return relative_path;
-    }
-
-    // 如果所有路径都找不到，记录错误并返回默认名称
-    log::error!("ADB executable not found in any expected location");
-    PathBuf::from(adb_filename)
-}
-
-/// 获取Fastboot可执行文件路径（已弃用，请使用缓存版本）
-#[deprecated(note = "Use get_cached_fastboot_path() for better performance")]
-#[allow(dead_code)]
-pub fn get_fastboot_path() -> PathBuf {
-    let fb_filename = executable_name("fastboot");
-
-    // 1. 优先尝试从应用工具目录获取（生产模式）
-    if let Ok(exe_dir) = std::env::current_exe() {
-        if let Some(parent) = exe_dir.parent() {
-            let fastboot_path = parent.join("tools").join("adb").join(&fb_filename);
-            if fastboot_path.exists() {
-                log::info!("Found Fastboot at app tools: {}", fastboot_path.display());
-                return fastboot_path;
-            }
-        }
-    }
-
-    // 2. 尝试从当前工作目录的tools/adb获取（开发模式）
-    let current_dir_tools = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("src-tauri")
-        .join("tools")
-        .join("adb")
-        .join(&fb_filename);
-    if current_dir_tools.exists() {
-        log::info!(
-            "Found Fastboot at current dir tools: {}",
-            current_dir_tools.display()
-        );
-        return current_dir_tools;
-    }
-
-    // 3. 尝试从相对路径获取（开发模式备选）
-    let relative_path = PathBuf::from(format!("src-tauri/tools/adb/{}", fb_filename));
-    if relative_path.exists() {
-        log::info!(
-            "Found Fastboot at relative path: {}",
-            relative_path.display()
-        );
-        return relative_path;
-    }
-
-    // 如果所有路径都找不到，记录错误并返回默认名称
-    log::error!("Fastboot executable not found in any expected location");
-    PathBuf::from(fb_filename)
-}
 
 /// 确保文件在 Unix 系统上具有执行权限
 pub fn ensure_executable(path: &std::path::Path) -> Result<()> {
@@ -317,30 +228,4 @@ pub fn parse_fastboot_device_list(output: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-/// 格式化文件大小
-#[allow(dead_code)]
-pub fn format_file_size(size: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
-    let mut size = size as f64;
-    let mut unit_index = 0;
 
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_index += 1;
-    }
-
-    if unit_index == 0 {
-        format!("{} {}", size as u64, UNITS[unit_index])
-    } else {
-        format!("{:.1} {}", size, UNITS[unit_index])
-    }
-}
-
-/// 验证设备序列号格式
-#[allow(dead_code)]
-pub fn is_valid_serial(serial: &str) -> bool {
-    !serial.is_empty()
-        && serial
-            .chars()
-            .all(|c| c.is_alphanumeric() || c == ':' || c == '.')
-}

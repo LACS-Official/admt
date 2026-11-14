@@ -2,7 +2,7 @@
 import { open } from '@tauri-apps/plugin-dialog';
 import { exists, mkdir } from '@tauri-apps/plugin-fs';
 import { documentDir, join } from '@tauri-apps/api/path';
-import { open as openPath } from '@tauri-apps/plugin-shell';
+
 import React, { useState, useEffect, useCallback } from "react";
 import {
   makeStyles,
@@ -355,7 +355,6 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
   }, [device, onAdbRequired, t]);
 
 
-
   const [currentPath, setCurrentPath] = useState<string>('/storage/emulated/0/');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -617,7 +616,6 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
       loadFiles(currentPath);
     }
   }, [device?.serial, loadFiles, currentPath]);
-
 
   const handleNavigateUp = () => {
     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
@@ -1090,7 +1088,6 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
 //     );
 //   }
 
-
   return (
     <div className={styles.container}>
       {/* Sidebar Quick Access */}
@@ -1207,7 +1204,6 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
                 </Button>
               </div>
             )}
-
 
             {/* File List */}
             {!device ? (

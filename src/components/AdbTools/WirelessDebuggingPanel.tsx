@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, {useState} from 'react';
 import {
   makeStyles,
   Text,
@@ -17,7 +17,7 @@ import {
   Key24Regular,
   LinkDismiss24Regular,
 } from "@fluentui/react-icons";
-import { useDeviceStore } from "../../stores/deviceStore";
+
 import { useAppStore } from "../../stores/appStore";
 import { DeviceInfo } from "../../types/device";
 import { useTranslation } from "react-i18next";

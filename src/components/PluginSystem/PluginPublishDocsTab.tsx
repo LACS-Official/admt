@@ -1,22 +1,6 @@
 import React from "react";
-import {
-  makeStyles,
-  shorthands,
-  Button,
-  Text,
-  Badge,
-  Card,
-  tokens,
-} from "@fluentui/react-components";
-import {
-  CheckmarkCircle24Filled,
-  Warning24Regular,
-  ShieldCheckmark24Regular,
-  ShareAndroid24Regular,
-  Branch24Regular,
-  DocumentSparkle24Regular,
-  Open24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, shorthands, Text} from "@fluentui/react-components";
+import {CheckmarkCircle24Filled, Warning24Regular, ShieldCheckmark24Regular, Branch24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({

@@ -1,18 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  makeStyles,
-  shorthands,
-  Text,
-  Button,
-  Badge,
-} from "@fluentui/react-components";
-import {
-  Sparkle24Regular,
-  Rocket24Regular,
-  Heart24Filled,
-  Checkmark24Regular,
-  Code24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, shorthands, Text} from "@fluentui/react-components";
+
 import { useTranslation } from "react-i18next";
 
 const useStyles = makeStyles({
@@ -172,7 +160,6 @@ export const UnderDevelopmentOverlay: React.FC<UnderDevelopmentOverlayProps> = (
   return (
     <div className={styles.overlayContainer}>
       <div className={styles.modalCard}>
-
 
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <Text className={styles.title}>

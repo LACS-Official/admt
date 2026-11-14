@@ -28,42 +28,7 @@ import {
   MenuPopover,
   MenuTrigger,
 } from "@fluentui/react-components";
-import {
-  Send24Regular,
-  Add24Regular,
-  Delete24Regular,
-  History24Regular,
-  Chat24Regular,
-  Bot24Regular,
-  Person24Regular,
-  Copy24Regular,
-  Copy16Regular,
-  Play24Regular,
-  PanelLeft24Regular,
-  PanelRight24Regular,
-  ArrowDownload24Regular,
-  Sparkle24Regular,
-  Sparkle20Regular,
-  DocumentAdd24Regular,
-  DismissCircle24Regular,
-  Wrench24Regular,
-  Server24Regular,
-  Checkmark24Regular,
-  Open24Regular,
-  Dismiss24Regular,
-  Search24Regular,
-  Settings24Regular,
-  Edit24Regular,
-  Wand24Regular,
-  RecordStop20Regular,
-  Camera24Regular,
-  ShieldCheckmark24Regular,
-  ShieldDismiss24Regular,
-  ShieldError24Regular,
-  Play16Regular,
-  Checkmark16Regular,
-  ChevronDown16Regular,
-} from "@fluentui/react-icons";
+import {Send24Regular, Add24Regular, Delete24Regular, History24Regular, Chat24Regular, Bot24Regular, Person24Regular, Copy16Regular, Play24Regular, ArrowDownload24Regular, Sparkle24Regular, Sparkle20Regular, DocumentAdd24Regular, DismissCircle24Regular, Wrench24Regular, Server24Regular, Dismiss24Regular, Search24Regular, Settings24Regular, RecordStop20Regular, Camera24Regular, ShieldCheckmark24Regular, ShieldDismiss24Regular, ShieldError24Regular, Play16Regular, Checkmark16Regular, ChevronDown16Regular} from "@fluentui/react-icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
@@ -71,7 +36,7 @@ import { useAIChatStore } from "../../stores/aiChatStore";
 import { useAppStore } from "../../stores/appStore";
 import { logService } from "../../services/logService";
 import { aiService, ChatToolCall } from "../../services/aiService";
-import { useMcpStore, ADMT_BUILTIN_MCP_TOOLS, PRESET_AI_SKILLS, AISkillResource, McpToolDefinition } from "../../stores/mcpStore";
+import {ADMT_BUILTIN_MCP_TOOLS, PRESET_AI_SKILLS, AISkillResource, McpToolDefinition} from "../../stores/mcpStore";
 import { executeMcpTool } from "../../services/mcpExecutor";
 import { listen, emit } from "@tauri-apps/api/event";
 import { save, open } from "@tauri-apps/plugin-dialog";

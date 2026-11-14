@@ -14,7 +14,7 @@ import {
   PinOff24Regular,
 } from "@fluentui/react-icons";
 import { getCurrentWebviewWindow as getCurrentWindow } from "@tauri-apps/api/webviewWindow";
-import { invoke } from "@tauri-apps/api/core";
+
 import { admtLogo64 } from "../../assets/icons";
 
 const useStyles = makeStyles({

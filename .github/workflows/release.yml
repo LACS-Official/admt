@@ -28,7 +28,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: install frontend dependencies
-        run: npm install
+        run: npm ci
+
+      - name: typecheck
+        run: npm run typecheck
+
+      - name: unit tests
+        run: npm run test:run
 
       - name: build frontend assets
         run: npm run build

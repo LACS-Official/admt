@@ -1,34 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import {
-  makeStyles,
-  Card,
-  Text,
-  Button,
-  ProgressBar,
-  Spinner,
-  Badge,
-  Tooltip,
-} from "@fluentui/react-components";
-import {
-  Warning24Regular,
-  Folder24Regular,
-  Play24Regular,
-  CheckmarkCircle24Regular,
-  ErrorCircle24Regular,
-  LockClosed24Regular,
-  ShieldCheckmark24Regular,
-  ShieldError24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, Card, Text, Button, ProgressBar, Badge, Tooltip} from "@fluentui/react-components";
+import {Folder24Regular, Play24Regular, CheckmarkCircle24Regular, ErrorCircle24Regular, LockClosed24Regular, ShieldCheckmark24Regular, ShieldError24Regular} from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
-import { useDeviceStore } from "../../stores/deviceStore";
+
 import { useAppStore } from "../../stores/appStore";
 import BatchExecutorDialog from "../Common/BatchExecutorDialog";
 import { useTranslation } from "react-i18next";
 
 import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
-
 
 const useStyles = makeStyles({
   card: {
@@ -185,7 +166,6 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
     };
   }, [setStatusBarMessage, clearStatusBarMessage, t]);
 
-  
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [packageInfo, setPackageInfo] = useState<Record<string, unknown> | null>(null);
   const [flashStatus, setFlashStatus] = useState<FlashStatus>("idle");
@@ -334,7 +314,6 @@ const XiaomiFlashCard: React.FC<XiaomiFlashCardProps> = ({ device, onFastbootReq
       setMissingFiles([t('flash.read_dir_fail')]);
     }
   };
-
 
   return (
     <>

@@ -105,12 +105,4 @@ impl From<serde_json::Error> for AdmtError {
     }
 }
 
-impl From<anyhow::Error> for AdmtError {
-    fn from(err: anyhow::Error) -> Self {
-        AdmtError::Unknown {
-            message: err.to_string(),
-        }
-    }
-}
-
 pub type Result<T> = std::result::Result<T, AdmtError>;

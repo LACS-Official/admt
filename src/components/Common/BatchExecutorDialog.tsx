@@ -26,7 +26,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { writeTextFile, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
-import { useDeviceStore } from "../../stores/deviceStore";
+
 import { logService } from "../../services/logService";
 import { useTranslation } from "react-i18next";
 

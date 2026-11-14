@@ -16,22 +16,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@fluentui/react-components";
-import {
-  ArrowSync24Regular,
-  Delete24Regular,
-  Search24Regular,
-  Add24Regular,
-  CheckmarkCircle24Regular,
-  Warning24Regular,
-  Info24Regular,
-  Apps24Regular,
-  Box24Regular,
-  ArrowDownload24Regular,
-  Sparkle24Regular,
-  Link24Regular,
-  Copy24Regular,
-  Open24Regular,
-} from "@fluentui/react-icons";
+import {ArrowSync24Regular, Delete24Regular, Search24Regular, Add24Regular, Box24Regular, ArrowDownload24Regular, Sparkle24Regular, Link24Regular, Copy24Regular, Open24Regular} from "@fluentui/react-icons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { DeviceInfo } from "../../types/device";
 import {

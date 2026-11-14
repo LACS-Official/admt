@@ -70,59 +70,80 @@ pub async fn get_window_close_behavior() -> Result<bool, String> {
 // 全局状态：托盘是否已创建
 static TRAY_CREATED: AtomicBool = AtomicBool::new(false);
 
+const TRAY_ID: &str = "main-tray";
+
+/// 根据菜单项构建托盘菜单；None 时使用默认「显示主页面 / 退出程序」菜单。
+fn build_tray_menu<R: Runtime>(
+    app: &AppHandle<R>,
+    items: Option<Vec<TrayMenuItem>>,
+) -> Result<Menu<R>, String> {
+    let menu = Menu::new(app).map_err(|e| format!("Failed to create menu: {}", e))?;
+    let list = items.unwrap_or_else(|| {
+        vec![
+            TrayMenuItem {
+                id: "show".into(),
+                label: "显示主页面".into(),
+                enabled: Some(true),
+                checked: None,
+            },
+            TrayMenuItem {
+                id: "separator1".into(),
+                label: "-".into(),
+                enabled: None,
+                checked: None,
+            },
+            TrayMenuItem {
+                id: "exit".into(),
+                label: "退出程序".into(),
+                enabled: Some(true),
+                checked: None,
+            },
+        ]
+    });
+
+    for it in list {
+        if it.label == "-" || it.id.starts_with("separator") {
+            let separator = PredefinedMenuItem::separator(app)
+                .map_err(|e| format!("Failed to create separator: {}", e))?;
+            menu.append(&separator)
+                .map_err(|e| format!("Failed to append separator: {}", e))?;
+        } else {
+            let item = MenuItem::with_id(
+                app,
+                &it.id,
+                &it.label,
+                it.enabled.unwrap_or(true),
+                None::<&str>,
+            )
+            .map_err(|e| format!("Failed to create menu item: {}", e))?;
+            menu.append(&item)
+                .map_err(|e| format!("Failed to append menu item: {}", e))?;
+        }
+    }
+    Ok(menu)
+}
+
 /// 创建系统托盘
 #[tauri::command]
 pub async fn create_system_tray<R: Runtime>(
-    _app: AppHandle<R>,
+    app: AppHandle<R>,
     tooltip: Option<String>,
-    _icon: Option<String>,
-    _menu_items: Option<Vec<TrayMenuItem>>,
+    icon: Option<String>,
+    menu_items: Option<Vec<TrayMenuItem>>,
 ) -> Result<(), String> {
-    let app = _app.clone();
+    // 参数名不能带下划线前缀，否则前端传的 `icon` / `menuItems` 无法完成
+    // camelCase→snake_case 映射，会被静默忽略并退回默认菜单。
+    // 自定义图标需要 tauri 的 image-png / image-ico feature，当前统一用应用默认图标。
+    let _ = icon;
 
-    // 如果已存在旧托盘，先隐藏旧托盘
-    if let Some(old_tray) = app.tray_by_id("main-tray") {
-        let _ = old_tray.set_visible(false);
-    }
+    // 同 id 的托盘必须先从资源表移除，否则重复 build 会冲突，
+    // 表现为「关闭托盘后再打开就没反应」。
+    app.remove_tray_by_id(TRAY_ID);
 
-    // 构建菜单
-    let menu_result = if let Some(items) = _menu_items {
-        let menu = Menu::new(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
-
-        for it in items {
-            if it.label == "-" || it.id.starts_with("separator") {
-                let separator = PredefinedMenuItem::separator(&app)
-                    .map_err(|e| format!("Failed to create separator: {}", e))?;
-                menu.append(&separator)
-                    .map_err(|e| format!("Failed to append separator: {}", e))?;
-            } else {
-                let is_enabled = it.enabled.unwrap_or(true);
-                let item = MenuItem::with_id(&app, &it.id, &it.label, is_enabled, None::<&str>)
-                    .map_err(|e| format!("Failed to create menu item: {}", e))?;
-                menu.append(&item)
-                    .map_err(|e| format!("Failed to append menu item: {}", e))?;
-            }
-        }
-        menu
-    } else {
-        let menu = Menu::new(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
-        let show_item = MenuItem::with_id(&app, "show", "显示主页面", true, None::<&str>)
-            .map_err(|e| format!("Failed to create show item: {}", e))?;
-        menu.append(&show_item)
-            .map_err(|e| format!("Failed to append show item: {}", e))?;
-        let separator = PredefinedMenuItem::separator(&app)
-            .map_err(|e| format!("Failed to create separator: {}", e))?;
-        menu.append(&separator)
-            .map_err(|e| format!("Failed to append separator: {}", e))?;
-        let exit_item = MenuItem::with_id(&app, "exit", "退出程序", true, None::<&str>)
-            .map_err(|e| format!("Failed to create exit item: {}", e))?;
-        menu.append(&exit_item)
-            .map_err(|e| format!("Failed to append exit item: {}", e))?;
-        menu
-    };
+    let menu_result = build_tray_menu(&app, menu_items)?;
 
     // 构建托盘
-    let mut builder = TrayIconBuilder::with_id("main-tray")
+    let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu_result)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app_handle, event| {
@@ -193,52 +214,65 @@ pub async fn setup_tray_event_listener<R: Runtime>(_app: AppHandle<R>) -> Result
 /// 更新托盘菜单
 #[tauri::command]
 pub async fn update_tray_menu<R: Runtime>(
-    _app: AppHandle<R>,
-    _menu_items: Vec<TrayMenuItem>,
+    app: AppHandle<R>,
+    menu_items: Vec<TrayMenuItem>,
 ) -> Result<(), String> {
-    // 在 Tauri 2.x 中，托盘菜单更新需要重新创建托盘
-    // 这里提供一个简化的实现
-    println!(" 托盘菜单更新完成（需要重新创建托盘以更新菜单）");
+    let tray = app
+        .tray_by_id(TRAY_ID)
+        .ok_or_else(|| "系统托盘尚未创建".to_string())?;
+    let menu = build_tray_menu(&app, Some(menu_items))?;
+    tray.set_menu(Some(menu))
+        .map_err(|e| format!("Failed to update tray menu: {e}"))?;
     Ok(())
 }
 
 /// 更新托盘图标
+///
+/// 运行时解码 PNG/ICO 需要 tauri 的 `image-png` / `image-ico` feature。
+/// 当前命令没有调用方，为避免为一个边缘能力引入图像解码依赖，
+/// 这里明确返回未实现，而不是像旧版那样打印日志后返回 Ok 骗过调用方。
 #[tauri::command]
 pub async fn update_tray_icon<R: Runtime>(
     _app: AppHandle<R>,
     _icon_path: String,
 ) -> Result<(), String> {
-    // 可根据需要实现从路径读取图标并更新
-    // 暂不实现具体图标替换逻辑，保留占位
-    println!(" 托盘图标更新完成");
-    Ok(())
+    Err("运行时托盘图标替换未启用（需要 tauri image-png / image-ico feature）".to_string())
 }
 
 /// 更新托盘提示文本
 #[tauri::command]
 pub async fn update_tray_tooltip<R: Runtime>(
-    _app: AppHandle<R>,
-    _tooltip: String,
+    app: AppHandle<R>,
+    tooltip: String,
 ) -> Result<(), String> {
-    // 在 Tauri 2.x 中，托盘提示文本更新需要重新创建托盘
-    // 这里提供一个简化的实现
-    println!(" 托盘提示文本更新完成（需要重新创建托盘以更新提示）");
+    let tray = app
+        .tray_by_id(TRAY_ID)
+        .ok_or_else(|| "系统托盘尚未创建".to_string())?;
+    tray.set_tooltip(Some(tooltip))
+        .map_err(|e| format!("Failed to update tray tooltip: {e}"))?;
     Ok(())
 }
 
 /// 检查是否支持系统托盘
 #[tauri::command]
 pub async fn is_system_tray_supported() -> Result<bool, String> {
-    // 在桌面环境中通常支持系统托盘
-    Ok(true)
+    // 托盘是桌面端能力；浏览器预览 / 移动端返回 false，避免前端开关误放行
+    #[cfg(desktop)]
+    {
+        Ok(true)
+    }
+    #[cfg(not(desktop))]
+    {
+        Ok(false)
+    }
 }
 
 /// 销毁系统托盘
 #[tauri::command]
 pub async fn destroy_system_tray<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    if let Some(tray) = app.tray_by_id("main-tray") {
-        let _ = tray.set_visible(false);
-    }
+    // 仅仅 set_visible(false) 不会释放句柄，资源表里仍占着同 id，
+    // 之后再调用 create_system_tray 会创建失败。这里必须真正移除。
+    app.remove_tray_by_id(TRAY_ID);
     TRAY_CREATED.store(false, Ordering::Relaxed);
     println!(" 系统托盘已销毁");
     Ok(())

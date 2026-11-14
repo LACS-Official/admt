@@ -7,7 +7,6 @@ export const useAppStyles = makeStyles({
     flexDirection: "column",
     backgroundColor: "var(--colorNeutralBackground1)",
     overflow: "hidden",
-    background: "linear-gradient(135deg, var(--colorNeutralBackground1) 0%, var(--colorNeutralBackground2) 100%)",
   },
   startupFlowContainer: {
     position: "relative",
@@ -29,7 +28,6 @@ export const useAppStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     backgroundColor: "var(--colorNeutralBackground1)",
-    background: "linear-gradient(135deg, var(--colorNeutralBackground1) 0%, var(--colorNeutralBackground2) 100%)",
   },
   errorHeader: {
     flex: "0 0 auto",
@@ -69,8 +67,7 @@ export const useAppStyles = makeStyles({
     gap: "24px",
     padding: "48px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "20px",
-    boxShadow: "0 16px 64px rgba(0, 0, 0, 0.15)",
+    borderRadius: "14px",
     border: "1px solid var(--colorNeutralStroke2)",
     maxWidth: "800px",
     width: "100%",
@@ -83,7 +80,7 @@ export const useAppStyles = makeStyles({
   errorDetails: {
     backgroundColor: "var(--colorNeutralBackground2)",
     padding: "20px",
-    borderRadius: "12px",
+    borderRadius: "14px",
     width: "100%",
     border: "1px solid var(--colorNeutralStroke2)",
   },
@@ -107,7 +104,7 @@ export const useAppStyles = makeStyles({
     gap: "12px",
     padding: "24px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "16px",
+    borderRadius: "14px",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   countdownText: {

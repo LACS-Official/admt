@@ -20,27 +20,7 @@ import {
     TabList,
     Tab,
 } from "@fluentui/react-components";
-import {
-    Phone24Regular,
-    Settings24Regular,
-    ArrowReset24Regular,
-    Play24Regular,
-    Stop24Regular,
-    FullScreenMaximize24Regular,
-    Record24Regular,
-    RecordStop24Regular,
-    Screenshot24Regular,
-    MoreHorizontal24Regular,
-    Options24Regular,
-    Sparkle24Regular,
-    Keyboard24Regular,
-    ArrowDownload24Regular,
-    ArrowUpload24Regular,
-    Copy24Regular,
-    Edit24Regular,
-    Power24Regular,
-    Navigation24Regular,
-} from "@fluentui/react-icons";
+import {Phone24Regular, Settings24Regular, Play24Regular, Stop24Regular, FullScreenMaximize24Regular, Record24Regular, RecordStop24Regular, Screenshot24Regular, MoreHorizontal24Regular, Options24Regular, Sparkle24Regular, Keyboard24Regular, Power24Regular} from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useScreenMirrorStore } from "../../stores/screenMirrorStore";
 import { useKeyMappingStore } from "../../stores/keyMappingStore";
@@ -52,6 +32,7 @@ import {
     ScreenMirrorConfig
 } from "../../types/screenMirror";
 import ScreenMirrorService from "../../services/screenMirrorService";
+import KeyMappingService, { normalizeKeyName } from "../../services/keyMappingService";
 import KeyMappingStudio from "./KeyMapping/KeyMappingStudio";
 import { DeviceInfo } from "../../types/device";
 import { useTranslation } from "react-i18next";
@@ -415,16 +396,18 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
             }
             try {
                 await startMapping(currentStreamingSerial);
+                const diag = useKeyMappingStore.getState().diagnostics;
+                const warning = diag?.issues?.length ? ` · ${diag.issues[0]}` : "";
                 setStatusBarMessage({
-                    type: "success",
-                    message: t('mirror.mapping_started_notice', `键鼠映射已生效 [${activeProfile?.name || '默认配置'}]，聚焦投屏窗口即可操作`),
+                    type: diag?.issues?.length ? "warning" : "success",
+                    message: t('mirror.mapping_started_notice', `键鼠映射已生效 [${activeProfile?.name || '默认配置'}]，聚焦投屏窗口即可操作`) + warning,
                     duration: 3500,
                 });
             } catch (err: any) {
                 setStatusBarMessage({
                     type: "error",
-                    message: `启动键鼠映射失败: ${err.message || err}`,
-                    duration: 4000,
+                    message: t('mirror.mapping_start_failed', '启动键鼠映射失败') + `: ${err?.message || err}`,
+                    duration: 5000,
                 });
             }
         } else {
@@ -453,8 +436,13 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                         message: `已切换配置方案并实时重载`,
                         duration: 2500,
                     });
-                } catch (e) {
+                } catch (e: any) {
                     console.error("Failed to hot reload mapping:", e);
+                    setStatusBarMessage({
+                        type: "error",
+                        message: t('mirror.mapping_reload_failed', '切换配置后重载失败') + `: ${e?.message || e}`,
+                        duration: 4000,
+                    });
                 }
             }, 60);
         }
@@ -800,7 +788,6 @@ const MirrorControlCard: React.FC<MirrorControlCardProps> = ({
                 />
 
 
-
                 <div className={styles.settingsGrid}>
                     {/* 视频与画质卡片 */}
                     <div className={styles.bentoCard}>
@@ -992,6 +979,44 @@ const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequ
     useEffect(() => {
         loadProfiles();
     }, [loadProfiles]);
+
+    // 应用窗口内的键盘桥接：全局 Hook 只覆盖独立 scrcpy 窗口，
+    // 用户在应用界面里按键时必须由 Webview 把事件送给同一个映射引擎，
+    // 否则 Hook 安装失败 / 焦点在主窗口时按键完全没反应。
+    useEffect(() => {
+        if (!isKeyMappingRunning) return;
+
+        const isTypingTarget = (target: EventTarget | null) => {
+            const el = target as HTMLElement | null;
+            if (!el) return false;
+            const tag = el.tagName;
+            return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+        };
+
+        const onKey = (e: KeyboardEvent, isDown: boolean) => {
+            if (e.repeat || isTypingTarget(e.target)) return;
+            if (document.body.dataset.keyCapture === "true") return;
+            const key = normalizeKeyName(e);
+            if (!key) return;
+            // 故意不 preventDefault：界面上的其它快捷键仍可正常使用
+            void KeyMappingService.injectKeyEvent(key, isDown);
+        };
+        const onDown = (e: KeyboardEvent) => onKey(e, true);
+        const onUp = (e: KeyboardEvent) => onKey(e, false);
+        const onBlur = () => {
+            // 窗口失焦后收不到 keyup，通知引擎放开所有已按下的键，避免摇杆/连点卡死
+            void KeyMappingService.injectKeyEvent("__release_all__", false);
+        };
+
+        window.addEventListener("keydown", onDown);
+        window.addEventListener("keyup", onUp);
+        window.addEventListener("blur", onBlur);
+        return () => {
+            window.removeEventListener("keydown", onDown);
+            window.removeEventListener("keyup", onUp);
+            window.removeEventListener("blur", onBlur);
+        };
+    }, [isKeyMappingRunning]);
 
     const handleStartMirror = async (device: ScreenMirrorDevice) => {
         if (!device || !canStartMirroring(device.serial)) return;

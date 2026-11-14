@@ -18,21 +18,6 @@ body {
   position: relative;
 }
 
-/* 全局极其淡的水印 */
-body::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 999999;
-  opacity: 0.023;
-  background-image: url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='200' y='200' fill='gray' font-family='Segoe UI, Microsoft YaHei' font-size='24' text-anchor='middle' transform='rotate(-30, 200, 200)'%3E玩机管家 admt.lacs.cc%3C/text%3E%3C/svg%3E");
-  background-repeat: repeat;
-}
-
 #root {
   height: 100%;
   position: relative; /* Ensure absolute children position relative to root */
@@ -69,50 +54,6 @@ body::after {
   --spacing-md: 8px;
   --spacing-lg: 12px;
   --spacing-xl: 16px;
-}
-
-/* 自定义动画 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-/* 工具类 */
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-
-.pulse {
-  animation: pulse 2s infinite;
 }
 
 /* 无选择文本 */
@@ -236,7 +177,6 @@ body::after {
   height: 6px;
   border-radius: 50%;
   background: var(--colorPaletteGreenBackground3);
-  animation: pulse 2s infinite;
 }
 
 .security-status-indicator.disabled::before {
@@ -285,21 +225,23 @@ body::after {
   opacity: 0.5;
 }
 
-/* 全局组件圆角与交互规范 */
+/* 全局组件圆角规范：卡片 14px，按钮/选项卡/输入控件胶囊，多行文本域按卡片圆角 */
 .fui-Card {
-  border-radius: var(--borderRadiusMedium) !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 14px !important;
 }
 
-.fui-Dropdown,
-.fui-Dropdown > button,
-.fui-Listbox,
 .fui-Button,
+.fui-Dropdown > button,
+.fui-Tab,
 .fui-Input,
 .fui-Input > input,
+.fui-Listbox {
+  border-radius: 9999px !important;
+}
+
 .fui-Textarea,
 .fui-Textarea > textarea {
-  border-radius: var(--borderRadiusMedium) !important;
+  border-radius: 14px !important;
 }
 
 /* 紧凑模式下的全局微调 */

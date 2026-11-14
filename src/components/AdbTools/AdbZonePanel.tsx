@@ -8,14 +8,7 @@ import {
   Button,
   tokens,
 } from "@fluentui/react-components";
-import {
-  Code24Regular,
-  Settings24Regular,
-  Play24Regular,
-  Apps24Regular,
-  Folder24Regular,
-  Wifi124Regular,
-} from "@fluentui/react-icons";
+import {Settings24Regular, Play24Regular, Apps24Regular, Folder24Regular} from "@fluentui/react-icons";
 import { useDeviceStore } from "../../stores/deviceStore";
 import ScreenMirrorPanel from "./ScreenMirrorPanel";
 import AppManagerPanel from "./AppManagerPanel";

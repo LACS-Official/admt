@@ -8,33 +8,7 @@ import {
   Input,
   Switch,
 } from "@fluentui/react-components";
-import {
-  Desktop20Regular,
-  Settings20Regular,
-  Phone20Regular,
-  BatteryCharge20Regular,
-  Timer20Regular,
-  ArrowReset20Regular,
-  WeatherSunny20Regular,
-  Wifi120Regular,
-  Cellular4G20Regular,
-  Airplane20Regular,
-  ArrowCounterclockwise20Regular,
-  WrenchScrewdriver20Regular,
-  Speaker220Regular,
-  Speaker120Regular,
-  SpeakerMute20Regular,
-  Play20Regular,
-  Next20Regular,
-  Previous20Regular,
-  Power20Regular,
-  LockClosed20Regular,
-  Home20Regular,
-  ArrowLeft20Regular,
-  Apps20Regular,
-  LineHorizontal320Regular,
-  Info20Regular,
-} from "@fluentui/react-icons";
+import {Desktop20Regular, Settings20Regular, Phone20Regular, BatteryCharge20Regular, Timer20Regular, ArrowReset20Regular, WeatherSunny20Regular, Wifi120Regular, Cellular4G20Regular, Airplane20Regular, ArrowCounterclockwise20Regular, WrenchScrewdriver20Regular, Speaker220Regular, Speaker120Regular, SpeakerMute20Regular, Play20Regular, Next20Regular, Previous20Regular, Power20Regular, LockClosed20Regular, Home20Regular, ArrowLeft20Regular, Apps20Regular, LineHorizontal320Regular} from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
 import { useAppStore } from "../../stores/appStore";
@@ -414,7 +388,6 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
           setWifiSsid(status.wifiSsid);
           setMobileDataEnabled(status.mobileDataEnabled);
           setAirplaneModeEnabled(status.airplaneModeEnabled);
-
 
           const rot = await deviceService.executeAdbCommand(device.serial, "shell", [
             "settings",

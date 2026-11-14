@@ -14,17 +14,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
- 
 
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/components/*": ["src/components/*"],
-      "@/services/*": ["src/services/*"],
-      "@/stores/*": ["src/stores/*"],
-      "@/types/*": ["src/types/*"],
-      "@/utils/*": ["src/utils/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src"],

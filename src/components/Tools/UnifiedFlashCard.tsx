@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { makeStyles, TabList, Tab, Text } from "@fluentui/react-components";
+import {makeStyles, TabList, Tab} from "@fluentui/react-components";
 import { CloudArrowUp24Regular, Flash24Regular } from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import ImageFlashCard from "./ImageFlashCard";

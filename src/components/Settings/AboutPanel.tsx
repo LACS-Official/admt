@@ -4,36 +4,8 @@ import { admtLogo128 } from "../../assets/icons";
 import { lacsbgIcon } from "../../assets/icons";
 import VersionChecker from "../Common/VersionChecker";
 
-import {
-  makeStyles,
-  mergeClasses,
-  Text,
-  Card,
-  Button,
-  Dialog,
-  DialogSurface,
-  DialogTitle,
-  DialogBody,
-  DialogContent,
-  DialogActions,
-  Spinner,
-  shorthands,
-  Badge,
-} from "@fluentui/react-components";
-import {
-  Info24Regular,
-  Heart24Regular,
-  Code24Regular,
-  Globe24Regular,
-  Person24Regular,
-  ArrowUpload24Regular,
-  BookOpen24Regular,
-  Chat24Regular,
-  Map24Regular,
-  Open20Regular,
-  Desktop24Regular,
-  CheckmarkCircle20Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, Text, Card, Button, Dialog, DialogSurface, DialogTitle, DialogBody, DialogContent, DialogActions, Spinner, shorthands, Badge} from "@fluentui/react-components";
+import {Heart24Regular, Code24Regular, Globe24Regular, Person24Regular, ArrowUpload24Regular, BookOpen24Regular, Chat24Regular, Map24Regular, Open20Regular, CheckmarkCircle20Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import DonationPanel from "./DonationPanel";
 
@@ -511,7 +483,6 @@ const AboutPanel: React.FC = () => {
             </div>
           </Card>
         </div>
-
 
         {/* --- Community & Social Bento Chips --- */}
         <div className={styles.communitySection}>

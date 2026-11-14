@@ -1,19 +1,6 @@
 import React, { useState } from "react";
-import { makeStyles, Text,
-  TabList,
-  Tab,
-  Button,
-} from "@fluentui/react-components";
-import {
-  CloudArrowUp24Regular,
-  Settings24Regular,
-  LockOpen24Regular,
-  Flash24Regular,
-  Code24Regular,
-  Archive24Regular,
-  Layer24Regular,
-  ArrowDownload24Regular,
-} from "@fluentui/react-icons";
+import {makeStyles, TabList, Tab} from "@fluentui/react-components";
+import {LockOpen24Regular, Flash24Regular, Archive24Regular, Layer24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 import { useDeviceStore } from "../../stores/deviceStore";
 import XiaomiUnlockCard from "../Tools/XiaomiUnlockCard";

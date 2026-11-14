@@ -4,19 +4,7 @@
 */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  makeStyles,
-  mergeClasses,
-  Button,
-  SearchBox,
-  Spinner,
-  Body1,
-  Caption1,
-  Option,
-  Toaster,
-  Link,
-  shorthands,
-} from '@fluentui/react-components';
+import {makeStyles, mergeClasses, Button, SearchBox, Spinner, Body1, Caption1, Toaster, Link, shorthands} from '@fluentui/react-components';
 import {
   CloudArrowDown24Regular,
   Search24Regular,
@@ -266,7 +254,6 @@ const OnlineResourcesPanel: React.FC = () => {
   };
 
 
-
   // 查看下载管理
   const _handleViewDownloads = () => {
     setState({
@@ -312,7 +299,6 @@ const OnlineResourcesPanel: React.FC = () => {
   };
 
 
-
   // 渲染软件卡片
   const renderSoftwareCard = (software: OnlineSoftware) => {
     return (
@@ -348,7 +334,6 @@ const OnlineResourcesPanel: React.FC = () => {
       />
     );
   }
-
 
   const categories = [
     { value: 'ADMT', label: t('online_resources.categories.all', '全部资源') },

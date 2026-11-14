@@ -161,12 +161,10 @@ export class AuthUtils {
   }
 
   /**
-   * 请求JWT令牌（如果需要）
+   * 向认证服务请求 JWT 令牌并缓存
    */
   static async requestJwtToken(userDeviceFingerprint?: string): Promise<string> {
     try {
-      // 这里可以实现向服务器请求JWT令牌的逻辑
-      // 目前返回一个模拟的令牌，实际应用中需要从服务器获取
       const response = await fetch('/api/auth/jwt-token', {
         method: 'POST',
         headers: {

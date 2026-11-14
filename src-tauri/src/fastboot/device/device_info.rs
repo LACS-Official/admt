@@ -196,8 +196,7 @@ fn parse_cpuid(value: &str) -> String {
     }
 }
 
-/// 获取fastboot设备属性
-#[tauri::command]
+/// 获取fastboot设备属性（仅供 Rust 内部调用）
 pub async fn get_fastboot_device_properties(serial: String) -> Result<FastbootDeviceProperties> {
     log::info!("[fastboot_device_info] 获取fastboot设备属性: {}", serial);
 
