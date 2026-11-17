@@ -67,13 +67,13 @@ const useStyles = makeStyles({
     gap: "8px",
     backgroundColor: "var(--colorNeutralBackground2)",
     padding: "4px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   tabSegmentItem: {
     fontSize: "12px",
     padding: "5px 14px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     cursor: "pointer",
     color: "var(--colorNeutralForeground2)",
     transition: "all 0.15s ease",
@@ -99,7 +99,7 @@ const useStyles = makeStyles({
     gap: "12px",
     flexWrap: "wrap",
     padding: "10px 14px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     flexShrink: 0,
@@ -127,7 +127,7 @@ const useStyles = makeStyles({
   filterPill: {
     fontSize: "12px",
     padding: "4px 12px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "var(--colorNeutralBackground3)",
     cursor: "pointer",
     border: "1px solid transparent",
@@ -165,7 +165,7 @@ const useStyles = makeStyles({
   },
   moduleCard: {
     padding: "14px 16px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
@@ -910,7 +910,7 @@ export const ModulePanel: React.FC<ModulePanelProps> = ({ device }) => {
                     <div className={styles.cardDesc}>{mod.description}</div>
 
                     {mod.notes && (
-                      <div style={{ fontSize: "11px", color: "var(--colorBrandForeground1)", backgroundColor: "rgba(0, 113, 227, 0.06)", padding: "4px 8px", borderRadius: "6px" }}>
+                      <div style={{ fontSize: "11px", color: "var(--colorBrandForeground1)", backgroundColor: "rgba(0, 113, 227, 0.06)", padding: "4px 8px", borderRadius: "var(--admt-radius-fine)" }}>
                         提示: {mod.notes}
                       </div>
                     )}

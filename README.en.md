@@ -496,7 +496,14 @@ Ways to contribute:
 -  **Improve Documentation & Translations**: Help refine component guides or translate ADMT into more languages.
 -  **Submit Pull Requests**: Clone the repo, implement fixes/features, and open a PR.
 
-Please refer to [.github/CONTRIBUTING.md](./.github/CONTRIBUTING.md) for contribution guidelines before submitting code.
+**Community documents** — please review the following before participating:
+
+- [Contributing Guide](./.github/CONTRIBUTING.md) — workflow, code standards and verification requirements
+- [Code of Conduct](./.github/CODE_OF_CONDUCT.md) — minimum standards for community participation
+- [Security Policy](./SECURITY.md) — how to responsibly report security vulnerabilities
+- [Accessibility](./ACCESSIBILITY.md) — current support, known limitations and feedback
+
+When submitting a Pull Request, follow the checklist in the [PR template](./.github/PULL_REQUEST_TEMPLATE.md).
 
 ---
 

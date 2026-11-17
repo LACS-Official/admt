@@ -18,6 +18,15 @@ body {
   position: relative;
 }
 
+/* 圆角变量：默认「标准 14px」，运行时由显示设置实时覆盖 */
+:root {
+  --admt-radius-card: 14px;
+  --admt-radius-panel: 12px;
+  --admt-radius-control: 8px;
+  --admt-radius-fine: 4px;
+  --admt-radius-pill: 9999px;
+}
+
 #root {
   height: 100%;
   position: relative; /* Ensure absolute children position relative to root */
@@ -35,12 +44,12 @@ body {
 
 ::-webkit-scrollbar-track {
   background: var(--colorNeutralBackground2);
-  border-radius: 3px;
+  border-radius: var(--admt-radius-fine);
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--colorNeutralStroke1);
-  border-radius: 3px;
+  border-radius: var(--admt-radius-fine);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -140,7 +149,7 @@ body {
 .security-test-area {
   border: 2px dashed var(--colorNeutralStroke2);
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--admt-radius-control);
   background: var(--colorNeutralBackground2);
   text-align: center;
   margin: 8px 0;
@@ -208,7 +217,7 @@ body {
   padding: 8px 12px;
   background: var(--colorNeutralBackground2);
   border: 1px solid var(--colorNeutralStroke2);
-  border-radius: 6px;
+  border-radius: var(--admt-radius-fine);
   font-size: 12px;
   color: var(--colorNeutralForeground2);
   opacity: 0.8;
@@ -225,9 +234,9 @@ body {
   opacity: 0.5;
 }
 
-/* 全局组件圆角规范：卡片 14px，按钮/选项卡/输入控件胶囊，多行文本域按卡片圆角 */
+/* 全局组件圆角规范：卡片/文本域跟随档位，按钮/选项卡/输入控件保持胶囊 */
 .fui-Card {
-  border-radius: 14px !important;
+  border-radius: var(--admt-radius-card) !important;
 }
 
 .fui-Button,
@@ -236,12 +245,12 @@ body {
 .fui-Input,
 .fui-Input > input,
 .fui-Listbox {
-  border-radius: 9999px !important;
+  border-radius: var(--admt-radius-pill) !important;
 }
 
 .fui-Textarea,
 .fui-Textarea > textarea {
-  border-radius: 14px !important;
+  border-radius: var(--admt-radius-card) !important;
 }
 
 /* 紧凑模式下的全局微调 */

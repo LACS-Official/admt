@@ -67,7 +67,7 @@ export const useAppStyles = makeStyles({
     gap: "24px",
     padding: "48px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     maxWidth: "800px",
     width: "100%",
@@ -80,7 +80,7 @@ export const useAppStyles = makeStyles({
   errorDetails: {
     backgroundColor: "var(--colorNeutralBackground2)",
     padding: "20px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     width: "100%",
     border: "1px solid var(--colorNeutralStroke2)",
   },
@@ -104,7 +104,7 @@ export const useAppStyles = makeStyles({
     gap: "12px",
     padding: "24px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   countdownText: {

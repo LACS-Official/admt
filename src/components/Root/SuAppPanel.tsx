@@ -41,7 +41,7 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground2)",
   },
   card: {
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     padding: "16px 18px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -85,14 +85,14 @@ const useStyles = makeStyles({
     gap: "12px",
   },
   pill: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
   },
   logBox: {
     display: "flex",
     flexDirection: "column",
     gap: "4px",
     padding: "12px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground3)",
     border: "1px solid var(--colorNeutralStroke2)",
     fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, "Cascadia Code", monospace',

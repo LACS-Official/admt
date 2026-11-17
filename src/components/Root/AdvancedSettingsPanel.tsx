@@ -47,7 +47,7 @@ const useStyles = makeStyles({
     gap: "16px",
   },
   card: {
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     padding: "16px 18px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -68,7 +68,7 @@ const useStyles = makeStyles({
     gap: "8px",
   },
   pill: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
   },
   caption: {
     color: "var(--colorNeutralForeground2)",

@@ -129,7 +129,16 @@
       "privacy": "Privacy Management",
       "ai_settings": "AI Settings"
     },
-    "title": "Quick Settings"
+    "title": "Quick Settings",
+    "log_retention": "Log Retention",
+    "log_retention_desc": "History logs older than the selected period are cleaned up automatically to free disk space",
+    "log_retention_1week": "One week (7 days)",
+    "log_retention_2week": "Two weeks (14 days)",
+    "log_retention_3week": "Three weeks (21 days)",
+    "log_retention_4week": "Four weeks (28 days)",
+    "log_retention_permanent": "Keep forever",
+    "log_retention_applied": "Log retention policy updated",
+    "log_retention_cleanup_done": "Cleaned up {{count}} expired log files"
   },
   "sidebar": {
     "home": "Home",
@@ -153,6 +162,8 @@
     "device_offline": "Device is offline, cannot fetch details.",
     "device_unauthorized": "Device unauthorized, cannot fetch details.",
     "refreshing_device_list": "Refreshing device list...",
+    "device_list_refreshed": "Device list refreshed",
+    "device_list_refresh_failed": "Failed to refresh device list: {{error}}",
     "info_copied": "Device info copied to clipboard",
     "scanning": "Scanning devices..."
   },
@@ -193,6 +204,7 @@
     "device_not_connected": "Device not connected, unable to reboot"
   },
   "common": {
+    "confirm_title": "Please confirm",
     "confirm_reset": "Are you sure you want to reset?",
     "cancel": "Cancel",
     "think_again": "Think Again",
@@ -241,8 +253,8 @@
     "wireless_connection": "Wireless Connection",
     "copy_to": "Copy to",
     "copy_value": "Copy value",
-    "feature_under_dev_desc": "We're polishing the next-generation experience. Your support and anticipation directly boost this feature's development priority and release schedule.",
-    "feature_under_development": "This feature is under active development...",
+    "feature_under_dev_desc": "This feature is not available yet.",
+    "feature_under_development": "Not available yet",
     "invalid_input": "Please fill in all required fields",
     "unknown_path": "Unknown path"
   },
@@ -416,7 +428,7 @@
     "subtitle": "Before getting started, please carefully read and agree to the following terms. Your privacy and data security are paramount to us.",
     "app_name": "ADMT",
     "app_subtitle": "Android Device Management Tool",
-    "version_tag": "Full-stack developed by LACS Studio",
+    "version_tag": "LACS Studio",
     "sponsorship_alipay": "Alipay ↓",
     "sponsorship_wechat": "WeChat ↓",
     "sponsorship_title": "Support Open Source · Voluntary Sponsorship",
@@ -1602,7 +1614,9 @@
     "category_security": "Security",
     "category_ai": "AI Assistant",
     "load_history": "Load history",
-    "open_log_dir": "Open log folder"
+    "open_log_dir": "Open log folder",
+    "retention_hint": "Auto-keep {{days}} days",
+    "retention_permanent": "Logs kept forever"
   },
   "fastboot": {
     "command_placeholder": "e.g.: flash recovery recovery.img",
@@ -1815,7 +1829,7 @@
         "flash": "Flashing & Rescue",
         "tuning": "System Tuning",
         "tools": "Utilities",
-        "ai": "AI Powered",
+        "ai": "AI Assistant",
         "ui": "UI & Screen"
       },
       "install": "Install Online",
@@ -1882,7 +1896,7 @@
       "download_template": "Download Project Boilerplate",
       "copy_code": "Copy Code"
     },
-    "under_dev_desc": "The open sandboxed plugin architecture, third-party script runtime, and developer ecosystem are in closed beta.",
+    "under_dev_desc": "Plugins and scripts are not available yet.",
     "under_dev_title": "Plugins & Extensions System in Development..."
   },
   "mcp": {

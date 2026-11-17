@@ -52,26 +52,34 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "6px",
     padding: "3px 8px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "rgba(16, 185, 129, 0.08)",
     border: "1px solid rgba(16, 185, 129, 0.2)",
     fontSize: "11px",
     fontWeight: "500",
-    color: "#059669",
+    color: "var(--colorPaletteGreenForeground1)",
   },
   liveDot: {
     width: "6px",
     height: "6px",
     borderRadius: "50%",
-    backgroundColor: "#10b981",
+    backgroundColor: "var(--colorPaletteGreenForeground1)",
     boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.25)",
   },
   countBadge: {
     fontSize: "12px",
     color: "var(--colorNeutralForeground3)",
     padding: "2px 8px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     backgroundColor: "var(--colorNeutralBackground3)",
+  },
+  retentionHint: {
+    fontSize: "12px",
+    color: "var(--colorNeutralForeground3)",
+    padding: "2px 8px",
+    borderRadius: "var(--admt-radius-fine)",
+    backgroundColor: "var(--colorNeutralBackground3)",
+    border: "1px solid var(--colorNeutralStroke2)",
   },
   toolbarActions: {
     display: "flex",
@@ -82,7 +90,7 @@ const useStyles = makeStyles({
     minWidth: "32px",
     height: "32px",
     padding: "0 8px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     color: "var(--colorNeutralForeground2)",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
@@ -91,10 +99,10 @@ const useStyles = makeStyles({
   },
   actionBtnActive: {
     backgroundColor: "rgba(0, 113, 227, 0.12)",
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
     "&:hover": {
       backgroundColor: "rgba(0, 113, 227, 0.18)",
-      color: "#0071e3",
+      color: "var(--colorBrandForeground1)",
     },
   },
 
@@ -105,7 +113,7 @@ const useStyles = makeStyles({
     gap: "10px",
     padding: "8px 12px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorNeutralStroke2)",
     flexShrink: 0,
     flexWrap: "wrap",
@@ -116,14 +124,14 @@ const useStyles = makeStyles({
     gap: "4px",
     backgroundColor: "var(--colorNeutralBackground3)",
     padding: "3px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
   },
   levelTabItem: {
     display: "inline-flex",
     alignItems: "center",
     gap: "5px",
     padding: "4px 10px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     fontSize: "12px",
     fontWeight: "500",
     cursor: "pointer",
@@ -147,17 +155,17 @@ const useStyles = makeStyles({
     fontSize: "11px",
     opacity: 0.75,
     padding: "0 4px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
   },
   levelTabCountAlert: {
     backgroundColor: "rgba(220, 38, 38, 0.15)",
-    color: "#dc2626",
+    color: "var(--colorPaletteRedForeground1)",
     fontWeight: "600",
     opacity: 1,
   },
   levelTabCountWarn: {
     backgroundColor: "rgba(217, 119, 6, 0.15)",
-    color: "#d97706",
+    color: "var(--colorPaletteOrangeForeground1)",
     fontWeight: "600",
     opacity: 1,
   },
@@ -166,7 +174,8 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "8px",
     flex: 1,
-    minWidth: "260px",
+    minWidth: 0,
+    flexWrap: "wrap",
     justifyContent: "flex-end",
   },
   searchInput: {
@@ -174,19 +183,19 @@ const useStyles = makeStyles({
     maxWidth: "320px",
     height: "30px",
     fontSize: "12px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
   },
   categorySelect: {
     height: "30px",
     fontSize: "12px",
     minWidth: "110px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
   },
   deviceInput: {
     width: "120px",
     height: "30px",
     fontSize: "12px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
   },
 
   // Log Stream Container
@@ -196,7 +205,7 @@ const useStyles = makeStyles({
     overflowY: "auto",
     overflowX: "auto",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: "8px",
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, 'Cascadia Code', monospace",
@@ -213,7 +222,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     padding: "4px 8px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     transition: "background-color 0.1s ease",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
@@ -238,7 +247,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     padding: "1px 6px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     fontSize: "10px",
     fontWeight: "700",
     letterSpacing: "0.02em",
@@ -248,24 +257,24 @@ const useStyles = makeStyles({
   },
   levelPillFatal: {
     backgroundColor: "rgba(220, 38, 38, 0.15)",
-    color: "#dc2626",
+    color: "var(--colorPaletteRedForeground1)",
     border: "1px solid rgba(220, 38, 38, 0.3)",
   },
   levelPillError: {
     backgroundColor: "rgba(239, 68, 68, 0.12)",
-    color: "#ef4444",
+    color: "var(--colorPaletteRedForeground1)",
   },
   levelPillWarning: {
     backgroundColor: "rgba(245, 158, 11, 0.12)",
-    color: "#d97706",
+    color: "var(--colorPaletteOrangeForeground1)",
   },
   levelPillInfo: {
     backgroundColor: "rgba(0, 113, 227, 0.1)",
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
   },
   levelPillDebug: {
     backgroundColor: "rgba(139, 92, 246, 0.1)",
-    color: "#8b5cf6",
+    color: "var(--colorPalettePurpleForeground1)",
   },
   sourceTag: {
     color: "var(--colorNeutralForeground3)",
@@ -289,7 +298,7 @@ const useStyles = makeStyles({
   highlight: {
     backgroundColor: "rgba(234, 179, 8, 0.35)",
     color: "inherit",
-    borderRadius: "2px",
+    borderRadius: "var(--admt-radius-fine)",
     padding: "0 2px",
   },
   rowActions: {
@@ -308,7 +317,7 @@ const useStyles = makeStyles({
     padding: "2px 4px",
     height: "20px",
     minWidth: "20px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     fontSize: "11px",
     cursor: "pointer",
     color: "var(--colorNeutralForeground3)",
@@ -322,7 +331,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "3px",
     padding: "1px 6px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     fontSize: "10px",
     fontWeight: "600",
     backgroundColor: "var(--colorNeutralBackground3)",
@@ -340,7 +349,7 @@ const useStyles = makeStyles({
     marginTop: "4px",
     marginLeft: "24px",
     padding: "8px 12px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke3)",
     fontSize: "11px",
@@ -385,6 +394,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
   const { t } = useTranslation();
 
   const recordingLevels = useAppStore((state) => state.config.logRecordingLevels ?? ["error", "warning"]);
+  const retentionDays = useAppStore((state) => state.config.logRetentionDays ?? 7);
   const [logs, setLogs] = useState<StructuredLogEntry[]>([]);
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -602,6 +612,11 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
               ? `共 ${logs.length} 条`
               : `筛选 ${filteredLogs.length} / 共 ${logs.length} 条`}
           </span>
+          <Text className={styles.retentionHint}>
+            {retentionDays === 0
+              ? t('logs_panel.retention_permanent', '日志永久保留')
+              : t('logs_panel.retention_hint', '自动保留 {{days}} 天', { days: retentionDays })}
+          </Text>
         </div>
 
         <div className={styles.toolbarActions}>
@@ -626,7 +641,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
           <Tooltip content={isCopiedAll ? "已复制所有日志" : "复制当前筛选日志"} relationship="label">
             <Button
               appearance="subtle"
-              icon={isCopiedAll ? <Checkmark20Regular style={{ color: "#10b981" }} /> : <Copy20Regular />}
+              icon={isCopiedAll ? <Checkmark20Regular style={{ color: "var(--colorPaletteGreenForeground1)" }} /> : <Copy20Regular />}
               className={styles.actionBtn}
               onClick={handleCopyAll}
               disabled={filteredLogs.length === 0}
@@ -861,7 +876,7 @@ export const LogsPanel: React.FC<LogsPanelProps> = ({ onClose }) => {
                         onClick={(e) => handleCopyRow(log, e)}
                         title="复制单行"
                       >
-                        {isRowCopied ? <Checkmark20Regular style={{ color: "#10b981" }} /> : <Copy20Regular />}
+                        {isRowCopied ? <Checkmark20Regular style={{ color: "var(--colorPaletteGreenForeground1)" }} /> : <Copy20Regular />}
                       </button>
                     </div>
                   </div>

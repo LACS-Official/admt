@@ -33,7 +33,7 @@ const useStyles = makeStyles({
   },
   // Hero section (About App)
   heroCard: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -52,7 +52,7 @@ const useStyles = makeStyles({
   appLogo: {
     width: "72px",
     height: "72px",
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     boxShadow: "0 6px 20px -4px rgba(0, 0, 0, 0.12)",
     flexShrink: 0,
   },
@@ -69,7 +69,7 @@ const useStyles = makeStyles({
     flexWrap: "wrap",
   },
   versionPill: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: 600,
     fontSize: "12px",
     padding: "2px 10px",
@@ -81,7 +81,7 @@ const useStyles = makeStyles({
     marginTop: "12px",
   },
   pillButton: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     height: "34px",
     fontWeight: 500,
     fontSize: "13px",
@@ -93,7 +93,7 @@ const useStyles = makeStyles({
 
   // Team side card
   teamCard: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -111,7 +111,7 @@ const useStyles = makeStyles({
   teamLogo: {
     width: "72px",
     height: "40px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     objectFit: "cover",
     border: "1px solid var(--colorNeutralStroke2)",
     flexShrink: 0,
@@ -124,7 +124,7 @@ const useStyles = makeStyles({
 
   // Specs & Environment Bento Card (High information density)
   specsCard: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -144,7 +144,7 @@ const useStyles = makeStyles({
   specItem: {
     padding: "10px 14px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
     flexDirection: "column",
@@ -192,7 +192,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "space-between",
     padding: "0 14px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     cursor: "pointer",
@@ -215,7 +215,7 @@ const useStyles = makeStyles({
     width: "660px",
     maxWidth: "92vw",
     maxHeight: "85vh",
-    borderRadius: "18px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 20px 48px -8px rgba(0, 0, 0, 0.24)",
     display: "flex",
@@ -240,13 +240,13 @@ const useStyles = makeStyles({
     },
     "&::-webkit-scrollbar-thumb": {
       backgroundColor: "var(--colorNeutralStroke1)",
-      borderRadius: "10px",
+      borderRadius: "var(--admt-radius-control)",
     },
   },
   openSourceDialog: {
     maxWidth: "800px",
     maxHeight: "80vh",
-    borderRadius: "18px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 20px 48px -8px rgba(0, 0, 0, 0.24)",
   },
@@ -264,7 +264,7 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     alignItems: "center",
     padding: "12px 14px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
@@ -281,7 +281,7 @@ const useStyles = makeStyles({
     color: "var(--colorBrandForeground1)",
     backgroundColor: "var(--colorBrandBackground2)",
     padding: "2px 8px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: "600",
   },
 });
@@ -411,7 +411,7 @@ const AboutPanel: React.FC = () => {
                     appearance="outline"
                     size="small"
                     className={styles.pillButton}
-                    icon={<Heart24Regular style={{ color: "#e11d48" }} />}
+                    icon={<Heart24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />}
                     onClick={() => setIsDonationDialogOpen(true)}
                   >
                     {t('settings.donate_us')}
@@ -603,7 +603,7 @@ const AboutPanel: React.FC = () => {
           <DialogBody className={styles.donationDialogBody}>
             <DialogTitle>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Heart24Regular style={{ color: "#e11d48" }} />
+                <Heart24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
                 <span>{t('settings.donate_us')}</span>
               </div>
             </DialogTitle>

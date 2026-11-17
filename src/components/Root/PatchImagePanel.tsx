@@ -22,6 +22,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../stores/appStore";
 import logService from "../../services/logService";
+import { confirm } from "../../services/confirmService";
 
 const useStyles = makeStyles({
   container: {
@@ -54,14 +55,14 @@ const useStyles = makeStyles({
   hintBox: {
     marginBottom: "12px",
     padding: "8px 14px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "rgba(0, 113, 227, 0.06)",
     border: "1px solid rgba(0, 113, 227, 0.15)",
   },
   dangerBox: {
     marginBottom: "12px",
     padding: "8px 14px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     borderLeft: "4px solid var(--colorPaletteRedBorder1)",
     backgroundColor: "var(--colorPaletteRedBackground1)",
   }
@@ -269,7 +270,7 @@ const PatchImagePanel: React.FC<PatchImagePanelProps> = ({ device }) => {
     }
     const targetPartition = partition === "auto" ? "boot" : partition;
     const confirmMsg = t('root.flash_confirm', { partition: targetPartition, image: patchedPath });
-    if (!window.confirm(confirmMsg)) {
+    if (!(await confirm({ message: confirmMsg, danger: true }))) {
       return;
     }
     setIsFlashing(true);

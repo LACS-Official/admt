@@ -18,8 +18,6 @@
   <img src="./public/github/bg.png" alt="玩机管家 ADMT 界面与架构背景图" width="100%" />
 </p>
 
-</div>
-
 ---
 
 ## 项目简介
@@ -551,7 +549,14 @@ admt/
 -  **完善文档与翻译**：帮助补充更完善的组件说明、翻译更多语言版本。
 -  **提交 Pull Request**：直接克隆仓库，修补 Bug 或实现新的功能组件后提交 PR。
 
-提交代码前，请参阅 [.github/CONTRIBUTING.md](./.github/CONTRIBUTING.md) 了解详细的贡献规范与代码风格要求。
+**社区文档**：参与本项目前，请先阅读以下文档。
+
+- [贡献指南](./.github/CONTRIBUTING.md) — 开发流程、代码规范与验证要求
+- [行为准则](./.github/CODE_OF_CONDUCT.md) — 社区参与的最低行为标准
+- [安全策略](./SECURITY.md) — 如何负责任地报告安全漏洞
+- [无障碍声明](./ACCESSIBILITY.md) — 当前支持能力、已知限制与反馈方式
+
+提交 Pull Request 时请遵循 [PR 模板](./.github/PULL_REQUEST_TEMPLATE.md) 中的自查清单。
 
 ---
 

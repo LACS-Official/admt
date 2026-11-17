@@ -15,7 +15,7 @@ const useStyles = makeStyles({
     width: "100%",
     height: "120px", 
     overflow: "hidden",
-    borderRadius: "12px", 
+    borderRadius: "var(--admt-radius-panel)", 
     backgroundColor: "transparent",
     border: "none",
     boxShadow: "none", 
@@ -83,7 +83,7 @@ const useStyles = makeStyles({
     border: "1px solid rgba(0, 0, 0, 0.5)", // 激活状态边框更明显
     transform: "scale(1.2)",
     width: "18px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
   }
 });
 

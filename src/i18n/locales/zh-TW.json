@@ -129,7 +129,16 @@
       "privacy": "隱私管理",
       "ai_settings": "AI 設定"
     },
-    "title": "快速設定"
+    "title": "快速設定",
+    "log_retention": "日誌保留時長",
+    "log_retention_desc": "超過設定時長的歷史日誌將被自動清理，釋放磁碟空間",
+    "log_retention_1week": "一週（7 天）",
+    "log_retention_2week": "兩週（14 天）",
+    "log_retention_3week": "三週（21 天）",
+    "log_retention_4week": "四週（28 天）",
+    "log_retention_permanent": "永久保留",
+    "log_retention_applied": "日誌保留策略已更新",
+    "log_retention_cleanup_done": "已清理 {{count}} 個過期日誌檔案"
   },
   "sidebar": {
     "home": "主頁中心",
@@ -153,6 +162,8 @@
     "device_offline": "當前設備已離線，無法獲取詳細信息。",
     "device_unauthorized": "當前設備未授權，無法獲取詳細信息。",
     "refreshing_device_list": "正在刷新設備列表...",
+    "device_list_refreshed": "設備列表已刷新",
+    "device_list_refresh_failed": "刷新設備列表失敗：{{error}}",
     "info_copied": "設備信息已複製到剪貼板",
     "scanning": "正在掃描設備..."
   },
@@ -193,6 +204,7 @@
     "device_not_connected": "設備未連接，無法執行重啟操作"
   },
   "common": {
+    "confirm_title": "請確認",
     "confirm_reset": "確定要重置嗎？",
     "cancel": "取消",
     "think_again": "我再想想",
@@ -241,8 +253,8 @@
     "wireless_connection": "無線調試連接",
     "copy_to": "複製到",
     "copy_value": "複製內容",
-    "feature_under_dev_desc": "我們正在打磨下一代極致體驗，您的助力與期待將直接提升該功能的研發排程與上線優先順序。",
-    "feature_under_development": "該功能正在全力開發中...",
+    "feature_under_dev_desc": "該功能暫未開放，敬請期待。",
+    "feature_under_development": "暫未開放",
     "invalid_input": "請輸入完整資訊",
     "unknown_path": "未知路徑"
   },
@@ -416,7 +428,7 @@
     "subtitle": "在開始使用之前，請您仔細閱讀並同意以下條款。您的隱私和數據安全對我們至關重要。",
     "app_name": "玩機管家 ADMT",
     "app_subtitle": "Android Device Management Tool",
-    "version_tag": "領創工作室全棧開發",
+    "version_tag": "領創工作室",
     "sponsorship_alipay": "支付寶 ↓",
     "sponsorship_wechat": "微信 ↓",
     "sponsorship_title": "支持開源 · 自願贊助",
@@ -1602,7 +1614,9 @@
     "category_security": "安全",
     "category_ai": "AI 助手",
     "load_history": "載入歷史記錄",
-    "open_log_dir": "開啟日誌目錄"
+    "open_log_dir": "開啟日誌目錄",
+    "retention_hint": "自動保留 {{days}} 天",
+    "retention_permanent": "日誌永久保留"
   },
   "fastboot": {
     "command_placeholder": "例如: flash recovery recovery.img",
@@ -1815,7 +1829,7 @@
         "flash": "刷機與救磚",
         "tuning": "系統調優",
         "tools": "實用工具",
-        "ai": "AI 賦能",
+        "ai": "AI 助手",
         "ui": "介面與投影"
       },
       "install": "線上安裝",
@@ -1882,7 +1896,7 @@
       "download_template": "下載開發工程範本",
       "copy_code": "複製代碼"
     },
-    "under_dev_desc": "開放式沙盒外掛架構、第三方指令碼執行環境與開發者生態正在內測。",
+    "under_dev_desc": "外掛與指令碼功能暫未開放。",
     "under_dev_title": "外掛與擴充系統開發中..."
   },
   "mcp": {

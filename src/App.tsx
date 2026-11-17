@@ -27,6 +27,7 @@ import { useAppStartup } from "./hooks/useAppStartup";
 import { useThemeStore } from "./stores/themeStore";
 
 import { SecurityVerificationDialog } from "./components/Common/SecurityVerificationDialog";
+import ConfirmDialogHost from "./components/Common/ConfirmDialogHost";
 
 function App() {
   const styles = useAppStyles();
@@ -84,6 +85,7 @@ function App() {
       <MainContent />
       <StatusBar />
       <SecurityVerificationDialog />
+      <ConfirmDialogHost />
     </div>
   );
 }

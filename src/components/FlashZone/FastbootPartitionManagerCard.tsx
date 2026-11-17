@@ -49,7 +49,7 @@ const useStyles = makeStyles({
   guidanceCard: {
     maxWidth: "540px",
     width: "100%",
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: "32px 28px",
@@ -63,7 +63,7 @@ const useStyles = makeStyles({
   guidanceIcon: {
     width: "60px",
     height: "60px",
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "rgba(0, 113, 227, 0.1)",
     display: "flex",
     alignItems: "center",
@@ -73,7 +73,7 @@ const useStyles = makeStyles({
   deviceInfoBox: {
     width: "100%",
     padding: "12px 16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
@@ -88,7 +88,7 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
   },
@@ -109,7 +109,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     fontSize: "12px",
     gap: "12px",
     flexShrink: 0,
@@ -127,7 +127,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "10px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: "14px",
     minHeight: 0,
@@ -138,7 +138,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "12px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: "14px",
     minHeight: 0,
@@ -158,7 +158,7 @@ const useStyles = makeStyles({
   categoryChip: {
     fontSize: "11px",
     padding: "4px 10px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     cursor: "pointer",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground2)",
@@ -182,7 +182,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     padding: "6px 10px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     border: "1px solid var(--colorNeutralStroke3)",
     fontSize: "12px",
   },
@@ -199,7 +199,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "8px",
     padding: "8px 10px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke3)",
     transition: "all 0.15s ease",
@@ -236,7 +236,7 @@ const useStyles = makeStyles({
   },
   sectionCard: {
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     padding: "12px",
     border: "1px solid var(--colorNeutralStroke3)",
     display: "flex",
@@ -275,14 +275,14 @@ const useStyles = makeStyles({
     overflowY: "auto",
     padding: "4px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     border: "1px solid var(--colorNeutralStroke3)",
   },
   logBox: {
     fontFamily: "Consolas, 'Courier New', monospace",
     fontSize: "11px",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     padding: "10px",
     border: "1px solid var(--colorNeutralStroke3)",
     maxHeight: "110px",
@@ -1344,7 +1344,7 @@ export const FastbootPartitionManagerCard: React.FC<
 
       {/* 单分区擦除确认对话框 */}
       <Dialog open={eraseDialogOpen} onOpenChange={(_, d) => setEraseDialogOpen(d.open)}>
-        <DialogSurface style={{ borderRadius: "14px", maxWidth: "440px" }}>
+        <DialogSurface style={{ borderRadius: "var(--admt-radius-card)", maxWidth: "440px" }}>
           <DialogTitle>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Delete24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
@@ -1358,7 +1358,7 @@ export const FastbootPartitionManagerCard: React.FC<
             <div
               style={{
                 padding: "10px 12px",
-                borderRadius: "8px",
+                borderRadius: "var(--admt-radius-control)",
                 backgroundColor: "var(--colorNeutralBackground2)",
                 border: "1px solid var(--colorNeutralStroke2)",
                 display: "flex",
@@ -1389,7 +1389,7 @@ export const FastbootPartitionManagerCard: React.FC<
 
       {/* 批量擦除确认对话框 */}
       <Dialog open={batchEraseDialogOpen} onOpenChange={(_, d) => setBatchEraseDialogOpen(d.open)}>
-        <DialogSurface style={{ borderRadius: "14px", maxWidth: "460px" }}>
+        <DialogSurface style={{ borderRadius: "var(--admt-radius-card)", maxWidth: "460px" }}>
           <DialogTitle>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Delete24Regular style={{ color: "var(--colorPaletteRedForeground1)" }} />
@@ -1425,14 +1425,14 @@ export const FastbootPartitionManagerCard: React.FC<
 
       {/* 非 Fastboot 模式操作拦截提示弹窗 */}
       <Dialog open={fastbootPromptOpen} onOpenChange={(_, d) => setFastbootPromptOpen(d.open)}>
-        <DialogSurface style={{ borderRadius: "16px", padding: "24px", maxWidth: "480px" }}>
+        <DialogSurface style={{ borderRadius: "var(--admt-radius-card)", padding: "24px", maxWidth: "480px" }}>
           <DialogTitle>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div
                 style={{
                   width: "36px",
                   height: "36px",
-                  borderRadius: "10px",
+                  borderRadius: "var(--admt-radius-control)",
                   backgroundColor: "rgba(0, 113, 227, 0.1)",
                   display: "flex",
                   alignItems: "center",
@@ -1461,7 +1461,7 @@ export const FastbootPartitionManagerCard: React.FC<
             <div
               style={{
                 padding: "12px 14px",
-                borderRadius: "10px",
+                borderRadius: "var(--admt-radius-control)",
                 backgroundColor: "var(--colorNeutralBackground2)",
                 border: "1px solid var(--colorNeutralStroke2)",
                 display: "flex",

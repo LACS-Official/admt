@@ -94,7 +94,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04)",
     backgroundColor: "var(--colorNeutralBackground1)",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -161,7 +161,7 @@ const useStyles = makeStyles({
     },
   },
   metricCard: {
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.03)",
@@ -184,7 +184,7 @@ const useStyles = makeStyles({
   metricIconWrap: {
     width: "36px",
     height: "36px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -219,7 +219,7 @@ const useStyles = makeStyles({
     fontFamily: tokens.fontFamilyMonospace,
     backgroundColor: "var(--colorNeutralBackground3)",
     padding: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalSNudge}`,
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     border: "1px solid var(--colorNeutralStroke3)",
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -276,7 +276,7 @@ const useStyles = makeStyles({
   headerTabList: {
     flex: "1 1 auto",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "3px 4px",
     display: "inline-flex",
     alignItems: "center",
@@ -291,7 +291,7 @@ const useStyles = makeStyles({
       fontSize: "12px",
       padding: "4px 12px",
       minHeight: "26px",
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
       transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
       border: "none",
       fontWeight: 500,
@@ -353,7 +353,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: tokens.spacingVerticalXXS,
     padding: tokens.spacingHorizontalS,
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke3)",
     transition: "all 0.2s ease",
@@ -381,7 +381,7 @@ const useStyles = makeStyles({
     gap: "4px",
     cursor: "pointer",
     padding: "3px 4px",
-    borderRadius: "3px",
+    borderRadius: "var(--admt-radius-fine)",
     transition: "all 0.2s ease",
     lineHeight: "1.3",
     ":hover": {
@@ -408,7 +408,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     padding: "8px",
     cursor: "pointer",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground2Hover)",
     },
@@ -681,7 +681,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                     icon={<Timer24Regular style={{ color: config.overviewAutoRefresh ? "var(--colorBrandForeground1)" : undefined }} />}
                     title="自动刷新设置"
                     style={{
-                      borderRadius: "9999px",
+                      borderRadius: "var(--admt-radius-pill)",
                       fontSize: "12px",
                       padding: "2px 10px",
                       height: "28px",
@@ -735,7 +735,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                 disabled={isLoadingMemoryStorage}
                 title="立即刷新硬件状态"
                 style={{
-                  borderRadius: "9999px",
+                  borderRadius: "var(--admt-radius-pill)",
                   height: "28px",
                   minWidth: "28px",
                   padding: "0 6px",
@@ -759,7 +759,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
               <ProgressBar
                 value={((memoryStorageInfo?.battery?.battery_level ?? device.properties?.batteryLevel ?? 0)) / 100}
                 color="brand"
-                style={{ height: "6px", borderRadius: "9999px" }}
+                style={{ height: "6px", borderRadius: "var(--admt-radius-pill)" }}
               />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
                 <span>{memoryStorageInfo?.battery?.battery_health_status || (device.properties?.batteryLevel ? "供电正常" : "待检测")}</span>
@@ -785,7 +785,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
               <ProgressBar
                 value={(getTemperatureInfo(memoryStorageInfo).temperaturePercent || 0) / 100}
                 color="brand"
-                style={{ height: "6px", borderRadius: "9999px" }}
+                style={{ height: "6px", borderRadius: "var(--admt-radius-pill)" }}
               />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
                 <span>传感器状态</span>
@@ -807,7 +807,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
               <ProgressBar
                 value={getStorageInfo(memoryStorageInfo).used / 100}
                 color="brand"
-                style={{ height: "6px", borderRadius: "9999px" }}
+                style={{ height: "6px", borderRadius: "var(--admt-radius-pill)" }}
               />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
                 <span>已用空间</span>
@@ -829,7 +829,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
               <ProgressBar
                 value={getMemoryUsage(memoryStorageInfo).used / 100}
                 color="brand"
-                style={{ height: "6px", borderRadius: "9999px" }}
+                style={{ height: "6px", borderRadius: "var(--admt-radius-pill)" }}
               />
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
                 <span>内存负载</span>
@@ -863,7 +863,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                         icon={<DocumentBulletList24Regular style={{ color: tokens.colorBrandForeground1 }} />}
                         onClick={handleGenerateAiReport}
                         title="生成设备配置 HTML 报告"
-                        style={{ borderRadius: "9999px" }}
+                        style={{ borderRadius: "var(--admt-radius-pill)" }}
                       >
                         HTML 报告
                       </Button>
@@ -908,7 +908,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                         icon={<DocumentBulletList24Regular style={{ color: tokens.colorBrandForeground1 }} />}
                         onClick={handleGenerateAiReport}
                         title="生成设备配置 HTML 报告"
-                        style={{ borderRadius: "9999px" }}
+                        style={{ borderRadius: "var(--admt-radius-pill)" }}
                       >
                         HTML 报告
                       </Button>
@@ -918,7 +918,7 @@ const DeviceOverviewCard: React.FC<DeviceOverviewCardProps> = ({ device, onCusto
                         icon={<WifiSettingsRegular />}
                         onClick={() => setWirelessDebuggingDialogOpen(true)}
                         title={t('common.wireless_connection', '无线调试连接')}
-                        style={{ borderRadius: "9999px" }}
+                        style={{ borderRadius: "var(--admt-radius-pill)" }}
                       />
                     </div>
                   )}

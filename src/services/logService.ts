@@ -901,6 +901,19 @@ export class LogService {
     }
   }
 
+  /** 按保留天数清理历史日志文件。days<=0 表示永久保留，不执行清理。返回实际删除的文件数。 */
+  async applyLogRetention(days: number): Promise<number> {
+    if (!days || days <= 0) return 0;
+    try {
+      return await invoke<number>("cleanup_logs_by_retention", { days });
+    } catch (error) {
+      this.logError("清理过期日志失败", "LogService", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return 0;
+    }
+  }
+
   dispose(): void {
     if (this.unlistenPluginLog) {
       this.unlistenPluginLog();

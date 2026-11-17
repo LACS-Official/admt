@@ -75,7 +75,7 @@ const useStyles = makeStyles({
     boxSizing: "border-box",
     overflow: "hidden",
     "& .fui-Button": {
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
     },
   },
   layoutBoth: {
@@ -101,7 +101,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalM,
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     padding: tokens.spacingHorizontalL,
     overflowY: "auto",
     flex: 1,
@@ -116,7 +116,7 @@ const useStyles = makeStyles({
     padding: "10px 16px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     cursor: "pointer",
     flexShrink: 0,
     transition: "all 0.15s ease",
@@ -142,7 +142,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
     padding: tokens.spacingHorizontalM,
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke3)",
   },
   summaryItem: {
@@ -191,7 +191,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: tokens.spacingHorizontalM,
     fontFamily: tokens.fontFamilyMonospace,
@@ -221,7 +221,7 @@ const useStyles = makeStyles({
     padding: "10px 16px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     flexShrink: 0,
   },
   infoBlock: {
@@ -242,7 +242,7 @@ const useStyles = makeStyles({
     padding: "12px 14px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
   },
   mono: {
     fontFamily: tokens.fontFamilyMonospace,

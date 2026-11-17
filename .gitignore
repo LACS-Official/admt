@@ -25,6 +25,9 @@ bin/
 .augment/
 .idea/
 .qoder/
+
+# AI assistant project rules (local only)
+.agents/
 *.swp
 *.swo
 *~

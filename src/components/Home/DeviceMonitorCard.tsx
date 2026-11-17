@@ -37,7 +37,7 @@ const useStyles = makeStyles({
     gap: "16px",
     overflow: "hidden",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 2px 12px rgba(0, 0, 0, 0.03)",
   },
@@ -58,7 +58,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "6px",
     padding: "3px 10px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontSize: "12px",
     fontWeight: 500,
     backgroundColor: "var(--colorNeutralBackground3)",
@@ -75,7 +75,7 @@ const useStyles = makeStyles({
     display: "inline-flex",
     alignItems: "center",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "2px",
     border: "1px solid var(--colorNeutralStroke2)",
   },
@@ -83,7 +83,7 @@ const useStyles = makeStyles({
     minHeight: "26px",
     padding: "2px 10px",
     fontSize: "12px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     border: "none",
     backgroundColor: "transparent",
     color: "var(--colorNeutralForeground2)",
@@ -121,7 +121,7 @@ const useStyles = makeStyles({
   monitorTabList: {
     flexShrink: 0,
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "3px 4px",
     display: "inline-flex",
     alignItems: "center",
@@ -132,7 +132,7 @@ const useStyles = makeStyles({
       fontSize: "12px",
       padding: "5px 12px",
       minHeight: "28px",
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
       transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
       border: "none",
       fontWeight: 500,
@@ -156,7 +156,7 @@ const useStyles = makeStyles({
     display: "inline-flex",
     alignItems: "center",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "2px",
     border: "1px solid var(--colorNeutralStroke2)",
   },
@@ -165,7 +165,7 @@ const useStyles = makeStyles({
     minHeight: "340px",
     position: "relative",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     padding: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
     overflow: "hidden",
@@ -179,7 +179,7 @@ const useStyles = makeStyles({
     fontWeight: "500",
     cursor: "pointer",
     padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     transition: "background 0.2s",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
@@ -189,7 +189,7 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorNeutralBackground1)",
     backdropFilter: "blur(16px)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     padding: "10px 14px",
     boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
   },
@@ -216,7 +216,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "10px 14px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
     transition: "all 0.15s ease",
     ":hover": {
@@ -716,7 +716,7 @@ const DeviceMonitorCard: React.FC<DeviceMonitorCardProps> = ({ device: propDevic
       {dataPoints.length > 0 ? (
         <div className={styles.chartContainer} ref={chartRef}>
           {error && (
-            <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 100, backgroundColor: 'rgba(209, 52, 56, 0.1)', color: 'var(--colorStatusDangerForeground1)', padding: '2px 12px', borderRadius: '4px', fontSize: '11px', border: '1px solid var(--colorStatusDangerBorder1)' }}>
+            <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', zIndex: 100, backgroundColor: 'rgba(209, 52, 56, 0.1)', color: 'var(--colorStatusDangerForeground1)', padding: '2px 12px', borderRadius: 'var(--admt-radius-fine)', fontSize: '11px', border: '1px solid var(--colorStatusDangerBorder1)' }}>
               {t('monitor.exception', { error })}
             </div>
           )}

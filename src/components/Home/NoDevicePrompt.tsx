@@ -34,7 +34,7 @@ const useStyles = makeStyles({
   guideCard: {
     width: "100%",
     padding: "24px 28px",
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     boxShadow: "0 2px 12px rgba(0, 0, 0, 0.03)",
@@ -58,7 +58,7 @@ const useStyles = makeStyles({
   iconBox: {
     width: "40px",
     height: "40px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "rgba(0, 113, 227, 0.08)",
     color: "var(--colorBrandForeground1)",
     display: "flex",
@@ -82,7 +82,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     padding: "16px 18px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     gap: "10px",
@@ -106,12 +106,12 @@ const useStyles = makeStyles({
     color: "var(--colorBrandForeground1)",
     backgroundColor: "rgba(0, 113, 227, 0.1)",
     padding: "2px 7px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
   },
   stepIconWrap: {
     width: "34px",
     height: "34px",
-    borderRadius: "9px",
+    borderRadius: "var(--admt-radius-control)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -155,7 +155,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
     gap: "6px",
     padding: "9px 14px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     color: "var(--colorNeutralForeground1)",
@@ -191,7 +191,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
       desc: "打开手机「设置 > 关于手机」，连续点击「版本号」7 次直至提示已处于开发者模式。",
       icon: <DeveloperBoard24Regular />,
       iconBg: "rgba(0, 113, 227, 0.1)",
-      iconColor: "#0071e3",
+      iconColor: "var(--colorBrandForeground1)",
     },
     {
       num: "02",
@@ -199,7 +199,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
       desc: "进入「系统与更新 > 开发者选项」，开启「USB 调试」总开关（部分机型需开启安全权限）。",
       icon: <Settings24Regular />,
       iconBg: "rgba(245, 158, 11, 0.1)",
-      iconColor: "#f59e0b",
+      iconColor: "var(--colorPaletteYellowForeground1)",
     },
     {
       num: "03",
@@ -207,7 +207,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
       desc: "使用原装/数据线连接电脑，手机屏幕弹出授权弹窗时，勾选「始终允许调试」并确定。",
       icon: <Phone24Regular />,
       iconBg: "rgba(16, 185, 129, 0.1)",
-      iconColor: "#10b981",
+      iconColor: "var(--colorPaletteGreenForeground1)",
     },
   ];
 
@@ -254,7 +254,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
                   size="small"
                   icon={<ArrowClockwise24Regular />}
                   onClick={onRefresh}
-                  style={{ borderRadius: "9999px" }}
+                  style={{ borderRadius: "var(--admt-radius-pill)" }}
                 >
                   {t('common.refresh_manual', '刷新设备')}
                 </Button>
@@ -265,7 +265,7 @@ const NoDevicePrompt: React.FC<NoDevicePromptProps> = ({
               size="small"
               icon={<WifiSettingsRegular />}
               onClick={() => setWirelessDebuggingDialogOpen(true)}
-              style={{ borderRadius: "9999px" }}
+              style={{ borderRadius: "var(--admt-radius-pill)" }}
             >
               {t('common.wireless_connection', '无线调试')}
             </Button>

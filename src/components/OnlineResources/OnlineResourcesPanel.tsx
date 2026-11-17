@@ -47,7 +47,7 @@ const useStyles = makeStyles({
     alignItems: 'center',
     flexShrink: 0,
     '& .fui-Input, & .fui-SearchBox': {
-      borderRadius: '9999px',
+      borderRadius: 'var(--admt-radius-pill)',
     },
   },
   searchBox: {
@@ -68,7 +68,7 @@ const useStyles = makeStyles({
   },
   chip: {
     padding: '5px 12px',
-    borderRadius: '9999px',
+    borderRadius: 'var(--admt-radius-pill)',
     ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke2)'),
     cursor: 'pointer',
     fontSize: '12px',
@@ -99,7 +99,7 @@ const useStyles = makeStyles({
     padding: '2px 0',
   },
   pillButton: {
-    borderRadius: '9999px',
+    borderRadius: 'var(--admt-radius-pill)',
   },
   softwareCard: {
     height: 'auto',
@@ -190,7 +190,7 @@ const useStyles = makeStyles({
     textAlign: 'center',
     padding: '16px',
     backgroundColor: 'var(--colorPaletteRedBackground1)',
-    borderRadius: '4px',
+    borderRadius: 'var(--admt-radius-fine)',
     border: '1px solid var(--colorPaletteRedBorder1)',
   },
 });

@@ -44,7 +44,7 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
   },
   content: {
     flex: 1,
@@ -60,7 +60,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "12px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
   },
   warningSection: {
     display: "flex",
@@ -68,7 +68,7 @@ const useStyles = makeStyles({
     gap: "8px",
     padding: "12px",
     backgroundColor: "var(--colorPaletteYellowBackground1)",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorPaletteYellowBorder1)",
   },
   warningIcon: {

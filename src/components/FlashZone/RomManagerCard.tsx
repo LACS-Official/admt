@@ -32,7 +32,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground2)",
   },
   inputRow: {
@@ -43,7 +43,7 @@ const useStyles = makeStyles({
   tabList: {
     flexShrink: 0,
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "3px 4px",
     display: "inline-flex",
     alignItems: "center",
@@ -55,7 +55,7 @@ const useStyles = makeStyles({
       fontSize: "12px",
       padding: "5px 12px",
       minHeight: "28px",
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
       transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
       border: "none",
       fontWeight: 500,
@@ -94,7 +94,7 @@ const useStyles = makeStyles({
     },
     "&::-webkit-scrollbar-thumb": {
       background: "var(--colorNeutralStroke2)",
-      borderRadius: "4px",
+      borderRadius: "var(--admt-radius-fine)",
     },
   },
   partitionItem: {
@@ -103,7 +103,7 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     padding: "10px 16px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     backgroundColor: "var(--colorNeutralBackground1)",
     transition: "all 0.2s ease",
     "&:hover": {
@@ -137,7 +137,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "10px",
     padding: "16px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   successCard: {

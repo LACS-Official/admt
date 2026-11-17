@@ -273,7 +273,7 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
                     <div style={{ 
                       backgroundColor: 'var(--colorNeutralBackground2)', 
                       padding: '12px', 
-                      borderRadius: '8px',
+                      borderRadius: 'var(--admt-radius-control)',
                       marginTop: '8px'
                     }}>
                       <Text size={300} style={{ color: 'var(--colorNeutralForeground2)' }}>

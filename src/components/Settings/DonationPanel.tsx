@@ -16,7 +16,7 @@ const useStyles = makeStyles({
   },
   banner: {
     padding: "12px 16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "var(--colorBrandBackground2)",
     border: "1px solid var(--colorBrandStroke2)",
     display: "flex",
@@ -45,7 +45,7 @@ const useStyles = makeStyles({
     },
   },
   qrCard: {
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground2)",
     padding: "14px 16px",
@@ -69,7 +69,7 @@ const useStyles = makeStyles({
   qrWrapper: {
     padding: "8px",
     backgroundColor: "#ffffff",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid rgba(0, 0, 0, 0.08)",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
     display: "flex",
@@ -79,7 +79,7 @@ const useStyles = makeStyles({
   qrImage: {
     width: "135px",
     height: "135px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     display: "block",
     objectFit: "contain",
   },
@@ -90,7 +90,7 @@ const useStyles = makeStyles({
   noticeCard: {
     padding: "14px 16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
     flexDirection: "column",

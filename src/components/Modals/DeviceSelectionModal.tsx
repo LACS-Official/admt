@@ -32,7 +32,7 @@ const useStyles = makeStyles({
     width: "90vw",
     maxHeight: "620px",
     padding: "0",
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 24px 50px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.05)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -82,7 +82,7 @@ const useStyles = makeStyles({
     minWidth: "32px",
     height: "32px",
     padding: "0 6px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     color: "var(--colorNeutralForeground2)",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
@@ -117,7 +117,7 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     padding: "12px 14px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     cursor: "pointer",
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.15s ease",
@@ -148,20 +148,16 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   statusOnline: {
-    backgroundColor: "#10b981",
-    boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.25)",
+    backgroundColor: "var(--colorPaletteGreenForeground1)",
   },
   statusFastboot: {
-    backgroundColor: "#8b5cf6",
-    boxShadow: "0 0 0 2px rgba(139, 92, 246, 0.25)",
+    backgroundColor: "var(--colorPalettePurpleForeground1)",
   },
   statusRecovery: {
-    backgroundColor: "#f59e0b",
-    boxShadow: "0 0 0 2px rgba(245, 158, 11, 0.25)",
+    backgroundColor: "var(--colorPaletteYellowForeground1)",
   },
   statusUnauthorized: {
-    backgroundColor: "#ef4444",
-    boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.25)",
+    backgroundColor: "var(--colorPaletteRedForeground1)",
   },
   deviceDetails: {
     display: "flex",
@@ -187,6 +183,10 @@ const useStyles = makeStyles({
     fontSize: "11px",
     fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
     color: "var(--colorNeutralForeground3)",
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
   emptyContainer: {
     display: "flex",
@@ -397,7 +397,7 @@ export const DeviceSelectionModal: React.FC = () => {
 
                         {isSelected && (
                           <CheckmarkCircle24Regular
-                            style={{ color: "#0071e3", flexShrink: 0 }}
+                            style={{ color: "var(--colorBrandForeground1)", flexShrink: 0 }}
                           />
                         )}
                       </motion.div>

@@ -85,7 +85,7 @@ describe('i18n 契约', () => {
   it('三份语言文件不存在重复的顶层段', () => {
     for (const name of Object.keys(locales)) {
       const raw = readFileSync(join(LOCALE_DIR, `${name}.json`), 'utf-8');
-      const topKeys = [...raw.matchAll(/^  "([^"]+)":\s*\{/gm)].map((m) => m[1]);
+      const topKeys = [...raw.matchAll(/^ {2}"([^"]+)":\s*\{/gm)].map((m) => m[1]);
       expect(new Set(topKeys).size, name).toBe(topKeys.length);
     }
   });

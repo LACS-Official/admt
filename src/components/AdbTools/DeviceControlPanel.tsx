@@ -11,6 +11,7 @@ import {
 import {Desktop20Regular, Settings20Regular, Phone20Regular, BatteryCharge20Regular, Timer20Regular, ArrowReset20Regular, WeatherSunny20Regular, Wifi120Regular, Cellular4G20Regular, Airplane20Regular, ArrowCounterclockwise20Regular, WrenchScrewdriver20Regular, Speaker220Regular, Speaker120Regular, SpeakerMute20Regular, Play20Regular, Next20Regular, Previous20Regular, Power20Regular, LockClosed20Regular, Home20Regular, ArrowLeft20Regular, Apps20Regular, LineHorizontal320Regular} from "@fluentui/react-icons";
 import { DeviceInfo } from "../../types/device";
 import { useDeviceService } from "../../services/deviceService";
+import { confirm } from "../../services/confirmService";
 import { useAppStore } from "../../stores/appStore";
 import { controlService } from "../../services/controlService";
 
@@ -51,7 +52,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     backgroundColor: "var(--colorNeutralBackground3)",
     padding: "3px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     gap: "2px",
   },
   tabItem: {
@@ -59,7 +60,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "6px",
     padding: "5px 12px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     fontSize: "12px",
     fontWeight: "500",
     cursor: "pointer",
@@ -73,7 +74,7 @@ const useStyles = makeStyles({
   },
   tabItemActive: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
     fontWeight: "600",
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
   },
@@ -95,7 +96,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     padding: "16px 18px",
     gap: "14px",
     transition: "box-shadow 0.2s ease, border-color 0.2s ease",
@@ -135,7 +136,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     padding: "10px 6px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
     cursor: "pointer",
@@ -155,7 +156,7 @@ const useStyles = makeStyles({
   keyButtonActive: {
     backgroundColor: "rgba(0, 113, 227, 0.08)",
     ...shorthands.borderColor("rgba(0, 113, 227, 0.3)"),
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
   },
   keyIcon: {
     fontSize: "20px",
@@ -174,7 +175,7 @@ const useStyles = makeStyles({
   },
   keySubLabel: {
     fontSize: "9px",
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
     fontWeight: "600",
     marginTop: "-2px",
   },
@@ -187,14 +188,14 @@ const useStyles = makeStyles({
     padding: "8px 12px",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     gap: "6px",
     flexWrap: "wrap",
   },
   mediaBtn: {
     flex: "1 1 70px",
     height: "32px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     fontSize: "12px",
   },
 
@@ -236,7 +237,7 @@ const useStyles = makeStyles({
     width: "80px",
     height: "30px",
     fontSize: "12px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
   },
   chipList: {
     display: "flex",
@@ -246,7 +247,7 @@ const useStyles = makeStyles({
   },
   chip: {
     padding: "3px 8px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     fontSize: "11px",
     fontWeight: "500",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -260,11 +261,11 @@ const useStyles = makeStyles({
     },
   },
   chipActive: {
-    backgroundColor: "#0071e3",
-    ...shorthands.borderColor("#0071e3"),
+    backgroundColor: "var(--colorBrandForeground1)",
+    ...shorthands.borderColor("var(--colorBrandForeground1)"),
     color: "#ffffff",
     "&:hover": {
-      backgroundColor: "#0077ed",
+      backgroundColor: "var(--colorBrandForeground2)",
       color: "#ffffff",
     },
   },
@@ -280,7 +281,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     padding: "10px 12px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
     gap: "4px",
   },
@@ -297,7 +298,7 @@ const useStyles = makeStyles({
   // Empty banner
   emptyBanner: {
     padding: "16px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "rgba(234, 179, 8, 0.08)",
     border: "1px solid rgba(234, 179, 8, 0.25)",
     color: "#d97706",
@@ -570,7 +571,7 @@ export const DeviceControlPanel: React.FC<DeviceControlPanelProps> = ({
 
   const handleResetDisplay = async () => {
     if (!isDeviceAvailable || !device) return;
-    if (!window.confirm("确定要恢复设备原生分辨率和 DPI 吗？")) return;
+    if (!(await confirm({ message: "确定要恢复设备原生分辨率和 DPI 吗？" }))) return;
     try {
       await deviceService.executeAdbCommand(device.serial, "shell", ["wm", "size", "reset"]);
       await deviceService.executeAdbCommand(device.serial, "shell", ["wm", "density", "reset"]);

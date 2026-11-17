@@ -39,6 +39,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useDeviceService } from "../../services/deviceService";
+import { confirm } from "../../services/confirmService";
 import { DeviceInfo, DeviceMode } from "../../types/device";
 import {
   loadAdbCommandsConfig,
@@ -106,12 +107,12 @@ const useStyles = makeStyles({
     alignItems: "center",
     backgroundColor: "var(--colorNeutralBackground3)",
     padding: "2px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     gap: "2px",
   },
   modeTab: {
     padding: "3px 12px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontSize: "11px",
     fontWeight: "600",
     cursor: "pointer",
@@ -125,7 +126,7 @@ const useStyles = makeStyles({
   },
   modeTabActiveAdb: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
   },
   modeTabActiveFastboot: {
@@ -153,7 +154,7 @@ const useStyles = makeStyles({
     gap: "8px",
     height: "32px",
     padding: "0 12px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     fontSize: "12px",
@@ -175,11 +176,11 @@ const useStyles = makeStyles({
   deviceDropdownMenu: {
     position: "absolute",
     top: "calc(100% + 4px)",
-    left: 0,
-    minWidth: "260px",
+    right: 0,
+    minWidth: "min(260px, 90vw)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
     zIndex: 1000,
     maxHeight: "300px",
@@ -191,7 +192,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "8px",
     padding: "8px 10px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     cursor: "pointer",
     fontSize: "12px",
     transition: "background-color 0.12s ease",
@@ -212,7 +213,7 @@ const useStyles = makeStyles({
     minWidth: "32px",
     height: "32px",
     padding: "0 8px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     color: "var(--colorNeutralForeground2)",
     "&:hover": {
       backgroundColor: "var(--colorNeutralBackground3)",
@@ -221,7 +222,7 @@ const useStyles = makeStyles({
   },
   actionBtnActive: {
     backgroundColor: "rgba(0, 113, 227, 0.12)",
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
   },
 
   // Terminal Window Container
@@ -232,7 +233,7 @@ const useStyles = makeStyles({
     minHeight: 0,
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     overflow: "hidden",
   },
   // Inline Search Bar inside Terminal
@@ -260,12 +261,12 @@ const useStyles = makeStyles({
   searchMark: {
     backgroundColor: "rgba(0, 113, 227, 0.16)",
     color: "inherit",
-    borderRadius: "2px",
+    borderRadius: "var(--admt-radius-fine)",
   },
   searchMarkActive: {
     backgroundColor: "rgba(0, 113, 227, 0.42)",
     color: "#ffffff",
-    borderRadius: "2px",
+    borderRadius: "var(--admt-radius-fine)",
   },
   // 终端屏幕容器（承载选中复制的浮动按钮定位）
   terminalScreenWrapper: {
@@ -284,7 +285,7 @@ const useStyles = makeStyles({
     gap: "4px",
     height: "26px",
     padding: "0 10px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     color: "var(--colorNeutralForeground2)",
@@ -348,12 +349,12 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   promptPrefixTarget: {
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
   },
   runButton: {
     height: "32px",
     padding: "0 14px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     fontSize: "12px",
     fontWeight: "600",
   },
@@ -373,7 +374,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     padding: "6px 10px",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     marginBottom: "8px",
   },
   categoryTitle: {
@@ -392,7 +393,7 @@ const useStyles = makeStyles({
     padding: "10px 12px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     transition: "all 0.15s ease",
     "&:hover": {
       ...shorthands.borderColor("var(--colorNeutralStroke1)"),
@@ -411,10 +412,10 @@ const useStyles = makeStyles({
   commandCardCode: {
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
     fontSize: "11px",
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
     backgroundColor: "rgba(0, 113, 227, 0.06)",
     padding: "2px 6px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     marginBottom: "6px",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -1069,7 +1070,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
 
   const handleDeleteQuickCommand = async (cmd: AdbCommand, cat: CommandCategory) => {
     if (!commandsConfig) return;
-    if (!window.confirm(`确定要删除快捷命令 "${cmd.label}" 吗？`)) return;
+    if (!(await confirm({ message: `确定要删除快捷命令 "${cmd.label}" 吗？`, danger: true }))) return;
 
     try {
       const updatedConfig = { ...commandsConfig };
@@ -1096,7 +1097,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
       });
       return;
     }
-    if (!window.confirm(`确定要删除分类 "${cat.name}" 吗？`)) return;
+    if (!(await confirm({ message: `确定要删除分类 "${cat.name}" 吗？`, danger: true }))) return;
 
     try {
       const updatedConfig = { ...commandsConfig };
@@ -1490,7 +1491,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
         onOpenChange={(_, data) => setIsQuickCommandDialogOpen(data.open)}
         modalType="modal"
       >
-        <DialogSurface style={{ width: "880px", maxWidth: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ width: "880px", maxWidth: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <DialogTitle>
@@ -1605,7 +1606,7 @@ export const CommandExecutePanel: React.FC<CommandExecutePanelProps> = ({
         }}
         modalType="modal"
       >
-        <DialogSurface style={{ borderRadius: "16px" }}>
+        <DialogSurface style={{ borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle>
               {isAddingNewCategory

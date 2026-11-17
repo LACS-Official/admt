@@ -32,6 +32,7 @@ import {
 import { DownloadTask } from '../../types/app';
 import { onlineResourcesService } from '../../services/onlineResourcesService';
 import { logService } from '../../services/logService';
+import { confirm } from '../../services/confirmService';
 
 const useStyles = makeStyles({
   infoText: {
@@ -65,7 +66,7 @@ const useStyles = makeStyles({
   },
   statsCard: {
     border: '1px solid var(--colorNeutralStroke2)',
-    borderRadius: '8px',
+    borderRadius: 'var(--admt-radius-control)',
     padding: '16px',
     marginBottom: '16px',
     minHeight: '80px',
@@ -99,9 +100,8 @@ const useStyles = makeStyles({
     flex: 1,
     overflowY: 'auto',
     maxHeight: '65vh', // 增加最大高度
-    minHeight: '400px', // 增加最小高度
     border: '1px solid var(--colorNeutralStroke2)',
-    borderRadius: '8px',
+    borderRadius: 'var(--admt-radius-control)',
     backgroundColor: 'var(--colorNeutralBackground1)',
 
   },
@@ -152,7 +152,7 @@ const useStyles = makeStyles({
   taskIconWrapper: {
     width: '32px',
     height: '32px',
-    borderRadius: '8px',
+    borderRadius: 'var(--admt-radius-control)',
     backgroundColor: 'var(--colorNeutralBackground3)',
     display: 'flex',
     alignItems: 'center',
@@ -222,7 +222,7 @@ const useStyles = makeStyles({
     marginTop: '16px',
     padding: '16px',
     backgroundColor: 'var(--colorNeutralBackground2)',
-    borderRadius: '6px',
+    borderRadius: 'var(--admt-radius-fine)',
   },
 });
 
@@ -365,7 +365,7 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
         <div style={{
           backgroundColor: '#FFF9C4',
           border: '1px solid #FFD600',
-          borderRadius: '8px',
+          borderRadius: 'var(--admt-radius-control)',
           padding: '12px 16px',
           display: 'flex',
           alignItems: 'center',
@@ -466,8 +466,8 @@ export const DownloadManagerPanel: React.FC<DownloadManagerPanelProps> = ({ onBa
         <Button
           appearance="subtle"
           icon={<Delete20Regular />}
-          onClick={() => {
-            if (window.confirm('确定要清除所有已显示的“已完成”任务记录吗？(不会删除文件)')) {
+          onClick={async () => {
+            if (await confirm({ message: '确定要清除所有已显示的“已完成”任务记录吗？(不会删除文件)' })) {
               onlineResourcesService.clearCompletedTasks();
               loadTasks(); // 刷新列表
             }

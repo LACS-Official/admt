@@ -30,7 +30,7 @@ const useStyles = makeStyles({
   headerTabList: {
     flexShrink: 0,
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "4px",
     display: "inline-flex",
     alignItems: "center",
@@ -41,7 +41,7 @@ const useStyles = makeStyles({
       fontSize: "13px",
       padding: "6px 14px",
       minHeight: "30px",
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
       transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
       border: "none",
       fontWeight: 500,
@@ -163,21 +163,14 @@ const PluginSystemPanel: React.FC = () => {
       </div>
 
       <div className={styles.contentArea} style={{ position: "relative" }}>
-        <div style={{
-          opacity: 0.4,
-          pointerEvents: "none",
-          filter: "blur(3px)",
-          transition: "all 0.3s ease",
-          height: "100%",
-          overflow: "hidden",
-        }}>
+        <div style={{ height: "100%", overflow: "hidden" }}>
           {renderTabContent()}
         </div>
 
         <UnderDevelopmentOverlay
           featureKey="plugin_system"
-          title={t("plugin_system.under_dev_title", "插件与扩展系统开发中...")}
-          description={t("plugin_system.under_dev_desc", "开放式沙盒插件架构、第三方脚本运行时与开发者生态正在内测。")}
+          title={t("plugin_system.under_dev_title", "插件与扩展系统")}
+          description={t("plugin_system.under_dev_desc", "插件与脚本功能暂未开放。")}
         />
       </div>
     </div>

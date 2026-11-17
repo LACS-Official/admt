@@ -21,7 +21,7 @@ const useStyles = makeStyles({
     gap: "12px",
     backgroundColor: "var(--colorNeutralBackground1)",
     ...shorthands.padding("14px", "18px"),
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
   },
@@ -61,7 +61,7 @@ const useStyles = makeStyles({
   },
   categoryChip: {
     ...shorthands.padding("5px", "12px"),
-    ...shorthands.borderRadius("16px"),
+    ...shorthands.borderRadius("var(--admt-radius-card)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke1)"),
     cursor: "pointer",
     fontSize: "12px",
@@ -100,7 +100,7 @@ const useStyles = makeStyles({
   },
   skillCard: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("16px"),
     display: "flex",
@@ -143,7 +143,7 @@ const useStyles = makeStyles({
     fontSize: "11px",
     padding: "2px 8px",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     color: "var(--colorNeutralForeground2)",
   },
   cardActions: {
@@ -156,7 +156,7 @@ const useStyles = makeStyles({
   },
   promptBox: {
     backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.borderRadius("8px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.padding("14px"),
     fontFamily: "Consolas, Monaco, monospace",
     fontSize: "12px",

@@ -20,7 +20,7 @@ const useStyles = makeStyles({
     gap: "10px",
     backgroundColor: "var(--colorNeutralBackground1)",
     ...shorthands.padding("14px", "18px"),
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
   },
@@ -60,7 +60,7 @@ const useStyles = makeStyles({
   },
   categoryChip: {
     ...shorthands.padding("6px", "14px"),
-    ...shorthands.borderRadius("18px"),
+    ...shorthands.borderRadius("var(--admt-radius-card)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke1)"),
     cursor: "pointer",
     fontSize: "12px",
@@ -98,7 +98,7 @@ const useStyles = makeStyles({
   },
   pluginCard: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("16px"),
     display: "flex",
@@ -120,7 +120,7 @@ const useStyles = makeStyles({
   iconBox: {
     width: "44px",
     height: "44px",
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     backgroundColor: "var(--colorBrandBackground2)",
     color: "var(--colorBrandForeground1)",
     display: "flex",
@@ -165,7 +165,7 @@ const useStyles = makeStyles({
     ...shorthands.padding("2px", "6px"),
     backgroundColor: "var(--colorNeutralBackground3)",
     color: "var(--colorNeutralForeground2)",
-    ...shorthands.borderRadius("4px"),
+    ...shorthands.borderRadius("var(--admt-radius-fine)"),
   },
   cardBottom: {
     display: "flex",
@@ -212,7 +212,7 @@ const useStyles = makeStyles({
   permissionBox: {
     ...shorthands.padding("10px", "14px"),
     backgroundColor: "var(--colorNeutralBackground3)",
-    ...shorthands.borderRadius("8px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     display: "flex",
     flexDirection: "column",
     gap: "6px",
@@ -509,7 +509,7 @@ const PluginStorePanel: React.FC = () => {
                             fontSize: "12px",
                             padding: "6px 10px",
                             backgroundColor: "var(--colorNeutralBackground2)",
-                            borderRadius: "6px",
+                            borderRadius: "var(--admt-radius-fine)",
                           }}
                         >
                           <span style={{ fontWeight: "600" }}>{setting.name}</span>: {setting.description || setting.id}

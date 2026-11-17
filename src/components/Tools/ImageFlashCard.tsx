@@ -29,7 +29,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px 18px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground1)",
   },
   inputRow: {
@@ -57,7 +57,7 @@ const useStyles = makeStyles({
   fileInfo: {
     padding: "12px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     fontSize: "12px",
     fontFamily: "monospace",
     display: "flex",
@@ -77,7 +77,7 @@ const useStyles = makeStyles({
     fontSize: "12px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     padding: "8px",
     maxHeight: "200px",
     overflow: "auto",
@@ -87,7 +87,7 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorPaletteRedBackground1)",
     border: "1px solid var(--colorPaletteRedBorder1)",
     padding: "12px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
   },
   actions: {
     display: "flex",
@@ -106,7 +106,7 @@ const useStyles = makeStyles({
     borderTop: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground2)",
     marginTop: "auto",
-    borderRadius: "0 0 14px 14px",
+    borderRadius: "0 0 var(--admt-radius-card) var(--admt-radius-card)",
   },
 });
 
@@ -573,7 +573,7 @@ const ImageFlashCard: React.FC<ImageFlashCardProps> = ({ device, onFastbootRequi
                   <Text weight="semibold" size={400}>{t('flash.confirm_dialog_desc')}</Text>
                 </div>
                 
-                <div style={{ padding: "12px 14px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "12px", border: "1px solid var(--colorNeutralStroke2)", display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
+                <div style={{ padding: "12px 14px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "var(--admt-radius-panel)", border: "1px solid var(--colorNeutralStroke2)", display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
                   <div><strong>{t('flash.device_label')}</strong> {device?.properties?.model || t('mirror.unknown_device')} ({device?.serial || t('mirror.unknown_device')})</div>
                   <div><strong>{t('flash.file_label')}</strong> {selectedFileName || '未选择'}</div>
                   <div><strong>{t('flash.partition_label')}</strong> {partitions.find(p => p.value === selectedPartition)?.label}</div>

@@ -1,6 +1,6 @@
 ﻿use crate::cache::{log_tool_paths, verify_tool_paths};
 use crate::error::AdmtError;
-use chrono::{Duration, Local, TimeZone, Utc};
+use chrono::{DateTime, Duration, Local, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
@@ -369,6 +369,76 @@ pub fn cleanup_expired_logs(
     }
 
     Ok(())
+}
+
+/// 按"保留天数"统一清理历史日志文件。
+///
+/// 覆盖两个位置：
+/// 1. tauri-plugin-log 的 `app_log_dir()` —— 前端日志页"历史回看"实际读取的目录。
+/// 2. 旧的 `admt_log_*.log` 目录（`initialize_log_directory()`）—— 向后兼容。
+///
+/// 以文件最后修改时间为准，删除早于 `now - days` 的日志文件。
+/// `days == 0` 表示永久保留，不做任何清理。返回实际删除的文件数。
+#[tauri::command]
+pub fn cleanup_logs_by_retention(app: tauri::AppHandle, days: u32) -> Result<i64> {
+    use tauri::Manager;
+
+    let mut removed: u32 = 0;
+
+    if let Ok(dir) = app.path().app_log_dir() {
+        removed += cleanup_dir_by_age(&dir, days);
+    }
+
+    if let Ok(dir) = initialize_log_directory() {
+        removed += cleanup_dir_by_age(&dir, days);
+    }
+
+    log::info!("[log-retention] 按保留天数清理完成 days={} removed={}", days, removed);
+    Ok(removed as i64)
+}
+
+/// 删除目录下早于 `now - days` 天的日志文件（按文件修改时间判断），返回删除数量。
+/// 单文件错误不影响整体，仅记录警告。
+fn cleanup_dir_by_age(dir: &PathBuf, days: u32) -> u32 {
+    if days == 0 {
+        return 0; // 永久保留，不清理
+    }
+
+    let cutoff = Utc::now() - Duration::days(days as i64);
+    let mut removed: u32 = 0;
+
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let fname = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            // 只处理日志文件（tauri-plugin-log 的 *.log 与旧的 admt_log_*.log 同为 .log 后缀）
+            if !fname.ends_with(".log") {
+                continue;
+            }
+
+            if let Ok(meta) = fs::metadata(&path) {
+                if let Ok(modified) = meta.modified() {
+                    let modified_utc: DateTime<Utc> = modified.into();
+                    if modified_utc < cutoff {
+                        match fs::remove_file(&path) {
+                            Ok(_) => {
+                                removed += 1;
+                                log::info!("[log-retention] 删除过期日志: {}", path.display());
+                            }
+                            Err(e) => {
+                                log::warn!("[log-retention] 删除失败 {}: {}", path.display(), e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    removed
 }
 
 /// 清空指定日期的日志

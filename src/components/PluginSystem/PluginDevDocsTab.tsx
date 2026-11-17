@@ -16,7 +16,7 @@ const useStyles = makeStyles({
   header: {
     backgroundColor: "var(--colorNeutralBackground1)",
     ...shorthands.padding("16px 20px"),
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     display: "flex",
     alignItems: "center",
@@ -25,7 +25,7 @@ const useStyles = makeStyles({
   },
   sectionCard: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("20px"),
     display: "flex",
@@ -35,7 +35,7 @@ const useStyles = makeStyles({
   },
   codeBlock: {
     backgroundColor: "var(--colorNeutralBackground3)",
-    ...shorthands.borderRadius("8px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.padding("14px"),
     fontFamily: "Consolas, Monaco, 'Courier New', monospace",
     fontSize: "12px",

@@ -45,7 +45,6 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
-    minHeight: '400px',
     maxHeight: '70vh',
     overflowY: 'auto',
     margin: '16px',
@@ -56,7 +55,7 @@ const useStyles = makeStyles({
     gap: '16px',
     backgroundColor: 'var(--colorNeutralBackground2)',
     ...shorthands.padding('12px'),
-    ...shorthands.borderRadius('12px'),
+    ...shorthands.borderRadius('var(--admt-radius-panel)'),
   },
   infoItem: {
     display: 'flex',
@@ -81,7 +80,7 @@ const useStyles = makeStyles({
     minWidth: '130px',
   },
   pillButton: {
-    borderRadius: '9999px',
+    borderRadius: 'var(--admt-radius-pill)',
   },
   loadingContainer: {
     display: 'flex',
@@ -102,14 +101,14 @@ const useStyles = makeStyles({
     maxHeight: '90vh',
     display: 'flex',
     flexDirection: 'column',
-    ...shorthands.borderRadius('14px'),
+    ...shorthands.borderRadius('var(--admt-radius-card)'),
   },
   errorBox: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '8px',
     ...shorthands.padding('12px', '14px'),
-    ...shorthands.borderRadius('12px'),
+    ...shorthands.borderRadius('var(--admt-radius-panel)'),
     ...shorthands.border('1px', 'solid', 'var(--colorPaletteRedBorder1)'),
     backgroundColor: 'var(--colorPaletteRedBackground1)',
   },
@@ -127,7 +126,7 @@ const useStyles = makeStyles({
   iconWrapper: {
     width: '40px',
     height: '40px',
-    borderRadius: '12px',
+    borderRadius: 'var(--admt-radius-panel)',
     backgroundColor: 'var(--colorNeutralBackground3)',
     display: 'flex',
     alignItems: 'center',
@@ -143,7 +142,7 @@ const useStyles = makeStyles({
   warningBox: {
     backgroundColor: 'var(--colorNeutralBackground4)', 
     ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke2)'), 
-    ...shorthands.borderRadius('12px'), 
+    ...shorthands.borderRadius('var(--admt-radius-panel)'), 
     ...shorthands.padding('12px'), 
     display: 'flex',
     alignItems: 'flex-start',
@@ -158,7 +157,7 @@ const useStyles = makeStyles({
   executableCard: {
     backgroundColor: 'var(--colorNeutralBackground3)',
     ...shorthands.padding('12px'),
-    ...shorthands.borderRadius('12px'),
+    ...shorthands.borderRadius('var(--admt-radius-panel)'),
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
@@ -628,14 +627,14 @@ export const ResourceDetailModal: React.FC<ResourceDetailModalProps> = ({
             <div style={{
               width: '100%',
               height: '4px',
-              borderRadius: '9999px',
+              borderRadius: 'var(--admt-radius-pill)',
               backgroundColor: 'var(--colorNeutralStroke2)',
               overflow: 'hidden'
             }}>
               <div style={{
                 width: `${Math.max(6, Math.min(100, globalDownload?.progress || 15))}%`,
                 height: '100%',
-                borderRadius: '9999px',
+                borderRadius: 'var(--admt-radius-pill)',
                 backgroundColor: 'var(--colorBrandBackground)',
                 transition: 'width 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
               }} />

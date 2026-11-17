@@ -409,6 +409,12 @@ export const useAppStartup = () => {
         // 2. 初始化应用状态
         await initialize();
 
+        // 2.1 启动后按配置清理过期日志（默认保留一周，0 表示永久保留）
+        const retentionDays = useAppStore.getState().config.logRetentionDays ?? 7;
+        logService.applyLogRetention(retentionDays).catch((err) => {
+          logService.warning("启动日志清理失败", "App", err);
+        });
+
         // 3. 记录设备检测配置状态
         logService.info(`设备检测配置 - 自动检测: ${config.autoDetectDevices}, 扫描间隔: ${config.scanInterval}ms`, 'App');
 

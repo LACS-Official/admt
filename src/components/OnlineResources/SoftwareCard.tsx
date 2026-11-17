@@ -28,7 +28,7 @@ const useStyles = makeStyles({
     gap: '12px',
     minHeight: '150px',
     padding: '16px 18px',
-    borderRadius: '14px',
+    borderRadius: 'var(--admt-radius-card)',
     border: '1px solid var(--colorNeutralStroke2)',
     backgroundColor: 'var(--colorNeutralBackground2)',
     boxSizing: 'border-box',
@@ -55,7 +55,7 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '10px',
+    borderRadius: 'var(--admt-radius-control)',
     backgroundColor: 'var(--colorNeutralBackground3)',
     color: 'var(--colorNeutralForeground3)',
     ...shorthands.border('1px', 'solid', 'var(--colorNeutralStroke2)'),
@@ -64,7 +64,7 @@ const useStyles = makeStyles({
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    borderRadius: '10px',
+    borderRadius: 'var(--admt-radius-control)',
   },
   titleBlock: {
     flex: 1,
@@ -91,7 +91,7 @@ const useStyles = makeStyles({
   categoryBadge: {
     flexShrink: 0,
     fontSize: '11px',
-    borderRadius: '9999px',
+    borderRadius: 'var(--admt-radius-pill)',
   },
   metaLine: {
     display: 'flex',
@@ -127,7 +127,7 @@ const useStyles = makeStyles({
   },
   statusBadge: {
     fontSize: '11px',
-    borderRadius: '9999px',
+    borderRadius: 'var(--admt-radius-pill)',
   },
   actionHint: {
     display: 'inline-flex',

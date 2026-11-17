@@ -38,7 +38,7 @@ const useStyles = makeStyles({
     gap: '8px',
     padding: '4px 12px',
     backgroundColor: 'var(--colorNeutralBackground2)',
-    borderRadius: '8px',
+    borderRadius: 'var(--admt-radius-control)',
     border: '1px solid var(--colorNeutralStroke2)',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -68,8 +68,8 @@ const useStyles = makeStyles({
     color: 'var(--colorNeutralForeground3)',
   },
   dialogContent: {
-    minWidth: '600px',
-    maxWidth: '800px',
+    minWidth: 'min(600px, 92vw)',
+    maxWidth: '92vw',
     maxHeight: '80vh',
     display: 'flex',
     flexDirection: 'column',
@@ -88,7 +88,7 @@ const useStyles = makeStyles({
       backgroundColor: 'var(--colorNeutralBackground2)',
     },
     border: '1px solid var(--colorNeutralStroke2)',
-    borderRadius: '8px',
+    borderRadius: 'var(--admt-radius-control)',
   },
   announcementHeader: {
     display: 'flex',
@@ -134,8 +134,8 @@ const useStyles = makeStyles({
     color: 'var(--colorNeutralForeground3)',
   },
   detailDialog: {
-    minWidth: '500px',
-    maxWidth: '700px',
+    minWidth: 'min(500px, 92vw)',
+    maxWidth: '92vw',
     maxHeight: '80vh',
     display: 'flex',
     flexDirection: 'column',
@@ -151,7 +151,7 @@ const useStyles = makeStyles({
     marginTop: '16px',
     padding: '12px',
     backgroundColor: 'var(--colorNeutralBackground2)',
-    borderRadius: '8px',
+    borderRadius: 'var(--admt-radius-control)',
   },
 });
 
@@ -200,18 +200,18 @@ const AnnouncementBar: React.FC<AnnouncementBarProps> = ({ className }) => {
 
   const getAnnouncementIcon = (type: string, priority: string) => {
     if (priority === 'urgent') {
-      return <Warning24Filled style={{ color: '#d83b01' }} />;
+      return <Warning24Filled style={{ color: 'var(--colorPaletteRedForeground1)' }} />;
     }
     
     switch (type) {
       case 'update':
-        return <Info24Regular style={{ color: '#0078d4' }} />;
+        return <Info24Regular style={{ color: 'var(--colorBrandForeground1)' }} />;
       case 'security':
-        return <Shield24Regular style={{ color: '#d83b01' }} />;
+        return <Shield24Regular style={{ color: 'var(--colorPaletteRedForeground1)' }} />;
       case 'maintenance':
-        return <Wrench24Regular style={{ color: '#ca5010' }} />;
+        return <Wrench24Regular style={{ color: 'var(--colorPaletteOrangeForeground1)' }} />;
       default:
-        return <Megaphone24Regular style={{ color: '#107c10' }} />;
+        return <Megaphone24Regular style={{ color: 'var(--colorPaletteGreenForeground1)' }} />;
     }
   };
 

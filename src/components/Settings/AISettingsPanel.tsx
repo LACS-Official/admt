@@ -61,7 +61,7 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
   },
   primaryCard: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -88,7 +88,7 @@ const useStyles = makeStyles({
     },
   },
   actionCard: {
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     padding: "14px 16px",
@@ -113,7 +113,7 @@ const useStyles = makeStyles({
   },
   actionCardIcon: {
     padding: "8px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorBrandBackground2)",
     color: "var(--colorBrandForeground1)",
     fontSize: "20px",
@@ -123,7 +123,7 @@ const useStyles = makeStyles({
     justifyContent: "center",
   },
   pillButton: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: 500,
   },
   input: {
@@ -134,7 +134,7 @@ const useStyles = makeStyles({
     fontSize: "12px",
     backgroundColor: "var(--colorNeutralBackground3)",
     padding: "12px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
     whiteSpace: "pre-wrap",
     overflowX: "auto",
@@ -853,7 +853,7 @@ const AISettingsPanel: React.FC = () => {
 
       {/* 弹窗 1: 高级网络与模型参数 */}
       <Dialog open={isAdvancedModalOpen} onOpenChange={(_, data) => !data.open && setIsAdvancedModalOpen(false)}>
-        <DialogSurface style={{ maxWidth: "560px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "560px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle
               action={
@@ -899,7 +899,7 @@ const AISettingsPanel: React.FC = () => {
 
       {/* 弹窗 2: AI 方案管理与备份导入导出 */}
       <Dialog open={isPresetModalOpen} onOpenChange={(_, data) => !data.open && setIsPresetModalOpen(false)}>
-        <DialogSurface style={{ maxWidth: "620px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "620px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle
               action={
@@ -916,7 +916,7 @@ const AISettingsPanel: React.FC = () => {
               {/* 另存为新方案 */}
               <div style={{
                 padding: "12px 14px",
-                borderRadius: "12px",
+                borderRadius: "var(--admt-radius-panel)",
                 backgroundColor: "var(--colorNeutralBackground2)",
                 border: "1px solid var(--colorNeutralStroke2)",
                 display: "flex",
@@ -960,7 +960,7 @@ const AISettingsPanel: React.FC = () => {
                         key={preset.id}
                         style={{
                           padding: "10px 14px",
-                          borderRadius: "10px",
+                          borderRadius: "var(--admt-radius-control)",
                           border: isActive ? "1px solid var(--colorBrandStroke1)" : "1px solid var(--colorNeutralStroke2)",
                           backgroundColor: isActive ? "var(--colorBrandBackground2)" : "var(--colorNeutralBackground2)",
                           display: "flex",
@@ -1047,7 +1047,7 @@ const AISettingsPanel: React.FC = () => {
 
       {/* 弹窗 3: 外部 MCP 本地联动配置 */}
       <Dialog open={isMcpModalOpen} onOpenChange={(_, data) => !data.open && setIsMcpModalOpen(false)}>
-        <DialogSurface style={{ maxWidth: "620px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "620px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle
               action={
@@ -1064,7 +1064,7 @@ const AISettingsPanel: React.FC = () => {
               {/* 服务端主开关 */}
               <div style={{
                 padding: "12px 14px",
-                borderRadius: "12px",
+                borderRadius: "var(--admt-radius-panel)",
                 backgroundColor: "var(--colorNeutralBackground2)",
                 border: "1px solid var(--colorNeutralStroke2)",
                 display: "flex",

@@ -62,7 +62,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "5px",
     padding: "3px 10px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     color: "var(--colorNeutralForeground1)",
@@ -183,7 +183,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "8px",
     padding: "3px 10px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
@@ -232,19 +232,19 @@ const useStyles = makeStyles({
   downloadTrack: {
     width: "100%",
     height: "3px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "var(--colorNeutralStroke2)",
     overflow: "hidden",
   },
   downloadBar: {
     height: "100%",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "var(--colorBrandBackground)",
     transition: "width 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
   },
   pageHintTag: {
     padding: "1px 6px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontSize: "10px",
     fontWeight: "600",
     backgroundColor: "rgba(0,0,0,0.06)",
@@ -536,26 +536,26 @@ const StatusBar: React.FC = () => {
       case "success":
         return {
           backgroundColor: "var(--colorSuccessBackground2, rgba(16, 124, 65, 0.1))",
-          color: "var(--colorSuccessForeground2, #107c41)",
+          color: "var(--colorSuccessForeground2, var(--colorPaletteGreenForeground1))",
           borderTop: "1px solid var(--colorNeutralStroke2)"
         };
       case "warning":
         return {
           backgroundColor: "var(--colorWarningBackground2, rgba(234, 134, 0, 0.12))",
-          color: "var(--colorWarningForeground2, #d83b01)",
+          color: "var(--colorWarningForeground2, var(--colorPaletteRedForeground1))",
           borderTop: "1px solid var(--colorNeutralStroke2)"
         };
       case "error":
         return {
           backgroundColor: "var(--colorErrorBackground2, rgba(216, 59, 1, 0.12))",
-          color: "var(--colorErrorForeground2, #d13438)",
+          color: "var(--colorErrorForeground2, var(--colorPaletteRedForeground1))",
           borderTop: "1px solid var(--colorNeutralStroke2)"
         };
       case "info":
       default:
         return {
           backgroundColor: "var(--colorInformationBackground2, rgba(0, 113, 227, 0.08))",
-          color: "var(--colorInformationForeground2, #0071e3)",
+          color: "var(--colorInformationForeground2, var(--colorBrandForeground1))",
           borderTop: "1px solid var(--colorNeutralStroke2)"
         };
     }
@@ -591,7 +591,7 @@ const StatusBar: React.FC = () => {
               className={styles.githubStarButton}
               onClick={handleOpenGithubStar}
             >
-              <Star20Filled style={{ color: "#f59e0b", fontSize: "14px" }} />
+              <Star20Filled style={{ color: "var(--colorNeutralForeground2)", fontSize: "14px" }} />
               <span>Star 本项目</span>
             </button>
           </Tooltip>
@@ -604,10 +604,8 @@ const StatusBar: React.FC = () => {
           )}
         </div>
 
-        {/* 中间区域 - 默认显示信息 */}
-        <div className={styles.centerSection}>
-          <span className="text-200">官方网站: lacs.cc | 官方微信: lacs177 | 领创工作室全栈开发</span>
-        </div>
+        {/* 中间区域 - 弹性占位，保持左右分布 */}
+        <div className={styles.centerSection} />
 
         {/* 右侧状态信息 */}
         <div className={styles.rightSection}>
@@ -657,7 +655,7 @@ const StatusBar: React.FC = () => {
                   border: "none",
                   cursor: "pointer",
                   padding: "4px",
-                  borderRadius: "4px",
+                  borderRadius: "var(--admt-radius-fine)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -702,11 +700,11 @@ const StatusBar: React.FC = () => {
                   alignItems: 'center',
                   gap: '4px',
                   padding: '2px 10px',
-                  borderRadius: '9999px',
+                  borderRadius: 'var(--admt-radius-pill)',
                   fontSize: '12px',
                   fontWeight: 500,
                   cursor: 'default',
-                  color: envIssue ? 'var(--colorErrorForeground2, #d13438)' : 'var(--colorSuccessForeground2, #107c41)',
+                  color: envIssue ? 'var(--colorErrorForeground2, var(--colorPaletteRedForeground1))' : 'var(--colorSuccessForeground2, var(--colorPaletteGreenForeground1))',
                   backgroundColor: envIssue
                     ? 'var(--colorErrorBackground2, rgba(216, 59, 1, 0.12))'
                     : 'var(--colorSuccessBackground2, rgba(16, 124, 65, 0.1))',
@@ -762,7 +760,7 @@ const StatusBar: React.FC = () => {
               border: "none",
               cursor: "pointer",
               padding: "4px",
-              borderRadius: "4px",
+              borderRadius: "var(--admt-radius-fine)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -790,7 +788,7 @@ const StatusBar: React.FC = () => {
               border: "none",
               cursor: "pointer",
               padding: "4px",
-              borderRadius: "4px",
+              borderRadius: "var(--admt-radius-fine)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -822,12 +820,12 @@ const StatusBar: React.FC = () => {
             paddingLeft: "16px",
             paddingRight: "16px",
             gap: "12px",
-            backgroundColor: currentNotification.type === "success" ? "#d4edda" :
-                           currentNotification.type === "error" ? "#f8d7da" :
-                           currentNotification.type === "warning" ? "#fff3cd" : "#d1ecf1",
-            color: currentNotification.type === "success" ? "#155724" :
-                   currentNotification.type === "error" ? "#721c24" :
-                   currentNotification.type === "warning" ? "#856404" : "#0c5460",
+            backgroundColor: currentNotification.type === "success" ? "var(--colorPaletteGreenBackground2)" :
+                           currentNotification.type === "error" ? "var(--colorPaletteRedBackground2)" :
+                           currentNotification.type === "warning" ? "var(--colorPaletteYellowBackground2)" : "var(--colorPaletteBlueBackground2)",
+            color: currentNotification.type === "success" ? "var(--colorPaletteGreenForeground1)" :
+                   currentNotification.type === "error" ? "var(--colorPaletteRedForeground1)" :
+                   currentNotification.type === "warning" ? "var(--colorPaletteYellowForeground1)" : "var(--colorPaletteBlueForeground1)",
             opacity: isNotificationVisible ? 1 : 0,
             transform: isNotificationVisible ? "translateY(0)" : "translateY(10px)",
             transition: "opacity 0.3s ease-in-out, transform 0.3s ease-in-out",
@@ -853,7 +851,7 @@ const StatusBar: React.FC = () => {
               border: "none",
               cursor: "pointer",
               padding: "8px",
-              borderRadius: "4px",
+              borderRadius: "var(--admt-radius-fine)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -885,7 +883,7 @@ const StatusBar: React.FC = () => {
               border: "none",
               cursor: "pointer",
               padding: "8px",
-              borderRadius: "4px",
+              borderRadius: "var(--admt-radius-fine)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -911,9 +909,9 @@ const StatusBar: React.FC = () => {
             left: 0,
             height: "3px",
             width: `${progressWidth}%`,
-            backgroundColor: currentNotification.type === "success" ? "#28a745" :
-                           currentNotification.type === "error" ? "#dc3545" :
-                           currentNotification.type === "warning" ? "#ffc107" : "#007bff",
+            backgroundColor: currentNotification.type === "success" ? "var(--colorPaletteGreenForeground1)" :
+                           currentNotification.type === "error" ? "var(--colorPaletteRedForeground1)" :
+                           currentNotification.type === "warning" ? "var(--colorPaletteYellowForeground1)" : "var(--colorBrandForeground1)",
             transition: "width 0.1s linear",
             zIndex: 21,
           }} />

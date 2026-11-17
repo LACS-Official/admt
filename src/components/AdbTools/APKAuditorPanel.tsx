@@ -29,7 +29,7 @@ const useStyles = makeStyles({
   resultArea: {
     backgroundColor: tokens.colorNeutralBackground3,
     padding: "16px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     minHeight: "200px",
     lineHeight: "1.6",

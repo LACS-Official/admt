@@ -25,7 +25,7 @@ const useStyles = makeStyles({
     },
   },
   card: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -60,7 +60,7 @@ const useStyles = makeStyles({
   },
   segmentedPillContainer: {
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "3px",
     display: "inline-flex",
     alignItems: "center",
@@ -74,7 +74,7 @@ const useStyles = makeStyles({
       fontSize: "12px",
       padding: "3px 10px",
       minHeight: "26px",
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
       transition: "all 0.15s ease",
       border: "none",
       fontWeight: 500,
@@ -88,7 +88,7 @@ const useStyles = makeStyles({
     },
   },
   badgePill: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: 600,
     fontSize: "11px",
     padding: "2px 8px",

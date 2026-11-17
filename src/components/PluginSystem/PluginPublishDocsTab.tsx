@@ -15,13 +15,13 @@ const useStyles = makeStyles({
   header: {
     backgroundColor: "var(--colorNeutralBackground1)",
     ...shorthands.padding("16px 20px"),
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
   },
   card: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("20px"),
     display: "flex",
@@ -35,7 +35,7 @@ const useStyles = makeStyles({
     gap: "14px",
     padding: "12px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.borderRadius("8px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
   },
   stepNumber: {
     width: "28px",

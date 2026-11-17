@@ -49,7 +49,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <div
               style={{
                 padding: "10px 12px",
-                borderRadius: "8px",
+                borderRadius: "var(--admt-radius-control)",
                 backgroundColor: "var(--colorNeutralBackground2)",
                 border: "1px solid var(--colorNeutralStroke2)",
                 fontSize: "12px",

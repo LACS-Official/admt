@@ -36,7 +36,7 @@ const useStyles = makeStyles({
     boxSizing: "border-box",
     overflow: "hidden",
     "& .fui-Input, & .fui-Select": {
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
     },
   },
   brandTabBar: {
@@ -45,7 +45,7 @@ const useStyles = makeStyles({
     gap: "6px",
     flexWrap: "wrap",
     padding: "4px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "var(--colorNeutralBackground3)",
     border: "1px solid var(--colorNeutralStroke2)",
     width: "fit-content",
@@ -54,7 +54,7 @@ const useStyles = makeStyles({
   brandTabItem: {
     fontSize: "12px",
     padding: "5px 14px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     cursor: "pointer",
     userSelect: "none",
     color: "var(--colorNeutralForeground2)",
@@ -76,7 +76,7 @@ const useStyles = makeStyles({
     boxShadow: "0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04)",
   },
   filterCard: {
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: "16px 18px",
@@ -86,7 +86,7 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   collapsedBar: {
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: "10px 18px",
@@ -146,14 +146,14 @@ const useStyles = makeStyles({
     flexWrap: "wrap",
     padding: "3px",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     border: "1px solid var(--colorNeutralStroke2)",
     width: "fit-content",
   },
   segmentedPill: {
     fontSize: "12px",
     padding: "4px 11px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     cursor: "pointer",
     userSelect: "none",
     color: "var(--colorNeutralForeground2)",
@@ -208,7 +208,7 @@ const useStyles = makeStyles({
   },
   romCard: {
     padding: "16px 18px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
@@ -257,7 +257,7 @@ const useStyles = makeStyles({
   },
   metaPill: {
     padding: "2px 10px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "var(--colorNeutralBackground3)",
     fontSize: "11px",
     display: "inline-flex",
@@ -287,7 +287,7 @@ const useStyles = makeStyles({
   detailDialogSurface: {
     maxWidth: "620px",
     width: "100%",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
   },
   detailContent: {
     display: "flex",
@@ -301,7 +301,7 @@ const useStyles = makeStyles({
     gap: "10px 16px",
     backgroundColor: "var(--colorNeutralBackground3)",
     padding: "14px 16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     fontSize: "12px",
   },
   detailMetaItem: {
@@ -315,7 +315,7 @@ const useStyles = makeStyles({
     gap: "10px",
     backgroundColor: "var(--colorNeutralBackground3)",
     padding: "14px 16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   mirrorHeader: {
@@ -330,7 +330,7 @@ const useStyles = makeStyles({
   },
   mirrorPill: {
     padding: "5px 12px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     cursor: "pointer",
@@ -360,7 +360,7 @@ const useStyles = makeStyles({
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
     fontSize: "11px",
     padding: "8px 10px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
     wordBreak: "break-all",
@@ -380,7 +380,7 @@ const useStyles = makeStyles({
     fontFamily: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
     fontSize: "12px",
     padding: "12px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "var(--colorNeutralBackground3)",
     border: "1px solid var(--colorNeutralStroke2)",
     overflowX: "auto",
@@ -391,10 +391,10 @@ const useStyles = makeStyles({
     overflowY: "auto",
   },
   pillButton: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
   },
   neutralBadge: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
   },
   hintText: {
     fontSize: "12px",
@@ -1763,7 +1763,7 @@ export const RomDownloadCenterCard: React.FC = () => {
         open={!!extractModalItem}
         onOpenChange={(_, data) => !isExtracting && !data.open && setExtractModalItem(null)}
       >
-        <DialogSurface style={{ maxWidth: "520px", borderRadius: "14px" }}>
+        <DialogSurface style={{ maxWidth: "520px", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle>流式提取指定镜像 ({extractModalItem?.version})</DialogTitle>
             <DialogContent className={styles.modalContent}>
@@ -1782,7 +1782,7 @@ export const RomDownloadCenterCard: React.FC = () => {
                 <Input value={outputDir} onChange={(_, d) => setOutputDir(d.value)} disabled={isExtracting} />
               </Field>
               {(isExtracting || extractedFile || extractStatus) && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", borderRadius: "12px", backgroundColor: "var(--colorNeutralBackground3)" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", borderRadius: "var(--admt-radius-panel)", backgroundColor: "var(--colorNeutralBackground3)" }}>
                   <Text weight="medium" size={200}>
                     {extractedFile ? "提取完成！" : isExtracting ? "正在在线切片提取..." : "状态"}
                   </Text>

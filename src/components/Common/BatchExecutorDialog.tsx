@@ -67,11 +67,11 @@ interface StreamOutput {
 
 const useStyles = makeStyles({
   dialogSurface: {
-    minWidth: '1000px',
-    height: '700px',
+    minWidth: 'min(1000px, 92vw)',
+    height: 'min(700px, 86vh)',
     display: 'flex',
     flexDirection: 'column',
-    borderRadius: '12px',
+    borderRadius: 'var(--admt-radius-panel)',
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
     overflow: 'hidden',
     backgroundColor: 'var(--colorNeutralBackground1)',
@@ -84,7 +84,7 @@ const useStyles = makeStyles({
     alignItems: 'center',
     borderBottom: '1px solid var(--colorNeutralStroke1)',
     background: 'linear-gradient(135deg, var(--colorBrandBackground) 0%, var(--colorBrandBackground2) 100%)',
-    borderRadius: '12px 12px 0 0',
+    borderRadius: 'var(--admt-radius-panel) var(--admt-radius-panel) 0 0',
   },
   statusBar: {
     padding: '12px 24px',
@@ -112,7 +112,7 @@ const useStyles = makeStyles({
     padding: '16px',
     height: '100%',
     width: '100%',
-    borderRadius: '8px',
+    borderRadius: 'var(--admt-radius-control)',
     resize: 'none',
     outline: 'none',
     whiteSpace: 'pre-wrap',
@@ -123,11 +123,11 @@ const useStyles = makeStyles({
     },
     '&::-webkit-scrollbar-track': {
       background: '#2d2d2d',
-      borderRadius: '4px',
+      borderRadius: 'var(--admt-radius-fine)',
     },
     '&::-webkit-scrollbar-thumb': {
       background: '#555',
-      borderRadius: '4px',
+      borderRadius: 'var(--admt-radius-fine)',
       '&:hover': {
         background: '#777',
       },
@@ -141,7 +141,7 @@ const useStyles = makeStyles({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderRadius: '0 0 12px 12px',
+    borderRadius: '0 0 var(--admt-radius-panel) var(--admt-radius-panel)',
   },
   buttonGroup: {
     display: 'flex',
@@ -149,7 +149,7 @@ const useStyles = makeStyles({
     alignItems: 'center',
   },
   confirmDialog: {
-    borderRadius: '12px',
+    borderRadius: 'var(--admt-radius-panel)',
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
   },
 });
@@ -628,7 +628,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
               icon={isRunning ? <Stop24Regular /> : <Dismiss24Regular />}
               style={{ 
                 color: 'white',
-                borderRadius: '6px'
+                borderRadius: 'var(--admt-radius-fine)'
               }}
             >
               {isRunning ? t('batch_executor.stop_exec') : t('common.close')}
@@ -697,7 +697,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
             <Button
               appearance="primary"
               onClick={handleClose}
-              style={{ borderRadius: '6px' }}
+              style={{ borderRadius: 'var(--admt-radius-fine)' }}
             >
               {isRunning ? t('batch_executor.stop_exec') : t('batch_executor.finish')}
             </Button>
@@ -726,7 +726,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
           <Button 
             appearance="secondary" 
             onClick={handleCancelClose}
-            style={{ borderRadius: '6px' }}
+            style={{ borderRadius: 'var(--admt-radius-fine)' }}
           >
             {t('common.cancel')}
           </Button>
@@ -736,7 +736,7 @@ const BatchExecutorDialog: React.FC<BatchExecutorDialogProps> = ({
             style={{ 
               backgroundColor: 'var(--colorPaletteRedBackground3)',
               borderColor: 'var(--colorPaletteRedBorder2)',
-              borderRadius: '6px'
+              borderRadius: 'var(--admt-radius-fine)'
             }}
           >
             {t('batch_executor.confirm_stop_btn')}

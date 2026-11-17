@@ -20,7 +20,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.padding("8px 12px"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03)",
@@ -34,7 +34,7 @@ const useStyles = makeStyles({
   },
   catButton: {
     padding: "5px 12px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     fontSize: "12px",
     fontWeight: 500,
     cursor: "pointer",
@@ -54,7 +54,7 @@ const useStyles = makeStyles({
   },
   pluginCard: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("16px"),
     display: "flex",
@@ -93,7 +93,7 @@ const useStyles = makeStyles({
   iconBox: {
     width: "40px",
     height: "40px",
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     backgroundColor: "var(--colorBrandBackground2)",
     color: "var(--colorBrandForeground1)",
     display: "flex",
@@ -134,7 +134,7 @@ const useStyles = makeStyles({
     ...shorthands.padding("2px", "6px"),
     backgroundColor: "var(--colorNeutralBackground3)",
     color: "var(--colorNeutralForeground2)",
-    ...shorthands.borderRadius("4px"),
+    ...shorthands.borderRadius("var(--admt-radius-fine)"),
   },
   cardFooter: {
     display: "flex",
@@ -157,7 +157,7 @@ const useStyles = makeStyles({
     height: "300px",
     gap: "14px",
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "dashed", "var(--colorNeutralStroke2)"),
     color: "var(--colorNeutralForeground3)",
   },
@@ -165,7 +165,7 @@ const useStyles = makeStyles({
     width: "100%",
     height: "560px",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
   },
 });
@@ -522,7 +522,7 @@ const InstalledPluginsTab: React.FC<Props> = ({ onGoToStore, onGoToImport }) => 
                       justifyContent: "space-between",
                       padding: "8px 12px",
                       backgroundColor: "var(--colorNeutralBackground2)",
-                      borderRadius: "8px",
+                      borderRadius: "var(--admt-radius-control)",
                     }}
                   >
                     <div>

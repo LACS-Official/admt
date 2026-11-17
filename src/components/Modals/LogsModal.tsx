@@ -18,7 +18,7 @@ const useStyles = makeStyles({
     maxHeight: "780px",
     padding: "0",
     overflow: "hidden",
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 24px 50px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.05)",
     backgroundColor: "var(--colorNeutralBackground1)",

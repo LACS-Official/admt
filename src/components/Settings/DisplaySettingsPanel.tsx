@@ -37,7 +37,7 @@ const useStyles = makeStyles({
     },
   },
   card: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -72,7 +72,7 @@ const useStyles = makeStyles({
   },
   segmentedPillContainer: {
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "3px",
     display: "inline-flex",
     alignItems: "center",
@@ -86,7 +86,7 @@ const useStyles = makeStyles({
       fontSize: "12px",
       padding: "4px 12px",
       minHeight: "28px",
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
       transition: "all 0.15s ease",
       border: "none",
       fontWeight: 500,
@@ -148,7 +148,7 @@ const useStyles = makeStyles({
     right: 0,
     top: "38px",
     zIndex: 200,
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     overflow: "hidden",
     boxShadow: "0 16px 36px -4px rgba(0, 0, 0, 0.22)",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -174,7 +174,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "10px",
     cursor: "pointer",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1.5px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -186,19 +186,18 @@ const useStyles = makeStyles({
   densityTileActive: {
     ...shorthands.borderColor("var(--colorBrandStroke1)"),
     backgroundColor: "var(--colorBrandBackground2)",
-    boxShadow: "0 2px 10px -2px rgba(0, 113, 227, 0.15)",
   },
   densityPreviewMock: {
     display: "flex",
     flexDirection: "column",
     padding: "8px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   densityLine: {
     height: "4px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     backgroundColor: "var(--colorNeutralStroke1)",
   },
 });
@@ -396,9 +395,9 @@ const DisplaySettingsPanel: React.FC = () => {
                   onTabSelect={(_, d) => setCornerRadius(d.value as 'small' | 'medium' | 'large')}
                   appearance="subtle"
                 >
-                  <Tab value="small">{t('settings.radius_small', '紧凑 8px')}</Tab>
-                  <Tab value="medium">{t('settings.radius_medium', '标准 14px')}</Tab>
-                  <Tab value="large">{t('settings.radius_large', '人文 20px')}</Tab>
+                  <Tab value="small">{t('settings.radius_small', '较小 8px')}</Tab>
+                  <Tab value="medium">{t('settings.radius_medium', '适中 14px')}</Tab>
+                  <Tab value="large">{t('settings.radius_large', '较大 20px')}</Tab>
                 </TabList>
               </div>
             </div>

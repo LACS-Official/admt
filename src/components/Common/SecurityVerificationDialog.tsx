@@ -31,7 +31,7 @@ const useStyles = makeStyles({
   actionBadge: {
     padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     fontFamily: tokens.fontFamilyMonospace,
     fontSize: "12px",
     color: "var(--colorBrandForeground1)",

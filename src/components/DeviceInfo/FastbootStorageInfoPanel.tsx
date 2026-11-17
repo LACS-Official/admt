@@ -574,7 +574,7 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
             style={{
               width: '100%',
               padding: '8px 12px',
-              borderRadius: '4px',
+              borderRadius: 'var(--admt-radius-fine)',
               border: '1px solid #ccc',
               backgroundColor: '#fff',
               fontSize: '14px',
@@ -602,7 +602,7 @@ export const FastbootStorageInfoPanel: React.FC<InfoPanelProps> = ({ device, onC
           style={{
             width: '100%',
             padding: '8px 12px',
-            borderRadius: '4px',
+            borderRadius: 'var(--admt-radius-fine)',
             border: '1px solid #ccc',
             backgroundColor: '#fff',
             fontSize: '14px',

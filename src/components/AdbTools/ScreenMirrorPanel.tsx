@@ -47,7 +47,7 @@ const useStyles = makeStyles({
     },
     mainLayout: {
         display: "grid",
-        gridTemplateColumns: "310px 1fr",
+        gridTemplateColumns: "minmax(0, 310px) minmax(0, 1fr)",
         gap: "16px",
         height: "100%",
         minHeight: 0,
@@ -55,7 +55,7 @@ const useStyles = makeStyles({
     },
     leftPane: {
         padding: "16px",
-        borderRadius: "14px",
+        borderRadius: "var(--admt-radius-card)",
         border: "1px solid var(--colorNeutralStroke2)",
         overflowY: "auto",
         display: "flex",
@@ -71,7 +71,7 @@ const useStyles = makeStyles({
         flexDirection: "column",
         gap: "18px",
         backgroundColor: "var(--colorNeutralBackground1)",
-        borderRadius: "14px",
+        borderRadius: "var(--admt-radius-card)",
         border: "1px solid var(--colorNeutralStroke2)",
         height: "100%",
         boxSizing: "border-box",
@@ -100,7 +100,7 @@ const useStyles = makeStyles({
         justifyContent: "space-between",
         padding: "12px 14px",
         border: "1px solid var(--colorNeutralStroke2)",
-        borderRadius: "10px",
+        borderRadius: "var(--admt-radius-control)",
         cursor: "pointer",
         transition: "all 0.18s cubic-bezier(0.4, 0, 0.2, 1)",
         backgroundColor: "var(--colorNeutralBackground1)",
@@ -134,7 +134,7 @@ const useStyles = makeStyles({
     deviceIconWrap: {
         width: "36px",
         height: "36px",
-        borderRadius: "9999px",
+        borderRadius: "var(--admt-radius-pill)",
         backgroundColor: "var(--colorNeutralBackground3)",
         display: "flex",
         alignItems: "center",
@@ -174,7 +174,7 @@ const useStyles = makeStyles({
     },
     bentoCard: {
         backgroundColor: "var(--colorNeutralBackground2)",
-        borderRadius: "14px",
+        borderRadius: "var(--admt-radius-card)",
         padding: "18px",
         border: "1px solid var(--colorNeutralStroke2)",
         display: "flex",
@@ -219,7 +219,7 @@ const useStyles = makeStyles({
         alignItems: "center",
         justifyContent: "space-between",
         padding: "10px 12px",
-        borderRadius: "10px",
+        borderRadius: "var(--admt-radius-control)",
         backgroundColor: "var(--colorNeutralBackground1)",
         border: "1px solid var(--colorNeutralStroke2)",
         transition: "all 0.15s ease",
@@ -240,7 +240,7 @@ const useStyles = makeStyles({
     },
     keyMappingBar: {
         backgroundColor: "var(--colorNeutralBackground2)",
-        borderRadius: "14px",
+        borderRadius: "var(--admt-radius-card)",
         padding: "14px 16px",
         border: "1px solid var(--colorNeutralStroke2)",
         display: "flex",
@@ -269,12 +269,12 @@ const useStyles = makeStyles({
         alignItems: "center",
         backgroundColor: "var(--colorNeutralBackground3)",
         padding: "3px",
-        borderRadius: "9999px",
+        borderRadius: "var(--admt-radius-pill)",
         gap: "4px",
     },
     modeSwitchButton: {
         padding: "5px 14px",
-        borderRadius: "9999px",
+        borderRadius: "var(--admt-radius-pill)",
         fontSize: "12px",
         fontWeight: "500",
         cursor: "pointer",
@@ -310,7 +310,7 @@ const useStyles = makeStyles({
         alignItems: "center",
         gap: "5px",
         padding: "3px 8px",
-        borderRadius: "6px",
+        borderRadius: "var(--admt-radius-fine)",
         backgroundColor: "var(--colorNeutralBackground1)",
         border: "1px solid var(--colorNeutralStroke2)",
         fontSize: "11px",
@@ -329,7 +329,7 @@ const useStyles = makeStyles({
     pulseDot: {
         width: "7px",
         height: "7px",
-        borderRadius: "9999px",
+        borderRadius: "var(--admt-radius-pill)",
         backgroundColor: "var(--colorBrandBackground)",
         boxShadow: "0 0 6px var(--colorBrandBackground)",
     },
@@ -1108,7 +1108,7 @@ const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequ
                     style={{
                         backgroundColor: "var(--colorNeutralBackground3)",
                         padding: "3px",
-                        borderRadius: "9999px",
+                        borderRadius: "var(--admt-radius-pill)",
                         display: "inline-flex",
                     }}
                 >
@@ -1133,7 +1133,7 @@ const ScreenMirrorPanel: React.FC<ScreenMirrorPanelProps> = ({ device, onAdbRequ
             </div>
 
             {error && (
-                <div style={{ padding: "8px 12px", borderRadius: "8px", backgroundColor: "var(--colorPaletteRedBackground1)", border: "1px solid var(--colorPaletteRedBorder1)" }}>
+                <div style={{ padding: "8px 12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorPaletteRedBackground1)", border: "1px solid var(--colorPaletteRedBorder1)" }}>
                     <Text style={{ color: "var(--colorPaletteRedForeground1)", fontSize: "13px" }}>{error}</Text>
                 </div>
             )}

@@ -40,7 +40,7 @@ const useStyles = makeStyles({
   },
   card: {
     width: "100%",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   content: {
@@ -71,7 +71,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     backgroundColor: "white",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     marginTop: "8px",
   },
   stepList: {

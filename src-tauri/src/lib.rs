@@ -241,6 +241,7 @@ pub fn run() {
             get_log_statistics,
             clear_logs,
             cleanup_expired_logs,
+            cleanup_logs_by_retention,
             write_logs_to_file,
             clear_all_logs,
             get_log_file_info,

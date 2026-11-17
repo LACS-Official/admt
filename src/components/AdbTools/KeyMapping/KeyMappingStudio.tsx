@@ -79,7 +79,7 @@ const useStyles = makeStyles({
     ...shorthands.padding("8px", "14px"),
     backgroundColor: "var(--colorNeutralBackground2)",
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
   },
   topBar: {
     display: "flex",
@@ -87,7 +87,7 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     ...shorthands.padding("10px", "16px"),
     backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.borderRadius("14px"),
+    ...shorthands.borderRadius("var(--admt-radius-card)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     flexWrap: "wrap",
     ...shorthands.gap("12px"),
@@ -100,7 +100,7 @@ const useStyles = makeStyles({
   },
   mainLayout: {
     display: "grid",
-    gridTemplateColumns: "330px 1fr",
+    gridTemplateColumns: "minmax(0, 330px) minmax(0, 1fr)",
     ...shorthands.gap("14px"),
     flex: 1,
     minHeight: 0,
@@ -108,7 +108,7 @@ const useStyles = makeStyles({
   },
   leftCard: {
     backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.borderRadius("14px"),
+    ...shorthands.borderRadius("var(--admt-radius-card)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("16px"),
     display: "flex",
@@ -118,7 +118,7 @@ const useStyles = makeStyles({
   },
   rightCard: {
     backgroundColor: "var(--colorNeutralBackground2)",
-    ...shorthands.borderRadius("14px"),
+    ...shorthands.borderRadius("var(--admt-radius-card)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("14px", "16px"),
     display: "flex",
@@ -164,7 +164,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "space-between",
     ...shorthands.padding("8px", "12px"),
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     backgroundColor: "var(--colorNeutralBackground1)",
     cursor: "pointer",
@@ -188,7 +188,7 @@ const useStyles = makeStyles({
     minWidth: "32px",
     height: "26px",
     ...shorthands.padding("0px", "8px"),
-    ...shorthands.borderRadius("6px"),
+    ...shorthands.borderRadius("var(--admt-radius-fine)"),
     backgroundColor: "var(--colorNeutralBackground4)",
     color: "var(--colorNeutralForeground1)",
     fontSize: "12px",
@@ -219,7 +219,7 @@ const useStyles = makeStyles({
   screenContainer: {
     position: "relative",
     backgroundColor: "#000000",
-    ...shorthands.borderRadius("18px"),
+    ...shorthands.borderRadius("var(--admt-radius-card)"),
     ...shorthands.border("2px", "solid", "rgba(255, 255, 255, 0.12)"),
     boxShadow: "0 16px 40px rgba(0,0,0,0.45)",
     ...shorthands.overflow("hidden"),
@@ -241,9 +241,8 @@ const useStyles = makeStyles({
   liveSyncPulse: {
     width: "8px",
     height: "8px",
-    ...shorthands.borderRadius("9999px"),
-    backgroundColor: "#30d158",
-    boxShadow: "0 0 8px #30d158",
+    ...shorthands.borderRadius("var(--admt-radius-pill)"),
+    backgroundColor: "var(--colorPaletteGreenForeground1)",
     display: "inline-block",
   },
   canvasElement: {
@@ -259,7 +258,7 @@ const useStyles = makeStyles({
   canvasKeyNode: {
     width: "38px",
     height: "38px",
-    ...shorthands.borderRadius("9999px"),
+    ...shorthands.borderRadius("var(--admt-radius-pill)"),
     backgroundColor: "rgba(20, 20, 22, 0.85)",
     backdropFilter: "blur(10px)",
     ...shorthands.border("1.5px", "solid", "rgba(255, 255, 255, 0.45)"),
@@ -283,7 +282,7 @@ const useStyles = makeStyles({
     bottom: "-6px",
     right: "-6px",
     ...shorthands.padding("1px", "4px"),
-    ...shorthands.borderRadius("9999px"),
+    ...shorthands.borderRadius("var(--admt-radius-pill)"),
     backgroundColor: "#e03e3e",
     color: "#ffffff",
     fontSize: "9px",
@@ -292,7 +291,7 @@ const useStyles = makeStyles({
   },
   canvasJoystickRing: {
     position: "absolute",
-    ...shorthands.borderRadius("9999px"),
+    ...shorthands.borderRadius("var(--admt-radius-pill)"),
     ...shorthands.border("2px", "dashed", "rgba(41, 151, 255, 0.7)"),
     backgroundColor: "rgba(41, 151, 255, 0.12)",
     transform: "translate(-50%, -50%)",
@@ -306,7 +305,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     height: "56px",
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.border("2px", "dashed", "var(--colorBrandStroke1)"),
     backgroundColor: "rgba(0, 113, 227, 0.06)",
     cursor: "pointer",
@@ -947,7 +946,7 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
                 alignItems: "center",
                 gap: "6px",
                 padding: "4px 10px",
-                borderRadius: "9999px",
+                borderRadius: "var(--admt-radius-pill)",
                 backgroundColor: "var(--colorNeutralBackground3)",
                 fontSize: "12px",
                 color: "var(--colorNeutralForeground2)",
@@ -1031,7 +1030,7 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
               gap: "8px",
               padding: "10px",
               backgroundColor: "var(--colorNeutralBackground1)",
-              borderRadius: "10px",
+              borderRadius: "var(--admt-radius-control)",
               border: "1px solid var(--colorNeutralStroke2)",
             }}
           >
@@ -1180,7 +1179,7 @@ export const KeyMappingStudio: React.FC<KeyMappingStudioProps> = ({ device: prop
                 style={{
                   backgroundColor: "var(--colorNeutralBackground3)",
                   padding: "2px",
-                  borderRadius: "9999px",
+                  borderRadius: "var(--admt-radius-pill)",
                 }}
               >
                 <Tab value="edit" icon={<CursorClick24Regular />}>

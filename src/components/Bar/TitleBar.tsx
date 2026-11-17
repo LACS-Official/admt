@@ -37,7 +37,7 @@ const useStyles = makeStyles({
   IconImage: {
     width: "100%",
     height: "100%",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
   },
   titleBar: {
     height: "48px",
@@ -99,7 +99,7 @@ const useStyles = makeStyles({
   titleBarButton: {
     minWidth: "32px",
     height: "32px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     // 确保按钮可交互，禁止拖拽
     cursor: "pointer",
   },

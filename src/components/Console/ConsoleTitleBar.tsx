@@ -60,7 +60,7 @@ const useStyles = makeStyles({
   titleBarButton: {
     minWidth: "32px",
     height: "32px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     ":hover": {
       backgroundColor: "var(--colorNeutralBackground1Hover)",
     },

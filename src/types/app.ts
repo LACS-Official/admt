@@ -25,6 +25,8 @@ export interface AppConfig {
   deviceDetectionInterval: number;
   logLevel: "debug" | "info" | "warn" | "error";
   logRecordingLevels?: LogRecordingLevel[];
+  /** 历史日志保留天数；0 表示永久保留，默认 7（一周） */
+  logRetentionDays?: number;
   adbPath?: string;
   fastbootPath?: string;
   systemTrayEnabled: boolean;

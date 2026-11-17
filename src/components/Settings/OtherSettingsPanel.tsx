@@ -54,7 +54,7 @@ const StatusIndicator: React.FC<{ status: SystemFeatureStatus | null }> = ({ sta
       marginTop: '6px',
       padding: '6px 10px',
       backgroundColor: 'var(--colorNeutralBackground2)',
-      borderRadius: '8px',
+      borderRadius: 'var(--admt-radius-control)',
       border: '1px solid var(--colorNeutralStroke2)'
     }}>
       {getIcon()}
@@ -86,7 +86,7 @@ const useStyles = makeStyles({
     },
   },
   card: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -133,7 +133,7 @@ const useStyles = makeStyles({
     padding: "8px",
   },
   restoreButton: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: 500,
     padding: "0 20px",
   },
@@ -151,6 +151,7 @@ const OtherSettingsPanel: React.FC = () => {
   const [startWithSystem, setStartWithSystem] = useState(config.autoStartEnabled);
   const [soundEnabled, setSoundEnabled] = useState(config.soundEnabled);
   const [globalSearchHotkey, setGlobalSearchHotkey] = useState(config.globalSearchHotkey || 'Ctrl+K');
+  const [logRetentionDays, setLogRetentionDays] = useState(config.logRetentionDays ?? 7);
   const [traySupported, setTraySupported] = useState(false);
   const [autoStartSupported, setAutoStartSupported] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -211,7 +212,8 @@ const OtherSettingsPanel: React.FC = () => {
     setStartWithSystem(config.autoStartEnabled);
     setSoundEnabled(config.soundEnabled);
     setGlobalSearchHotkey(config.globalSearchHotkey || 'Ctrl+K');
-  }, [config.systemTrayEnabled, config.autoStartEnabled, config.soundEnabled, config.globalSearchHotkey]);
+    setLogRetentionDays(config.logRetentionDays ?? 7);
+  }, [config.systemTrayEnabled, config.autoStartEnabled, config.soundEnabled, config.globalSearchHotkey, config.logRetentionDays]);
 
   const handleMinimizeToTrayChange = async (checked: boolean) => {
     try {
@@ -289,6 +291,19 @@ const OtherSettingsPanel: React.FC = () => {
 
   const currentRecordingLevels: LogRecordingLevel[] = config.logRecordingLevels ?? ["error", "warning", "info"];
 
+  const handleLogRetentionChange = async (value: string) => {
+    const days = Number(value);
+    setLogRetentionDays(days);
+    updateConfig({ logRetentionDays: days });
+    const removed = await logService.applyLogRetention(days);
+    setStatusBarMessage({
+      type: "success",
+      message: days === 0
+        ? t("settings.log_retention_applied")
+        : t("settings.log_retention_cleanup_done", { count: removed }),
+    });
+  };
+
   const handleToggleLogLevel = (level: LogRecordingLevel, checked: boolean) => {
     let next: LogRecordingLevel[];
     if (checked) {
@@ -310,6 +325,7 @@ const OtherSettingsPanel: React.FC = () => {
       soundEnabled: true,
       globalSearchHotkey: 'Ctrl+K',
       logRecordingLevels: ["error", "warning", "info"] as LogRecordingLevel[],
+      logRetentionDays: 7,
     };
     updateConfig(defaultSettings);
     logService.applyRecordedLevelsFilter();
@@ -494,6 +510,31 @@ const OtherSettingsPanel: React.FC = () => {
           />
 
           <div className={styles.cardContent}>
+            {/* 日志保留时长 */}
+            <div className={styles.settingRow}>
+              <div className={styles.rowInfo}>
+                <div className={styles.titleWithIcon}>
+                  <DocumentBulletList24Regular />
+                  <Text weight="semibold">{t('settings.log_retention', '日志保留时长')}</Text>
+                </div>
+                <Text className={styles.description}>{t('settings.log_retention_desc', '超过设定时长的历史日志将被自动清理，释放磁盘空间')}</Text>
+              </div>
+              <Select
+                value={String(logRetentionDays)}
+                onChange={(_, data) => handleLogRetentionChange(data.value)}
+                size="small"
+                className={styles.selectControl}
+              >
+                <option value="7">{t('settings.log_retention_1week', '一周（7 天）')}</option>
+                <option value="14">{t('settings.log_retention_2week', '两周（14 天）')}</option>
+                <option value="21">{t('settings.log_retention_3week', '三周（21 天）')}</option>
+                <option value="28">{t('settings.log_retention_4week', '四周（28 天）')}</option>
+                <option value="0">{t('settings.log_retention_permanent', '永久保留')}</option>
+              </Select>
+            </div>
+
+            <Divider />
+
             {/* 错误级别 */}
             <div className={styles.settingRow}>
               <div className={styles.rowInfo}>

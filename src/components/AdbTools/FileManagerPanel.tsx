@@ -63,7 +63,7 @@ const useStyles = makeStyles({
   container: {
     height: "100%",
     display: "grid",
-    gridTemplateColumns: "230px 1fr",
+    gridTemplateColumns: "minmax(0, 230px) minmax(0, 1fr)",
     gap: "16px",
     overflow: "hidden",
   },
@@ -72,7 +72,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     padding: "16px",
     overflowY: "auto",
@@ -92,7 +92,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "10px",
     padding: "8px 12px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     cursor: "pointer",
     fontSize: "13px",
     color: "var(--colorNeutralForeground1)",
@@ -104,7 +104,7 @@ const useStyles = makeStyles({
   sidebarItemActive: {
     backgroundColor: "rgba(0, 113, 227, 0.08)",
     fontWeight: 600,
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
   },
   toolbox: {
     marginTop: "12px",
@@ -117,7 +117,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     gap: "10px",
     padding: "8px 12px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     cursor: "pointer",
     fontSize: "13px",
     color: "var(--colorNeutralForeground1)",
@@ -146,7 +146,7 @@ const useStyles = makeStyles({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground1)",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
@@ -168,7 +168,7 @@ const useStyles = makeStyles({
     gap: "8px",
     padding: "6px 10px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   pathInput: {
@@ -184,7 +184,7 @@ const useStyles = makeStyles({
     },
     "&::-webkit-scrollbar-thumb": {
       backgroundColor: "var(--colorNeutralStroke2)",
-      borderRadius: "10px",
+      borderRadius: "var(--admt-radius-control)",
     },
   },
   quickNavButtons: {
@@ -204,7 +204,7 @@ const useStyles = makeStyles({
     minHeight: 0,
     overflow: "auto",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
     "&::-webkit-scrollbar": {
       width: "6px",
@@ -215,7 +215,7 @@ const useStyles = makeStyles({
     },
     "&::-webkit-scrollbar-thumb": {
       backgroundColor: "var(--colorNeutralStroke2)",
-      borderRadius: "10px",
+      borderRadius: "var(--admt-radius-control)",
       "&:hover": {
         backgroundColor: "var(--colorNeutralStroke1)",
       },
@@ -264,13 +264,13 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     padding: "8px 14px",
     backgroundColor: "rgba(0, 113, 227, 0.08)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorBrandStroke2)",
   },
   selectedInfo: {
     fontSize: "13px",
     fontWeight: 600,
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
   },
   loadingContainer: {
     display: "flex",
@@ -305,7 +305,7 @@ interface FileManagerPanelProps {
 
 const getFileIcon = (fileName: string, type: 'file' | 'directory') => {
   if (type === 'directory') {
-    return <Folder24Regular style={{ color: '#0071e3' }} />;
+    return <Folder24Regular style={{ color: 'var(--colorBrandForeground1)' }} />;
   }
   const ext = fileName.split('.').pop()?.toLowerCase() || '';
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) {
@@ -327,7 +327,7 @@ const getFileIcon = (fileName: string, type: 'file' | 'directory') => {
     return <Apps24Regular style={{ color: '#5856d6' }} />;
   }
   if (['js', 'ts', 'jsx', 'tsx', 'py', 'json', 'xml', 'html', 'css', 'sh', 'bat', 'c', 'cpp', 'rs', 'java'].includes(ext)) {
-    return <Code24Regular style={{ color: '#0071e3' }} />;
+    return <Code24Regular style={{ color: 'var(--colorBrandForeground1)' }} />;
   }
   if (['txt', 'log', 'md', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
     return <DocumentText24Regular style={{ color: '#ff9500' }} />;
@@ -1149,13 +1149,13 @@ const FileManagerPanel: React.FC<FileManagerPanelProps> = ({ device, onAdbRequir
                backgroundColor: 'rgba(0, 120, 212, 0.1)',
                zIndex: 100,
                border: '2px dashed var(--colorBrandStroke1)',
-               borderRadius: '8px',
+               borderRadius: 'var(--admt-radius-control)',
                display: 'flex',
                alignItems: 'center',
                justifyContent: 'center',
                pointerEvents: 'none',
              }}>
-               <div style={{ padding: '20px', backgroundColor: 'var(--colorNeutralBackground1)', borderRadius: '8px', boxShadow: '0 4px 14px rgba(0,0,0,0.1)' }}>
+               <div style={{ padding: '20px', backgroundColor: 'var(--colorNeutralBackground1)', borderRadius: 'var(--admt-radius-control)', boxShadow: '0 4px 14px rgba(0,0,0,0.1)' }}>
                   <Text size={500} weight="semibold" style={{ color: 'var(--colorBrandForeground1)' }}>
                     {t('file_manager.drop_files_here')}
                   </Text>

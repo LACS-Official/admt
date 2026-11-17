@@ -408,14 +408,14 @@ const StatusBar: React.FC = () => {
   const getStatusBarMessageColor = (type: StatusBarMessage['type']) => {
     switch (type) {
       case "success":
-        return { backgroundColor: "#d4edda", color: "#155724", border: "1px solid #c3e6cb" };
+        return { backgroundColor: "var(--colorPaletteGreenBackground2)", color: "var(--colorPaletteGreenForeground1)", border: "1px solid var(--colorPaletteGreenBackground3)" };
       case "warning":
-        return { backgroundColor: "#fff3cd", color: "#856404", border: "1px solid #ffeaa7" };
+        return { backgroundColor: "var(--colorPaletteYellowBackground2)", color: "var(--colorPaletteYellowForeground1)", border: "1px solid var(--colorPaletteYellowBackground3)" };
       case "error":
-        return { backgroundColor: "#f8d7da", color: "#721c24", border: "1px solid #f5c6cb" };
+        return { backgroundColor: "var(--colorPaletteRedBackground2)", color: "var(--colorPaletteRedForeground1)", border: "1px solid var(--colorPaletteRedBackground3)" };
       case "info":
       default:
-        return { backgroundColor: "#d1ecf1", color: "#0c5460", border: "1px solid #bee5eb" };
+        return { backgroundColor: "var(--colorPaletteBlueBackground2)", color: "var(--colorPaletteBlueForeground1)", border: "1px solid var(--colorPaletteBlueBackground3)" };
     }
   };
 
@@ -480,7 +480,7 @@ const StatusBar: React.FC = () => {
               border: "none",
               cursor: "pointer",
               padding: "4px",
-              borderRadius: "4px",
+              borderRadius: "var(--admt-radius-fine)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -507,7 +507,7 @@ const StatusBar: React.FC = () => {
               border: "none",
               cursor: "pointer",
               padding: "4px",
-              borderRadius: "4px",
+              borderRadius: "var(--admt-radius-fine)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -537,12 +537,12 @@ const StatusBar: React.FC = () => {
             paddingLeft: "16px",
             paddingRight: "16px",
             gap: "12px",
-            backgroundColor: currentNotification.type === "success" ? "#d4edda" :
-                           currentNotification.type === "error" ? "#f8d7da" :
-                           currentNotification.type === "warning" ? "#fff3cd" : "#d1ecf1",
-            color: currentNotification.type === "success" ? "#155724" :
-                   currentNotification.type === "error" ? "#721c24" :
-                   currentNotification.type === "warning" ? "#856404" : "#0c5460",
+            backgroundColor: currentNotification.type === "success" ? "var(--colorPaletteGreenBackground2)" :
+                           currentNotification.type === "error" ? "var(--colorPaletteRedBackground2)" :
+                           currentNotification.type === "warning" ? "var(--colorPaletteYellowBackground2)" : "var(--colorPaletteBlueBackground2)",
+            color: currentNotification.type === "success" ? "var(--colorPaletteGreenForeground1)" :
+                   currentNotification.type === "error" ? "var(--colorPaletteRedForeground1)" :
+                   currentNotification.type === "warning" ? "var(--colorPaletteYellowForeground1)" : "var(--colorPaletteBlueForeground1)",
             opacity: isNotificationVisible ? 1 : 0,
             transform: isNotificationVisible ? "translateY(0)" : "translateY(10px)",
             transition: "opacity 0.3s ease-in-out, transform 0.3s ease-in-out",
@@ -568,7 +568,7 @@ const StatusBar: React.FC = () => {
               border: "none",
               cursor: "pointer",
               padding: "8px",
-              borderRadius: "4px",
+              borderRadius: "var(--admt-radius-fine)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -600,7 +600,7 @@ const StatusBar: React.FC = () => {
               border: "none",
               cursor: "pointer",
               padding: "8px",
-              borderRadius: "4px",
+              borderRadius: "var(--admt-radius-fine)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -626,9 +626,9 @@ const StatusBar: React.FC = () => {
             left: 0,
             height: "3px",
             width: `${progressWidth}%`,
-            backgroundColor: currentNotification.type === "success" ? "#28a745" :
-                           currentNotification.type === "error" ? "#dc3545" :
-                           currentNotification.type === "warning" ? "#ffc107" : "#007bff",
+            backgroundColor: currentNotification.type === "success" ? "var(--colorPaletteGreenForeground1)" :
+                           currentNotification.type === "error" ? "var(--colorPaletteRedForeground1)" :
+                           currentNotification.type === "warning" ? "var(--colorPaletteYellowForeground1)" : "var(--colorBrandForeground1)",
             transition: "width 0.1s linear",
             zIndex: 21,
           }} />

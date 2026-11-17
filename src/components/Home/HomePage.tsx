@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useAppStore } from "../../stores/appStore";
+import { deviceService } from "../../services/deviceService";
 
 import DeviceOverviewCard from "../DeviceInfo/DeviceOverviewCard";
 import DeviceRebootCard from "./DeviceRebootCard";
@@ -41,7 +42,7 @@ const useStyles = makeStyles({
   tabArea: {
     alignSelf: "flex-start",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "4px",
     display: "inline-flex",
     alignItems: "center",
@@ -56,7 +57,7 @@ const useStyles = makeStyles({
       fontSize: "13px",
       padding: "6px 16px",
       minHeight: "30px",
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
       transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
       border: "none",
       fontWeight: 500,
@@ -100,7 +101,7 @@ const useStyles = makeStyles({
     },
     "&::-webkit-scrollbar-thumb": {
       backgroundColor: "var(--colorNeutralStroke1)",
-      borderRadius: "10px",
+      borderRadius: "var(--admt-radius-control)",
     },
   },
   deviceSection: {
@@ -136,7 +137,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
     padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalL}`,
     backgroundColor: "var(--colorBrandBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorBrandStroke2)",
     marginBottom: tokens.spacingVerticalS,
     color: "var(--colorBrandForeground2)",
@@ -145,7 +146,7 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorBrandBackgroundStatic)",
     color: "white",
     padding: "2px 8px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontSize: "11px",
     fontWeight: "bold",
     textTransform: "uppercase",
@@ -218,11 +219,29 @@ const HomePage: React.FC = () => {
     setActiveTab(data.value as string);
   };
 
-  const handleManualRefresh = () => {
+  const handleManualRefresh = async () => {
     setStatusBarMessage({
       type: "info",
+      source: "home:refresh",
       message: t("status.refreshing_device_list"),
     });
+    try {
+      const devices = await deviceService.scanDevices();
+      useDeviceStore.getState().setDevices(devices);
+      clearStatusBarMessage("home:refresh");
+      setStatusBarMessage({
+        type: "success",
+        message: t("status.device_list_refreshed"),
+      });
+    } catch (error) {
+      clearStatusBarMessage("home:refresh");
+      setStatusBarMessage({
+        type: "error",
+        message: t("status.device_list_refresh_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      });
+    }
   };
 
   // 连接设备面板

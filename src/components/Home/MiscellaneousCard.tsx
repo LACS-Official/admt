@@ -16,7 +16,7 @@ const useStyles = makeStyles({
     flexDirection: "column",
     gap: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground1)",
     boxShadow: "0 2px 12px rgba(0, 0, 0, 0.03)",
   },
@@ -44,7 +44,7 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     padding: "12px 14px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     cursor: "pointer",
@@ -63,7 +63,7 @@ const useStyles = makeStyles({
   iconBox: {
     width: "32px",
     height: "32px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -110,7 +110,7 @@ const useStyles = makeStyles({
   infoBox: {
     padding: "12px",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
 });
@@ -463,7 +463,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
         }}
         modalType="modal"
       >
-        <DialogSurface style={{ minWidth: '500px', maxWidth: '600px' }}>
+        <DialogSurface style={{ minWidth: 'min(500px, 92vw)', maxWidth: '92vw', maxHeight: '86vh', overflowY: 'auto' }}>
           <DialogTitle>{t('misc.usb_fix_title')}</DialogTitle>
           <DialogContent>
             <DialogBody>
@@ -475,7 +475,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                 <div style={{
                   padding: '16px',
                   backgroundColor: 'var(--colorNeutralBackground2)',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--admt-radius-control)',
                   marginBottom: '16px'
                 }}>
                   <Text weight="semibold" style={{ color: 'var(--colorPaletteYellowForeground1)' }}>
@@ -493,7 +493,7 @@ const MiscellaneousCard: React.FC<MiscellaneousCardProps> = ({ className }) => {
                 <div style={{
                   backgroundColor: 'var(--colorNeutralBackground6)',
                   border: '1px solid var(--colorNeutralStroke2)',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--admt-radius-fine)',
                   padding: '12px',
                   fontFamily: 'Consolas, "Courier New", monospace',
                   fontSize: '12px',

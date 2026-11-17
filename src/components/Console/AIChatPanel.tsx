@@ -64,7 +64,7 @@ const useStyles = makeStyles({
   diagnoseCard: {
     padding: "16px",
     ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground2)",
     cursor: "pointer",
     display: "flex",
@@ -157,7 +157,7 @@ const useStyles = makeStyles({
   },
   messageContent: {
     padding: "12px 18px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     fontSize: "13.5px",
     lineHeight: "1.6",
     whiteSpace: "normal",
@@ -171,13 +171,13 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorBrandBackground2)",
     color: "var(--colorBrandForeground1)",
     border: `1px solid var(--colorBrandStroke2)`,
-    borderRadius: "14px 4px 14px 14px",
+    borderRadius: "var(--admt-radius-card) var(--admt-radius-fine) var(--admt-radius-card) var(--admt-radius-card)",
   },
   botContent: {
     backgroundColor: "var(--colorNeutralBackground2)",
     color: "var(--colorNeutralForeground1)",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: "4px 14px 14px 14px",
+    borderRadius: "var(--admt-radius-fine) var(--admt-radius-card) var(--admt-radius-card) var(--admt-radius-card)",
   },
   inputArea: {
     padding: "6px 20px 10px",
@@ -194,7 +194,7 @@ const useStyles = makeStyles({
     margin: "0 auto",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     padding: "4px 6px 4px 12px",
     minHeight: "38px",
     boxSizing: "border-box",
@@ -277,13 +277,13 @@ const useStyles = makeStyles({
     "& code": {
       backgroundColor: tokens.colorNeutralBackground4,
       padding: "2px 4px",
-      borderRadius: "4px",
+      borderRadius: "var(--admt-radius-fine)",
       fontFamily: "var(--fontFamilyMonospace)",
     },
     "& pre": {
       backgroundColor: tokens.colorNeutralBackground4,
       padding: "12px",
-      borderRadius: "8px",
+      borderRadius: "var(--admt-radius-control)",
       overflowX: "auto",
       margin: "12px 0",
       "& code": {
@@ -305,7 +305,7 @@ const AGENT_SYSTEM_PROMPT = `你是一个专业的 Android 玩机管家（ADMT�
 1. Android 玩机、ADB/Fastboot 调试、Root (Magisk/KernelSU)、分区刷写、应用管理与救砖排障。
 2. 宿主电脑系统运维与诊断：拥有在本地电脑直接运行 CMD 或 PowerShell 命令的能力（通过 admt_execute_host_command 工具）。当用户询问电脑 IP、端口占用 (如 5037 ADB 端口)、网络连通性 (ping/tracert)、环境变量或系统状态时，直接调用该工具执行对应命令（如 ipconfig, netstat -ano, ping 等）并结合输出直接回答。
 3. 全网实时权威技术资料与玩机方案检索。
-4. Windows 宿主环境排查：排查本地开发工具版本（Java/Python/Git）时，注意部分 Windows 系统上的 Oracle javapath (shimconsole.exe) 会因目标不存在而静默退出且无输出。若 java -version 输出为空，可进一步查询 where.exe java 或检索 C:\Program Files\Java\ 目录。排查完成后请基于所得信息给出完整的 Markdown 最终回答。
+4. Windows 宿主环境排查：排查本地开发工具版本（Java/Python/Git）时，注意部分 Windows 系统上的 Oracle javapath (shimconsole.exe) 会因目标不存在而静默退出且无输出。若 java -version 输出为空，可进一步查询 where.exe java 或检索 C:\\Program Files\\Java\\ 目录。排查完成后请基于所得信息给出完整的 Markdown 最终回答。
 
 【回答准则】
 - 始终以友好、专业、务实自然的人类中文回答（严禁说教、严禁生硬拒绝关于电脑或网络的合理询问）。
@@ -1443,12 +1443,14 @@ ${slicedLogs}
         try {
           const parsed = JSON.parse(msg.content);
           toolBody = "```json\n" + JSON.stringify(parsed, null, 2) + "\n```";
-        } catch {}
-        sections.push(`> **🛠️ 工具执行反馈: ${msg.toolName || "本地工具"}** (${time})\n\n${toolBody}\n\n---`);
+        } catch {
+          // 非 JSON 内容按纯文本输出
+        }
+        sections.push(`> **工具执行反馈: ${msg.toolName || "本地工具"}** (${time})\n\n${toolBody}\n\n---`);
       } else if (msg.role === "assistant") {
         if (!msg.content && msg.tool_calls && msg.tool_calls.length > 0) {
           const callsSummary = msg.tool_calls.map((tc: any) => `- 请求调用工具: \`${tc.function?.name || tc.name}\``).join("\n");
-          sections.push(`> **🤖 发起工具调用** (${time})\n\n${callsSummary}\n\n---`);
+          sections.push(`> **发起工具调用** (${time})\n\n${callsSummary}\n\n---`);
           continue;
         }
 
@@ -1459,7 +1461,7 @@ ${slicedLogs}
             md += `**分析与说明**:\n${agentData.thought}\n\n`;
           }
           if (agentData.risk_warning) {
-            md += `> ⚠️ **安全风险提示**: ${agentData.risk_warning}\n\n`;
+            md += `> **安全风险提示**: ${agentData.risk_warning}\n\n`;
           }
           if (agentData.actions && agentData.actions.length > 0) {
             md += `**建议执行指令**:\n`;
@@ -1840,7 +1842,7 @@ ${slicedLogs}
             alignItems: "center",
             gap: "6px",
             padding: "2px 6px 2px 8px",
-            borderRadius: "10px",
+            borderRadius: "var(--admt-radius-control)",
             backgroundColor: "var(--colorNeutralBackground2)",
             border: `1px solid ${tokens.colorNeutralStroke2}`,
             boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
@@ -1866,7 +1868,7 @@ ${slicedLogs}
                   appearance="subtle"
                   size="small"
                   onClick={() => createNewConversation()}
-                  style={{ borderRadius: "6px", height: "24px", padding: "0 6px", fontSize: "12px" }}
+                  style={{ borderRadius: "var(--admt-radius-fine)", height: "24px", padding: "0 6px", fontSize: "12px" }}
                 >
                   新建
                 </Button>
@@ -1878,7 +1880,7 @@ ${slicedLogs}
                   appearance="subtle"
                   size="small"
                   onClick={() => setIsHistoryModalOpen(true)}
-                  style={{ borderRadius: "6px", height: "24px", padding: "0 6px", fontSize: "12px" }}
+                  style={{ borderRadius: "var(--admt-radius-fine)", height: "24px", padding: "0 6px", fontSize: "12px" }}
                 >
                   历史 {conversations.length > 0 ? `(${conversations.length})` : ""}
                 </Button>
@@ -1897,7 +1899,7 @@ ${slicedLogs}
                     alignItems: "center",
                     gap: "6px",
                     padding: "4px 10px",
-                    borderRadius: "9999px",
+                    borderRadius: "var(--admt-radius-pill)",
                     backgroundColor: isAgentMode ? "rgba(0, 113, 227, 0.08)" : "var(--colorNeutralBackground2)",
                     border: isAgentMode ? "1px solid var(--colorBrandStroke2)" : `1px solid ${tokens.colorNeutralStroke2}`,
                     cursor: "pointer",
@@ -1917,7 +1919,7 @@ ${slicedLogs}
                   <ChevronDown16Regular style={{ fontSize: "12px", opacity: 0.7 }} />
                 </div>
               </MenuTrigger>
-              <MenuPopover style={{ borderRadius: "14px", minWidth: "210px", padding: "6px" }}>
+              <MenuPopover style={{ borderRadius: "var(--admt-radius-card)", minWidth: "210px", padding: "6px" }}>
                 <MenuList>
                   <div style={{ padding: "4px 8px", fontSize: "11px", color: "var(--colorNeutralForeground4)", fontWeight: "600" }}>
                     运行与执行策略
@@ -1977,7 +1979,7 @@ ${slicedLogs}
                         alignItems: "center",
                         gap: "6px",
                         padding: "4px 12px",
-                        borderRadius: "9999px",
+                        borderRadius: "var(--admt-radius-pill)",
                         backgroundColor: hasApiKey && currentModel ? "var(--colorNeutralBackground2)" : "rgba(245, 158, 11, 0.12)",
                         border: hasApiKey && currentModel ? `1px solid ${tokens.colorNeutralStroke2}` : "1px solid rgba(245, 158, 11, 0.4)",
                         cursor: "pointer",
@@ -2007,7 +2009,7 @@ ${slicedLogs}
                       <ChevronDown16Regular style={{ fontSize: "12px", color: "var(--colorNeutralForeground4)" }} />
                     </div>
                   </MenuTrigger>
-                  <MenuPopover style={{ borderRadius: "14px", minWidth: "220px", padding: "6px" }}>
+                  <MenuPopover style={{ borderRadius: "var(--admt-radius-card)", minWidth: "220px", padding: "6px" }}>
                     <MenuList>
                       <div style={{ padding: "4px 8px", fontSize: "11px", color: "var(--colorNeutralForeground4)", fontWeight: "600" }}>
                         快速切换 AI 模型预设
@@ -2167,7 +2169,7 @@ ${slicedLogs}
                               width: "100%",
                               minWidth: "260px",
                               padding: "10px 12px",
-                              borderRadius: "10px",
+                              borderRadius: "var(--admt-radius-control)",
                               backgroundColor: "var(--colorNeutralBackground3)",
                               border: "1px solid var(--colorNeutralStroke2)",
                               fontSize: "12px",
@@ -2185,7 +2187,7 @@ ${slicedLogs}
                                   <img
                                     src={msg.toolResult.imageBase64}
                                     alt="Screen Preview"
-                                    style={{ maxWidth: "260px", maxHeight: "360px", borderRadius: "8px", border: "1px solid var(--colorNeutralStroke1)" }}
+                                    style={{ maxWidth: "260px", maxHeight: "360px", borderRadius: "var(--admt-radius-control)", border: "1px solid var(--colorNeutralStroke1)" }}
                                   />
                                 </div>
                               ) : msg.toolResult?.sources && msg.toolResult.sources.length > 0 ? (
@@ -2214,7 +2216,7 @@ ${slicedLogs}
                                 <pre style={{
                                   margin: 0,
                                   padding: "8px 10px",
-                                  borderRadius: "6px",
+                                  borderRadius: "var(--admt-radius-fine)",
                                   backgroundColor: "var(--colorNeutralBackground1)",
                                   overflowX: "auto",
                                   maxHeight: "160px",
@@ -2247,7 +2249,7 @@ ${slicedLogs}
                                 {agentData.risk_warning && (
                                   <div style={{
                                     padding: "10px 14px",
-                                    borderRadius: "6px",
+                                    borderRadius: "var(--admt-radius-fine)",
                                     backgroundColor: agentData.danger_level === "high" ? "#FDF2F2" : "#FFFBEB",
                                     borderLeft: `4px solid ${agentData.danger_level === "high" ? "#EF4444" : "#F59E0B"}`,
                                     color: agentData.danger_level === "high" ? "#9B1C1C" : "#92400E",
@@ -2261,7 +2263,7 @@ ${slicedLogs}
                                 {agentData.actions.length > 0 && (
                                   <div style={{
                                     border: `1px solid ${tokens.colorNeutralStroke2}`,
-                                    borderRadius: "8px",
+                                    borderRadius: "var(--admt-radius-control)",
                                     backgroundColor: tokens.colorNeutralBackground2,
                                     padding: "12px",
                                     display: "flex",
@@ -2277,7 +2279,7 @@ ${slicedLogs}
                                           flexDirection: "column",
                                           padding: "8px",
                                           border: `1px solid ${tokens.colorNeutralStroke1}`,
-                                          borderRadius: "6px",
+                                          borderRadius: "var(--admt-radius-fine)",
                                           backgroundColor: tokens.colorNeutralBackground1,
                                           gap: "4px"
                                         }}>
@@ -2298,7 +2300,7 @@ ${slicedLogs}
                                             <span style={{
                                               fontSize: "11px",
                                               padding: "2px 6px",
-                                              borderRadius: "4px",
+                                              borderRadius: "var(--admt-radius-fine)",
                                               backgroundColor: action.type === "fastboot" ? "#E0F2FE" : "#F3F4F6",
                                               color: action.type === "fastboot" ? "#0369A1" : "#374151"
                                             }}>{action.type}</span>
@@ -2307,7 +2309,7 @@ ${slicedLogs}
                                             display: "block",
                                             padding: "4px 8px",
                                             backgroundColor: tokens.colorNeutralBackground4,
-                                            borderRadius: "4px",
+                                            borderRadius: "var(--admt-radius-fine)",
                                             fontSize: "12px",
                                             fontFamily: "monospace",
                                             marginTop: "4px",
@@ -2334,7 +2336,7 @@ ${slicedLogs}
                                         padding: "8px 12px",
                                         backgroundColor: "#1E293B",
                                         color: "#F8FAFC",
-                                        borderRadius: "6px",
+                                        borderRadius: "var(--admt-radius-fine)",
                                         fontFamily: "monospace",
                                         fontSize: "12px",
                                         maxHeight: "200px",
@@ -2378,7 +2380,7 @@ ${slicedLogs}
                                       return (
                                         <div style={{ 
                                           border: `1px solid ${safetyLevel === "blocked" ? "var(--colorPaletteRedBorder2)" : tokens.colorNeutralStroke2}`, 
-                                          borderRadius: "10px", 
+                                          borderRadius: "var(--admt-radius-control)", 
                                           overflow: "hidden", 
                                           margin: "10px 0",
                                           backgroundColor: "var(--colorNeutralBackground2)",
@@ -2482,7 +2484,7 @@ ${slicedLogs}
                                                         <pre style={{
                                                           margin: "2px 0 6px 12px",
                                                           padding: "4px 8px",
-                                                          borderRadius: "6px",
+                                                          borderRadius: "var(--admt-radius-fine)",
                                                           backgroundColor: "var(--colorNeutralBackground1)",
                                                           fontSize: "11px",
                                                           fontFamily: "var(--fontFamilyMonospace)",
@@ -2527,7 +2529,7 @@ ${slicedLogs}
                                       alignItems: "center",
                                       justifyContent: "space-between",
                                       padding: "8px 12px",
-                                      borderRadius: "10px",
+                                      borderRadius: "var(--admt-radius-control)",
                                       backgroundColor: "var(--colorNeutralBackground2)",
                                       border: "1px solid var(--colorNeutralStroke2)",
                                     }}>
@@ -2555,7 +2557,7 @@ ${slicedLogs}
                                   return (
                                     <div key={tcIdx} style={{
                                       padding: "10px 12px",
-                                      borderRadius: "10px",
+                                      borderRadius: "var(--admt-radius-control)",
                                       backgroundColor: "var(--colorNeutralBackground3)",
                                       border: "1px solid var(--colorNeutralStroke2)",
                                       display: "flex",
@@ -2591,7 +2593,7 @@ ${slicedLogs}
                                       <pre style={{
                                         margin: 0,
                                         padding: "6px 8px",
-                                        borderRadius: "6px",
+                                        borderRadius: "var(--admt-radius-fine)",
                                         backgroundColor: "var(--colorNeutralBackground1)",
                                         fontSize: "11px",
                                         fontFamily: "var(--fontFamilyMonospace)",
@@ -2635,7 +2637,7 @@ ${slicedLogs}
                             style={{
                               height: "24px",
                               padding: "0 6px",
-                              borderRadius: "6px",
+                              borderRadius: "var(--admt-radius-fine)",
                               fontSize: "12px",
                               color: copiedMsgId === msg.id ? "var(--colorPaletteGreenForeground1)" : "var(--colorNeutralForeground3)",
                             }}
@@ -2701,7 +2703,7 @@ ${slicedLogs}
                       gap: "6px",
                       padding: "4px 8px",
                       backgroundColor: "var(--colorNeutralBackground3)",
-                      borderRadius: "6px",
+                      borderRadius: "var(--admt-radius-fine)",
                       fontSize: "12px",
                       border: `1px solid var(--colorNeutralStroke2)`,
                     }}>
@@ -2742,7 +2744,7 @@ ${slicedLogs}
                     alignItems: "center",
                     gap: "4px",
                     padding: "3px 10px",
-                    borderRadius: "9999px",
+                    borderRadius: "var(--admt-radius-pill)",
                     fontSize: "11px",
                     fontWeight: 500,
                     backgroundColor: "var(--colorNeutralBackground3)",
@@ -2753,7 +2755,7 @@ ${slicedLogs}
                     transition: "all 0.15s ease",
                   }}
                 >
-                  🩺 整机状态体检
+                  整机状态体检
                 </div>
                 <div
                   onClick={() => executeSlashCommand(SLASH_COMMANDS[1])}
@@ -2762,7 +2764,7 @@ ${slicedLogs}
                     alignItems: "center",
                     gap: "4px",
                     padding: "3px 10px",
-                    borderRadius: "9999px",
+                    borderRadius: "var(--admt-radius-pill)",
                     fontSize: "11px",
                     fontWeight: 500,
                     backgroundColor: "var(--colorNeutralBackground3)",
@@ -2773,7 +2775,7 @@ ${slicedLogs}
                     transition: "all 0.15s ease",
                   }}
                 >
-                  ⚡ 提取前台应用
+                  提取前台应用
                 </div>
                 <div
                   onClick={() => executeSlashCommand(SLASH_COMMANDS.find(c => c.cmd === "/search") || SLASH_COMMANDS[0])}
@@ -2782,7 +2784,7 @@ ${slicedLogs}
                     alignItems: "center",
                     gap: "4px",
                     padding: "3px 10px",
-                    borderRadius: "9999px",
+                    borderRadius: "var(--admt-radius-pill)",
                     fontSize: "11px",
                     fontWeight: 500,
                     backgroundColor: "var(--colorNeutralBackground3)",
@@ -2793,7 +2795,7 @@ ${slicedLogs}
                     transition: "all 0.15s ease",
                   }}
                 >
-                  🌐 检索救砖固件
+                  检索救砖固件
                 </div>
                 {selectedDevice && (
                   <div
@@ -2803,7 +2805,7 @@ ${slicedLogs}
                       alignItems: "center",
                       gap: "4px",
                       padding: "3px 10px",
-                      borderRadius: "9999px",
+                      borderRadius: "var(--admt-radius-pill)",
                       fontSize: "11px",
                       fontWeight: 500,
                       backgroundColor: "var(--colorNeutralBackground3)",
@@ -2814,7 +2816,7 @@ ${slicedLogs}
                       transition: "all 0.15s ease",
                     }}
                   >
-                    📷 屏幕截取诊断
+                    屏幕截取诊断
                   </div>
                 )}
               </div>
@@ -2825,7 +2827,7 @@ ${slicedLogs}
                   marginBottom: "8px",
                   backgroundColor: "var(--colorNeutralBackground1)",
                   border: `1px solid ${tokens.colorNeutralStroke2}`,
-                  borderRadius: "14px",
+                  borderRadius: "var(--admt-radius-card)",
                   boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
                   padding: "6px",
                   zIndex: 100,
@@ -2847,7 +2849,7 @@ ${slicedLogs}
                         alignItems: "center",
                         justifyContent: "space-between",
                         padding: "6px 10px",
-                        borderRadius: "8px",
+                        borderRadius: "var(--admt-radius-control)",
                         backgroundColor: idx === slashMenuIndex ? "var(--colorBrandBackground2)" : "transparent",
                         cursor: "pointer",
                         fontSize: "12px",
@@ -2897,7 +2899,7 @@ ${slicedLogs}
                       alignItems: "center",
                       gap: "4px",
                       padding: "2px 8px",
-                      borderRadius: "9999px",
+                      borderRadius: "var(--admt-radius-pill)",
                       backgroundColor: isAutoMcpEnabled ? "var(--colorBrandBackground2)" : "var(--colorNeutralBackground3)",
                       border: isAutoMcpEnabled ? "1px solid var(--colorBrandStroke2)" : `1px solid var(--colorNeutralStroke2)`,
                       transition: "all 0.18s ease",
@@ -2928,7 +2930,7 @@ ${slicedLogs}
                         size="small"
                         onClick={handleScreenDiagnose}
                         disabled={isLoading}
-                        style={{ minWidth: "28px", width: "28px", height: "28px", padding: 0, borderRadius: "9999px" }}
+                        style={{ minWidth: "28px", width: "28px", height: "28px", padding: 0, borderRadius: "var(--admt-radius-pill)" }}
                       />
                     </Tooltip>
                   )}
@@ -2941,7 +2943,7 @@ ${slicedLogs}
                         size="small"
                         onClick={handleLogcatDiagnose}
                         disabled={isLoading}
-                        style={{ minWidth: "auto", padding: "0 8px", height: "28px", borderRadius: "9999px", fontSize: "12px" }}
+                        style={{ minWidth: "auto", padding: "0 8px", height: "28px", borderRadius: "var(--admt-radius-pill)", fontSize: "12px" }}
                       >
                         Logcat
                       </Button>
@@ -2955,7 +2957,7 @@ ${slicedLogs}
                       size="small"
                       onClick={handleUploadFile}
                       disabled={isLoading}
-                      style={{ minWidth: "28px", width: "28px", height: "28px", padding: 0, borderRadius: "9999px" }}
+                      style={{ minWidth: "28px", width: "28px", height: "28px", padding: 0, borderRadius: "var(--admt-radius-pill)" }}
                     />
                   </Tooltip>
 
@@ -2966,7 +2968,7 @@ ${slicedLogs}
                         appearance="secondary" 
                         size="small"
                         onClick={handleStopGeneration}
-                        style={{ borderRadius: "9999px", height: "28px", padding: "0 10px", minWidth: "auto", fontSize: "12px" }}
+                        style={{ borderRadius: "var(--admt-radius-pill)", height: "28px", padding: "0 10px", minWidth: "auto", fontSize: "12px" }}
                       >
                         停止
                       </Button>
@@ -2979,7 +2981,7 @@ ${slicedLogs}
                         size="small"
                         onClick={handleSendMessage}
                         disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading}
-                        style={{ borderRadius: "9999px", height: "28px", padding: "0 12px", minWidth: "auto", fontSize: "12px" }}
+                        style={{ borderRadius: "var(--admt-radius-pill)", height: "28px", padding: "0 12px", minWidth: "auto", fontSize: "12px" }}
                       >
                         发送
                       </Button>
@@ -3007,7 +3009,7 @@ ${slicedLogs}
 
       {/* 历史记录独立弹窗 */}
       <Dialog open={isHistoryModalOpen} onOpenChange={(_, data) => !data.open && setIsHistoryModalOpen(false)}>
-        <DialogSurface style={{ maxWidth: "700px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "700px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle
               action={
@@ -3084,7 +3086,7 @@ ${slicedLogs}
                         key={conv.id}
                         style={{
                           padding: "10px 14px",
-                          borderRadius: "10px",
+                          borderRadius: "var(--admt-radius-control)",
                           border: isCurrent ? "1px solid var(--colorBrandStroke1)" : "1px solid var(--colorNeutralStroke2)",
                           backgroundColor: isCurrent ? "var(--colorBrandBackground2)" : "var(--colorNeutralBackground2)",
                           display: "flex",
@@ -3148,7 +3150,7 @@ ${slicedLogs}
 
       {/* Skills 与 MCP 工具箱统一独立弹窗 */}
       <Dialog open={isSkillsMcpModalOpen} onOpenChange={(_, data) => !data.open && setIsSkillsMcpModalOpen(false)}>
-        <DialogSurface style={{ maxWidth: "780px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "780px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle
               action={
@@ -3167,7 +3169,7 @@ ${slicedLogs}
                 <div style={{
                   display: "inline-flex",
                   padding: "3px",
-                  borderRadius: "9999px",
+                  borderRadius: "var(--admt-radius-pill)",
                   backgroundColor: "var(--colorNeutralBackground3)",
                   border: "1px solid var(--colorNeutralStroke2)",
                   gap: "4px"
@@ -3176,7 +3178,7 @@ ${slicedLogs}
                     type="button"
                     style={{
                       padding: "6px 20px",
-                      borderRadius: "9999px",
+                      borderRadius: "var(--admt-radius-pill)",
                       border: "none",
                       fontSize: "13px",
                       fontWeight: skillsMcpTab === "skills" ? "600" : "500",
@@ -3197,7 +3199,7 @@ ${slicedLogs}
                     type="button"
                     style={{
                       padding: "6px 20px",
-                      borderRadius: "9999px",
+                      borderRadius: "var(--admt-radius-pill)",
                       border: "none",
                       fontSize: "13px",
                       fontWeight: skillsMcpTab === "mcp" ? "600" : "500",
@@ -3229,7 +3231,7 @@ ${slicedLogs}
                         key={skill.id}
                         style={{
                           padding: "14px",
-                          borderRadius: "10px",
+                          borderRadius: "var(--admt-radius-control)",
                           border: "1px solid var(--colorNeutralStroke2)",
                           backgroundColor: "var(--colorNeutralBackground2)",
                           display: "flex",
@@ -3250,7 +3252,7 @@ ${slicedLogs}
                         </Text>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
                           {skill.tags.map((t, idx) => (
-                            <span key={idx} style={{ fontSize: "11px", padding: "1px 6px", background: "var(--colorNeutralBackground3)", borderRadius: "4px" }}>
+                            <span key={idx} style={{ fontSize: "11px", padding: "1px 6px", background: "var(--colorNeutralBackground3)", borderRadius: "var(--admt-radius-fine)" }}>
                               #{t}
                             </span>
                           ))}
@@ -3292,7 +3294,7 @@ ${slicedLogs}
                   </div>
 
                   {selectedMcpTool && (
-                    <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)", display: "flex", flexDirection: "column", gap: "10px", border: "1px solid var(--colorNeutralStroke2)" }}>
+                    <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)", display: "flex", flexDirection: "column", gap: "10px", border: "1px solid var(--colorNeutralStroke2)" }}>
                       <div>
                         <strong>工具说明：</strong> {selectedMcpTool.description}
                       </div>
@@ -3358,7 +3360,7 @@ ${slicedLogs}
                         <div
                           style={{
                             padding: "10px",
-                            borderRadius: "6px",
+                            borderRadius: "var(--admt-radius-fine)",
                             backgroundColor: "#1e293b",
                             color: "#f8fafc",
                             fontFamily: "Consolas, monospace",
@@ -3388,7 +3390,7 @@ ${slicedLogs}
 
       {/* AI 方案与快速配置弹窗 */}
       <Dialog open={isPresetModalOpen} onOpenChange={(_, data) => !data.open && setIsPresetModalOpen(false)}>
-        <DialogSurface style={{ maxWidth: "620px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "620px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle
               action={
@@ -3407,7 +3409,7 @@ ${slicedLogs}
                 display: "flex",
                 gap: "6px",
                 padding: "3px",
-                borderRadius: "9999px",
+                borderRadius: "var(--admt-radius-pill)",
                 backgroundColor: "var(--colorNeutralBackground3)",
                 width: "fit-content"
               }}>
@@ -3415,7 +3417,7 @@ ${slicedLogs}
                   size="small"
                   appearance={presetModalTab === "presets" ? "primary" : "subtle"}
                   onClick={() => setPresetModalTab("presets")}
-                  style={{ borderRadius: "9999px", fontSize: "12px", height: "26px" }}
+                  style={{ borderRadius: "var(--admt-radius-pill)", fontSize: "12px", height: "26px" }}
                 >
                   多方案选择与切换 ({aiPresets.length})
                 </Button>
@@ -3423,7 +3425,7 @@ ${slicedLogs}
                   size="small"
                   appearance={presetModalTab === "quickConfig" ? "primary" : "subtle"}
                   onClick={() => setPresetModalTab("quickConfig")}
-                  style={{ borderRadius: "9999px", fontSize: "12px", height: "26px" }}
+                  style={{ borderRadius: "var(--admt-radius-pill)", fontSize: "12px", height: "26px" }}
                 >
                   快捷通道与密钥配置
                 </Button>
@@ -3435,7 +3437,7 @@ ${slicedLogs}
                   {/* 保存当前为新方案 */}
                   <div style={{
                     padding: "12px 14px",
-                    borderRadius: "12px",
+                    borderRadius: "var(--admt-radius-panel)",
                     backgroundColor: "var(--colorNeutralBackground2)",
                     border: "1px solid var(--colorNeutralStroke2)",
                     display: "flex",
@@ -3480,7 +3482,7 @@ ${slicedLogs}
                             key={preset.id}
                             style={{
                               padding: "10px 14px",
-                              borderRadius: "10px",
+                              borderRadius: "var(--admt-radius-control)",
                               border: isActive ? "1px solid var(--colorBrandStroke1)" : "1px solid var(--colorNeutralStroke2)",
                               backgroundColor: isActive ? "var(--colorBrandBackground2)" : "var(--colorNeutralBackground2)",
                               display: "flex",

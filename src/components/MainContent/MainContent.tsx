@@ -32,7 +32,6 @@ import { useThemeStore } from "../../stores/themeStore";
 import { useDeviceService } from "../../services/deviceService";
 import { AppView } from "../../types/app";
 import HomePage from "../Home/HomePage";
-import CarouselComponent from "./CarouselComponent";
 import VersionChecker from "../Common/VersionChecker";
 import EnvCheckBanner from "../Common/EnvCheckBanner";
 import { DeviceSelectionModal } from "../Modals/DeviceSelectionModal";
@@ -64,7 +63,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "row",
     overflow: "hidden",
-    height: "100vh",
+    minHeight: 0, // flex 子项收缩，避免叠加标题栏/状态栏后底部被裁切
     backgroundColor: "var(--colorNeutralBackground1)",
     gap: "1px", // 添加分隔线效果
   },
@@ -118,7 +117,7 @@ const useStyles = makeStyles({
     background: "transparent",
     border: "none",
     padding: "4px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -184,7 +183,7 @@ const useStyles = makeStyles({
     position: "relative",
     width: "36px",
     height: "36px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
@@ -221,7 +220,7 @@ const useStyles = makeStyles({
     position: "relative",
     boxSizing: "border-box",
     margin: tokens.spacingHorizontalS, // 添加外边距
-    borderRadius: "8px", // 添加圆角
+    borderRadius: "var(--admt-radius-control)", // 添加圆角
   },
   deviceInfoOverlay: {
     position: "absolute",
@@ -238,7 +237,7 @@ const useStyles = makeStyles({
     opacity: 0,
     transition: "all 0.2s ease",
     cursor: "pointer",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
 
     "&:hover": {
       opacity: 1,
@@ -250,7 +249,7 @@ const useStyles = makeStyles({
     fontWeight: "600",
     padding: `${tokens.spacingVerticalSNudge} ${tokens.spacingHorizontalM}`,
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: "20px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid rgba(255, 255, 255, 0.3)",
     backdropFilter: "blur(4px)",
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
@@ -273,7 +272,7 @@ const useStyles = makeStyles({
     width: "100%",
     overflow: "hidden",
     marginBottom: tokens.spacingVerticalXS, // 减少底部间距
-    borderRadius: "8px", // 添加圆角
+    borderRadius: "var(--admt-radius-control)", // 添加圆角
     padding: tokens.spacingHorizontalXS, // 添加内边距
   },
   deviceSelectorArea: {
@@ -284,7 +283,7 @@ const useStyles = makeStyles({
     width: "100%",
     padding: tokens.spacingHorizontalS,
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
     cursor: "pointer",
     transition: "all 0.2s ease",
@@ -320,7 +319,7 @@ const useStyles = makeStyles({
     width: "100%",
     padding: tokens.spacingHorizontalM,
     border: "1px solid var(--colorNeutralStroke3)",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground3)",
     display: "flex",
     alignItems: "center",
@@ -340,7 +339,7 @@ const useStyles = makeStyles({
     height: "auto", // 改为自动高度
     minHeight: "120px", // 设置最小高度以匹配文字信息区域
     flexShrink: 0,
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     backgroundColor: "var(--colorNeutralBackground2)",
     position: "relative",
     overflow: "hidden",
@@ -379,7 +378,7 @@ const useStyles = makeStyles({
     textAlign: "center",
     padding: tokens.spacingHorizontalXS,
     boxSizing: "border-box",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px solid var(--colorNeutralStroke2)",
     color: "var(--colorNeutralForeground1)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -449,7 +448,7 @@ const useStyles = makeStyles({
     fontSize: "10px", // 稍微增大字体
     padding: "3px 6px", // 增加内边距
     minHeight: "18px", // 增加高度
-    borderRadius: "8px", // 更圆润的边角
+    borderRadius: "var(--admt-radius-control)", // 更圆润的边角
     fontWeight: "500", // 增加字重
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)", // 添加微妙阴影
     width: "80px", // 自适应宽度
@@ -468,7 +467,7 @@ const useStyles = makeStyles({
     width: "95px", // 增加宽度以更好地填充容器
     height: "100%", // 高度填充整个容器
     maxHeight: "88px", // 设置最大高度，留出容器内边距空间
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     objectFit: "contain", // 保持图片比例
     flexShrink: 0,
   },
@@ -600,11 +599,11 @@ const useStyles = makeStyles({
     },
     "&::-webkit-scrollbar-track": {
       background: "var(--colorNeutralBackground1)",
-      borderRadius: "4px",
+      borderRadius: "var(--admt-radius-fine)",
     },
     "&::-webkit-scrollbar-thumb": {
       background: "var(--colorNeutralStroke2)",
-      borderRadius: "4px",
+      borderRadius: "var(--admt-radius-fine)",
       "&:hover": {
         background: "var(--colorNeutralStroke1)",
       },
@@ -614,7 +613,7 @@ const useStyles = makeStyles({
     width: "100%",
     justifyContent: "flex-start",
     padding: "10px 12px", // Increased padding for better touch targets
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     minHeight: "42px", // Increased height for better visibility
     maxWidth: "92%",
     fontSize: "12px",
@@ -668,7 +667,7 @@ const useStyles = makeStyles({
         width: "4px",
         height: "70%",
         backgroundColor: "var(--colorBrandForeground1)",
-        borderRadius: "0 3px 3px 0",
+        borderRadius: "0 var(--admt-radius-fine) var(--admt-radius-fine) 0",
         transition: "all 0.3s ease",
       },
 
@@ -682,14 +681,6 @@ const useStyles = makeStyles({
     "&:active": {
       transform: "scale(0.98)",
     },
-  },
-  carouselContainer: {
-    padding: "8px", // 减少内边距
-    marginTop: "auto",
-    borderTop: "1px solid var(--colorNeutralStroke2)", // 简化边框
-    backgroundColor: "var(--colorNeutralBackground1)",
-    position: "relative",
-    boxSizing: "border-box",
   },
   buttonGroupContainer: {
     display: "flex",
@@ -705,7 +696,7 @@ const useStyles = makeStyles({
     height: "36px",
     fontSize: "12.5px",
     fontWeight: "600",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -730,7 +721,6 @@ const useStyles = makeStyles({
     color: "var(--colorBrandForeground1)",
     ...shorthands.borderColor("var(--colorBrandStroke1)"),
     fontWeight: "600",
-    boxShadow: "0 2px 8px -2px rgba(0, 113, 227, 0.18)",
   },
   consoleButtonGroup: {
     display: "flex",
@@ -742,7 +732,7 @@ const useStyles = makeStyles({
     height: "32px",
     fontSize: "12px",
     fontWeight: "500",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

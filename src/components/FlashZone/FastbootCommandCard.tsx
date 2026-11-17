@@ -95,7 +95,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     border: "1px solid var(--colorNeutralStroke2)", 
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     overflow: "hidden",
   },
   outputContent: {
@@ -122,7 +122,7 @@ const useStyles = makeStyles({
     fontWeight: "600",
     fontSize: "14px",
     marginBottom: "8px",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
   },
   commandGrid: {
     display: "grid",
@@ -133,7 +133,7 @@ const useStyles = makeStyles({
   commandItem: {
     padding: "10px 12px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "4px",
+    borderRadius: "var(--admt-radius-fine)",
     cursor: "pointer",
     '&:hover': {
       backgroundColor: "var(--colorNeutralBackground2)",

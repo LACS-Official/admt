@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { confirm } from './confirmService';
 
 /**
  * 管理员权限管理服务
@@ -94,11 +95,13 @@ class AdminService {
       return;
     }
 
-    const confirmed = window.confirm(
-      '某些功能需要管理员权限才能正常工作。\n\n' +
-      '点击确定将以管理员权限重新启动应用。\n' +
-      '如果取消，某些功能可能无法正常使用。'
-    );
+    const confirmed = await confirm({
+      title: '需要管理员权限',
+      message:
+        '某些功能需要管理员权限才能正常工作。\n\n' +
+        '点击确定将以管理员权限重新启动应用。\n' +
+        '如果取消，某些功能可能无法正常使用。',
+    });
 
     if (confirmed) {
       try {

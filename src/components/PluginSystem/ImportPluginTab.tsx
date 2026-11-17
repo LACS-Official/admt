@@ -24,7 +24,7 @@ const useStyles = makeStyles({
   },
   card: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("20px"),
     display: "flex",
@@ -40,7 +40,7 @@ const useStyles = makeStyles({
   iconBadge: {
     width: "36px",
     height: "36px",
-    ...shorthands.borderRadius("8px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     backgroundColor: "var(--colorBrandBackground2)",
     color: "var(--colorBrandForeground1)",
     display: "flex",
@@ -50,7 +50,7 @@ const useStyles = makeStyles({
   },
   dropZone: {
     ...shorthands.border("2px", "dashed", "var(--colorNeutralStroke1)"),
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.padding("32px", "16px"),
     display: "flex",
     flexDirection: "column",
@@ -71,13 +71,13 @@ const useStyles = makeStyles({
     gap: "6px",
     backgroundColor: "var(--colorNeutralBackground3)",
     ...shorthands.padding("12px"),
-    ...shorthands.borderRadius("8px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     maxHeight: "180px",
     overflowY: "auto",
   },
   presetExamples: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("12px"),
+    ...shorthands.borderRadius("var(--admt-radius-panel)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("16px 20px"),
     display: "flex",
@@ -260,7 +260,7 @@ const ImportPluginTab: React.FC<Props> = ({ onInstallSuccess }) => {
             style={{
               padding: "10px 14px",
               backgroundColor: "var(--colorNeutralBackground2)",
-              borderRadius: "8px",
+              borderRadius: "var(--admt-radius-control)",
               fontSize: "12px",
               color: "var(--colorNeutralForeground3)",
               lineHeight: "1.4",
@@ -303,7 +303,7 @@ const ImportPluginTab: React.FC<Props> = ({ onInstallSuccess }) => {
                 </div>
               </DialogTitle>
               <DialogContent style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ padding: "8px 12px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "8px" }}>
+                <div style={{ padding: "8px 12px", backgroundColor: "var(--colorNeutralBackground2)", borderRadius: "var(--admt-radius-control)" }}>
                   <div style={{ fontWeight: "600", fontSize: "14px" }}>{pendingManifest.name}</div>
                   <div style={{ fontSize: "11px", color: "var(--colorNeutralForeground3)" }}>
                     ID: {pendingManifest.id} • 作者: {pendingManifest.author?.name || "未知"}

@@ -35,7 +35,7 @@ const useStyles = makeStyles({
     justifyContent: 'space-between',
     padding: '16px',
     border: '1px solid var(--colorNeutralStroke2)',
-    borderRadius: '8px',
+    borderRadius: 'var(--admt-radius-control)',
     cursor: 'pointer',
     backgroundColor: 'var(--colorNeutralBackground1)',
     transition: 'all 0.15s ease',

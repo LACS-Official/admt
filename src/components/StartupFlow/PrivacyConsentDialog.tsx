@@ -32,7 +32,7 @@ const useStyles = makeStyles({
     maxHeight: "88vh",
     display: "flex",
     flexDirection: "row",
-    borderRadius: "20px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 24px 64px -12px rgba(0, 0, 0, 0.12), 0 0 1px 1px rgba(0, 0, 0, 0.04)",
@@ -63,7 +63,7 @@ const useStyles = makeStyles({
   appIconImage: {
     width: "112px",
     height: "112px",
-    borderRadius: "22px",
+    borderRadius: "var(--admt-radius-card)",
     boxShadow: "0 8px 24px -4px rgba(0, 0, 0, 0.12)",
     marginBottom: "16px",
   },
@@ -93,7 +93,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     justifyContent: "center",
     padding: "16px 12px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
     cursor: "pointer",
@@ -111,7 +111,7 @@ const useStyles = makeStyles({
   policyIconBox: {
     width: "44px",
     height: "44px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "rgba(0, 113, 227, 0.08)",
     display: "flex",
     alignItems: "center",
@@ -137,7 +137,7 @@ const useStyles = makeStyles({
   checkboxWrapper: {
     marginBottom: "16px",
     padding: "10px 14px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorNeutralStroke2)",
     backgroundColor: "var(--colorNeutralBackground2)",
   },
@@ -147,12 +147,12 @@ const useStyles = makeStyles({
     justifyContent: "flex-end",
   },
   pillButton: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: 500,
     transition: "all 0.15s ease",
   },
   dialogSurface: {
-    borderRadius: "18px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 24px 64px -12px rgba(0, 0, 0, 0.2)",
   },
@@ -180,7 +180,7 @@ const useStyles = makeStyles({
     alignItems: "center",
     padding: "8px 12px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorNeutralStroke2)",
   },
   sponsorshipLeftPanel: {
@@ -197,7 +197,7 @@ const useStyles = makeStyles({
   qrImage: {
     width: "180px",
     height: "180px",
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     objectFit: "cover",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 6px 20px -4px rgba(0, 0, 0, 0.08)",
@@ -205,7 +205,7 @@ const useStyles = makeStyles({
   segmentedTabs: {
     display: "flex",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "3px",
     gap: "4px",
     border: "1px solid var(--colorNeutralStroke2)",
@@ -213,7 +213,7 @@ const useStyles = makeStyles({
   },
   segmentTab: {
     padding: "4px 16px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontSize: "12px",
     fontWeight: 500,
     cursor: "pointer",
@@ -250,7 +250,7 @@ const useStyles = makeStyles({
   highlightBox: {
     padding: "14px 16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
     flexDirection: "column",
@@ -260,7 +260,7 @@ const useStyles = makeStyles({
     width: "660px",
     maxWidth: "92vw",
     maxHeight: "85vh",
-    borderRadius: "18px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 20px 48px -8px rgba(0, 0, 0, 0.24)",
     display: "flex",

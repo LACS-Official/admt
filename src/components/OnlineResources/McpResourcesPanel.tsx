@@ -70,7 +70,7 @@ const useStyles = makeStyles({
   },
   subTabList: {
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     padding: "3px 4px",
     display: "inline-flex",
     alignItems: "center",
@@ -81,7 +81,7 @@ const useStyles = makeStyles({
       fontSize: "12px",
       padding: "4px 14px",
       minHeight: "26px",
-      borderRadius: "9999px",
+      borderRadius: "var(--admt-radius-pill)",
       transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
       border: "none",
       fontWeight: 500,
@@ -123,7 +123,7 @@ const useStyles = makeStyles({
   },
   card: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    ...shorthands.borderRadius("14px"),
+    ...shorthands.borderRadius("var(--admt-radius-card)"),
     ...shorthands.border("1px", "solid", "var(--colorNeutralStroke2)"),
     ...shorthands.padding("16px", "18px"),
     display: "flex",
@@ -157,7 +157,7 @@ const useStyles = makeStyles({
   cardIcon: {
     width: "36px",
     height: "36px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "rgba(0, 113, 227, 0.07)",
     border: "1px solid rgba(0, 113, 227, 0.12)",
     display: "flex",
@@ -192,7 +192,7 @@ const useStyles = makeStyles({
     textOverflow: "ellipsis",
   },
   cardBadge: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontSize: "11px",
     padding: "2px 8px",
     flexShrink: 0,
@@ -237,7 +237,7 @@ const useStyles = makeStyles({
     gap: "6px",
   },
   actionButton: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontSize: "12px",
     height: "28px",
     padding: "0 12px",
@@ -246,7 +246,7 @@ const useStyles = makeStyles({
   },
   codeBlock: {
     backgroundColor: "var(--colorNeutralBackground3)",
-    ...shorthands.borderRadius("10px"),
+    ...shorthands.borderRadius("var(--admt-radius-control)"),
     ...shorthands.padding("14px"),
     fontFamily: 'ui-monospace, "SF Mono", Menlo, Consolas, "Cascadia Code", monospace',
     fontSize: "12px",
@@ -260,7 +260,7 @@ const useStyles = makeStyles({
   sourceCard: {
     backgroundColor: "var(--colorNeutralBackground1)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     padding: "12px 14px",
     display: "flex",
     flexDirection: "column",
@@ -807,7 +807,7 @@ export const McpResourcesPanel: React.FC = () => {
 
       {/* 1. MCP 工具调试弹窗 */}
       <Dialog open={!!detailTool} onOpenChange={(_, data) => !data.open && setDetailTool(null)}>
-        <DialogSurface style={{ maxWidth: "740px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "740px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           {detailTool && (
             <DialogBody>
               <DialogTitle
@@ -830,7 +830,7 @@ export const McpResourcesPanel: React.FC = () => {
                 {detailTool.name === "yuanbao_web_search" && (
                   <div style={{
                     padding: "14px",
-                    borderRadius: "12px",
+                    borderRadius: "var(--admt-radius-panel)",
                     backgroundColor: "var(--colorNeutralBackground2)",
                     border: "1px solid var(--colorNeutralStroke2)",
                     display: "flex",
@@ -840,7 +840,7 @@ export const McpResourcesPanel: React.FC = () => {
                     {!config.ai?.yuanbaoSearch?.apiKey && (
                       <div style={{
                         padding: "8px 12px",
-                        borderRadius: "8px",
+                        borderRadius: "var(--admt-radius-control)",
                         backgroundColor: "rgba(235, 87, 87, 0.08)",
                         border: "1px solid rgba(235, 87, 87, 0.2)",
                         fontSize: "12px",
@@ -890,7 +890,7 @@ export const McpResourcesPanel: React.FC = () => {
 
                 {/* 其他常见 MCP 工具参数 */}
                 {detailTool.name === "admt_execute_adb" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Field label="ADB Shell 指令 (无需加 'adb')">
                       <Input
                         value={mcpParamInputs.command || ""}
@@ -903,7 +903,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "admt_reboot_device" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Field label="重启目标模式 (Target)">
                       <Select
                         value={mcpParamInputs.target || "system"}
@@ -919,7 +919,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "admt_list_packages" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Field label="过滤分类">
                       <Select
                         value={mcpParamInputs.filter || "all"}
@@ -934,7 +934,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "admt_execute_fastboot" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Field label="Fastboot 命令参数 (无需加 'fastboot')">
                       <Input
                         value={mcpParamInputs.fastbootCommand || "getvar all"}
@@ -947,7 +947,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "admt_execute_host_command" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)", display: "flex", flexDirection: "column", gap: "10px" }}>
                     <Field label="宿主命令行指令">
                       <Input
                         value={mcpParamInputs.hostCommand || "ipconfig"}
@@ -969,7 +969,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "admt_install_apk" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Field label="电脑本地 APK 文件绝对路径" required>
                       <Input
                         value={mcpParamInputs.filePath || ""}
@@ -982,7 +982,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {(detailTool.name === "admt_get_device_info" || detailTool.name === "admt_take_screenshot" || detailTool.name === "admt_capture_screen") && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Field label="指定设备序列号 (可选，留空则自动选择已连接设备)">
                       <Input
                         value={mcpParamInputs.serial || ""}
@@ -995,7 +995,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "admt_get_devices" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
                       该工具无需参数，点击「立即运行测试」将实时扫描并通过底层接口获取当前所有已连接的 Android / Fastboot 设备。
                     </Text>
@@ -1003,7 +1003,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "admt_get_host_info" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Text size={200} style={{ color: "var(--colorNeutralForeground2)" }}>
                       该工具无需参数，点击「立即运行测试」将自动采集当前运行 ADMT 宿主电脑的主机名、操作系统平台与局域网 IPv4 地址。
                     </Text>
@@ -1011,7 +1011,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "fetch_web_content" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Field label="网页目标 URL">
                       <Input
                         value={mcpParamInputs.url || "https://github.com"}
@@ -1024,7 +1024,7 @@ export const McpResourcesPanel: React.FC = () => {
                 )}
 
                 {detailTool.name === "brave_web_search" && (
-                  <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "var(--colorNeutralBackground2)" }}>
+                  <div style={{ padding: "12px", borderRadius: "var(--admt-radius-control)", backgroundColor: "var(--colorNeutralBackground2)" }}>
                     <Field label="搜索关键词">
                       <Input
                         value={mcpParamInputs.query || ""}
@@ -1102,11 +1102,11 @@ export const McpResourcesPanel: React.FC = () => {
                 {mcpTestResult?.result?.imageBase64 && (
                   <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
                     <Text weight="bold" size={200}>屏幕快照预览：</Text>
-                    <div style={{ textAlign: "center", backgroundColor: "var(--colorNeutralBackground1)", padding: "10px", borderRadius: "12px", border: "1px solid var(--colorNeutralStroke2)" }}>
+                    <div style={{ textAlign: "center", backgroundColor: "var(--colorNeutralBackground1)", padding: "10px", borderRadius: "var(--admt-radius-panel)", border: "1px solid var(--colorNeutralStroke2)" }}>
                       <img
                         src={mcpTestResult.result.imageBase64.startsWith("data:") ? mcpTestResult.result.imageBase64 : `data:image/png;base64,${mcpTestResult.result.imageBase64}`}
                         alt="Screen Capture"
-                        style={{ maxHeight: "260px", maxWidth: "100%", borderRadius: "8px", objectFit: "contain" }}
+                        style={{ maxHeight: "260px", maxWidth: "100%", borderRadius: "var(--admt-radius-control)", objectFit: "contain" }}
                       />
                     </div>
                   </div>
@@ -1132,7 +1132,7 @@ export const McpResourcesPanel: React.FC = () => {
 
       {/* 2. MCP 服务端接入弹窗 */}
       <Dialog open={!!detailMcpServer} onOpenChange={(_, data) => !data.open && setDetailMcpServer(null)}>
-        <DialogSurface style={{ maxWidth: "740px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "740px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           {detailMcpServer && (
             <DialogBody>
               <DialogTitle
@@ -1170,7 +1170,7 @@ export const McpResourcesPanel: React.FC = () => {
                 {detailMcpServer.id === "mcp.admt.core" && (
                   <div style={{
                     padding: "12px 14px",
-                    borderRadius: "12px",
+                    borderRadius: "var(--admt-radius-panel)",
                     backgroundColor: "var(--colorNeutralBackground2)",
                     border: "1px solid var(--colorNeutralStroke2)",
                     display: "flex",
@@ -1302,7 +1302,7 @@ export const McpResourcesPanel: React.FC = () => {
 
       {/* 3. 元宝搜索专属参数配置弹窗（仅由对应卡片内部触发） */}
       <Dialog open={isYuanbaoConfigOpen} onOpenChange={(_, data) => !data.open && setIsYuanbaoConfigOpen(false)}>
-        <DialogSurface style={{ maxWidth: "540px", width: "90vw", borderRadius: "16px" }}>
+        <DialogSurface style={{ maxWidth: "540px", width: "90vw", borderRadius: "var(--admt-radius-card)" }}>
           <DialogBody>
             <DialogTitle
               action={
@@ -1395,7 +1395,7 @@ export const McpResourcesPanel: React.FC = () => {
                 {yuanbaoTestStatus.type !== "idle" && (
                   <div style={{
                     padding: "8px 12px",
-                    borderRadius: "8px",
+                    borderRadius: "var(--admt-radius-control)",
                     fontSize: "12px",
                     display: "flex",
                     alignItems: "center",

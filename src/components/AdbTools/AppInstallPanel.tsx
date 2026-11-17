@@ -32,7 +32,7 @@ const useStyles = makeStyles({
   },
   splitLayout: {
     display: "grid",
-    gridTemplateColumns: "320px 1fr",
+    gridTemplateColumns: "minmax(0, 320px) minmax(0, 1fr)",
     gap: "16px",
     height: "100%",
     minHeight: 0,
@@ -43,7 +43,7 @@ const useStyles = makeStyles({
     gap: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
     padding: "20px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     overflowY: "auto",
     boxSizing: "border-box",
@@ -73,13 +73,13 @@ const useStyles = makeStyles({
     display: "flex",
     padding: "3px",
     backgroundColor: "var(--colorNeutralBackground3)",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     gap: "4px",
   },
   segmentedButton: {
     flex: 1,
     padding: "6px 12px",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontSize: "12px",
     fontWeight: 500,
     textAlign: "center",
@@ -94,13 +94,13 @@ const useStyles = makeStyles({
   },
   segmentedButtonActive: {
     backgroundColor: "var(--colorNeutralBackground1)",
-    color: "#0071e3",
+    color: "var(--colorBrandForeground1)",
     fontWeight: 600,
     boxShadow: "0 1px 4px rgba(0, 0, 0, 0.08)",
   },
   card: {
     width: "100%",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
     flexDirection: "column",
@@ -127,7 +127,7 @@ const useStyles = makeStyles({
   },
   dropzoneCard: {
     padding: "20px 16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1.5px dashed var(--colorNeutralStroke1)",
     backgroundColor: "var(--colorNeutralBackground1)",
     display: "flex",
@@ -139,7 +139,7 @@ const useStyles = makeStyles({
     transition: "all 0.2s ease",
     cursor: "pointer",
     "&:hover": {
-      ...shorthands.borderColor("#0071e3"),
+      ...shorthands.borderColor("var(--colorBrandForeground1)"),
       backgroundColor: "rgba(0, 113, 227, 0.03)",
     },
   },
@@ -149,7 +149,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "12px 14px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground2)",
     transition: "all 0.18s ease",
     "&:hover": {
@@ -185,7 +185,7 @@ const useStyles = makeStyles({
     justifyContent: "space-between",
     padding: "10px 14px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
     transition: "all 0.18s cubic-bezier(0.4, 0, 0.2, 1)",
     "&:hover": {
@@ -227,7 +227,7 @@ const useStyles = makeStyles({
     color: "var(--colorNeutralForeground3)",
     gap: "8px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     border: "1px dashed var(--colorNeutralStroke2)",
     height: "100%",
     boxSizing: "border-box",
@@ -580,7 +580,7 @@ const AppInstallPanel: React.FC<AppInstallPanelProps> = ({ device, onAdbRequired
           {installMode === 'single' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div className={styles.dropzoneCard} onClick={handleFileSelect}>
-                <ArrowUpload24Regular style={{ fontSize: '28px', color: '#0071e3' }} />
+                <ArrowUpload24Regular style={{ fontSize: '28px', color: 'var(--colorBrandForeground1)' }} />
                 <div>
                   <Text size={200} weight="semibold" block>{t('app_install.select_package')}</Text>
                   <Text size={100} color="neutralSecondary" block>{t('app_install.apk_files')}</Text>

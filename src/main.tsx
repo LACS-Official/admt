@@ -28,6 +28,19 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useDeviceStore } from "./stores/deviceStore";
 import { useAIChatStore } from "./stores/aiChatStore";
 
+// 圆角档位由「显示设置 → 圆角风格」驱动，界面所有圆角统一引用这组 CSS 变量。
+// 数值与设置项一致：较小 8px / 适中 14px / 较大 20px（指卡片圆角）。
+type RadiusLevel = "small" | "medium" | "large";
+
+const RADIUS_PRESETS: Record<
+  RadiusLevel,
+  { card: string; panel: string; control: string; fine: string; pill: string }
+> = {
+  small:  { card: "8px",  panel: "6px",  control: "4px",  fine: "2px", pill: "9999px" },
+  medium: { card: "14px", panel: "12px", control: "8px",  fine: "4px", pill: "9999px" },
+  large:  { card: "20px", panel: "16px", control: "12px", fine: "6px", pill: "9999px" },
+};
+
 // 辅助函数：根据十六进制颜色生成品牌色阶 (BrandVariants)
 const generateBrandVariants = (hex: string): BrandVariants => {
   // 十六进制转 HSL
@@ -94,28 +107,31 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     cornerRadius,
   } = useThemeStore();
 
+  const radius = RADIUS_PRESETS[cornerRadius] ?? RADIUS_PRESETS.medium;
+
+  // 变量写在 documentElement 上，Fluent 的 Portal 弹窗（挂到 body）也能读到。
+  React.useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--admt-radius-card", radius.card);
+    root.style.setProperty("--admt-radius-panel", radius.panel);
+    root.style.setProperty("--admt-radius-control", radius.control);
+    root.style.setProperty("--admt-radius-fine", radius.fine);
+    root.style.setProperty("--admt-radius-pill", radius.pill);
+  }, [radius]);
+
   const theme = React.useMemo(() => {
     const brand = generateBrandVariants(accentColor || "#0078d4");
     const baseTheme = isDarkMode ? createDarkTheme(brand) : createLightTheme(brand);
-    
-    // 应用圆角设置
-    // 设计规范：卡片 12-16px 连续圆角，交互控件 9999px 胶囊。
-    // 三档用户设置都落在合规区间内，不再出现 2/4/8px 小碎圆角。
-    const radiusMap = {
-      small: "12px",
-      medium: "14px",
-      large: "16px"
-    };
-    const borderRadius = radiusMap[cornerRadius] || "14px";
 
+    // Fluent 主题令牌同步跟随圆角档位，胶囊按钮/选项卡保持 9999px。
     const finalTheme: Theme = {
       ...baseTheme,
       borderRadiusNone: "0",
-      borderRadiusSmall: "12px",
-      borderRadiusMedium: borderRadius,
-      borderRadiusLarge: "16px",
-      borderRadiusXLarge: "16px",
-      borderRadiusCircular: "9999px",
+      borderRadiusSmall: radius.fine,
+      borderRadiusMedium: radius.control,
+      borderRadiusLarge: radius.card,
+      borderRadiusXLarge: radius.card,
+      borderRadiusCircular: radius.pill,
     };
 
     // 应用内容密度 (间距) 设置
@@ -140,7 +156,7 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     }
 
     return finalTheme;
-  }, [isDarkMode, accentColor, cornerRadius, contentDensity]);
+  }, [isDarkMode, accentColor, cornerRadius, contentDensity, radius]);
 
   const densityClassName = contentDensity === 'compact' ? 'fui-FluentProvider--compact' : '';
   const themeClassName = `${densityClassName} ${isDarkMode ? 'fui-FluentProvider--dark' : 'fui-FluentProvider--light'}`;

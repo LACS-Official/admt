@@ -94,7 +94,7 @@ const useStyles = makeStyles({
   },
   splitLayout: {
     display: "grid",
-    gridTemplateColumns: "270px 1fr",
+    gridTemplateColumns: "minmax(0, 270px) minmax(0, 1fr)",
     gap: "16px",
     height: "100%",
     minHeight: 0,
@@ -105,7 +105,7 @@ const useStyles = makeStyles({
     gap: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
     padding: "18px",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     overflowY: "auto",
     boxSizing: "border-box",
@@ -121,7 +121,7 @@ const useStyles = makeStyles({
   card: {
     width: "100%",
     height: "100%",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     display: "flex",
     flexDirection: "column",
@@ -152,7 +152,7 @@ const useStyles = makeStyles({
     flex: 1,
     overflow: "auto",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground1)",
     "&::-webkit-scrollbar": {
       width: "6px",
@@ -163,7 +163,7 @@ const useStyles = makeStyles({
     },
     "&::-webkit-scrollbar-thumb": {
       backgroundColor: "var(--colorNeutralStroke2)",
-      borderRadius: "10px",
+      borderRadius: "var(--admt-radius-control)",
       "&:hover": {
         backgroundColor: "var(--colorNeutralStroke1)",
       },
@@ -187,7 +187,7 @@ const useStyles = makeStyles({
   appIcon: {
     width: "24px",
     height: "24px",
-    borderRadius: "6px",
+    borderRadius: "var(--admt-radius-fine)",
     backgroundColor: "var(--colorNeutralBackground2)",
     display: "flex",
     alignItems: "center",
@@ -213,7 +213,7 @@ const useStyles = makeStyles({
       wordBreak: "break-all",
       backgroundColor: "var(--colorNeutralBackground1)",
       padding: "4px",
-      borderRadius: "4px",
+      borderRadius: "var(--admt-radius-fine)",
       boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       zIndex: 1000,
       position: "relative",
@@ -233,7 +233,7 @@ const useStyles = makeStyles({
       wordBreak: "break-all",
       backgroundColor: "var(--colorNeutralBackground1)",
       padding: "4px",
-      borderRadius: "4px",
+      borderRadius: "var(--admt-radius-fine)",
       boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       zIndex: 1000,
       position: "relative",
@@ -280,7 +280,7 @@ const useStyles = makeStyles({
   appIconLarge: {
     width: "32px",
     height: "32px",
-    borderRadius: "8px",
+    borderRadius: "var(--admt-radius-control)",
     backgroundColor: "var(--colorNeutralBackground3)",
     display: "flex",
     alignItems: "center",

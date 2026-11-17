@@ -53,7 +53,7 @@ const useStyles = makeStyles({
     },
   },
   bentoCard: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke1)",
     boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02)",
     backgroundColor: "var(--colorNeutralBackground1)",
@@ -78,7 +78,7 @@ const useStyles = makeStyles({
   iconSquircle: {
     width: "36px",
     height: "36px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -89,7 +89,7 @@ const useStyles = makeStyles({
   iconSquircleDanger: {
     width: "36px",
     height: "36px",
-    borderRadius: "10px",
+    borderRadius: "var(--admt-radius-control)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -150,7 +150,7 @@ const useStyles = makeStyles({
     lineHeight: "1.4",
   },
   badgePill: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: 600,
     fontSize: "11px",
     padding: "3px 10px",
@@ -162,7 +162,7 @@ const useStyles = makeStyles({
     padding: "12px 14px",
     marginTop: "8px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     border: "1px solid var(--colorNeutralStroke2)",
     "@media (max-width: 560px)": {
       gridTemplateColumns: "1fr",
@@ -170,7 +170,7 @@ const useStyles = makeStyles({
   },
   dangerBox: {
     padding: "14px 16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "rgba(239, 68, 68, 0.08)",
     border: "1px solid rgba(239, 68, 68, 0.24)",
     display: "flex",
@@ -185,7 +185,7 @@ const useStyles = makeStyles({
     gap: "16px",
   },
   pillButton: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: 500,
     padding: "0 16px",
     height: "32px",
@@ -193,7 +193,7 @@ const useStyles = makeStyles({
     transition: "all 0.15s ease",
   },
   dangerButton: {
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
     fontWeight: 500,
     padding: "0 16px",
     height: "32px",
@@ -206,7 +206,7 @@ const useStyles = makeStyles({
     },
   },
   dialogSurface: {
-    borderRadius: "16px",
+    borderRadius: "var(--admt-radius-card)",
     border: "1px solid var(--colorNeutralStroke2)",
     boxShadow: "0 20px 48px -8px rgba(0, 0, 0, 0.24)",
     padding: "20px 24px",

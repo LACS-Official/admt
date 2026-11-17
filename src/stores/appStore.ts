@@ -77,6 +77,7 @@ const defaultConfig: AppConfig = {
   deviceDetectionInterval: 5000,
   logLevel: "info",
   logRecordingLevels: ["error", "warning", "info"],
+  logRetentionDays: 7,
   systemTrayEnabled: true,
   autoStartEnabled: false,
   minimizeToTrayOnClose: true,

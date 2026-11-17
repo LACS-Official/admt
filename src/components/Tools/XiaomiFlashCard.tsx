@@ -31,7 +31,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "14px",
+    borderRadius: "var(--admt-radius-card)",
     backgroundColor: "var(--colorNeutralBackground1)",
   },
   packageSection: {
@@ -47,7 +47,7 @@ const useStyles = makeStyles({
   packageInfo: {
     padding: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     fontSize: "13px",
     lineHeight: 1.5,
   },
@@ -57,7 +57,7 @@ const useStyles = makeStyles({
     gap: "12px",
     padding: "16px",
     backgroundColor: "var(--colorNeutralBackground2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     fontSize: "13px",
   },
   progressSection: {
@@ -73,7 +73,7 @@ const useStyles = makeStyles({
     fontSize: "14px",
     backgroundColor: "var(--colorNeutralBackground2)",
     border: "1px solid var(--colorNeutralStroke2)",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     padding: "12px",
     maxHeight: "300px",
     overflow: "auto",
@@ -84,17 +84,17 @@ const useStyles = makeStyles({
     backgroundColor: "var(--colorPaletteRedBackground1)",
     border: "1px solid var(--colorPaletteRedBorder1)",
     padding: "16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
   },
   infoSection: {
     backgroundColor: "var(--colorPaletteBlueBackground1)",
     border: "1px solid var(--colorPaletteBlueBorder1)",
     padding: "16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
   },
   arbDangerAlert: {
     padding: "12px 16px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "rgba(235, 87, 87, 0.12)",
     border: "1px solid rgba(235, 87, 87, 0.4)",
     display: "flex",
@@ -103,7 +103,7 @@ const useStyles = makeStyles({
   },
   arbSafeAlert: {
     padding: "10px 14px",
-    borderRadius: "12px",
+    borderRadius: "var(--admt-radius-panel)",
     backgroundColor: "rgba(39, 174, 96, 0.12)",
     border: "1px solid rgba(39, 174, 96, 0.35)",
     display: "flex",
@@ -136,7 +136,7 @@ const useStyles = makeStyles({
   actionButton: {
     minHeight: "36px",
     width: "100%",
-    borderRadius: "9999px",
+    borderRadius: "var(--admt-radius-pill)",
   },
 });
 
