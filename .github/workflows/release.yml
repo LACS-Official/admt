@@ -49,3 +49,28 @@ jobs:
           releaseBody: "Automated Windows release for ADMT ${{ github.ref_name }}."
           releaseDraft: false
           prerelease: false
+
+      # 发版约定：docs/updates/<去掉 v 的版本号>.md 即该版本 Release 正文。
+      # 优先取 master 上的文档（兼容先打 tag 后补日志），其次取 tag commit 自带的文档。
+      - name: Sync changelog to release notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          file="docs/updates/${version}.md"
+          git fetch --no-tags origin master
+          git show "origin/master:$file" > "$file.from-master" 2>/dev/null || true
+          if [ -s "$file.from-master" ]; then
+            notes="$file.from-master"
+          elif [ -f "$file" ]; then
+            notes="$file"
+          else
+            notes=""
+          fi
+          if [ -n "$notes" ]; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file "$notes" --repo "$GITHUB_REPOSITORY"
+            echo "Release notes synced from $notes"
+          else
+            echo "::warning::$file not found; keeping default release body."
+          fi
