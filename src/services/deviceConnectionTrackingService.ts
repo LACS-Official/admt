@@ -17,6 +17,7 @@ interface DeviceConnectionData {
   deviceBrand?: string;
   deviceModel?: string;
   osVersion?: string;
+  osPlatform?: string; // 发起连接的桌面端运行系统：windows/macos/linux/android
 }
 
 // API响应接口
@@ -43,6 +44,7 @@ export class DeviceConnectionTrackingService {
   private static instance: DeviceConnectionTrackingService | null = null;
   private isInitialized = false;
   private deviceFingerprint: string | null = null;
+  private osPlatform: string | null = null; // 运行系统（来自设备指纹）
   private lastRequestTime = 0;
   private reportedSerials = new Set<string>(); // 记录已上报的序列号，防止重复访问API
   private readonly RATE_LIMIT_INTERVAL = 10000; // 10秒频率限制
@@ -120,6 +122,7 @@ export class DeviceConnectionTrackingService {
         ...connectionData,
         softwareId: config.software_id,
         userDeviceFingerprint: this.deviceFingerprint!,
+        osPlatform: this.osPlatform || undefined,
       };
 
       // 发送数据到API
@@ -192,11 +195,12 @@ export class DeviceConnectionTrackingService {
       
       console.log(` [设备连接统计] 环境: ${environment}, 请求: POST ${endpoint}`);
 
-      // 根据API文档，只发送必需的字段
+      // 根据API文档，只发送必需的字段（含运行系统维度）
       const apiData = {
         deviceSerial: data.deviceSerial,
         softwareId: data.softwareId,
-        userDeviceFingerprint: data.userDeviceFingerprint
+        userDeviceFingerprint: data.userDeviceFingerprint,
+        osPlatform: data.osPlatform
       };
 
       console.log(' 发送设备连接数据到端点:', endpoint);
@@ -250,12 +254,14 @@ export class DeviceConnectionTrackingService {
       // 调用Tauri命令获取设备指纹
       const fingerprint: DetailedDeviceFingerprint = await invoke('get_detailed_device_fingerprint');
       this.deviceFingerprint = fingerprint.fingerprint;
-      
+      this.osPlatform = fingerprint.os || null;
+
       console.log(' 设备指纹生成成功:', this.deviceFingerprint.substring(0, 8) + '...');
     } catch (error) {
       console.error(' 生成设备指纹失败:', error);
       // 使用备用方案生成简单指纹
       this.deviceFingerprint = this.generateFallbackFingerprint();
+      this.osPlatform = (navigator as any).userAgentData?.platform || navigator.platform || null;
       console.log(' 使用备用设备指纹:', this.deviceFingerprint.substring(0, 8) + '...');
     }
   }

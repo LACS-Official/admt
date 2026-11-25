@@ -7,6 +7,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { usePrivacyConsentStore } from '../stores/privacyConsentStore';
 import { SecurityConfigManager } from '../config/securityConfig';
+import { tauriHttpService } from './tauriHttpService';
 
 // 使用数据接口
 interface UsageData {
@@ -15,6 +16,7 @@ interface UsageData {
   softwareVersion?: string;
   deviceFingerprint: string;
   used: number;
+  osPlatform?: string; // 运行系统：windows/macos/linux/android
 }
 
 // API响应接口
@@ -44,6 +46,7 @@ export class UsageTrackingService {
   private hasTrackedThisSession = false;
   private isTrackingInProgress = false; // 新向：平衡并发请求
   private deviceFingerprint: string | null = null;
+  private osPlatform: string | null = null; // 运行系统（来自设备指纹）
   private lastRequestTimes: Map<string, number> = new Map(); // IP级别频率限制
 
   private constructor() {
@@ -139,7 +142,8 @@ export class UsageTrackingService {
         softwareName: '玩机管家',
         softwareVersion: config.app_version,
         deviceFingerprint: this.deviceFingerprint!,
-        used: 1
+        used: 1,
+        osPlatform: this.osPlatform || 'unknown'
       };
 
       // 发送数据到API
@@ -206,9 +210,11 @@ export class UsageTrackingService {
   }
 
   /**
-   * 记录使用数据（开源纯净策略：100% 存储于本地，不外发网络请求）
+   * 记录使用数据（本地留档 + 真实上报服务端，启动即记录运行系统 OS）
+   * 仅在用户同意隐私政策后发送（canCollectData 已在调用方校验）
    */
   private async sendUsageData(data: UsageData): Promise<boolean> {
+    // 1. 本地留档（无论上报成败都保留，供本地查看）
     try {
       const localStatsKey = 'admt_local_usage_stats';
       const existing = localStorage.getItem(localStatsKey);
@@ -225,13 +231,52 @@ export class UsageTrackingService {
       localStorage.setItem(localStatsKey, JSON.stringify({
         lastUsed: new Date().toISOString(),
         version: data.softwareVersion,
+        os: data.osPlatform,
         count,
       }));
 
       console.log(`[UsageTracking] 本地会话统计更新完成 (累计使用: ${count} 次)`);
-      return true;
     } catch (error) {
       console.warn('[UsageTracking] 本地统计记录异常:', error);
+    }
+
+    // 2. 真实上报服务端（记录启动软件的设备 OS：windows/macos/linux/android）
+    try {
+      const endpoint = '/api/user-behavior/usage';
+
+      // 只发送 API 需要的字段
+      const apiData = {
+        softwareId: data.softwareId,
+        softwareName: data.softwareName,
+        softwareVersion: data.softwareVersion,
+        deviceFingerprint: data.deviceFingerprint,
+        used: data.used,
+        osPlatform: data.osPlatform || undefined
+      };
+
+      console.log(` [使用统计] 请求: POST ${endpoint}`, {
+        softwareId: apiData.softwareId,
+        osPlatform: apiData.osPlatform,
+        deviceFingerprint: apiData.deviceFingerprint.substring(0, 8) + '...'
+      });
+
+      const response = await tauriHttpService.post<ApiResponse>(endpoint, apiData, {
+        timeout: 10000,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.success) {
+        console.warn('[UsageTracking] 使用数据上报失败:', response.error);
+        return false;
+      }
+
+      console.log('[UsageTracking] 使用数据上报成功:', response.data?.message || '成功');
+      return true;
+    } catch (error) {
+      console.warn('[UsageTracking] 使用数据上报异常:', error);
       return false;
     }
   }
@@ -245,6 +290,7 @@ export class UsageTrackingService {
       // 调用Tauri命令获取设备指纹
       const fingerprint: DetailedDeviceFingerprint = await invoke('get_detailed_device_fingerprint');
       this.deviceFingerprint = fingerprint.fingerprint;
+      this.osPlatform = fingerprint.os || null;
 
       console.log(' 设备指纹生成成功:', this.deviceFingerprint.substring(0, 8) + '...');
       console.log(' 设备指纹详细信息:', {
@@ -258,6 +304,7 @@ export class UsageTrackingService {
       console.log(' 尝试使用备用方案生成设备指纹...');
       // 使用备用方案生成简单指纹
       this.deviceFingerprint = this.generateFallbackFingerprint();
+      this.osPlatform = (navigator as any).userAgentData?.platform || navigator.platform || null;
       console.log(' 使用备用设备指纹:', this.deviceFingerprint.substring(0, 8) + '...');
     }
   }
