@@ -7,7 +7,11 @@ on:
 
 jobs:
   quality:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,6 +23,12 @@ jobs:
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
+
+      - name: install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev rpm
 
       - name: install frontend dependencies
         run: npm ci

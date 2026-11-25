@@ -6,6 +6,8 @@
 
 [English](./README.en.md) | 简体中文
 
+桌面端、Web 版与共享包的仓库边界见 [项目结构说明](./docs/PROJECT_STRUCTURE.md)。
+
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC107.svg?logo=tauri)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react)](https://react.dev)

@@ -12,9 +12,12 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "npm run build && tauri build",
-    "tauri:build:debug": "npm run build && tauri build --debug",
-    "tauri:build:prod": "npm run build && tauri build --mode production",
+    "tauri:build": "npm run prepare:tools && npm run build && tauri build",
+    "tauri:build:debug": "npm run prepare:tools && npm run build && tauri build --debug",
+    "tauri:build:prod": "npm run prepare:tools && npm run build && tauri build --mode production",
+    "prepare:tools": "node scripts/prepare-tools.mjs",
+    "version:sync": "node scripts/sync-versions.mjs",
+    "version:check": "node scripts/sync-versions.mjs --check",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
@@ -22,6 +25,7 @@
     "prebuild": "npm run clean"
   },
   "dependencies": {
+    "@admt/shared": "file:vendor/admt-shared-1.5.6.tgz",
     "@fluentui/react-components": "^9.54.19",
     "@fluentui/react-icons": "^2.0.258",
     "@tauri-apps/api": "~2.10.0",

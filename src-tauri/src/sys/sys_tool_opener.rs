@@ -252,12 +252,40 @@ pub async fn open_task_manager() -> Result<CommandResult> {
         }
     }
 
-    #[cfg(not(any(windows, target_os = "linux")))]
+    #[cfg(target_os = "macos")]
+    {
+        log::info!("Attempting to open Activity Monitor on macOS");
+        let mut cmd = Command::new("open");
+        cmd.args(["-a", "Activity Monitor"]);
+        match cmd.spawn() {
+            Ok(child) => {
+                let pid = child.id();
+                log::info!("Activity Monitor started successfully with PID: {}", pid);
+                return Ok(CommandResult {
+                    success: true,
+                    output: format!("活动监视器已成功打开 (进程ID: {})", pid),
+                    error: None,
+                    exit_code: Some(0),
+                });
+            }
+            Err(e) => {
+                log::error!("Failed to open Activity Monitor: {}", e);
+                return Ok(CommandResult {
+                    success: false,
+                    output: String::new(),
+                    error: Some(format!("无法打开活动监视器: {}", e)),
+                    exit_code: Some(1),
+                });
+            }
+        }
+    }
+
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
     {
         Ok(CommandResult {
             success: false,
             output: String::new(),
-            error: Some("任务管理器功能目前仅支持 Windows 和 Linux".to_string()),
+            error: Some("任务管理器功能目前仅支持 Windows、Linux 和 macOS".to_string()),
             exit_code: Some(1),
         })
     }

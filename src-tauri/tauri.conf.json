@@ -70,7 +70,8 @@
     "icon": [
       "icons/64x64.png",
       "icons/128x128.png",
-      "icons/icon.ico"
+      "icons/icon.ico",
+      "icons/icon.icns"
     ],
     "category": "Utility",
     "shortDescription": "Android设备跨平台全能管家",

@@ -399,10 +399,9 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(not(windows))]
     {
-        // ... (Linux implementation stays same)
-        // 在 Linux 上使用 pkill 结束 adb 进程
+        // 在 Linux/macOS 上使用 pkill 结束 adb 进程
         let mut cmd = Command::new("pkill");
         cmd.args(["-f", "adb"])
             .stdout(Stdio::piped())
@@ -419,7 +418,7 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
                 };
 
                 log::info!(
-                    "ADB service termination (Linux) completed with exit code: {:?}",
+                    "ADB service termination (Linux/macOS) completed with exit code: {:?}",
                     output.status.code()
                 );
 
@@ -435,7 +434,7 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
                 })
             }
             Err(e) => {
-                let error_msg = format!("结束ADB服务失败 (Linux): {}", e);
+                let error_msg = format!("结束ADB服务失败 (Linux/macOS): {}", e);
                 log::error!("{}", error_msg);
                 Ok(CommandResult {
                     success: false,
@@ -445,16 +444,6 @@ pub async fn finish_adb_service() -> Result<CommandResult> {
                 })
             }
         }
-    }
-
-    #[cfg(not(any(windows, target_os = "linux")))]
-    {
-        Ok(CommandResult {
-            success: false,
-            output: String::new(),
-            error: Some("结束ADB服务功能目前仅支持 Windows 和 Linux".to_string()),
-            exit_code: Some(1),
-        })
     }
 }
 

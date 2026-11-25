@@ -5,15 +5,17 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
-  publish:
+  build:
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest]
-
+        platform: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -24,8 +26,24 @@ jobs:
           node-version: 22
           cache: "npm"
 
+      - name: verify release version
+        shell: bash
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          actual=$(node -p "require('./package.json').version")
+          if [ "$expected" != "$actual" ]; then
+            echo "::error::tag $GITHUB_REF_NAME 与 package.json 版本 $actual 不一致"
+            exit 1
+          fi
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
+
+      - name: install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev rpm
 
       - name: install frontend dependencies
         run: npm ci
@@ -36,23 +54,34 @@ jobs:
       - name: unit tests
         run: npm run test:run
 
+      - name: prepare platform tools
+        run: npm run prepare:tools
+
       - name: build frontend assets
         run: npm run build
 
-      - name: build and release
+      - name: build and upload assets to draft release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "ADMT ${{ github.ref_name }}"
-          releaseBody: "Automated Windows release for ADMT ${{ github.ref_name }}."
-          releaseDraft: false
+          releaseBody: "ADMT ${{ github.ref_name }}"
+          releaseDraft: true
           prerelease: false
 
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
       # 发版约定：docs/updates/<去掉 v 的版本号>.md 即该版本 Release 正文。
-      # 优先取 master 上的文档（兼容先打 tag 后补日志），其次取 tag commit 自带的文档。
-      - name: Sync changelog to release notes
+      # 优先取 master 上的文档（兼容先打 tag 后补日志），再回退到 tag commit 自带文档。
+      - name: publish release and sync changelog
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -61,16 +90,16 @@ jobs:
           file="docs/updates/${version}.md"
           git fetch --no-tags origin master
           git show "origin/master:$file" > "$file.from-master" 2>/dev/null || true
+          notes=""
           if [ -s "$file.from-master" ]; then
             notes="$file.from-master"
           elif [ -f "$file" ]; then
             notes="$file"
-          else
-            notes=""
           fi
           if [ -n "$notes" ]; then
-            gh release edit "$GITHUB_REF_NAME" --notes-file "$notes" --repo "$GITHUB_REPOSITORY"
+            gh release edit "$GITHUB_REF_NAME" --draft=false --notes-file "$notes" --repo "$GITHUB_REPOSITORY"
             echo "Release notes synced from $notes"
           else
+            gh release edit "$GITHUB_REF_NAME" --draft=false --repo "$GITHUB_REPOSITORY"
             echo "::warning::$file not found; keeping default release body."
           fi

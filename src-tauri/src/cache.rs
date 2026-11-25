@@ -326,7 +326,13 @@ pub fn verify_tool_paths() -> bool {
 /// 统一使用 tools/adb 目录中的可执行文件
 fn find_adb_path() -> PathBuf {
     use std::env::consts::EXE_SUFFIX;
-    let platform_dir = if cfg!(windows) { "windows" } else { "linux" };
+    let platform_dir = if cfg!(windows) {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "macos"
+    } else {
+        "linux"
+    };
     let adb_filename = format!("adb{}", EXE_SUFFIX);
 
     log::info!(
@@ -381,6 +387,7 @@ fn find_adb_path() -> PathBuf {
     };
 
     let dev_paths = [
+        dev_root.join("tools").join("adb-bin").join(&adb_filename),
         dev_root
             .join("tools")
             .join("adb")
@@ -406,7 +413,13 @@ fn find_adb_path() -> PathBuf {
 /// 统一使用 tools/adb 目录中的可执行文件
 fn find_fastboot_path() -> PathBuf {
     use std::env::consts::EXE_SUFFIX;
-    let platform_dir = if cfg!(windows) { "windows" } else { "linux" };
+    let platform_dir = if cfg!(windows) {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "macos"
+    } else {
+        "linux"
+    };
     let fb_filename = format!("fastboot{}", EXE_SUFFIX);
 
     log::info!(
@@ -460,6 +473,7 @@ fn find_fastboot_path() -> PathBuf {
     };
 
     let dev_paths = [
+        dev_root.join("tools").join("adb-bin").join(&fb_filename),
         dev_root
             .join("tools")
             .join("adb")
