@@ -1,5 +1,7 @@
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 // API响应数据结构 - 根据实际API返回的结构
 interface VersionResponse {
@@ -90,4 +92,54 @@ export async function checkForUpdates(): Promise<VersionCheckResult> {
     // 重新抛出错误，让调用方处理
     throw new Error(`版本检查失败: ${errorMessage}`);
   }
+}
+
+// 更新下载进度
+export interface UpdateDownloadProgress {
+  downloadedBytes: number;
+  totalBytes: number | null; // null = 服务器未返回总长
+  percent: number | null;
+}
+
+/**
+ * 应用内更新：检查 → 下载（带进度）→ 安装 → 重启
+ * 走 tauri-plugin-updater，签名包来自 GitHub Releases latest.json。
+ * 返回 false 表示上游无可用更新包（如 latest.json 未产出），调用方应回退到官网下载。
+ */
+export async function downloadAndInstallUpdate(
+  onProgress?: (p: UpdateDownloadProgress) => void
+): Promise<boolean> {
+  const update = await check();
+  if (!update) {
+    console.log('[更新] 上游未返回可用更新包，回退官网下载');
+    return false;
+  }
+
+  console.log(`[更新] 发现更新包 ${update.version}，开始下载`);
+  let downloaded = 0;
+  let total: number | null = null;
+
+  await update.downloadAndInstall((event) => {
+    switch (event.event) {
+      case 'Started':
+        total = event.data.contentLength ?? null;
+        onProgress?.({ downloadedBytes: 0, totalBytes: total, percent: total ? 0 : null });
+        break;
+      case 'Progress':
+        downloaded += event.data.chunkLength;
+        onProgress?.({
+          downloadedBytes: downloaded,
+          totalBytes: total,
+          percent: total ? Math.min(100, Math.round((downloaded / total) * 1000) / 10) : null,
+        });
+        break;
+      case 'Finished':
+        onProgress?.({ downloadedBytes: downloaded, totalBytes: total, percent: 100 });
+        break;
+    }
+  });
+
+  console.log('[更新] 下载并安装完成，即将重启应用');
+  await relaunch();
+  return true;
 }

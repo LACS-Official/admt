@@ -1,27 +1,25 @@
 {
-  "version": "1.5.6",
-  "buildNumber": 11,
-  "versionName": "1.5.6",
-  "releaseDate": "2026-11-14",
+  "version": "1.5.7",
+  "buildNumber": 12,
+  "versionName": "1.5.7",
+  "releaseDate": "2026-11-25",
   "description": "统一版本管理配置文件",
   "changelog": [
-    "启动检测：启动时探测 ADB / Fastboot 工具链，状态栏常驻指示器 + 可关闭提醒横幅，仅手动引导安装",
-    "按键映射：读取设备分辨率、探测触屏事件通道，投屏窗口键盘按下/抬起实时映射为设备触控",
-    "系统托盘：修正 Tauri 2 环境判定，支持按 id 重建托盘菜单并接入自定义菜单项",
-    "Root 镜像修补：Magisk 分区名参数化，新增 KernelSU / SukiSU / APatch 的 PC 原生修补、KMI 检测、刷入闭环与 AVB 选项",
-    "下载链路：修正 GitHub release API 地址，接入系统代理与镜像站点多候选回退，支持取消并清理残件",
-    "标准日志：统一后端 log 门面与前端 logService 出口，默认采集 error/warning/info，日志页可载入历史与打开日志目录",
-    "稳定性与安全：命令输出分段转义防 XSS、收紧 CSP 与 HTTP 权限、补齐前端错误链解析",
-    "代码库清理：删除 33 个零引用文件与冗余依赖，收敛配置加载、SHA256 等为唯一实现入口，新增 CI 工作流与契约测试",
-    "界面收敛（首批）：统一卡片 14px / 控件胶囊圆角，移除全局水印、渐变背景与装饰性循环动画"
+    "三平台支持：macOS / Linux 桌面版适配，Windows / macOS / Linux 统一构建发布",
+    "应用内自动更新：检查新版本后直接下载安装并自动重启，免去官网手动下载",
+    "无线调试扫码配对闭环：扫码后自动发现、自动配对并连接，无需先插 USB 线",
+    "无线调试弹窗重构：扫码配对 / IP 连接 / 手动配对三标签页，文案精简、单表单聚焦",
+    "使用统计完善 OS 维度，启动即记录运行系统平台",
+    "Web 版历史日志持久化与双端能力对照文档更新",
+    "修复配对信息序列化错误与深色模式硬编码色值"
   ],
   "environments": {
     "development": {
-      "version": "1.5.6-dev",
+      "version": "1.5.7-dev",
       "enableDebug": true
     },
     "production": {
-      "version": "1.5.6",
+      "version": "1.5.7",
       "enableDebug": false
     }
   },

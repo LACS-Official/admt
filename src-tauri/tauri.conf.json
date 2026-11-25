@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "玩机管家",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "identifier": "com.lacs.admt",
   "build": {
     "frontendDist": "../dist",
@@ -62,11 +62,21 @@
     "fs": {
       "requireLiteralLeadingDot": false
     },
-    "opener": null
+    "opener": null,
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY1NkFERDUwQzVENDcyNDEKUldSQmN0VEZVTjFxOVI3RDI3TG1DME1nQ2xjNkE5QW9ENWhGa2hrd1RydnVuSDZMWG5wQlhKTkUK",
+      "endpoints": [
+        "https://github.com/LACS-Official/admt/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/64x64.png",
       "icons/128x128.png",

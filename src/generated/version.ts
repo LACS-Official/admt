@@ -1,13 +1,13 @@
 // 自动生成的版本常量文件
-// 生成时间: 2026-11-14T02:35:00.000Z
+// 生成时间: 2026-11-25T11:20:00.000Z
 import { APP_IDENTIFIER, APP_VERSION, messagesZhCN } from "@admt/shared";
 
 export const VERSION_INFO = {
   version: APP_VERSION,
-  buildNumber: 11,
+  buildNumber: 12,
   versionName: APP_VERSION,
-  releaseDate: '2026-11-14',
-  buildDate: '2026-11-14T02:35:00.000Z',
+  releaseDate: '2026-11-25',
+  buildDate: '2026-11-25T11:20:00.000Z',
   environment: 'production'
 };
 

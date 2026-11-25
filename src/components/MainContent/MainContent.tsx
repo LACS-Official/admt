@@ -21,7 +21,7 @@ import {
   Spinner,
   Tooltip,
 } from "@fluentui/react-components";
-import {Code24Regular, Settings24Regular, CloudArrowUp24Regular, CloudArrowDown24Regular, Home24Regular, Icons24Regular, Notepad24Regular, AppsAddIn24Regular, Flash24Regular, Bot24Regular, PanelLeftContract24Regular, PanelLeftExpand24Regular, Prompt24Regular} from "@fluentui/react-icons";
+import {Code24Regular, Settings24Regular, CloudArrowUp24Regular, CloudArrowDown24Regular, Home24Regular, Dismiss24Regular, Notepad24Regular, AppsAddIn24Regular, Flash24Regular, Bot24Regular, PanelLeftContract24Regular, PanelLeftExpand24Regular, Prompt24Regular} from "@fluentui/react-icons";
 import { useTranslation } from "react-i18next";
 // import DeviceSelectionDialog from "./DeviceSelectionDialog";
 import { getDeviceIcon } from "../../assets/icons";
@@ -1573,9 +1573,9 @@ const MainContent: React.FC = () => {
         onOpenChange={(event, data) => setWirelessDebuggingDialogOpen(data.open)}
         modalType="modal"
       >
-        <DialogSurface style={{ maxWidth: '800px', width: '90vw' }}>
+        <DialogSurface style={{ maxWidth: '640px', width: '90vw' }}>
           <DialogBody>
-            <DialogTitle action={<Button appearance="subtle" icon={<Icons24Regular />} onClick={() => setWirelessDebuggingDialogOpen(false)} />}>
+            <DialogTitle action={<Button appearance="subtle" aria-label={t('common.close')} icon={<Dismiss24Regular />} onClick={() => setWirelessDebuggingDialogOpen(false)} />}>
               {t('wireless.title')}
             </DialogTitle>
             <DialogContent>

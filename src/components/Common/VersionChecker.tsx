@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { checkForUpdates, VersionCheckResult } from '../../services/versionService';
+import {
+  checkForUpdates,
+  downloadAndInstallUpdate,
+  UpdateDownloadProgress,
+  VersionCheckResult,
+} from '../../services/versionService';
 import { useAppStore } from "../../stores/appStore";
 import {
   Dialog,
@@ -12,6 +17,7 @@ import {
   MessageBarBody,
   Text,
   Button,
+  ProgressBar,
 } from "@fluentui/react-components";
 import {
   CheckmarkCircle24Regular,
@@ -46,6 +52,7 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
   const [updateInfo, setUpdateInfo] = useState<VersionCheckResult | null>(null);
   const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<UpdateDownloadProgress | null>(null);
 
   // 组件挂载时自动检查更新
   useEffect(() => {
@@ -167,19 +174,33 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
     }
   };
 
-  const handleDownloadUpdate = () => {
+  const handleDownloadUpdate = async () => {
     // 标记正在下载更新
     setIsDownloading(true);
-    
+    setDownloadProgress(null);
+
+    try {
+      // 应用内更新：检查 → 下载（带进度）→ 安装 → 重启
+      const started = await downloadAndInstallUpdate((p) => setDownloadProgress(p));
+      if (started) {
+        // downloadAndInstallUpdate 成功后会自动 relaunch，此处不会继续执行
+        return;
+      }
+    } catch (error) {
+      console.warn('应用内更新失败，回退到官网下载:', error);
+    }
+
+    // 回退：官网下载（上游无更新包或应用内更新异常时）
+    setIsDownloading(false);
     if (updateInfo?.updateInfo?.downloadUrl) {
       openUrl(updateInfo.updateInfo.downloadUrl);
     } else {
       openUrl(downloadUrl); // 降级到默认下载页面
     }
-    
+
     // 关闭对话框
     setUpdateDialogOpen(false);
-    
+
     // 延迟1秒后退出应用，给用户时间看到下载页面已打开
     setTimeout(() => {
       // 使用 Tauri 的退出功能
@@ -281,18 +302,34 @@ const VersionChecker: React.FC<VersionCheckerProps> = ({
                       </Text>
                     </div>
                     <Text size={300} style={{ color: 'var(--colorNeutralForeground2)', textAlign: 'center' }}>
-                      此更新包含重要修复和改进，点击"立即更新"后将自动打开下载页面并退出应用。
+                      {isDownloading
+                        ? '正在下载并安装更新，完成后应用将自动重启。'
+                        : '此更新包含重要修复和改进，点击"立即更新"后将自动下载安装并重启应用。'}
                     </Text>
+                    {isDownloading && (
+                      <div>
+                        <ProgressBar
+                          value={downloadProgress?.percent != null ? downloadProgress.percent / 100 : undefined}
+                          thickness="large"
+                        />
+                        <Text size={200} style={{ color: 'var(--colorNeutralForeground2)', marginTop: '6px', display: 'block', textAlign: 'center' }}>
+                          {downloadProgress?.percent != null
+                            ? `已下载 ${downloadProgress.percent}%`
+                            : '正在下载...'}
+                        </Text>
+                      </div>
+                    )}
                   </div>
                 )}
               </DialogContent>
               <DialogActions>
-                <Button 
-                  appearance="primary" 
+                <Button
+                  appearance="primary"
                   onClick={handleDownloadUpdate}
-                  icon={<ArrowUpload24Regular />}
+                  disabled={isDownloading}
+                  icon={isDownloading ? undefined : <ArrowUpload24Regular />}
                 >
-                  立即更新
+                  {isDownloading ? '更新中...' : '立即更新'}
                 </Button>
               </DialogActions>
             </DialogBody>

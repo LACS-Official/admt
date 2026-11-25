@@ -1,14 +1,14 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   makeStyles,
   Text,
-  Card,
-  CardHeader,
   Button,
   Field,
   Input,
   Spinner,
   Badge,
+  TabList,
+  Tab,
 } from "@fluentui/react-components";
 import {
   Wifi124Regular,
@@ -19,66 +19,85 @@ import {
 } from "@fluentui/react-icons";
 
 import { useAppStore } from "../../stores/appStore";
+import { useDeviceStore } from "../../stores/deviceStore";
 import { DeviceInfo } from "../../types/device";
 import { useTranslation } from "react-i18next";
 import { QRCodeSVG } from "qrcode.react";
-import { wirelessService } from "../../services/wirelessService";
+import { wirelessService, QrPairingInfo, PairingProgressEvent } from "../../services/wirelessService";
+import { useDeviceService } from "../../services/deviceService";
+
+type TabValue = "qr" | "ip" | "pair";
 
 const useStyles = makeStyles({
-  container: {
-    height: "100%",
+  root: {
     display: "flex",
     flexDirection: "column",
     gap: "12px",
-    padding: "12px",
-    overflowY: "auto",
   },
-  layout: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))",
-    gap: "12px",
-  },
-  card: {
-    width: "100%",
-    borderRadius: "var(--admt-radius-control)",
-    border: "1px solid var(--colorNeutralStroke2)",
-  },
-  content: {
-    padding: "16px",
+  pane: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "12px",
+    paddingTop: "12px",
+    minHeight: "264px",
   },
-  inputGroup: {
+  centered: {
+    alignItems: "center",
+    textAlign: "center",
+    justifyContent: "center",
+    gap: "8px",
+  },
+  inputRow: {
     display: "flex",
     gap: "8px",
     alignItems: "flex-end",
   },
-  actionSection: {
-    marginTop: "8px",
+  usbRow: {
+    display: "flex",
+    gap: "12px",
+    alignItems: "center",
+    padding: "4px 0",
+  },
+  usbText: {
+    flex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "2px",
+    minWidth: 0,
   },
-  infoText: {
-    color: "var(--colorNeutralForeground2)",
-    fontSize: "12px",
-  },
-  qrContainer: {
+  qrBlock: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     gap: "12px",
     padding: "16px",
-    backgroundColor: "white",
-    borderRadius: "var(--admt-radius-control)",
-    marginTop: "8px",
+    // 二维码识别需要白底，不随主题变化
+    backgroundColor: "#ffffff",
+    borderRadius: "var(--admt-radius-card)",
+    alignSelf: "center",
   },
-  stepList: {
+  statusRow: {
     display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    marginTop: "8px",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+  },
+  hint: {
+    color: "var(--colorNeutralForeground2)",
+    fontSize: "12px",
+    lineHeight: 1.5,
+    textAlign: "center",
+  },
+  subtle: {
+    color: "var(--colorNeutralForeground3)",
+    fontSize: "12px",
+  },
+  footer: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: "auto",
+    paddingTop: "4px",
   },
 });
 
@@ -91,30 +110,68 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
   const styles = useStyles();
   const { t } = useTranslation();
   const { setStatusBarMessage } = useAppStore();
-  
-  // USB to Wireless State
+  const { deviceService } = useDeviceService();
+
+  const [tab, setTab] = useState<TabValue>("qr");
+
+  // USB 转无线
   const [isSwitching, setIsSwitching] = useState(false);
-  const [detectedIp, setDetectedIp] = useState("");
-  
-  // Standalone Connection State
+
+  // IP 连接
   const [targetIp, setTargetIp] = useState("");
   const [targetPort, setTargetPort] = useState("5555");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  
-  // Pairing State
+
+  // 手动配对
   const [pairIp, setPairIp] = useState("");
   const [pairPort, setPairPort] = useState("");
   const [pairCode, setPairCode] = useState("");
   const [isPairing, setIsPairing] = useState(false);
 
-  // QR Pairing State
-  const [qrPairingInfo, setQrPairingInfo] = useState<{ serviceName: string; port: number; pairingCode: string } | null>(null);
+  // 扫码配对
+  const [qrPairingInfo, setQrPairingInfo] = useState<QrPairingInfo | null>(null);
+  const [qrStatus, setQrStatus] = useState<PairingProgressEvent | null>(null);
   const [isStartingQrServer, setIsStartingQrServer] = useState(false);
+
+  // 订阅配对进度事件（wireless-pairing-progress）
+  useEffect(() => {
+    let disposed = false;
+    let unlistenFn: (() => void) | null = null;
+    wirelessService
+      .onPairingProgress((event) => {
+        if (disposed) return;
+        setQrStatus(event);
+        if (event.status === "connected") {
+          setStatusBarMessage({ type: "success", message: t('wireless.qr_pairing_success') });
+          // 刷新设备列表，让无线设备立即出现
+          deviceService
+            .scanDevices()
+            .then((devices) => useDeviceStore.getState().setDevices(devices))
+            .catch(() => {});
+          // 配对完成，收起 QR 界面
+          wirelessService.stopPairingServer().catch(() => {});
+          setQrPairingInfo(null);
+        } else if (event.status === "failed") {
+          setStatusBarMessage({ type: "error", message: event.message || t('wireless.qr_status_failed') });
+        }
+      })
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else unlistenFn = unlisten;
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      if (unlistenFn) unlistenFn();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startQrPairing = async () => {
     try {
       setIsStartingQrServer(true);
+      setQrStatus(null);
       const info = await wirelessService.startPairingServer();
       setQrPairingInfo(info);
       setStatusBarMessage({ type: "info", message: t('wireless.qr_pairing_waiting') });
@@ -129,12 +186,13 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
     try {
       await wirelessService.stopPairingServer();
       setQrPairingInfo(null);
+      setQrStatus(null);
     } catch (error) {
       // Ignore
     }
   };
 
-  const qrValue = qrPairingInfo 
+  const qrValue = qrPairingInfo
     ? `WIFI:T:ADB;S:${qrPairingInfo.serviceName};P:${qrPairingInfo.pairingCode};;`
     : "";
 
@@ -143,7 +201,7 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
       setStatusBarMessage({ type: "warning", message: t('error.no_device') });
       return;
     }
-    
+
     if (!device.connected) {
       onAdbRequired();
       return;
@@ -152,15 +210,15 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
     try {
       setIsSwitching(true);
       setStatusBarMessage({ type: "info", message: t('wireless.msg_switching') });
-      
+
       const result = await wirelessService.switchToTcpIp(device.serial);
       if (result.success) {
         setStatusBarMessage({ type: "success", message: t('wireless.msg_switch_success') });
-        
-        // Try to detect IP automatically
+
+        // 自动探测 IP 并填入连接表单
         const ip = await wirelessService.getDeviceIp(device.serial);
         if (ip) {
-          setDetectedIp(ip);
+          setTargetIp(ip);
           setStatusBarMessage({ type: "success", message: t('wireless.msg_detect_ip_success', { ip }) });
         } else {
           setStatusBarMessage({ type: "warning", message: t('wireless.msg_detect_ip_failed') });
@@ -185,7 +243,7 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
       setIsConnecting(true);
       const port = parseInt(targetPort) || 5555;
       setStatusBarMessage({ type: "info", message: t('wireless.msg_connecting', { ip: targetIp, port }) });
-      
+
       const result = await wirelessService.connectWireless(targetIp, port);
       if (result.success && !result.output.includes("failed")) {
         setStatusBarMessage({ type: "success", message: t('wireless.msg_connect_success', { ip: targetIp, port }) });
@@ -204,10 +262,10 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
       setIsDisconnecting(true);
       const ip = all ? undefined : targetIp;
       const port = all ? undefined : (parseInt(targetPort) || 5555);
-      
+
       setStatusBarMessage({ type: "info", message: t('wireless.msg_disconnecting') });
       const result = await wirelessService.disconnectWireless(ip, port);
-      
+
       if (result.success) {
         setStatusBarMessage({ type: "success", message: t('wireless.msg_disconnect_success') });
       } else {
@@ -230,13 +288,10 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
       setIsPairing(true);
       const port = parseInt(pairPort);
       setStatusBarMessage({ type: "info", message: t('wireless.msg_pairing', { ip: pairIp, port }) });
-      
+
       const result = await wirelessService.pairWireless(pairIp, port, pairCode);
       if (result.success && !result.output.includes("failed")) {
         setStatusBarMessage({ type: "success", message: t('wireless.msg_pair_success') });
-        // After pairing, typically you need to connect.
-        // Usually the connection port is different from pairing port in Android 11+ UI.
-        // But some devices use the same. Let's just notify success.
       } else {
         setStatusBarMessage({ type: "error", message: result.output || result.error || t('wireless.msg_pair_failed', { error: "" }) });
       }
@@ -248,124 +303,159 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.layout}>
-        {/* USB to Wireless Card */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<UsbPlug24Regular />}
-            header={<Text weight="semibold">{t('wireless.usb_to_wireless')}</Text>}
-            description={<Text size={200}>{t('wireless.usb_to_wireless_desc')}</Text>}
-          />
-          <div className={styles.content}>
-            <div className={styles.actionSection}>
+    <div className={styles.root}>
+      <TabList selectedValue={tab} onTabSelect={(_, data) => setTab(data.value as TabValue)}>
+        <Tab value="qr">{t('wireless.qr_pairing_title')}</Tab>
+        <Tab value="ip">{t('wireless.standalone_connection')}</Tab>
+        <Tab value="pair">{t('wireless.pairing_section')}</Tab>
+      </TabList>
+
+      {tab === "qr" && (
+        <div className={`${styles.pane} ${!qrPairingInfo ? styles.centered : ""}`}>
+          {!qrPairingInfo ? (
+            <>
+              <Text>{t('wireless.qr_pairing_desc')}</Text>
               <Button
                 appearance="primary"
-                icon={isSwitching ? <Spinner size="tiny" /> : <Wifi124Regular />}
-                onClick={handleSwitchToTcpIp}
-                disabled={!device || isSwitching}
+                icon={isStartingQrServer ? <Spinner size="tiny" /> : <Wifi124Regular />}
+                onClick={startQrPairing}
+                disabled={isStartingQrServer}
               >
-                {t('wireless.switch_to_tcpip')}
+                {t('wireless.qr_pairing_start')}
               </Button>
-              
-              {detectedIp && (
-                <div className={styles.inputGroup}>
-                   <Field label={t('wireless.device_ip')} style={{ flex: 1 }}>
-                     <Input value={detectedIp} readOnly />
-                   </Field>
-                   <Button onClick={() => setTargetIp(detectedIp)}>
-                     {t('common.copy_to', "复制到")}连接
-                   </Button>
+              <Text className={styles.subtle}>{t('wireless.qr_pairing_fallback_tip')}</Text>
+            </>
+          ) : (
+            <>
+              <div className={styles.qrBlock}>
+                <QRCodeSVG value={qrValue} size={160} />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Badge appearance="filled" color="brand">{qrPairingInfo.pairingCode}</Badge>
+                  <Text size={200} className={styles.subtle}>{qrPairingInfo.serviceName}</Text>
+                </div>
+              </div>
+
+              {qrStatus && (
+                <div className={styles.statusRow}>
+                  {qrStatus.status !== 'connected' && qrStatus.status !== 'failed' && <Spinner size="tiny" />}
+                  <Text
+                    size={200}
+                    weight="semibold"
+                    style={{
+                      color: qrStatus.status === 'failed'
+                        ? 'var(--colorPaletteRedForeground1)'
+                        : qrStatus.status === 'connected'
+                          ? 'var(--colorPaletteGreenForeground1)'
+                          : undefined,
+                    }}
+                  >
+                    {t(`wireless.qr_status_${qrStatus.status}`)}
+                  </Text>
+                  {qrStatus.target && (
+                    <Text size={100} className={styles.subtle}>{qrStatus.target}</Text>
+                  )}
                 </div>
               )}
-              
-              <Text className={styles.infoText}>
-                {t('wireless.usb_hint', "提示：点击切换后，当显示成功即可断开 USB 线。")}
-              </Text>
-            </div>
-          </div>
-        </Card>
+              {qrStatus?.status === 'failed' && qrStatus.message && (
+                <Text size={100} style={{ color: 'var(--colorPaletteRedForeground1)', textAlign: 'center', lineHeight: 1.4 }}>
+                  {qrStatus.message}
+                </Text>
+              )}
 
-        {/* Standalone Connection Card */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Link24Regular />}
-            header={<Text weight="semibold">{t('wireless.standalone_connection')}</Text>}
-            description={<Text size={200}>{t('wireless.standalone_connection_desc')}</Text>}
-          />
-          <div className={styles.content}>
-            <div className={styles.inputGroup}>
-              <Field label={t('wireless.device_ip')} style={{ flex: 2 }}>
-                <Input
-                  value={targetIp}
-                  onChange={(_, data) => setTargetIp(data.value)}
-                  placeholder="192.168.x.x"
-                />
-              </Field>
-              <Field label={t('wireless.port')} style={{ flex: 1 }}>
-                <Input
-                  value={targetPort}
-                  onChange={(_, data) => setTargetPort(data.value)}
-                  placeholder="5555"
-                />
-              </Field>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button
-                appearance="primary"
-                icon={isConnecting ? <Spinner size="tiny" /> : <Link24Regular />}
-                onClick={handleConnect}
-                disabled={isConnecting || isDisconnecting}
-                style={{ flex: 1 }}
-              >
-                {t('wireless.connect_btn')}
+              <Text className={styles.hint}>{t('wireless.qr_pairing_steps')}</Text>
+              <Button appearance="secondary" onClick={stopQrPairing}>
+                {t('wireless.qr_pairing_stop')}
               </Button>
-              <Button
-                appearance="secondary"
-                icon={isDisconnecting ? <Spinner size="tiny" /> : <LinkDismiss24Regular />}
-                onClick={() => handleDisconnect(false)}
-                disabled={isConnecting || isDisconnecting}
-                style={{ flex: 1 }}
-              >
-                {t('wireless.disconnect_btn')}
-              </Button>
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === "ip" && (
+        <div className={styles.pane}>
+          <div className={styles.usbRow}>
+            <UsbPlug24Regular />
+            <div className={styles.usbText}>
+              <Text size={200} weight="semibold">{t('wireless.usb_to_wireless')}</Text>
+              <Text size={100} className={styles.subtle}>{t('wireless.usb_to_wireless_desc')}</Text>
             </div>
             <Button
-                appearance="subtle"
-                size="small"
-                onClick={() => handleDisconnect(true)}
-                disabled={isConnecting || isDisconnecting}
-              >
-                {t('wireless.disconnect_all')}
+              icon={isSwitching ? <Spinner size="tiny" /> : <Wifi124Regular />}
+              onClick={handleSwitchToTcpIp}
+              disabled={!device || isSwitching}
+            >
+              {t('wireless.switch_to_tcpip')}
             </Button>
           </div>
-        </Card>
 
-        {/* Wireless Pairing Card */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Key24Regular />}
-            header={<Text weight="semibold">{t('wireless.pairing_section')}</Text>}
-            description={<Text size={200}>{t('wireless.pairing_desc')}</Text>}
-          />
-          <div className={styles.content}>
-            <div className={styles.inputGroup}>
-              <Field label={t('wireless.device_ip')} style={{ flex: 2 }}>
-                <Input
-                  value={pairIp}
-                  onChange={(_, data) => setPairIp(data.value)}
-                  placeholder="192.168.x.x"
-                />
-              </Field>
-              <Field label={t('wireless.port')} style={{ flex: 1 }}>
-                <Input
-                  value={pairPort}
-                  onChange={(_, data) => setPairPort(data.value)}
-                  placeholder="Port"
-                />
-              </Field>
-            </div>
-            <Field label={t('wireless.pairing_code')}>
+          <div className={styles.inputRow}>
+            <Field label={t('wireless.device_ip')} style={{ flex: 2 }}>
+              <Input
+                value={targetIp}
+                onChange={(_, data) => setTargetIp(data.value)}
+                placeholder="192.168.x.x"
+              />
+            </Field>
+            <Field label={t('wireless.port')} style={{ flex: 1 }}>
+              <Input
+                value={targetPort}
+                onChange={(_, data) => setTargetPort(data.value)}
+                placeholder="5555"
+              />
+            </Field>
+            <Button
+              appearance="primary"
+              icon={isConnecting ? <Spinner size="tiny" /> : <Link24Regular />}
+              onClick={handleConnect}
+              disabled={isConnecting || isDisconnecting}
+            >
+              {t('wireless.connect_btn')}
+            </Button>
+            <Button
+              appearance="secondary"
+              icon={isDisconnecting ? <Spinner size="tiny" /> : <LinkDismiss24Regular />}
+              onClick={() => handleDisconnect(false)}
+              disabled={isConnecting || isDisconnecting}
+            >
+              {t('wireless.disconnect_btn')}
+            </Button>
+          </div>
+
+          <div className={styles.footer}>
+            <Button
+              appearance="subtle"
+              size="small"
+              onClick={() => handleDisconnect(true)}
+              disabled={isConnecting || isDisconnecting}
+            >
+              {t('wireless.disconnect_all')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {tab === "pair" && (
+        <div className={styles.pane}>
+          <Text className={styles.hint} style={{ textAlign: 'left' }}>{t('wireless.pairing_desc')}</Text>
+
+          <div className={styles.inputRow}>
+            <Field label={t('wireless.device_ip')} style={{ flex: 2 }}>
+              <Input
+                value={pairIp}
+                onChange={(_, data) => setPairIp(data.value)}
+                placeholder="192.168.x.x"
+              />
+            </Field>
+            <Field label={t('wireless.port')} style={{ flex: 1 }}>
+              <Input
+                value={pairPort}
+                onChange={(_, data) => setPairPort(data.value)}
+                placeholder="00000"
+              />
+            </Field>
+          </div>
+          <div className={styles.inputRow}>
+            <Field label={t('wireless.pairing_code')} style={{ flex: 1 }}>
               <Input
                 value={pairCode}
                 onChange={(_, data) => setPairCode(data.value)}
@@ -381,52 +471,10 @@ const WirelessDebuggingPanel: React.FC<WirelessDebuggingPanelProps> = ({ device,
               {t('wireless.pair_btn')}
             </Button>
           </div>
-        </Card>
 
-        {/* QR Code Pairing Card */}
-        <Card className={styles.card}>
-          <CardHeader
-            image={<Wifi124Regular />}
-            header={<Text weight="semibold">{t('wireless.qr_pairing_title')}</Text>}
-            description={<Text size={200}>{t('wireless.qr_pairing_desc')}</Text>}
-          />
-          <div className={styles.content}>
-            {!qrPairingInfo ? (
-              <Button
-                appearance="primary"
-                icon={isStartingQrServer ? <Spinner size="tiny" /> : <Wifi124Regular />}
-                onClick={startQrPairing}
-                disabled={isStartingQrServer}
-              >
-                {t('wireless.qr_pairing_start')}
-              </Button>
-            ) : (
-              <>
-                <div className={styles.qrContainer}>
-                  <QRCodeSVG value={qrValue} size={180} />
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <Badge appearance="filled" color="brand">{qrPairingInfo.pairingCode}</Badge>
-                    <Text size={200} style={{ color: '#666' }}>{qrPairingInfo.serviceName}:{qrPairingInfo.port}</Text>
-                  </div>
-                </div>
-                
-                <div className={styles.stepList}>
-                   <Text size={200}>{t('wireless.qr_pairing_step1')}</Text>
-                   <Text size={200}>{t('wireless.qr_pairing_step2')}</Text>
-                   <Text size={200}>{t('wireless.qr_pairing_step3')}</Text>
-                   <Text size={200} style={{ color: "var(--colorNeutralForeground3)", marginTop: "4px", lineHeight: "1.4" }}>
-                     {t('wireless.qr_pairing_fallback_tip')}
-                   </Text>
-                </div>
-
-                <Button appearance="secondary" onClick={stopQrPairing}>
-                  {t('wireless.qr_pairing_stop')}
-                </Button>
-              </>
-            )}
-          </div>
-        </Card>
-      </div>
+          <Text className={styles.subtle}>{t('wireless.pair_manual_hint')}</Text>
+        </div>
+      )}
     </div>
   );
 };

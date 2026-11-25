@@ -1,6 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { CommandResult } from "../types/device";
 import { logService } from "./logService";
+
+/** QR 配对会话信息（用于拼二维码 WIFI:T:ADB;S:<serviceName>;P:<pairingCode>;;） */
+export interface QrPairingInfo {
+  serviceName: string;
+  pairingCode: string;
+}
+
+/** 配对进度事件（wireless-pairing-progress） */
+export interface PairingProgressEvent {
+  /** searching | device_found | pairing | paired | connecting | connected | failed */
+  status: string;
+  message: string;
+  target?: string | null;
+}
 
 export class WirelessService {
   /**
@@ -135,28 +150,42 @@ export class WirelessService {
   }
 
   /**
-   * 启动无线配对服务器
+   * 创建 QR 无线配对会话（Android 11+）
+   * 后台会自动完成 mDNS 发现 → adb pair → adb connect 全流程，
+   * 进度通过 onPairingProgress 推送。
    */
-  async startPairingServer(): Promise<{ serviceName: string; port: number; pairingCode: string }> {
+  async startPairingServer(): Promise<QrPairingInfo> {
     try {
-      logService.info("正在启动无线配对服务器...", "无线调试");
-      const result = await invoke<{ serviceName: string; port: number; pairingCode: string }>("start_adb_pairing_server");
+      logService.info("正在创建无线配对会话...", "无线调试");
+      const result = await invoke<QrPairingInfo>("start_adb_pairing_server");
       return result;
     } catch (error) {
-      logService.error(`启动配对服务器失败: ${error}`, "无线调试");
+      logService.error(`创建配对会话失败: ${error}`, "无线调试");
       throw error;
     }
   }
 
   /**
-   * 停止无线配对服务器
+   * 订阅配对进度事件（wireless-pairing-progress）
+   * 返回取消订阅函数。
+   */
+  async onPairingProgress(
+    callback: (event: PairingProgressEvent) => void
+  ): Promise<UnlistenFn> {
+    return listen<PairingProgressEvent>("wireless-pairing-progress", (event) => {
+      callback(event.payload);
+    });
+  }
+
+  /**
+   * 停止无线配对会话
    */
   async stopPairingServer(): Promise<void> {
     try {
       await invoke("stop_adb_pairing_server");
-      logService.info("无线配对服务器已停止", "无线调试");
+      logService.info("无线配对会话已停止", "无线调试");
     } catch (error) {
-      logService.error(`停止配对服务器失败: ${error}`, "无线调试");
+      logService.error(`停止配对会话失败: ${error}`, "无线调试");
     }
   }
 
