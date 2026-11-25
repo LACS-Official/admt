@@ -18,10 +18,10 @@ jobs:
         platform: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: "npm"
@@ -80,7 +80,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 发版约定：docs/updates/<去掉 v 的版本号>.md 即该版本 Release 正文。
       # 优先取 master 上的文档（兼容先打 tag 后补日志），再回退到 tag commit 自带文档。

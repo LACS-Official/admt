@@ -64,7 +64,7 @@
     },
     "opener": null,
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY1NkFERDUwQzVENDcyNDEKUldSQmN0VEZVTjFxOVI3RDI3TG1DME1nQ2xjNkE5QW9ENWhGa2hrd1RydnVuSDZMWG5wQlhKTkUK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM4NUMzOTI2N0RFRUI2RUUKUldUdXR1NTlKamxjeUxBQ1hSWVJyOFNsSm5KVFhuKzVaMVJEalo1ODNKM2N6alFXaE9BUS9Gc2kK",
       "endpoints": [
         "https://github.com/LACS-Official/admt/releases/latest/download/latest.json"
       ],
